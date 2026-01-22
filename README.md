@@ -23,20 +23,26 @@ short_description: Multi-project RAG system turning documents into answers
 
 # 📚 RAGCraft
 
-**RAGCraft** is a **multi-project Retrieval-Augmented Generation (RAG) system** designed as a **portfolio project** to demonstrate end-to-end AI product development.
+> **Multi-project Retrieval-Augmented Generation system turning documents into answers**
 
-It enables users to ingest unstructured documents, build isolated knowledge bases, and query them through a conversational interface.
+**RAGCraft** is a **portfolio-grade Retrieval-Augmented Generation (RAG) system** designed to demonstrate how to build **reliable, end-to-end RAG applications** beyond simple demos.
 
-## 🚀 Features
+It allows users to create multiple projects, ingest unstructured documents, and interact with isolated knowledge bases through a conversational interface.
 
-* 🔐 Session-based user isolation
-* 📁 Multiple projects per user
-* 📄 Document ingestion (PDF, DOCX, PPTX)
-* 🧩 Parsing & chunking with **Unstructured**
-* 🔎 Vector search with **FAISS**
-* 🧠 RAG pipelines using **LangChain**
-* 💬 Conversational UI with **Streamlit**
-* ☁️ Fully deployed on **Hugging Face Spaces**
+---
+
+## 🚀 Key Features
+
+- 🔐 **Session-based user isolation**
+- 📁 **Multiple projects per user**
+- 📄 **Document ingestion** (PDF, DOCX, PPTX)
+- 🧩 **Parsing & chunking** with **Unstructured**
+- 🔎 **Vector search** using **FAISS**
+- 🧠 **RAG pipelines** orchestrated with **LangChain**
+- 💬 **Conversational UI** built with **Streamlit**
+- ☁️ **Fully deployed on Hugging Face Spaces**
+
+---
 
 ## 🏗️ Architecture Overview
 
@@ -52,7 +58,9 @@ FAISS Vector Store (per project)
 LLM
 ```
 
-## Data isolation model
+---
+
+## Data Isolation Model
 
 ```
 data/
@@ -64,56 +72,69 @@ data/
 
 ```
 
-Each project has:
 
-* its own documents
-* its own vector index
-* its own conversation history
+Each project is fully isolated and contains:
+- its own documents
+- its own vector index
+- its own conversation history
+
+This design prevents knowledge leakage across projects and mirrors real-world multi-tenant RAG constraints.
+
+---
 
 ## 🧠 Product & Technical Decisions
 
-**Why session-based users?**
+### Why session-based users?
+- Simplifies deployment on Hugging Face Spaces
+- Avoids premature authentication complexity
+- Still guarantees per-user and per-project isolation
 
-* Simplifies deployment on Hugging Face Spaces
-* Avoids premature authentication complexity
-* Still guarantees project isolation
+### Why FAISS?
+- Lightweight and fast
+- Well-suited for single-container environments
+- Ideal for portfolio and MVP-grade RAG systems
 
-**Why FAISS?**
+### Why Streamlit?
+- Rapid prototyping and iteration
+- Clear, user-friendly workflows
+- Widely adopted for AI demos and internal tools
 
-* Lightweight and reliable
-* Well-suited for single-container deployments
-* Ideal for portfolio and MVP-grade systems
-
-**Why Streamlit?**
-
-* Rapid iteration
-* Clear user workflows
-* Excellent for AI demos and internal tools
+---
 
 ## 🧪 Current Scope & Limitations
 
-* No persistent authentication
-* No concurrent multi-user guarantees
-* Portfolio-grade security model
+- No persistent authentication
+- No concurrent multi-user guarantees
+- Portfolio-grade security model
 
-These trade-offs are intentional and documented.
+These trade-offs are **intentional**, documented, and aligned with the project’s educational goals.
+
+---
 
 ## 🛣️ Roadmap
 
-**Next versions may include**
+Planned future improvements include:
+- FastAPI backend separation
+- JWT-based authentication
+- Hybrid search (BM25 + embeddings)
+- RAG evaluation & monitoring dashboard
+- LLM-as-a-Judge pipelines
+- Advanced observability and analytics
 
-* FastAPI backend
-* JWT authentication
-* Hybrid search (BM25 + embeddings)
-* RAG evaluation dashboard
-* LLM-as-a-Judge pipelines
-* Advanced monitoring
+---
 
 ## ⚠️ Disclaimer
 
-This project is developed for **educational and portfolio purposes only** and is not affiliated with any existing product named “RAGCraft”.
+This project is developed for **educational and portfolio purposes only** and is not affiliated with any existing product named **“RAGCraft”**.
+
+---
 
 ## 👤 Author
 
+<<<<<<< HEAD
 Developed by *Amos Bangmo* (Software & AI Engineer)
 >>>>>>> 6d1d13e (Fixing short_description config)
+=======
+Developed by **Amos Bangmo**  
+*Software & AI Engineer*
+>>>>>>> 739a7c5 (README enhancement)
