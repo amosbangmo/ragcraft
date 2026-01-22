@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+COPY streamlit_app.py ./
 COPY requirements.txt ./
 COPY src/ ./src/
 
