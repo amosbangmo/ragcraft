@@ -7,11 +7,14 @@ streamlit
 
 # RAG core
 langchain
+langchain-core
 langchain-community
+langchain-openai
 langchain-text-splitters
 
 # Unstructured (text extraction)
 unstructured
+unstructured-inference
 unstructured[pdf]
 
 # Vector store (used next week)
@@ -19,6 +22,7 @@ faiss-cpu
 
 # Utils
 python-dotenv
+tiktoken
 tqdm
 uuid
 >>>>>>> 0b09946 (Document ingestion with Unstructured and Langchain)
