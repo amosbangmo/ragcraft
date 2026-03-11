@@ -32,7 +32,7 @@ if uploaded_files:
             file_path = save_uploaded_file(file, project_path)
             text = parse_document(file_path)
             chunks = create_chunks(text, project, file.name)
-            vector_store = create_vector_store(chunks)
+            vector_store = create_vector_store(chunks, project)
             save_vector_store(
                 vector_store,
                 project_path
