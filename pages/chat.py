@@ -32,10 +32,9 @@ def render_sources(docs):
 
 def build_chat_history(messages, max_messages: int = 6):
     """
-    Convert chat messages from Streamlit session state into a compact
-    text-based chat history for the prompt.
-
-    Only the most recent messages are kept to control token usage.
+    Convert chat messages into a compact text-based history
+    for the prompt. Only the most recent messages are kept
+    to control token usage.
     """
     recent_messages = messages[-max_messages:]
 
@@ -58,13 +57,8 @@ if not project_id:
 
 project = app.get_project(user_id, project_id)
 
-# Initialize chat session for the current project
 app.chat_service.init(project.project_id)
 
-# Get current chat history from session state
-messages = app.chat_service.get_messages()
-
-# Header actions
 col1, col2 = st.columns([4, 1])
 
 with col1:
@@ -75,16 +69,14 @@ with col2:
         app.invalidate_project_chain(user_id, project_id)
         st.success("Project chain cache cleared.")
 
-# Render existing conversation
+messages = app.chat_service.get_messages()
 render_chat_history(messages)
 
-# Chat input
 question = st.chat_input("Ask a question about your documents")
 
 if not question:
     st.stop()
 
-# Add user message immediately to UI state
 app.chat_service.add_user_message(question)
 
 with st.chat_message("user"):
@@ -92,9 +84,7 @@ with st.chat_message("user"):
 
 with st.chat_message("assistant"):
     with st.spinner("Thinking..."):
-        # Re-read messages after adding the user message
         messages = app.chat_service.get_messages()
-
         chat_history = build_chat_history(messages)
 
         response = app.ask_question(
