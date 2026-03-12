@@ -62,3 +62,9 @@ def load_vector_store(project_path):
     )
 
     return vector_store
+
+def get_project_vector_store(user_id: str, project_id: str):
+
+    project_path = f"data/user_{user_id}/{project_id}"
+
+    return load_vector_store(project_path)

@@ -5,7 +5,7 @@ from src.ingestion.parser import parse_document
 from src.ingestion.chunker import create_chunks
 from src.vectorstore.faiss_store import create_vector_store, save_vector_store
 
-project = st.session_state.get("current_project")
+project = st.session_state.get("project_id")
 user_id = st.session_state.get("user_id")
 
 header_title = "📄 Document Ingestion"
@@ -32,7 +32,7 @@ if uploaded_files:
             file_path = save_uploaded_file(file, project_path)
             text = parse_document(file_path)
             chunks = create_chunks(text, project, file.name)
-            vector_store = create_vector_store(chunks, project)
+            vector_store = create_vector_store(chunks, project_path)
             save_vector_store(
                 vector_store,
                 project_path

@@ -17,4 +17,4 @@ if created and project_name:
 projects = os.listdir(base_path)
 selected = st.selectbox("Select project", projects)
 
-st.session_state["current_project"] = selected
+st.session_state["project_id"] = selected

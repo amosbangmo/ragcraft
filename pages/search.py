@@ -3,7 +3,7 @@ from src.vectorstore.faiss_store import load_vector_store
 
 st.title("Vector Search Test")
 
-project = st.session_state.get("current_project")
+project = st.session_state.get("project_id")
 user_id = st.session_state.get("user_id")
 
 project_path = f"data/user_{user_id}/{project}"
