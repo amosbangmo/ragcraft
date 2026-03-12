@@ -25,4 +25,9 @@ python-dotenv
 tiktoken
 tqdm
 uuid
+<<<<<<< HEAD
 >>>>>>> 0b09946 (Document ingestion with Unstructured and Langchain)
+=======
+rank-bm25
+sentence-transformers
+>>>>>>> fb0d8fd (enhancing the chat page)

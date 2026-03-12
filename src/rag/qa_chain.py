@@ -3,6 +3,9 @@ from langchain_classic.chains.combine_documents import create_stuff_documents_ch
 
 from src.core.config import LLM
 from src.rag.prompts import get_rag_prompt
+from src.rag.reranker import Reranker
+
+reranker = Reranker()
 
 def build_qa_chain(retriever):
     """
@@ -57,6 +60,12 @@ def ask_question(chain, question: str):
         return None
 
     result = chain.invoke({"input": question})
-    print(result)
+    
+    docs = result.get("context", [])
+
+    # rerank documents
+    ranked_docs = reranker.rerank(question, docs)
+
+    result["context"] = ranked_docs[:4]
     
     return result
