@@ -1,21 +1,105 @@
 import streamlit as st
+
 from src.core.session import get_user_id
-from src.app.ragcraft_app import RAGCraftApp
+from src.core.app_state import get_app
+from src.ui.project_selector import render_project_selector
+from src.ui.layout import apply_layout
 
-app = RAGCraftApp()
+apply_layout()
 
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-badge">Projects</div>
+        <h1 class="hero-title">Manage your knowledge bases</h1>
+        <p class="hero-subtitle">
+            Create projects, select the active workspace and inspect ingested documents.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+app = get_app()
 user_id = get_user_id()
-st.header("📁 Projects")
 
-project_name = st.text_input("Project name", key="project_name")
+# Create project
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Create a new project</div>', unsafe_allow_html=True)
+st.markdown('<div class="card-subtitle">Use a short, explicit name for each workspace.</div>', unsafe_allow_html=True)
 
-if st.button("Create") and project_name:
-    app.create_project(user_id, project_name)
+col1, col2 = st.columns([3, 1])
+with col1:
+    project_name = st.text_input("Project name", placeholder="e.g. annual-report-2024", key="project_name_input")
+with col2:
+    st.write("")
+    st.write("")
+    create_clicked = st.button("Create project", use_container_width=True)
 
+if create_clicked:
+    normalized_name = project_name.strip()
+    if not normalized_name:
+        st.warning("Please enter a project name.")
+    else:
+        app.create_project(user_id, normalized_name)
+        st.session_state["project_id"] = normalized_name
+        st.success(f"Project '{normalized_name}' created.")
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Current project selector
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Current workspace</div>', unsafe_allow_html=True)
+st.markdown('<div class="card-subtitle">The selected project is shared across all pages.</div>', unsafe_allow_html=True)
+selected_project = render_project_selector("Active project")
+if selected_project:
+    st.caption(f"Current selected project: **{selected_project}**")
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Metrics
 projects = app.list_projects(user_id)
+total_documents = 0
+for project_id in projects:
+    total_documents += len(app.list_project_documents(user_id, project_id))
 
-if projects:
-    selected = st.selectbox("Select project", projects)
-    st.session_state["project_id"] = selected
-else:
+m1, m2 = st.columns(2)
+with m1:
+    st.metric("Projects", len(projects))
+with m2:
+    st.metric("Ingested documents", total_documents)
+
+# Project list
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">All projects</div>', unsafe_allow_html=True)
+st.markdown('<div class="card-subtitle">Inspect each project and review its ingested documents.</div>', unsafe_allow_html=True)
+
+if not projects:
     st.info("No project yet.")
+    st.stop()
+
+for project_id in projects:
+    documents = app.list_project_documents(user_id, project_id)
+    is_current = project_id == st.session_state.get("project_id")
+
+    with st.expander(
+        f"{'✅ ' if is_current else '📂 '}{project_id} — {len(documents)} document(s)",
+        expanded=is_current,
+    ):
+        col_a, col_b = st.columns([1, 4])
+
+        with col_a:
+            if st.button("Use project", key=f"use_{project_id}", use_container_width=True):
+                st.session_state["project_id"] = project_id
+                st.success(f"Selected project: {project_id}")
+
+        with col_b:
+            if is_current:
+                st.caption("This is the current active project.")
+
+        if documents:
+            st.markdown("**Ingested documents**")
+            for doc_name in documents:
+                st.markdown(f"- {doc_name}")
+        else:
+            st.caption("No document ingested yet.")
+
+st.markdown("</div>", unsafe_allow_html=True)

@@ -1,11 +1,29 @@
 import streamlit as st
 
+from src.ui.layout import apply_layout
+
+
 st.set_page_config(
     page_title="RAGCraft",
     page_icon="🚀",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-st.title("📚 RAGCraft Assistant")
-st.markdown("Create projects, ingest documents and chat with your knowledge base.")
-st.write("Navigate using the sidebar.")
+apply_layout()
+
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="hero-badge">RAGCraft</div>
+        <h1 class="hero-title">Build, search and chat with your document knowledge bases</h1>
+        <p class="hero-subtitle">
+            Multi-project Retrieval-Augmented Generation system with ingestion, vector search,
+            evaluation and conversational QA.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.info("Use the sidebar to navigate between Projects, Ingestion, Chat, Search and Evaluation.")

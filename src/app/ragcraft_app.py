@@ -45,6 +45,22 @@ class RAGCraftApp:
     def list_projects(self, user_id: str):
         return self.project_service.list_projects(user_id)
 
+    def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
+        project = self.get_project(user_id, project_id)
+
+        if not project.path.exists():
+            return []
+
+        ignored_names = {"faiss_index", "logs.json"}
+
+        documents = [
+            item.name
+            for item in project.path.iterdir()
+            if item.is_file() and item.name not in ignored_names
+        ]
+
+        return sorted(documents)
+
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
         Return a cached RAG chain for the given project,
