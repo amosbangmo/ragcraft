@@ -4,14 +4,45 @@ from src.core.session import get_user_id
 from src.core.app_state import get_app
 
 
-def render_project_selector(label: str = "Select a project"):
+def render_project_selector(
+    label: str = "Select a project",
+    show_create_button: bool = True,
+):
     app = get_app()
     user_id = get_user_id()
 
     projects = app.list_projects(user_id)
 
     if not projects:
-        st.info("No project available yet. Create one in the Projects page.")
+
+        if show_create_button:
+
+            col_left, col_right = st.columns(
+                [5, 1],
+                vertical_alignment="center"
+            )
+
+            with col_left:
+                st.warning(
+                    "No project available yet. Create one in the Projects page.",
+                    icon="📁"
+                )
+
+            with col_right:
+                if st.button(
+                    "Create project",
+                    key=f"create_project_{label}",
+                    use_container_width=True
+                ):
+                    st.switch_page("pages/projects.py")
+
+        else:
+
+            st.warning(
+                "No project available yet. Create one in the Projects page.",
+                icon="📁"
+            )
+
         st.session_state["project_id"] = None
         return None
 

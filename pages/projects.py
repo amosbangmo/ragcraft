@@ -1,29 +1,23 @@
 import streamlit as st
 
+from src.ui.layout import apply_layout
+from src.ui.page_header import render_hero
 from src.core.session import get_user_id
 from src.core.app_state import get_app
 from src.ui.project_selector import render_project_selector
-from src.ui.layout import apply_layout
+
 
 apply_layout()
 
-st.markdown(
-    """
-    <div class="hero-card">
-        <div class="hero-badge">Projects</div>
-        <h1 class="hero-title">Manage your knowledge bases</h1>
-        <p class="hero-subtitle">
-            Create projects, select the active workspace and inspect ingested documents.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+render_hero(
+    badge="Projects",
+    title="Manage your knowledge bases",
+    subtitle="Create projects, select the active workspace and inspect ingested documents.",
 )
 
 app = get_app()
 user_id = get_user_id()
 
-# Create project
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Create a new project</div>', unsafe_allow_html=True)
 st.markdown('<div class="card-subtitle">Use a short, explicit name for each workspace.</div>', unsafe_allow_html=True)
@@ -46,20 +40,19 @@ if create_clicked:
         st.success(f"Project '{normalized_name}' created.")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Current project selector
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Current workspace</div>', unsafe_allow_html=True)
 st.markdown('<div class="card-subtitle">The selected project is shared across all pages.</div>', unsafe_allow_html=True)
-selected_project = render_project_selector("Active project")
+selected_project = render_project_selector(
+    "Active project",
+    show_create_button=False,
+)
 if selected_project:
     st.caption(f"Current selected project: **{selected_project}**")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# Metrics
 projects = app.list_projects(user_id)
-total_documents = 0
-for project_id in projects:
-    total_documents += len(app.list_project_documents(user_id, project_id))
+total_documents = sum(len(app.list_project_documents(user_id, pid)) for pid in projects)
 
 m1, m2 = st.columns(2)
 with m1:
@@ -67,7 +60,6 @@ with m1:
 with m2:
     st.metric("Ingested documents", total_documents)
 
-# Project list
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">All projects</div>', unsafe_allow_html=True)
 st.markdown('<div class="card-subtitle">Inspect each project and review its ingested documents.</div>', unsafe_allow_html=True)

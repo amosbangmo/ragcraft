@@ -1,11 +1,11 @@
 import streamlit as st
 
-from src.core.app_state import get_app
-from src.core.session import get_user_id
-from src.ui.project_selector import render_project_selector
 from src.ui.layout import apply_layout
+from src.ui.page_header import render_page_header
+
 
 apply_layout()
+
 
 def render_eval_sources(docs):
     if not docs:
@@ -20,23 +20,16 @@ def render_eval_sources(docs):
             st.write(preview)
 
 
-st.markdown(
-    """
-    <div class="hero-card">
-        <div class="hero-badge">Evaluation</div>
-        <h1 class="hero-title">Test answer quality</h1>
-        <p class="hero-subtitle">
-            Run evaluation queries and inspect confidence and retrieved evidence.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+header = render_page_header(
+    badge="Evaluation",
+    title="Test answer quality",
+    subtitle="Run evaluation queries and inspect confidence and retrieved evidence.",
+    selector_label="Project for evaluation",
 )
 
-app = get_app()
-user_id = get_user_id()
-
-project_id = render_project_selector("Project for evaluation")
+app = header["app"]
+user_id = header["user_id"]
+project_id = header["project_id"]
 
 if not project_id:
     st.stop()
@@ -48,7 +41,7 @@ if st.button("Run evaluation", use_container_width=True) and question:
         user_id=user_id,
         project_id=project_id,
         question=question,
-        chat_history=[]
+        chat_history=[],
     )
 
     if response is None:
@@ -56,11 +49,13 @@ if st.button("Run evaluation", use_container_width=True) and question:
         st.stop()
 
     c1, c2 = st.columns([3, 1])
+
     with c1:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Answer</div>', unsafe_allow_html=True)
         st.write(response.answer)
         st.markdown("</div>", unsafe_allow_html=True)
+
     with c2:
         st.metric("Confidence", response.confidence)
 

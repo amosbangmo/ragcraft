@@ -1,56 +1,33 @@
 import streamlit as st
 
-from src.core.app_state import get_app
-from src.core.session import get_user_id
-from src.ui.project_selector import render_project_selector
 from src.ui.layout import apply_layout
+from src.ui.page_header import render_page_header
+
 
 apply_layout()
 
-st.markdown(
-    """
-    <div class="hero-card">
-        <div class="hero-badge">Ingestion</div>
-        <h1 class="hero-title">Add documents to a project</h1>
-        <p class="hero-subtitle">
-            Upload PDF, DOCX or PPTX files and turn them into searchable chunks.
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
+header = render_page_header(
+    badge="Ingestion",
+    title="Add documents to a project",
+    subtitle="Upload PDF, DOCX or PPTX files and turn them into searchable chunks.",
+    selector_label="Project for ingestion",
 )
 
-app = get_app()
-user_id = get_user_id()
-
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-project_id = render_project_selector("Project for ingestion")
-st.markdown("</div>", unsafe_allow_html=True)
+app = header["app"]
+user_id = header["user_id"]
+project_id = header["project_id"]
 
 if not project_id:
     st.stop()
 
 documents = app.list_project_documents(user_id, project_id)
 
-col1, col2 = st.columns([2, 1])
-with col1:
-    st.markdown(
-        f"""
-        <div class="section-card">
-            <div class="card-title">Upload files</div>
-            <div class="card-subtitle">Selected project: <b>{project_id}</b></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-with col2:
-    st.metric("Existing documents", len(documents))
+st.metric("Existing documents", len(documents))
 
 uploaded_files = st.file_uploader(
     "Upload documents",
     type=["pdf", "docx", "pptx"],
     accept_multiple_files=True,
-    label_visibility="collapsed",
 )
 
 if uploaded_files:
@@ -70,4 +47,5 @@ if updated_documents:
         st.markdown(f"- {doc_name}")
 else:
     st.caption("No document ingested yet.")
+
 st.markdown("</div>", unsafe_allow_html=True)

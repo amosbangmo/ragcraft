@@ -24,6 +24,7 @@ def render_navigation():
         st.markdown("---")
 
         st.markdown('<div class="sidebar-project-box">', unsafe_allow_html=True)
+
         st.caption("Current project")
         if project_id:
             st.success(project_id)
@@ -31,5 +32,13 @@ def render_navigation():
             st.info("No project selected")
 
         st.caption("Available projects")
-        st.write(len(projects))
+
+        st.markdown(
+            f"""
+            <div class="sidebar-metric">
+                {len(projects)}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         st.markdown("</div>", unsafe_allow_html=True)
