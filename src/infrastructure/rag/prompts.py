@@ -1,9 +1,13 @@
 from langchain_classic.prompts import PromptTemplate
 
+
 def get_rag_prompt():
 
     template = """
 You are an AI assistant answering questions using the provided context.
+
+Chat history:
+{chat_history}
 
 Context:
 {context}
@@ -19,7 +23,7 @@ Instructions:
 
     prompt = PromptTemplate(
         template=template,
-        input_variables=["context", "input"]
+        input_variables=["chat_history", "context", "input"]
     )
 
     return prompt

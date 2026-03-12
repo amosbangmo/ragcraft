@@ -1,153 +1,116 @@
 import streamlit as st
 
-from src.vectorstore.faiss_store import get_project_vector_store
-from src.rag.retriever import get_retriever
-from src.rag.qa_chain import build_qa_chain
-from src.rag.qa_chain import ask_question
+from src.core.app_state import get_app
+from src.core.session import get_user_id
 
-def init_session():
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    if "chain" not in st.session_state:
-        st.session_state.chain = None
-
-def load_chain():
-
-    user_id = st.session_state.get("user_id")
-    project_id = st.session_state.get("project_id")
-
-    if not user_id or not project_id:
-        st.warning("Select a project first.")
-        return None
-
-    try:
-
-        vector_store = get_project_vector_store(user_id, project_id)
-
-        if vector_store is None:
-            st.warning("No FAISS index found for this project.")
-            return None
-
-        retriever = get_retriever(vector_store, project_id)
-
-        chain = build_qa_chain(retriever)
-
-        return chain
-
-    except Exception as e:
-
-        st.error("Error loading FAISS index.")
-        st.exception(e)
-
-        return None 
-
-def render_chat_history():
-
-    for msg in st.session_state.messages:
-
+def render_chat_history(messages):
+    for msg in messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
 
 def render_sources(docs):
-
     if not docs:
         return
 
-    st.markdown("#### Sources")
+    st.markdown("### Sources")
 
     for i, doc in enumerate(docs):
-
         file_name = doc.metadata.get("file_name", "unknown")
         chunk_id = doc.metadata.get("chunk_id", "?")
-
-        text = doc.page_content[:200]
+        preview = doc.page_content[:200]
 
         st.markdown(
             f"""
 **[{i+1}] {file_name} — chunk {chunk_id}**
 
-> {text}...
+> {preview}...
 """
         )
 
 
-def stream_answer(chain, question):
+def build_chat_history(messages, max_messages: int = 6):
+    """
+    Convert chat messages from Streamlit session state into a compact
+    text-based chat history for the prompt.
 
-    placeholder = st.empty()
-    full_answer = ""
+    Only the most recent messages are kept to control token usage.
+    """
+    recent_messages = messages[-max_messages:]
 
-    try:
+    return [
+        f"{msg['role']}: {msg['content']}"
+        for msg in recent_messages
+    ]
 
-        for chunk in chain.stream({"input": question}):
 
-            if "answer" in chunk:
+st.title("💬 RAG Chat")
 
-                token = chunk["answer"]
+app = get_app()
 
-                full_answer += token
+user_id = get_user_id()
+project_id = st.session_state.get("project_id")
 
-                placeholder.markdown(full_answer + "▌")
+if not project_id:
+    st.warning("Please select a project first.")
+    st.stop()
 
-        placeholder.markdown(full_answer)
+project = app.get_project(user_id, project_id)
 
-    except Exception as e:
+# Initialize chat session for the current project
+app.chat_service.init(project.project_id)
 
-        st.error("Streaming error.")
-        st.exception(e)
+# Get current chat history from session state
+messages = app.chat_service.get_messages()
 
-        return None, None
+# Header actions
+col1, col2 = st.columns([4, 1])
 
-    result = ask_question(chain, question)
+with col1:
+    st.caption(f"Current project: **{project.project_id}**")
 
-    docs = result.get("context", [])
+with col2:
+    if st.button("🔄 Refresh chain"):
+        app.invalidate_project_chain(user_id, project_id)
+        st.success("Project chain cache cleared.")
 
-    return full_answer, docs
+# Render existing conversation
+render_chat_history(messages)
 
-def handle_chat():
+# Chat input
+question = st.chat_input("Ask a question about your documents")
 
-    chain = st.session_state.chain
+if not question:
+    st.stop()
 
-    if chain is None:
-        st.info("No documents indexed yet.")
-        return
+# Add user message immediately to UI state
+app.chat_service.add_user_message(question)
 
-    question = st.chat_input("Ask a question about your documents")
+with st.chat_message("user"):
+    st.markdown(question)
 
-    if question:
+with st.chat_message("assistant"):
+    with st.spinner("Thinking..."):
+        # Re-read messages after adding the user message
+        messages = app.chat_service.get_messages()
 
-        st.session_state.messages.append(
-            {"role": "user", "content": question}
+        chat_history = build_chat_history(messages)
+
+        response = app.ask_question(
+            user_id=user_id,
+            project_id=project_id,
+            question=question,
+            chat_history=chat_history,
         )
 
-        with st.chat_message("user"):
-            st.markdown(question)
+    if response is None:
+        st.warning("No answer available.")
+        st.stop()
 
-        with st.chat_message("assistant"):
+    st.markdown(response.answer)
+    st.markdown(f"**Confidence:** {response.confidence}")
 
-            answer, docs = stream_answer(chain, question)
+    render_sources(response.source_documents)
 
-            if answer:
-
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": answer}
-                )
-
-                render_sources(docs)
-                
-def render():
-
-    st.title("💬 RAG Chat")
-
-    init_session()
-
-    if st.session_state.chain is None:
-        st.session_state.chain = load_chain()
-
-    render_chat_history()
-
-    handle_chat()
-
-render()
+    app.chat_service.add_assistant_message(response.answer)

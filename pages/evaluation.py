@@ -1,39 +1,37 @@
 import streamlit as st
 
-from src.rag.qa_chain import ask_question
-from src.evaluation.confidence import compute_confidence
+from src.core.app_state import get_app
+from src.core.session import get_user_id
 
-def render():
 
-    st.title("RAG Evaluation")
+st.title("RAG Evaluation")
 
-    chain = st.session_state.get("chain")
+app = get_app()
 
-    if chain is None:
-        st.warning("No RAG chain loaded.")
-        return
+user_id = get_user_id()
+project_id = st.session_state.get("project_id")
 
-    question = st.text_input("Test question")
+if not project_id:
+    st.warning("Please select a project first.")
+    st.stop()
 
-    if st.button("Run evaluation"):
+question = st.text_input("Test question")
 
-        result = ask_question(chain, question)
+if st.button("Run evaluation") and question:
 
-        answer = result.get("answer")
-        docs = result.get("context", [])
+    response = app.ask_question(user_id, project_id, question)
 
-        confidence = compute_confidence(docs)
+    if response is None:
+        st.warning("No RAG response available.")
+        st.stop()
 
-        st.markdown("### Answer")
-        st.write(answer)
+    st.markdown("### Answer")
+    st.write(response.answer)
 
-        st.markdown("### Confidence")
-        st.write(confidence)
+    st.markdown("### Confidence")
+    st.write(response.confidence)
 
-        st.markdown("### Retrieved Documents")
+    st.markdown("### Retrieved Documents")
 
-        for doc in docs:
-
-            st.markdown(doc.page_content[:300])
-
-render()
+    for doc in response.source_documents:
+        st.markdown(doc.page_content[:300])

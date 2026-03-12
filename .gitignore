@@ -72,6 +72,7 @@ cache/
 # Vector databases
 # ======================================================
 faiss_index/
+<<<<<<< HEAD
 vector_store/
 vectordb/
 db/
@@ -228,6 +229,8 @@ cache/
 # ======================================================
 faiss_index/
 vectorstore/
+=======
+>>>>>>> ded2d17 (POO refactor)
 vector_store/
 vectordb/
 db/

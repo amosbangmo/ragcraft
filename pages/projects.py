@@ -1,20 +1,21 @@
-import os
 import streamlit as st
 from src.core.session import get_user_id
+from src.app.ragcraft_app import RAGCraftApp
+
+app = RAGCraftApp()
 
 user_id = get_user_id()
-base_path = f"data/user_{user_id}"
-os.makedirs(base_path, exist_ok=True)
-
 st.header("📁 Projects")
 
 project_name = st.text_input("Project name", key="project_name")
-created = st.button("Create")
 
-if created and project_name:
-    os.makedirs(f"{base_path}/{project_name}", exist_ok=True)
+if st.button("Create") and project_name:
+    app.create_project(user_id, project_name)
 
-projects = os.listdir(base_path)
-selected = st.selectbox("Select project", projects)
+projects = app.list_projects(user_id)
 
-st.session_state["project_id"] = selected
+if projects:
+    selected = st.selectbox("Select project", projects)
+    st.session_state["project_id"] = selected
+else:
+    st.info("No project yet.")

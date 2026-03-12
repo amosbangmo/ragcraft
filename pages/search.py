@@ -1,21 +1,38 @@
 import streamlit as st
-from src.vectorstore.faiss_store import load_vector_store
 
-st.title("Vector Search Test")
+from src.app.ragcraft_app import RAGCraftApp
+from src.core.session import get_user_id
 
-project = st.session_state.get("project_id")
-user_id = st.session_state.get("user_id")
+st.title("🔎 Vector Search")
 
-project_path = f"data/user_{user_id}/{project}"
+user_id = get_user_id()
+project_id = st.session_state.get("project_id")
 
-vector_store = load_vector_store(project_path)
+if not project_id:
+    st.warning("Please select a project first.")
+    st.stop()
+
+app = RAGCraftApp()
+
+project = app.get_project(user_id, project_id)
 
 query = st.text_input("Search query")
 
-if query and vector_store:
+if query:
 
-    docs = vector_store.similarity_search(query, k=3)
+    docs = app.vectorstore_service.similarity_search(project, query, k=3)
+
+    if not docs:
+        st.info("No documents found.")
+        st.stop()
+
+    st.markdown("### Retrieved Documents")
 
     for doc in docs:
+
+        file_name = doc.metadata.get("file_name", "unknown")
+        chunk_id = doc.metadata.get("chunk_id", "?")
+
+        st.markdown(f"**{file_name} — chunk {chunk_id}**")
         st.write(doc.page_content)
         st.write("---")
