@@ -60,23 +60,24 @@ def _flush_text_buffer(
 
 def _partition_pdf_with_fallback(file_path: str):
     """
-    Try the configured default PDF strategy first.
+    Primary PDF extraction mode:
+    - hi_res
+    - infer_table_structure=True
+    - extract_image_block_types=["Image"]
+    - extract_image_block_to_payload=True
+
     If OCR-related extraction fails and fallback is enabled,
     degrade to the configured fallback strategy.
     """
-    partition_kwargs = {
-        "filename": file_path,
-        "strategy": INGESTION_CONFIG.pdf_strategy_default,
-        "infer_table_structure": INGESTION_CONFIG.infer_table_structure,
-    }
-
-    if INGESTION_CONFIG.enable_pdf_image_extraction:
-        partition_kwargs["extract_image_block_types"] = ["Image"]
-        partition_kwargs["extract_image_block_to_payload"] = True
-
     try:
-        elements = partition_pdf(**partition_kwargs)
-        return elements, INGESTION_CONFIG.enable_pdf_image_extraction
+        elements = partition_pdf(
+            filename=file_path,
+            strategy="hi_res",
+            infer_table_structure=True,
+            extract_image_block_types=["Image"],
+            extract_image_block_to_payload=True,
+        )
+        return elements, True
     except Exception as exc:
         if not _is_tesseract_missing_error(exc):
             raise
@@ -90,13 +91,11 @@ def _partition_pdf_with_fallback(file_path: str):
                 ),
             ) from exc
 
-    fallback_kwargs = {
-        "filename": file_path,
-        "strategy": INGESTION_CONFIG.pdf_strategy_fallback,
-        "infer_table_structure": INGESTION_CONFIG.infer_table_structure,
-    }
-
-    elements = partition_pdf(**fallback_kwargs)
+    elements = partition_pdf(
+        filename=file_path,
+        strategy=INGESTION_CONFIG.pdf_strategy_fallback,
+        infer_table_structure=True,
+    )
     return elements, False
 
 
@@ -215,9 +214,16 @@ def _extract_pdf_elements(
     max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
     """
-    PDF extraction using Unstructured.
-    We only keep true detected Image blocks when enabled in config.
-    No full-page rendering, no document-wide image fallback.
+    PDF extraction using Unstructured in raw hi_res mode.
+
+    Primary extraction:
+    - strategy="hi_res"
+    - infer_table_structure=True
+    - extract_image_block_types=["Image"]
+    - extract_image_block_to_payload=True
+
+    Fallback:
+    - configured fallback strategy when OCR dependency is missing
     """
     if max_text_chars_per_asset is None:
         max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
