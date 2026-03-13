@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -30,6 +31,7 @@ def inject_document_table_styles():
         .rc-doc-meta {
             min-width: 0;
             flex: 1;
+            padding-bottom: 8px;
         }
 
         .rc-doc-name {
@@ -73,6 +75,20 @@ def inject_document_table_styles():
             color: #475569;
         }
 
+        .rc-doc-extra {
+            color: #64748b;
+            font-size: 0.84rem;
+            margin-top: 4px;
+            line-height: 1.5;
+        }
+
+        .rc-doc-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .rc-doc-empty {
             padding: 16px;
             border-radius: 14px;
@@ -104,7 +120,7 @@ def inject_document_table_styles():
             border-radius: 8px !important;
             color: #b91c1c !important;
         }
-        
+
         [class*="st-key-doc-card"] {
             background: #ffffff !important;
             border-radius: 16px !important;
@@ -142,6 +158,17 @@ def _format_file_size(size_bytes: int) -> str:
     return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
 
 
+def _format_ingested_at(created_at: str | None) -> str:
+    if not created_at:
+        return "Unknown"
+
+    try:
+        dt = datetime.fromisoformat(created_at)
+        return dt.strftime("%d %b %Y, %H:%M")
+    except Exception:
+        return created_at
+
+
 def render_document_table(
     *,
     documents: list[dict],
@@ -156,19 +183,24 @@ def render_document_table(
         )
         return None
 
-    selected_for_delete = None
+    selected_action = None
 
     for index, doc in enumerate(documents):
         doc_name = doc["name"]
         size_bytes = int(doc.get("size_bytes", 0))
         asset_count = int(doc.get("asset_count", 0))
+        text_count = int(doc.get("text_count", 0))
+        table_count = int(doc.get("table_count", 0))
+        image_count = int(doc.get("image_count", 0))
+        latest_ingested_at = _format_ingested_at(doc.get("latest_ingested_at"))
 
         badge, icon = _get_file_badge_and_icon(doc_name)
         size_label = _format_file_size(size_bytes)
         asset_label = f"{asset_count} asset" if asset_count == 1 else f"{asset_count} assets"
+        composition_label = f"{text_count} text / {table_count} table / {image_count} image"
 
         with st.container(border=True, key=f"doc-card-{key_prefix}-{index}"):
-            col_main, col_delete = st.columns([20, 1], vertical_alignment="center")
+            col_main, col_actions = st.columns([8, 4], vertical_alignment="center")
 
             with col_main:
                 st.markdown(
@@ -185,18 +217,39 @@ def render_document_table(
                                 <span class="rc-doc-badge rc-doc-badge-neutral">{size_label}</span>
                                 <span class="rc-doc-badge rc-doc-badge-neutral">{asset_label}</span>
                             </div>
+                            <div class="rc-doc-extra">
+                                Composition: {composition_label}<br/>
+                                Ingested: {latest_ingested_at}
+                            </div>
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-            with col_delete:
-                clicked = st.button(
-                    "🗑",
-                    key=f"{key_prefix}_delete_{index}_{doc_name}",
-                    help=f"Delete {doc_name}",
-                )
+            with col_actions:
+                action_cols = st.columns([1.3, 1.3, 0.8])
+
+                with action_cols[0]:
+                    inspect_clicked = st.button(
+                        "Inspect",
+                        key=f"{key_prefix}_inspect_{index}_{doc_name}",
+                        use_container_width=True,
+                    )
+
+                with action_cols[1]:
+                    reindex_clicked = st.button(
+                        "Reindex",
+                        key=f"{key_prefix}_reindex_{index}_{doc_name}",
+                        use_container_width=True,
+                    )
+
+                with action_cols[2]:
+                    delete_clicked = st.button(
+                        "🗑",
+                        key=f"{key_prefix}_delete_{index}_{doc_name}",
+                        help=f"Delete {doc_name}",
+                    )
 
                 st.markdown(
                     """
@@ -212,7 +265,13 @@ def render_document_table(
                     unsafe_allow_html=True,
                 )
 
-                if clicked:
-                    selected_for_delete = doc_name
+                if inspect_clicked:
+                    selected_action = {"action": "inspect", "doc_name": doc_name}
 
-    return selected_for_delete
+                if reindex_clicked:
+                    selected_action = {"action": "reindex", "doc_name": doc_name}
+
+                if delete_clicked:
+                    selected_action = {"action": "delete", "doc_name": doc_name}
+
+    return selected_action

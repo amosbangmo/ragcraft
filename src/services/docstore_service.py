@@ -60,6 +60,32 @@ class DocStoreService:
             source_file=source_file,
         )
 
+    def get_asset_stats_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> dict:
+        return self.docstore.get_asset_stats_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+    def list_assets_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> list[dict]:
+        return self.docstore.list_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
     def delete_assets_for_source_file(
         self,
         *,

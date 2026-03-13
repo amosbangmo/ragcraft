@@ -72,7 +72,14 @@ class RAGCraftApp:
 
         for doc_name in documents:
             file_path = project.path / doc_name
+
             asset_count = self.docstore_service.count_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+
+            asset_stats = self.docstore_service.get_asset_stats_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
                 source_file=doc_name,
@@ -84,10 +91,21 @@ class RAGCraftApp:
                     "path": str(file_path),
                     "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
                     "asset_count": asset_count,
+                    "text_count": asset_stats["text_count"],
+                    "table_count": asset_stats["table_count"],
+                    "image_count": asset_stats["image_count"],
+                    "latest_ingested_at": asset_stats["latest_ingested_at"],
                 }
             )
 
         return details
+
+    def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]:
+        return self.docstore_service.list_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
 
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
@@ -144,6 +162,42 @@ class RAGCraftApp:
             "existing_doc_ids": existing_doc_ids,
             "deleted_vectors": deleted_vectors,
             "deleted_assets": deleted_assets,
+        }
+
+    def reindex_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
+        project = self.get_project(user_id, project_id)
+        file_path = project.path / source_file
+
+        if not file_path.exists() or not file_path.is_file():
+            raise FileNotFoundError(f"Document not found on disk: {source_file}")
+
+        replacement_info = self.replace_document_assets(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+        summary_documents, raw_assets = self.ingestion_service.ingest_file_path(
+            project=project,
+            file_path=file_path,
+            source_file=source_file,
+        )
+
+        if not raw_assets:
+            raise ValueError(f"No raw assets generated for file: {source_file}")
+
+        for asset in raw_assets:
+            self.docstore_service.save_asset(**asset)
+
+        if summary_documents:
+            self.vectorstore_service.index_documents(project, summary_documents)
+
+        self.invalidate_project_chain(user_id, project_id)
+
+        return {
+            "source_file": source_file,
+            "raw_assets": raw_assets,
+            "replacement_info": replacement_info,
         }
 
     def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
