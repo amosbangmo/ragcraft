@@ -40,11 +40,9 @@ class AuthService:
 
         # Set session
         st.session_state[self.SESSION_AUTH_KEY] = True
-        st.session_state[self.SESSION_USER_KEY] = username
-        st.session_state[self.SESSION_USER_ID_KEY] = username
-        st.session_state[self.SESSION_DISPLAY_NAME_KEY] = user.get(
-            "display_name", username
-        )
+        st.session_state[self.SESSION_USER_KEY] =  user.get("username", username)
+        st.session_state[self.SESSION_USER_ID_KEY] = user.get("user_id", username)
+        st.session_state[self.SESSION_DISPLAY_NAME_KEY] = user.get("display_name", username)
 
         return True
 
