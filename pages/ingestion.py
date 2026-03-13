@@ -50,7 +50,15 @@ if uploaded_files:
             )
 
         except Exception as exc:
-            st.error(f"Failed to process {uploaded_file.name}: {exc}")
+            error_message = str(exc)
+
+            if "tesseract is not installed" in error_message.lower():
+                st.error(
+                    f"Failed to process {uploaded_file.name}: Tesseract OCR is required for hi_res PDF parsing. "
+                    "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
+                )
+            else:
+                st.error(f"Failed to process {uploaded_file.name}: {exc}")
 
 updated_documents = app.list_project_documents(user_id, project_id)
 

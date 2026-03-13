@@ -11,11 +11,6 @@ class IngestionService:
         self.summarizer = ElementSummarizer()
 
     def ingest_uploaded_file(self, project: Project, uploaded_file) -> tuple[list[Document], list[dict]]:
-        """
-        Returns:
-        - summary_documents: LangChain Documents to index in FAISS
-        - raw_assets: raw multimodal assets to persist in SQLite docstore
-        """
         project.path.mkdir(parents=True, exist_ok=True)
 
         file_path = save_uploaded_file(uploaded_file, str(project.path))
@@ -33,7 +28,11 @@ class IngestionService:
             raw_content = element["raw_content"]
             element_metadata = element.get("metadata", {})
 
-            summary = self.summarizer.summarize(content_type, raw_content)
+            summary = self.summarizer.summarize(
+                content_type=content_type,
+                raw_content=raw_content,
+                metadata=element_metadata,
+            )
 
             metadata = {
                 "doc_id": doc_id,
