@@ -7,21 +7,6 @@ def inject_document_table_styles():
     st.markdown(
         """
         <style>
-        .rc-doc-table {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .rc-doc-card {
-            background: #ffffff;
-            border: 1px solid rgba(15,23,42,0.08);
-            border-radius: 16px;
-            padding: 14px 16px;
-            box-shadow: 0 4px 14px rgba(15,23,42,0.04);
-        }
-
         .rc-doc-main {
             display: flex;
             align-items: center;
@@ -68,6 +53,7 @@ def inject_document_table_styles():
             gap: 8px;
             flex-wrap: wrap;
             margin-top: 8px;
+            margin-bottom: 6px;
         }
 
         .rc-doc-badge {
@@ -102,9 +88,12 @@ def inject_document_table_styles():
             color: #dc2626 !important;
             border: none !important;
             box-shadow: none !important;
-            padding: 0.20rem 0.30rem !important;
-            min-height: 28px !important;
-            width: 28px !important;
+            width: 30px !important;
+            height: 30px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             font-size: 0.95rem !important;
             line-height: 1 !important;
         }
@@ -114,6 +103,15 @@ def inject_document_table_styles():
             background: rgba(220,38,38,0.08) !important;
             border-radius: 8px !important;
             color: #b91c1c !important;
+        }
+        
+        [class*="st-key-doc-card"] {
+            background: #ffffff !important;
+            border-radius: 16px !important;
+        }
+
+        [class*="st-key-doc-card"] > div {
+            background: #ffffff !important;
         }
         </style>
         """,
@@ -160,8 +158,6 @@ def render_document_table(
 
     selected_for_delete = None
 
-    st.markdown('<div class="rc-doc-table">', unsafe_allow_html=True)
-
     for index, doc in enumerate(documents):
         doc_name = doc["name"]
         size_bytes = int(doc.get("size_bytes", 0))
@@ -171,17 +167,19 @@ def render_document_table(
         size_label = _format_file_size(size_bytes)
         asset_label = f"{asset_count} asset" if asset_count == 1 else f"{asset_count} assets"
 
-        col_main, col_delete = st.columns([18, 1], vertical_alignment="center")
+        with st.container(border=True, key=f"doc-card-{key_prefix}-{index}"):
+            col_main, col_delete = st.columns([20, 1], vertical_alignment="center")
 
-        with col_main:
-            st.markdown(
-                f"""
-                <div class="rc-doc-card">
+            with col_main:
+                st.markdown(
+                    f"""
                     <div class="rc-doc-main">
                         <div class="rc-doc-icon">{icon}</div>
                         <div class="rc-doc-meta">
                             <div class="rc-doc-name">{doc_name}</div>
-                            <div class="rc-doc-subtitle">Indexed and available in the current workspace</div>
+                            <div class="rc-doc-subtitle">
+                                Indexed and available in the current workspace
+                            </div>
                             <div class="rc-doc-badges">
                                 <span class="rc-doc-badge">{badge}</span>
                                 <span class="rc-doc-badge rc-doc-badge-neutral">{size_label}</span>
@@ -189,35 +187,32 @@ def render_document_table(
                             </div>
                         </div>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-        with col_delete:
-            clicked = st.button(
-                "🗑",
-                key=f"{key_prefix}_delete_{index}_{doc_name}",
-                help=f"Delete {doc_name}",
-            )
+            with col_delete:
+                clicked = st.button(
+                    "🗑",
+                    key=f"{key_prefix}_delete_{index}_{doc_name}",
+                    help=f"Delete {doc_name}",
+                )
 
-            st.markdown(
-                """
-                <script>
-                const buttons = window.parent.document.querySelectorAll('button');
-                buttons.forEach(btn => {
-                    if (btn.innerText.trim() === '🗑') {
-                        btn.classList.add('rc-delete-icon-btn');
-                    }
-                });
-                </script>
-                """,
-                unsafe_allow_html=True,
-            )
+                st.markdown(
+                    """
+                    <script>
+                    const buttons = window.parent.document.querySelectorAll('button');
+                    buttons.forEach(btn => {
+                        if (btn.innerText.trim() === '🗑') {
+                            btn.classList.add('rc-delete-icon-btn');
+                        }
+                    });
+                    </script>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-            if clicked:
-                selected_for_delete = doc_name
-
-    st.markdown("</div>", unsafe_allow_html=True)
+                if clicked:
+                    selected_for_delete = doc_name
 
     return selected_for_delete
