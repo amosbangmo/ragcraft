@@ -1,0 +1,237 @@
+import streamlit as st
+
+from src.ui.layout import apply_layout
+from src.ui.page_header import render_hero
+from src.auth.guards import require_authentication
+from src.auth.auth_service import AuthService
+
+
+apply_layout()
+require_authentication("pages/profile.py")
+
+auth_service = AuthService()
+user = auth_service.get_current_user_record()
+
+if user is None:
+    st.error("Unable to load user profile.")
+    st.stop()
+
+
+@st.dialog("Confirm profile update")
+def confirm_profile_update_dialog(user_id: str, username: str, display_name: str):
+    st.write("Are you sure you want to update your profile information?")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key="cancel_profile_update"):
+            st.rerun()
+
+    with col2:
+        if st.button("Confirm update", use_container_width=True, key="confirm_profile_update"):
+            success, message = auth_service.update_profile(
+                user_id=user_id,
+                new_username=username,
+                new_display_name=display_name,
+            )
+            if success:
+                st.session_state["profile_success_message"] = message
+            else:
+                st.session_state["profile_error_message"] = message
+            st.rerun()
+
+
+@st.dialog("Confirm password change")
+def confirm_password_change_dialog(
+    user_id: str,
+    current_password: str,
+    new_password: str,
+    confirm_new_password: str,
+):
+    st.write("Are you sure you want to change your password?")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key="cancel_password_change"):
+            st.rerun()
+
+    with col2:
+        if st.button("Confirm change", use_container_width=True, key="confirm_password_change"):
+            success, message = auth_service.change_password(
+                user_id=user_id,
+                current_password=current_password,
+                new_password=new_password,
+                confirm_new_password=confirm_new_password,
+            )
+            if success:
+                st.session_state["profile_success_message"] = message
+            else:
+                st.session_state["profile_error_message"] = message
+            st.rerun()
+
+
+@st.dialog("Confirm account deletion")
+def confirm_delete_account_dialog(user_id: str, current_password: str):
+    st.error("This action is irreversible. Your account and stored user data will be deleted.")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key="cancel_delete_account"):
+            st.rerun()
+
+    with col2:
+        if st.button("Delete account", use_container_width=True, key="confirm_delete_account"):
+            success, message = auth_service.delete_account(
+                user_id=user_id,
+                current_password=current_password,
+            )
+            if success:
+                st.success(message)
+                st.switch_page("pages/login.py")
+            else:
+                st.session_state["profile_error_message"] = message
+                st.rerun()
+
+
+render_hero(
+    badge="Profile",
+    title="Manage your account",
+    subtitle="Update your personal information, avatar and password.",
+)
+
+if "profile_success_message" in st.session_state:
+    st.success(st.session_state.pop("profile_success_message"))
+
+if "profile_error_message" in st.session_state:
+    st.error(st.session_state.pop("profile_error_message"))
+
+col_left, col_right = st.columns([1, 1])
+
+with col_left:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">Profile information</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-subtitle">Update your username and display name.</div>', unsafe_allow_html=True)
+
+    new_display_name = st.text_input(
+        "Display name",
+        value=user["display_name"],
+        key="profile_display_name",
+    )
+
+    new_username = st.text_input(
+        "Username",
+        value=user["username"],
+        key="profile_username",
+    )
+
+    if st.button("Save profile", use_container_width=True):
+        confirm_profile_update_dialog(
+            user_id=user["user_id"],
+            username=new_username,
+            display_name=new_display_name,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">Avatar / photo</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-subtitle">Upload a profile image for your account.</div>', unsafe_allow_html=True)
+
+    avatar_path = user["avatar_path"]
+    if avatar_path:
+        st.image(avatar_path, width=140)
+    else:
+        st.info("No avatar uploaded yet.")
+
+    avatar_file = st.file_uploader(
+        "Upload avatar",
+        type=["png", "jpg", "jpeg", "webp"],
+        key="profile_avatar_upload",
+    )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if st.button("Save avatar", use_container_width=True):
+            success, message = auth_service.save_avatar(user["user_id"], avatar_file)
+            if success:
+                st.session_state["profile_success_message"] = message
+            else:
+                st.session_state["profile_error_message"] = message
+            st.rerun()
+
+    with col_b:
+        if st.button("Remove avatar", use_container_width=True):
+            success, message = auth_service.remove_avatar(user["user_id"])
+            if success:
+                st.session_state["profile_success_message"] = message
+            else:
+                st.session_state["profile_error_message"] = message
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with col_right:
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">Change password</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-subtitle">Choose a strong password with at least 8 characters.</div>', unsafe_allow_html=True)
+
+    current_password = st.text_input(
+        "Current password",
+        type="password",
+        key="profile_current_password",
+    )
+
+    new_password = st.text_input(
+        "New password",
+        type="password",
+        key="profile_new_password",
+    )
+
+    confirm_new_password = st.text_input(
+        "Confirm new password",
+        type="password",
+        key="profile_confirm_new_password",
+    )
+
+    if st.button("Update password", use_container_width=True):
+        confirm_password_change_dialog(
+            user_id=user["user_id"],
+            current_password=current_password,
+            new_password=new_password,
+            confirm_new_password=confirm_new_password,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">Danger zone</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-subtitle">Delete your account after re-authentication.</div>', unsafe_allow_html=True)
+
+    delete_current_password = st.text_input(
+        "Current password to confirm deletion",
+        type="password",
+        key="profile_delete_password",
+    )
+
+    if st.button("Delete account", use_container_width=True):
+        confirm_delete_account_dialog(
+            user_id=user["user_id"],
+            current_password=delete_current_password,
+        )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Account details</div>', unsafe_allow_html=True)
+st.markdown('<div class="card-subtitle">Read-only information associated with your account.</div>', unsafe_allow_html=True)
+
+m1, m2, m3, m4 = st.columns(4)
+with m1:
+    st.metric("Username", user["username"])
+with m2:
+    st.metric("Display name", user["display_name"])
+with m3:
+    st.metric("User ID", user["user_id"])
+with m4:
+    st.metric("Created", auth_service.format_created_at(user["created_at"]))
+
+st.markdown("</div>", unsafe_allow_html=True)

@@ -29,6 +29,7 @@ def init_auth_db():
             user_id TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             display_name TEXT NOT NULL,
+            avatar_path TEXT,
             created_at TEXT NOT NULL
         )
         """

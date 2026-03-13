@@ -50,6 +50,7 @@ def render_navigation(hide_sidebar: bool = False):
         st.page_link("pages/chat.py", label="💬 Chat")
         st.page_link("pages/search.py", label="🔎 Search")
         st.page_link("pages/evaluation.py", label="📊 Evaluation")
+        st.page_link("pages/profile.py", label="👤 Profile")
 
         if auth_service.is_authenticated():
             if st.button("Logout", use_container_width=True):
