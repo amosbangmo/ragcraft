@@ -4,9 +4,6 @@ from src.ui.layout import apply_layout
 from src.auth.auth_service import AuthService
 
 
-# -------------------------
-# Page setup
-# -------------------------
 st.set_page_config(
     page_title="Login | RAGCraft",
     page_icon="🔐",
@@ -18,17 +15,10 @@ apply_layout(hide_sidebar=True)
 st.markdown(
     """
     <style>
-    /* Center the login page content */
     .block-container {
         max-width: 600px;
         margin: 0 auto;
         padding-top: 6vh;
-    }
-
-    .login-shell {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
     }
 
     .login-card {
@@ -73,13 +63,6 @@ st.markdown(
         margin-bottom: 1.25rem;
         line-height: 1.5;
     }
-
-    .login-footer {
-        text-align: center;
-        color: #64748b;
-        font-size: 0.85rem;
-        margin-top: 0.75rem;
-    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -87,94 +70,61 @@ st.markdown(
 
 auth_service = AuthService()
 
-# -------------------------
-# Already authenticated
-# -------------------------
 if auth_service.is_authenticated():
-    st.markdown(
-        """
-        <div class="login-shell">
-            <div class="login-card">
-                <div class="login-logo">🚀</div>
-                <div style="text-align:center;">
-                    <div class="login-badge">Authentication</div>
-                </div>
-                <h1 class="login-title">Welcome back</h1>
-                <p class="login-subtitle">
-                    You are already signed in to RAGCraft.
-                </p>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.success(f"Signed in as {auth_service.get_display_name()}")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Go to Projects", use_container_width=True):
-            st.switch_page("pages/projects.py")
-    with col2:
-        if st.button("Logout", use_container_width=True):
-            auth_service.logout()
-            st.rerun()
-
+    st.success(f"Already signed in as {auth_service.get_display_name()}.")
+    if st.button("Go to Projects", use_container_width=True):
+        st.switch_page("pages/projects.py")
     st.stop()
 
-# -------------------------
-# Login form
-# -------------------------
 st.markdown(
     """
-    <div class="login-shell">
-        <div class="login-card">
-            <div class="login-logo">🔐</div>
-            <div style="text-align:center;">
-                <div class="login-badge">Authentication</div>
-            </div>
-            <h1 class="login-title">Sign in to RAGCraft</h1>
-            <p class="login-subtitle">
-                Access your projects, ingested documents and conversational workspace.
-            </p>
-    """,
-    unsafe_allow_html=True,
-)
-
-username = st.text_input(
-    "Username",
-    placeholder="Enter your username",
-)
-
-password = st.text_input(
-    "Password",
-    type="password",
-    placeholder="Enter your password",
-)
-
-signin_clicked = st.button("Sign in", use_container_width=True)
-
-if signin_clicked:
-    if not username.strip() or not password.strip():
-        st.warning("Please enter both username and password.")
-    else:
-        success = auth_service.login(username.strip(), password)
-
-        if success:
-            st.success("Login successful.")
-            redirect_page = st.session_state.get("post_login_redirect", "pages/projects.py")
-            st.session_state.pop("post_login_redirect", None)
-            st.switch_page(redirect_page)
-        else:
-            st.error("Invalid username or password.")
-
-st.markdown(
-    """
-            <div class="login-footer">
-                Local authentication enabled for this workspace
-            </div>
+    <div class="login-card">
+        <div class="login-logo">🔐</div>
+        <div style="text-align:center;">
+            <div class="login-badge">Authentication</div>
         </div>
+        <h1 class="login-title">Welcome to RAGCraft</h1>
+        <p class="login-subtitle">
+            Sign in or create an account to manage your projects and documents.
+        </p>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+tab_login, tab_signup = st.tabs(["Sign in", "Create account"])
+
+with tab_login:
+    username = st.text_input("Username", key="login_username")
+    password = st.text_input("Password", type="password", key="login_password")
+
+    if st.button("Sign in", use_container_width=True):
+        success, message = auth_service.login(username, password)
+
+        if success:
+            st.success(message)
+            redirect_page = st.session_state.get("post_login_redirect", "pages/projects.py")
+            st.session_state.pop("post_login_redirect", None)
+            st.switch_page(redirect_page)
+        else:
+            st.error(message)
+
+with tab_signup:
+    display_name = st.text_input("Display name", key="signup_display_name")
+    username = st.text_input("Username", key="signup_username")
+    password = st.text_input("Password", type="password", key="signup_password")
+    confirm_password = st.text_input("Confirm password", type="password", key="signup_confirm_password")
+
+    if st.button("Create account", use_container_width=True):
+        success, message = auth_service.register(
+            username=username,
+            password=password,
+            confirm_password=confirm_password,
+            display_name=display_name,
+        )
+
+        if success:
+            st.success(message)
+            st.switch_page("pages/projects.py")
+        else:
+            st.error(message)

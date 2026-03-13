@@ -6,15 +6,6 @@ from src.auth.auth_service import AuthService
 
 
 def render_navigation(hide_sidebar: bool = False):
-    """
-    Render the main navigation sidebar.
-
-    Parameters
-    ----------
-    hide_sidebar : bool
-        If True, hide the sidebar completely (used for login page).
-    """
-
     if hide_sidebar:
         st.markdown(
             """
@@ -44,7 +35,6 @@ def render_navigation(hide_sidebar: bool = False):
     projects = app.list_projects(user_id)
 
     with st.sidebar:
-
         st.markdown('<div class="nav-title">🚀 RAGCraft</div>', unsafe_allow_html=True)
         st.markdown('<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True)
 
@@ -54,6 +44,7 @@ def render_navigation(hide_sidebar: bool = False):
             st.caption("Not signed in")
 
         st.page_link("streamlit_app.py", label="🏠 Home")
+        st.page_link("pages/login.py", label="🔐 Login")
         st.page_link("pages/projects.py", label="📁 Projects")
         st.page_link("pages/ingestion.py", label="📄 Ingestion")
         st.page_link("pages/chat.py", label="💬 Chat")
@@ -68,7 +59,6 @@ def render_navigation(hide_sidebar: bool = False):
         st.markdown("---")
 
         st.markdown('<div class="sidebar-project-box">', unsafe_allow_html=True)
-
         st.caption("Current project")
 
         if project_id:
@@ -77,7 +67,6 @@ def render_navigation(hide_sidebar: bool = False):
             st.info("No project selected")
 
         st.caption("Available projects")
-
         st.markdown(
             f"""
             <div class="sidebar-metric">
@@ -86,5 +75,4 @@ def render_navigation(hide_sidebar: bool = False):
             """,
             unsafe_allow_html=True
         )
-
         st.markdown("</div>", unsafe_allow_html=True)
