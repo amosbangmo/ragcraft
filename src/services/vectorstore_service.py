@@ -7,6 +7,7 @@ from src.infrastructure.vectorstore.faiss_store import (
     create_or_update_vector_store,
     delete_documents_from_vector_store,
 )
+from src.core.exceptions import VectorStoreError
 
 
 class VectorStoreService:
@@ -16,40 +17,66 @@ class VectorStoreService:
     """
 
     def load(self, project: Project):
-        return load_vector_store(project.faiss_index_path)
+        try:
+            return load_vector_store(project.faiss_index_path)
+        except Exception as exc:
+            raise VectorStoreError(
+                f"Failed to load vector store for project '{project.project_id}': {exc}",
+                user_message="Unable to load the vector index for the selected project.",
+            ) from exc
 
     def index_documents(self, project: Project, chunks: list[Document]):
         if not chunks:
             return None
 
-        vector_store = create_or_update_vector_store(
-            chunks=chunks,
-            index_path=project.faiss_index_path,
-        )
+        try:
+            vector_store = create_or_update_vector_store(
+                chunks=chunks,
+                index_path=project.faiss_index_path,
+            )
 
-        if vector_store is not None:
-            save_vector_store(vector_store, project.faiss_index_path)
+            if vector_store is not None:
+                save_vector_store(vector_store, project.faiss_index_path)
 
-        return vector_store
+            return vector_store
+        except Exception as exc:
+            raise VectorStoreError(
+                f"Failed to index documents for project '{project.project_id}': {exc}",
+                user_message="Unable to update the FAISS index for this project.",
+            ) from exc
 
     def delete_documents(self, project: Project, doc_ids: list[str]):
         if not doc_ids:
             return None
 
-        vector_store = delete_documents_from_vector_store(
-            index_path=project.faiss_index_path,
-            doc_ids=doc_ids,
-        )
+        try:
+            vector_store = delete_documents_from_vector_store(
+                index_path=project.faiss_index_path,
+                doc_ids=doc_ids,
+            )
 
-        if vector_store is not None:
-            save_vector_store(vector_store, project.faiss_index_path)
+            if vector_store is not None:
+                save_vector_store(vector_store, project.faiss_index_path)
 
-        return vector_store
+            return vector_store
+        except Exception as exc:
+            raise VectorStoreError(
+                f"Failed to delete vectors for project '{project.project_id}': {exc}",
+                user_message="Unable to update the FAISS index while deleting document vectors.",
+            ) from exc
 
     def similarity_search(self, project: Project, query: str, k: int = 3):
-        vector_store = self.load(project)
+        try:
+            vector_store = self.load(project)
 
-        if vector_store is None:
-            return []
+            if vector_store is None:
+                return []
 
-        return vector_store.similarity_search(query, k=k)
+            return vector_store.similarity_search(query, k=k)
+        except VectorStoreError:
+            raise
+        except Exception as exc:
+            raise VectorStoreError(
+                f"Failed to perform similarity search for project '{project.project_id}': {exc}",
+                user_message="Unable to query the FAISS index for this project.",
+            ) from exc

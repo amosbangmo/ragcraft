@@ -13,6 +13,10 @@ def _render_image_asset(base64_content: str, title: str | None = None):
         st.warning("Unable to render image asset.")
 
 
+def _get_user_error_message(exc: Exception, default_message: str) -> str:
+    return getattr(exc, "user_message", default_message)
+
+
 @st.dialog("Delete document")
 def confirm_delete_document_dialog(
     app,
@@ -21,6 +25,7 @@ def confirm_delete_document_dialog(
     project_id: str,
     doc_name: str,
     success_message_key: str,
+    error_message_key: str,
 ):
     st.warning(
         "This will remove the file from disk, delete its SQLite raw assets, "
@@ -43,16 +48,23 @@ def confirm_delete_document_dialog(
             use_container_width=True,
             key=f"confirm_delete_{project_id}_{doc_name}_{success_message_key}",
         ):
-            result = app.delete_project_document(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=doc_name,
-            )
-            st.session_state[success_message_key] = (
-                f"{doc_name}: file deleted={result['file_deleted']}, "
-                f"SQLite assets removed={result['deleted_assets']}, "
-                f"FAISS vectors removed={result['deleted_vectors']}."
-            )
+            try:
+                result = app.delete_project_document(
+                    user_id=user_id,
+                    project_id=project_id,
+                    source_file=doc_name,
+                )
+                st.session_state[success_message_key] = (
+                    f"{doc_name}: file deleted={result['file_deleted']}, "
+                    f"SQLite assets removed={result['deleted_assets']}, "
+                    f"FAISS vectors removed={result['deleted_vectors']}."
+                )
+            except Exception as exc:
+                st.session_state[error_message_key] = _get_user_error_message(
+                    exc,
+                    f"Failed to delete '{doc_name}'.",
+                )
+
             st.rerun()
 
 
@@ -108,7 +120,10 @@ def confirm_reindex_document_dialog(
                     f"generated {len(assets)} multimodal asset(s) {type_counts}."
                 )
             except Exception as exc:
-                st.session_state[error_message_key] = f"Failed to reindex {doc_name}: {exc}"
+                st.session_state[error_message_key] = _get_user_error_message(
+                    exc,
+                    f"Failed to reindex '{doc_name}'.",
+                )
 
             st.rerun()
 
@@ -121,11 +136,15 @@ def inspect_document_dialog(
     project_id: str,
     doc_name: str,
 ):
-    assets = app.get_document_assets(
-        user_id=user_id,
-        project_id=project_id,
-        source_file=doc_name,
-    )
+    try:
+        assets = app.get_document_assets(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=doc_name,
+        )
+    except Exception as exc:
+        st.error(_get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
+        return
 
     st.markdown(f"### {doc_name}")
     st.caption("Review the indexed assets currently stored for this document.")
@@ -207,6 +226,8 @@ def handle_document_action(
     if not doc_name:
         return
 
+    resolved_error_key = error_message_key or "document_action_error_message"
+
     if action == "delete":
         confirm_delete_document_dialog(
             app,
@@ -214,6 +235,7 @@ def handle_document_action(
             project_id=project_id,
             doc_name=doc_name,
             success_message_key=success_message_key,
+            error_message_key=resolved_error_key,
         )
         return
 
@@ -224,7 +246,7 @@ def handle_document_action(
             project_id=project_id,
             doc_name=doc_name,
             success_message_key=success_message_key,
-            error_message_key=error_message_key or "document_action_error_message",
+            error_message_key=resolved_error_key,
         )
         return
 

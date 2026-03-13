@@ -6,10 +6,19 @@ from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.source_citations import render_source_citations
 from src.auth.guards import require_authentication
+from src.core.exceptions import (
+    LLMServiceError,
+    VectorStoreError,
+    DocStoreError,
+)
 
 
 require_authentication("pages/chat.py")
 apply_layout()
+
+
+def _get_user_error_message(exc: Exception, default_message: str) -> str:
+    return getattr(exc, "user_message", default_message)
 
 
 def render_chat_history(messages):
@@ -117,8 +126,11 @@ if not project_id:
     st.stop()
 
 if header["refresh_clicked"]:
-    app.invalidate_project_chain(user_id, project_id)
-    st.success("Project retrieval cache cleared.")
+    try:
+        app.invalidate_project_chain(user_id, project_id)
+        st.success("Project retrieval cache cleared.")
+    except Exception as exc:
+        st.error(_get_user_error_message(exc, "Unable to refresh the retrieval cache."))
 
 project = app.get_project(user_id, project_id)
 documents = app.list_project_documents(user_id, project_id)
@@ -145,25 +157,35 @@ with st.chat_message("user"):
     st.markdown(question)
 
 with st.chat_message("assistant"):
-    with st.spinner("Thinking..."):
-        messages = app.chat_service.get_messages()
-        chat_history = build_chat_history(messages)
+    try:
+        with st.spinner("Thinking..."):
+            messages = app.chat_service.get_messages()
+            chat_history = build_chat_history(messages)
 
-        response = app.ask_question(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            chat_history=chat_history,
-        )
+            response = app.ask_question(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                chat_history=chat_history,
+            )
 
-    if response is None:
-        st.warning("No answer available.")
-        st.stop()
+        if response is None:
+            st.warning("No answer available.")
+            st.stop()
 
-    st.markdown(response.answer)
-    st.markdown(f"**Confidence:** {response.confidence}")
+        st.markdown(response.answer)
+        st.markdown(f"**Confidence:** {response.confidence}")
 
-    render_source_citations(response.citations)
-    render_raw_assets(response.raw_assets)
+        render_source_citations(getattr(response, "citations", []))
+        render_raw_assets(response.raw_assets)
 
-    app.chat_service.add_assistant_message(response.answer)
+        app.chat_service.add_assistant_message(response.answer)
+
+    except VectorStoreError as exc:
+        st.error(_get_user_error_message(exc, "Unable to query the FAISS index for this question."))
+    except DocStoreError as exc:
+        st.error(_get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite."))
+    except LLMServiceError as exc:
+        st.error(_get_user_error_message(exc, "The language model failed while generating the answer."))
+    except Exception as exc:
+        st.error(_get_user_error_message(exc, f"Unexpected error while answering the question: {exc}"))

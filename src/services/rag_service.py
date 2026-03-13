@@ -5,6 +5,7 @@ from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
+from src.core.exceptions import LLMServiceError
 
 
 MAX_RECALL_SUMMARIES = 15
@@ -308,7 +309,14 @@ Instructions:
             raw_context=raw_context,
         )
 
-        response = LLM.invoke(prompt)
+        try:
+            response = LLM.invoke(prompt)
+        except Exception as exc:
+            raise LLMServiceError(
+                f"Failed to generate answer for project '{project.project_id}': {exc}",
+                user_message="The language model failed while generating the answer.",
+            ) from exc
+
         answer = getattr(response, "content", str(response)).strip()
 
         confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
