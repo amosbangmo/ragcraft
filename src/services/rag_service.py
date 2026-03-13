@@ -4,9 +4,11 @@ from src.domain.rag_response import RAGResponse
 from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.docstore_service import DocStoreService
+from src.services.reranking_service import RerankingService
 
 
-MAX_RETRIEVED_SUMMARIES = 6
+MAX_RECALL_SUMMARIES = 15
+MAX_RERANKED_ASSETS = 5
 MAX_TEXT_CHARS_PER_ASSET = 4000
 MAX_TABLE_CHARS_PER_ASSET = 4000
 
@@ -14,10 +16,10 @@ MAX_TABLE_CHARS_PER_ASSET = 4000
 class RAGService:
     """
     Multi-step RAG service:
-    1. retrieve summary documents from FAISS
-    2. rehydrate raw assets from SQLite using doc_id
-    3. build a custom multimodal prompt
-    4. answer from raw assets only
+    1. large recall retrieval from FAISS over summary documents
+    2. raw asset rehydration from SQLite using doc_id
+    3. strict reranking over the rehydrated raw assets
+    4. final prompt built only from the top reranked assets
     """
 
     def __init__(
@@ -25,10 +27,12 @@ class RAGService:
         vectorstore_service: VectorStoreService,
         evaluation_service: EvaluationService,
         docstore_service: DocStoreService,
+        reranking_service: RerankingService,
     ):
         self.vectorstore_service = vectorstore_service
         self.evaluation_service = evaluation_service
         self.docstore_service = docstore_service
+        self.reranking_service = reranking_service
 
     def build_chain(self, project: Project):
         """
@@ -50,6 +54,16 @@ class RAGService:
 
         return ordered_doc_ids
 
+    def _select_summary_docs_by_doc_ids(self, summary_docs: list, doc_ids: list[str]) -> list:
+        docs_by_id = {}
+
+        for doc in summary_docs:
+            doc_id = doc.metadata.get("doc_id")
+            if doc_id and doc_id not in docs_by_id:
+                docs_by_id[doc_id] = doc
+
+        return [docs_by_id[doc_id] for doc_id in doc_ids if doc_id in docs_by_id]
+
     def _build_source_reference(self, asset: dict, index: int) -> dict:
         content_type = asset.get("content_type", "unknown")
         source_file = asset.get("source_file", "unknown")
@@ -63,6 +77,7 @@ class RAGService:
         image_title = metadata.get("image_title")
         start_element_index = metadata.get("start_element_index")
         end_element_index = metadata.get("end_element_index")
+        rerank_score = metadata.get("rerank_score")
 
         page_label = None
         if page_number:
@@ -113,6 +128,7 @@ class RAGService:
             "display_label": " — ".join(display_parts),
             "inline_label": "".join(structured_labels),
             "metadata": metadata,
+            "rerank_score": rerank_score,
         }
 
     def _format_raw_asset_for_prompt(self, asset: dict, source_reference: dict) -> str:
@@ -168,6 +184,7 @@ Raw table text:
                 "element_category": metadata.get("element_category"),
                 "embedded_path": metadata.get("embedded_path"),
                 "image_title": metadata.get("image_title"),
+                "rerank_score": metadata.get("rerank_score"),
             }
 
             return f"""Asset {source_reference["source_number"]}
@@ -226,7 +243,10 @@ Raw multimodal context:
 
 Instructions:
 - Use only the provided raw context.
-- The summary retrieval layer was used only to find relevant assets.
+- Retrieval happened in two stages:
+  1. large recall retrieval over summary documents
+  2. strict reranking over rehydrated raw assets
+- Only the final reranked assets are included in the context.
 - If the answer is not supported by the raw context, say you don't know.
 - Be precise and concise.
 - Every factual claim grounded in a source should include its citation label.
@@ -244,29 +264,44 @@ Instructions:
         if chat_history is None:
             chat_history = []
 
-        summary_docs = self.vectorstore_service.similarity_search(
+        recalled_summary_docs = self.vectorstore_service.similarity_search(
             project,
             question,
-            k=MAX_RETRIEVED_SUMMARIES,
+            k=MAX_RECALL_SUMMARIES,
         )
 
-        if not summary_docs:
+        if not recalled_summary_docs:
             return None
 
-        doc_ids = self._deduplicate_doc_ids(summary_docs)
-        if not doc_ids:
+        recalled_doc_ids = self._deduplicate_doc_ids(recalled_summary_docs)
+        if not recalled_doc_ids:
             return None
 
-        raw_assets = self.docstore_service.get_assets_by_doc_ids(doc_ids)
-        if not raw_assets:
+        recalled_raw_assets = self.docstore_service.get_assets_by_doc_ids(recalled_doc_ids)
+        if not recalled_raw_assets:
             return None
+
+        reranked_raw_assets = self.reranking_service.rerank(
+            query=question,
+            raw_assets=recalled_raw_assets,
+            top_k=MAX_RERANKED_ASSETS,
+        )
+
+        if not reranked_raw_assets:
+            return None
+
+        selected_doc_ids = [asset.get("doc_id") for asset in reranked_raw_assets if asset.get("doc_id")]
+        selected_summary_docs = self._select_summary_docs_by_doc_ids(
+            recalled_summary_docs,
+            selected_doc_ids,
+        )
 
         source_references = [
             self._build_source_reference(asset, index)
-            for index, asset in enumerate(raw_assets, start=1)
+            for index, asset in enumerate(reranked_raw_assets, start=1)
         ]
 
-        raw_context = self._build_raw_context(raw_assets, source_references)
+        raw_context = self._build_raw_context(reranked_raw_assets, source_references)
         prompt = self._build_prompt(
             question=question,
             chat_history=chat_history,
@@ -276,13 +311,14 @@ Instructions:
         response = LLM.invoke(prompt)
         answer = getattr(response, "content", str(response)).strip()
 
-        confidence = self.evaluation_service.compute_confidence(summary_docs)
+        confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
+        confidence = self.evaluation_service.compute_confidence(confidence_docs)
 
         return RAGResponse(
             question=question,
             answer=answer,
-            source_documents=summary_docs,
-            raw_assets=raw_assets,
+            source_documents=selected_summary_docs,
+            raw_assets=reranked_raw_assets,
             citations=source_references,
             confidence=confidence,
         )

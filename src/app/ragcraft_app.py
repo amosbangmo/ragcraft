@@ -6,6 +6,7 @@ from src.services.evaluation_service import EvaluationService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
+from src.services.reranking_service import RerankingService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -25,6 +26,7 @@ class RAGCraftApp:
         self.evaluation_service = EvaluationService()
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()
+        self.reranking_service = RerankingService()
 
         self._rag_service = None
 
@@ -35,6 +37,7 @@ class RAGCraftApp:
                 vectorstore_service=self.vectorstore_service,
                 evaluation_service=self.evaluation_service,
                 docstore_service=self.docstore_service,
+                reranking_service=self.reranking_service,
             )
 
         return self._rag_service
@@ -72,7 +75,6 @@ class RAGCraftApp:
 
         for doc_name in documents:
             file_path = project.path / doc_name
-
             asset_count = self.docstore_service.count_assets_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
