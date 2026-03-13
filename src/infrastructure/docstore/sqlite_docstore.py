@@ -21,18 +21,25 @@ class SQLiteDocStore:
         conn.execute(
             """
             INSERT INTO rag_assets (
-                doc_id, user_id, project_id, source_file,
-                content_type, raw_content, summary, metadata_json, created_at
+                doc_id,
+                user_id,
+                project_id,
+                source_file,
+                content_type,
+                raw_content,
+                summary,
+                metadata_json,
+                created_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(doc_id) DO UPDATE SET
-                user_id=excluded.user_id,
-                project_id=excluded.project_id,
-                source_file=excluded.source_file,
-                content_type=excluded.content_type,
-                raw_content=excluded.raw_content,
-                summary=excluded.summary,
-                metadata_json=excluded.metadata_json
+                user_id = excluded.user_id,
+                project_id = excluded.project_id,
+                source_file = excluded.source_file,
+                content_type = excluded.content_type,
+                raw_content = excluded.raw_content,
+                summary = excluded.summary,
+                metadata_json = excluded.metadata_json
             """,
             (
                 doc_id,
@@ -53,8 +60,15 @@ class SQLiteDocStore:
         conn = get_connection()
         row = conn.execute(
             """
-            SELECT doc_id, user_id, project_id, source_file,
-                   content_type, raw_content, summary, metadata_json
+            SELECT
+                doc_id,
+                user_id,
+                project_id,
+                source_file,
+                content_type,
+                raw_content,
+                summary,
+                metadata_json
             FROM rag_assets
             WHERE doc_id = ?
             """,
@@ -77,9 +91,42 @@ class SQLiteDocStore:
         }
 
     def get_assets_by_doc_ids(self, doc_ids: list[str]) -> list[dict]:
-        assets = []
-        for doc_id in doc_ids:
-            asset = self.get_asset_by_doc_id(doc_id)
-            if asset:
-                assets.append(asset)
-        return assets
+        assets_by_id = {}
+
+        if not doc_ids:
+            return []
+
+        conn = get_connection()
+        placeholders = ",".join(["?"] * len(doc_ids))
+
+        rows = conn.execute(
+            f"""
+            SELECT
+                doc_id,
+                user_id,
+                project_id,
+                source_file,
+                content_type,
+                raw_content,
+                summary,
+                metadata_json
+            FROM rag_assets
+            WHERE doc_id IN ({placeholders})
+            """,
+            doc_ids,
+        ).fetchall()
+        conn.close()
+
+        for row in rows:
+            assets_by_id[row["doc_id"]] = {
+                "doc_id": row["doc_id"],
+                "user_id": row["user_id"],
+                "project_id": row["project_id"],
+                "source_file": row["source_file"],
+                "content_type": row["content_type"],
+                "raw_content": row["raw_content"],
+                "summary": row["summary"],
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+            }
+
+        return [assets_by_id[doc_id] for doc_id in doc_ids if doc_id in assets_by_id]

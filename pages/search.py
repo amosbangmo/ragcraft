@@ -12,7 +12,7 @@ apply_layout()
 header = render_page_header(
     badge="Search",
     title="Inspect vector retrieval",
-    subtitle="Debug retrieval quality by querying the active vector store directly.",
+    subtitle="Debug summary retrieval from FAISS before raw asset rehydration.",
     selector_label="Project for search",
 )
 
@@ -31,7 +31,7 @@ if query:
     docs = app.vectorstore_service.similarity_search(project, query, k=5)
 
     if not docs:
-        st.info("No documents found.")
+        st.info("No summaries found.")
         st.stop()
 
     st.metric("Retrieved summaries", len(docs))

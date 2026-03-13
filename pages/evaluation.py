@@ -17,11 +17,14 @@ def render_eval_raw_assets(raw_assets):
         source_file = asset.get("source_file", "unknown")
         content_type = asset.get("content_type", "unknown")
         raw_content = asset.get("raw_content", "")
+        doc_id = asset.get("doc_id", "?")
+        metadata = asset.get("metadata", {}) or {}
 
-        with st.expander(f"Raw source {i} — {source_file} / {content_type}"):
+        with st.expander(f"Raw source {i} — {source_file} / {content_type} / {doc_id}"):
+            st.caption(f"Metadata: {metadata}")
+
             if content_type == "image":
-                st.caption("Image stored as base64 in SQLite.")
-                st.code(raw_content[:1000] + ("..." if len(raw_content) > 1000 else ""))
+                st.info("Image asset stored as base64 in SQLite. Raw payload hidden in UI for readability.")
             else:
                 st.write(raw_content)
 
@@ -29,7 +32,7 @@ def render_eval_raw_assets(raw_assets):
 header = render_page_header(
     badge="Evaluation",
     title="Test answer quality",
-    subtitle="Run evaluation queries and inspect confidence and retrieved evidence.",
+    subtitle="Run evaluation queries and inspect the raw evidence used to generate the answer.",
     selector_label="Project for evaluation",
 )
 
@@ -67,6 +70,9 @@ if st.button("Run evaluation", use_container_width=True) and question:
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Raw evidence used</div>', unsafe_allow_html=True)
-    st.markdown('<div class="card-subtitle">Review the raw text, tables, or images used to support the answer.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="card-subtitle">Review the raw text, tables, and visual assets selected after summary retrieval.</div>',
+        unsafe_allow_html=True,
+    )
     render_eval_raw_assets(response.raw_assets)
     st.markdown("</div>", unsafe_allow_html=True)

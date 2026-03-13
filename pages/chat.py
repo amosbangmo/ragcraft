@@ -22,14 +22,17 @@ def render_raw_assets(raw_assets):
     st.markdown("### Raw sources used")
 
     for i, asset in enumerate(raw_assets, start=1):
-        content_type = asset.get("content_type", "unknown")
         source_file = asset.get("source_file", "unknown")
+        content_type = asset.get("content_type", "unknown")
         raw_content = asset.get("raw_content", "")
+        doc_id = asset.get("doc_id", "?")
+        metadata = asset.get("metadata", {}) or {}
 
-        with st.expander(f"[{i}] {source_file} — {content_type}"):
+        with st.expander(f"[{i}] {source_file} — {content_type} — doc_id {doc_id}"):
+            st.caption(f"Metadata: {metadata}")
+
             if content_type == "image":
-                st.caption("Image stored as base64 in SQLite docstore.")
-                st.code(raw_content[:1000] + ("..." if len(raw_content) > 1000 else ""))
+                st.info("Image asset stored as base64 in SQLite. Raw payload hidden in UI for readability.")
             else:
                 st.write(raw_content)
 
@@ -42,7 +45,7 @@ def build_chat_history(messages, max_messages: int = 6):
 header = render_page_header(
     badge="Chat",
     title="Talk to your documents",
-    subtitle="Ask questions, inspect citations and refresh the project chain when needed.",
+    subtitle="Ask questions, inspect raw evidence, and refresh the project retrieval state when needed.",
     selector_label="Project for chat",
     show_project_selector=True,
     show_refresh_button=True,
@@ -57,7 +60,7 @@ if not project_id:
 
 if header["refresh_clicked"]:
     app.invalidate_project_chain(user_id, project_id)
-    st.success("Project chain cache cleared.")
+    st.success("Project retrieval cache cleared.")
 
 project = app.get_project(user_id, project_id)
 documents = app.list_project_documents(user_id, project_id)
