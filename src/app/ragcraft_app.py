@@ -64,15 +64,40 @@ class RAGCraftApp:
 
         return sorted(documents)
 
+    def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
+        project = self.get_project(user_id, project_id)
+        documents = self.list_project_documents(user_id, project_id)
+
+        details = []
+
+        for doc_name in documents:
+            file_path = project.path / doc_name
+            asset_count = self.docstore_service.count_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+
+            details.append(
+                {
+                    "name": doc_name,
+                    "path": str(file_path),
+                    "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
+                    "asset_count": asset_count,
+                }
+            )
+
+        return details
+
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
         Return a cached RAG chain for the given project,
         or build and cache it if missing.
         """
         project = self.get_project(user_id, project_id)
-        project_id = project.project_id
+        project_key = project.project_id
 
-        cached_chain = get_cached_chain(project_id)
+        cached_chain = get_cached_chain(project_key)
 
         if cached_chain is not None:
             return cached_chain
@@ -80,7 +105,7 @@ class RAGCraftApp:
         chain = self.rag_service.build_chain(project)
 
         if chain is not None:
-            set_cached_chain(project_id, chain)
+            set_cached_chain(project_key, chain)
 
         return chain
 
@@ -121,6 +146,43 @@ class RAGCraftApp:
             "deleted_assets": deleted_assets,
         }
 
+    def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
+        project = self.get_project(user_id, project_id)
+        file_path = project.path / source_file
+
+        existing_doc_ids = self.docstore_service.get_doc_ids_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+        deleted_vectors = 0
+        deleted_assets = 0
+        file_deleted = False
+
+        if existing_doc_ids:
+            self.vectorstore_service.delete_documents(project, existing_doc_ids)
+            deleted_vectors = len(existing_doc_ids)
+
+            deleted_assets = self.docstore_service.delete_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=source_file,
+            )
+
+        if file_path.exists() and file_path.is_file():
+            file_path.unlink()
+            file_deleted = True
+
+        self.invalidate_project_chain(user_id, project_id)
+
+        return {
+            "source_file": source_file,
+            "file_deleted": file_deleted,
+            "deleted_vectors": deleted_vectors,
+            "deleted_assets": deleted_assets,
+        }
+
     def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
         project = self.get_project(user_id, project_id)
 
@@ -144,7 +206,6 @@ class RAGCraftApp:
         if summary_documents:
             self.vectorstore_service.index_documents(project, summary_documents)
 
-        # Important: the index changed, so the chain must be rebuilt
         self.invalidate_project_chain(user_id, project_id)
 
         return {

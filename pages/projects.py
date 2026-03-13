@@ -3,6 +3,7 @@ import streamlit as st
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_hero
 from src.ui.project_selector import render_project_selector
+from src.ui.document_table import render_document_table
 from src.auth.guards import require_authentication
 from src.core.session import get_user_id
 from src.core.app_state import get_app
@@ -10,6 +11,35 @@ from src.core.app_state import get_app
 
 require_authentication("pages/projects.py")
 apply_layout()
+
+
+@st.dialog("Delete document")
+def confirm_delete_document_dialog(app, user_id: str, project_id: str, doc_name: str):
+    st.warning(
+        "This will remove the file from disk, delete its SQLite raw assets, "
+        "remove its FAISS vectors, and refresh the project cache."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key=f"cancel_projects_delete_{project_id}_{doc_name}"):
+            st.rerun()
+
+    with col2:
+        if st.button("Delete", use_container_width=True, key=f"confirm_projects_delete_{project_id}_{doc_name}"):
+            result = app.delete_project_document(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+            st.session_state["projects_success_message"] = (
+                f"{doc_name}: file deleted={result['file_deleted']}, "
+                f"SQLite assets removed={result['deleted_assets']}, "
+                f"FAISS vectors removed={result['deleted_vectors']}."
+            )
+            st.rerun()
+
 
 render_hero(
     badge="Projects",
@@ -19,6 +49,9 @@ render_hero(
 
 app = get_app()
 user_id = get_user_id()
+
+if "projects_success_message" in st.session_state:
+    st.success(st.session_state.pop("projects_success_message"))
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Create a new project</div>', unsafe_allow_html=True)
@@ -71,7 +104,7 @@ if not projects:
     st.stop()
 
 for project_id in projects:
-    documents = app.list_project_documents(user_id, project_id)
+    documents = app.get_project_document_details(user_id, project_id)
     is_current = project_id == st.session_state.get("project_id")
 
     with st.expander(
@@ -89,11 +122,12 @@ for project_id in projects:
             if is_current:
                 st.caption("This is the current active project.")
 
-        if documents:
-            st.markdown("**Ingested documents**")
-            for doc_name in documents:
-                st.markdown(f"- {doc_name}")
-        else:
-            st.caption("No document ingested yet.")
+        selected_doc_to_delete = render_document_table(
+            documents=documents,
+            key_prefix=f"projects_{project_id}",
+        )
+
+        if selected_doc_to_delete:
+            confirm_delete_document_dialog(app, user_id, project_id, selected_doc_to_delete)
 
 st.markdown("</div>", unsafe_allow_html=True)

@@ -2,11 +2,40 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.document_table import render_document_table
 from src.auth.guards import require_authentication
 
 
 require_authentication("pages/ingestion.py")
 apply_layout()
+
+
+@st.dialog("Delete document")
+def confirm_delete_document_dialog(app, user_id: str, project_id: str, doc_name: str):
+    st.warning(
+        "This will remove the file from disk, delete its SQLite raw assets, "
+        "remove its FAISS vectors, and refresh the project cache."
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key=f"cancel_delete_{doc_name}"):
+            st.rerun()
+
+    with col2:
+        if st.button("Delete", use_container_width=True, key=f"confirm_delete_{doc_name}"):
+            result = app.delete_project_document(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+            st.session_state["ingestion_success_message"] = (
+                f"{doc_name}: file deleted={result['file_deleted']}, "
+                f"SQLite assets removed={result['deleted_assets']}, "
+                f"FAISS vectors removed={result['deleted_vectors']}."
+            )
+            st.rerun()
 
 
 header = render_page_header(
@@ -22,6 +51,9 @@ project_id = header["project_id"]
 
 if not project_id:
     st.stop()
+
+if "ingestion_success_message" in st.session_state:
+    st.success(st.session_state.pop("ingestion_success_message"))
 
 documents = app.list_project_documents(user_id, project_id)
 
@@ -73,16 +105,21 @@ if uploaded_files:
             else:
                 st.error(f"Failed to process {uploaded_file.name}: {exc}")
 
-updated_documents = app.list_project_documents(user_id, project_id)
+updated_documents = app.get_project_document_details(user_id, project_id)
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Documents in current project</div>', unsafe_allow_html=True)
-st.markdown('<div class="card-subtitle">These files are currently available in the active workspace.</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card-subtitle">Review and manage files already indexed in this workspace.</div>',
+    unsafe_allow_html=True,
+)
 
-if updated_documents:
-    for doc_name in updated_documents:
-        st.markdown(f"- {doc_name}")
-else:
-    st.caption("No document ingested yet.")
+selected_doc_to_delete = render_document_table(
+    documents=updated_documents,
+    key_prefix=f"ingestion_{project_id}",
+)
+
+if selected_doc_to_delete:
+    confirm_delete_document_dialog(app, user_id, project_id, selected_doc_to_delete)
 
 st.markdown("</div>", unsafe_allow_html=True)
