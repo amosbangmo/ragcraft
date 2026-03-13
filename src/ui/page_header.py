@@ -50,40 +50,31 @@ def render_page_header(
         badge=badge,
     )
 
-    project_id = None
     refresh_clicked = False
+    project_id = st.session_state.get("project_id")
 
     if show_project_selector and show_refresh_button:
-
-        # Show refresh button only if a project exists
-        if project_id:
-            col_left, col_right = st.columns([3, 1])
-            with col_left:
-                project_id = render_project_selector(
-                    selector_label,
-                    show_create_button=show_create_button_when_empty,
-                )            
-            with col_right:
-                st.write("")
-                st.write("")
-                refresh_clicked = st.button(
-                    refresh_button_label,
-                    use_container_width=True,
-                )
-        else:
+        col_left, col_right = st.columns([3, 1])
+        with col_left:
             project_id = render_project_selector(
                 selector_label,
                 show_create_button=show_create_button_when_empty,
-            )   
-    elif show_project_selector:
+            )
+        with col_right:
+            st.write("")
+            st.write("")
+            refresh_clicked = st.button(
+                refresh_button_label,
+                use_container_width=True,
+            )
 
+    elif show_project_selector:
         project_id = render_project_selector(
             selector_label,
             show_create_button=show_create_button_when_empty,
         )
 
     elif show_refresh_button:
-
         refresh_clicked = st.button(
             refresh_button_label,
             use_container_width=True,

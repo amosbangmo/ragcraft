@@ -12,7 +12,7 @@ apply_layout()
 header = render_page_header(
     badge="Ingestion",
     title="Add documents to a project",
-    subtitle="Upload PDF, DOCX or PPTX files and turn them into searchable chunks.",
+    subtitle="Upload PDF, DOCX or PPTX files and turn them into searchable multimodal assets.",
     selector_label="Project for ingestion",
 )
 
@@ -35,9 +35,22 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     for uploaded_file in uploaded_files:
-        with st.spinner(f"Processing {uploaded_file.name}..."):
-            chunks = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
-            st.success(f"{uploaded_file.name}: {len(chunks)} chunks created")
+        try:
+            with st.spinner(f"Processing {uploaded_file.name}..."):
+                assets = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+
+            type_counts: dict[str, int] = {}
+            for asset in assets:
+                asset_type = asset["content_type"]
+                type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
+
+            st.success(
+                f"{uploaded_file.name}: {len(assets)} multimodal asset(s) processed "
+                f"({type_counts})"
+            )
+
+        except Exception as exc:
+            st.error(f"Failed to process {uploaded_file.name}: {exc}")
 
 updated_documents = app.list_project_documents(user_id, project_id)
 

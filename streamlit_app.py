@@ -1,12 +1,6 @@
 import streamlit as st
-
 from src.ui.layout import apply_layout
 from src.auth.guards import require_authentication
-
-
-require_authentication("streamlit_app.py")
-apply_layout()
-
 
 st.set_page_config(
     page_title="RAGCraft",
@@ -14,6 +8,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+require_authentication("streamlit_app.py")
+apply_layout()
 
 
 st.markdown(

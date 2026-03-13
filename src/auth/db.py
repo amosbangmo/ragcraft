@@ -35,5 +35,36 @@ def init_auth_db():
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS rag_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            doc_id TEXT NOT NULL UNIQUE,
+            user_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            content_type TEXT NOT NULL,
+            raw_content TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            metadata_json TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_rag_assets_project
+        ON rag_assets(user_id, project_id)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_rag_assets_doc_id
+        ON rag_assets(doc_id)
+        """
+    )
+
     conn.commit()
     conn.close()

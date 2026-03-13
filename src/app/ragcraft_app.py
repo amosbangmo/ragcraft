@@ -4,6 +4,7 @@ from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
+from src.services.docstore_service import DocStoreService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -12,26 +13,30 @@ from src.core.chain_state import (
     invalidate_all_project_chains,
 )
 
+from src.auth.db import init_auth_db
+
 
 class RAGCraftApp:
 
     def __init__(self):
+        init_auth_db()
 
         self.project_service = ProjectService()
         self.ingestion_service = IngestionService()
         self.vectorstore_service = VectorStoreService()
         self.evaluation_service = EvaluationService()
         self.chat_service = ChatService()
+        self.docstore_service = DocStoreService()
 
         self._rag_service = None
 
     @property
     def rag_service(self):
-
         if self._rag_service is None:
             self._rag_service = RAGService(
                 vectorstore_service=self.vectorstore_service,
                 evaluation_service=self.evaluation_service,
+                docstore_service=self.docstore_service,
             )
 
         return self._rag_service
@@ -66,7 +71,6 @@ class RAGCraftApp:
         Return a cached RAG chain for the given project,
         or build and cache it if missing.
         """
-
         project = self.get_project(user_id, project_id)
         project_id = project.project_id
 
@@ -90,23 +94,27 @@ class RAGCraftApp:
         invalidate_all_project_chains()
 
     def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
-
         project = self.get_project(user_id, project_id)
 
-        chunks = self.ingestion_service.ingest_uploaded_file(
+        summary_documents, raw_assets = self.ingestion_service.ingest_uploaded_file(
             project,
-            uploaded_file
+            uploaded_file,
         )
 
-        self.vectorstore_service.index_documents(project, chunks)
+        if not raw_assets:
+            raise ValueError(f"No raw assets generated for file: {uploaded_file.name}")
+
+        for asset in raw_assets:
+            self.docstore_service.save_asset(**asset)
+
+        if summary_documents:
+            self.vectorstore_service.index_documents(project, summary_documents)
 
         # Important: the index changed, so the chain must be rebuilt
         self.invalidate_project_chain(user_id, project_id)
 
-        return chunks
+        return raw_assets
 
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
-
         project = self.get_project(user_id, project_id)
-
         return self.rag_service.ask(project, question, chat_history)

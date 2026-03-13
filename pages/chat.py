@@ -15,26 +15,23 @@ def render_chat_history(messages):
             st.markdown(msg["content"])
 
 
-def render_sources(docs):
-    if not docs:
+def render_raw_assets(raw_assets):
+    if not raw_assets:
         return
 
-    st.markdown("### Sources")
+    st.markdown("### Raw sources used")
 
-    for i, doc in enumerate(docs):
-        file_name = doc.metadata.get("file_name", "unknown")
-        chunk_id = doc.metadata.get("chunk_id", "?")
-        preview = doc.page_content[:220]
+    for i, asset in enumerate(raw_assets, start=1):
+        content_type = asset.get("content_type", "unknown")
+        source_file = asset.get("source_file", "unknown")
+        raw_content = asset.get("raw_content", "")
 
-        st.markdown(
-            f"""
-            <div class="source-card">
-                <div class="source-title">[{i+1}] {file_name} — chunk {chunk_id}</div>
-                <div class="source-preview">{preview}...</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.expander(f"[{i}] {source_file} — {content_type}"):
+            if content_type == "image":
+                st.caption("Image stored as base64 in SQLite docstore.")
+                st.code(raw_content[:1000] + ("..." if len(raw_content) > 1000 else ""))
+            else:
+                st.write(raw_content)
 
 
 def build_chat_history(messages, max_messages: int = 6):
@@ -65,7 +62,6 @@ if header["refresh_clicked"]:
 project = app.get_project(user_id, project_id)
 documents = app.list_project_documents(user_id, project_id)
 
-st.columns(2)
 col1, col2 = st.columns(2)
 with col1:
     st.metric("Current project", project.project_id)
@@ -106,6 +102,6 @@ with st.chat_message("assistant"):
     st.markdown(response.answer)
     st.markdown(f"**Confidence:** {response.confidence}")
 
-    render_sources(response.source_documents)
+    render_raw_assets(response.raw_assets)
 
     app.chat_service.add_assistant_message(response.answer)

@@ -24,10 +24,13 @@ faiss-cpu
 python-dotenv
 tiktoken
 tqdm
+<<<<<<< HEAD
 uuid
 <<<<<<< HEAD
 >>>>>>> 0b09946 (Document ingestion with Unstructured and Langchain)
 =======
+=======
+>>>>>>> 19b51ec (PR1: setting up multi-modal RAG)
 rank-bm25
 <<<<<<< HEAD
 sentence-transformers

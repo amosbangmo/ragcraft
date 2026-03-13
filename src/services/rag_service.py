@@ -2,6 +2,7 @@ from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
+from src.services.docstore_service import DocStoreService
 from src.infrastructure.rag.retriever import get_retriever
 from src.infrastructure.rag.qa_chain import build_qa_chain, ask_question
 
@@ -11,9 +12,11 @@ class RAGService:
         self,
         vectorstore_service: VectorStoreService,
         evaluation_service: EvaluationService,
+        docstore_service: DocStoreService,
     ):
         self.vectorstore_service = vectorstore_service
         self.evaluation_service = evaluation_service
+        self.docstore_service = docstore_service
 
     def build_chain(self, project: Project):
         vector_store = self.vectorstore_service.load(project)
@@ -29,7 +32,6 @@ class RAGService:
         return build_qa_chain(retriever)
 
     def ask_with_chain(self, chain, question: str, chat_history=None) -> RAGResponse | None:
-
         if chain is None:
             return None
 
@@ -47,6 +49,7 @@ class RAGService:
             question=question,
             answer=answer,
             source_documents=docs,
+            raw_assets=[],
             confidence=confidence,
         )
 

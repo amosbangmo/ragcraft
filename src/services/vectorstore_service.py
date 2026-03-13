@@ -18,11 +18,17 @@ class VectorStoreService:
         return load_vector_store(project.faiss_index_path)
 
     def index_documents(self, project: Project, chunks: list[Document]):
+        if not chunks:
+            return None
+
         vector_store = create_or_update_vector_store(
             chunks=chunks,
             index_path=project.faiss_index_path,
         )
-        save_vector_store(vector_store, project.faiss_index_path)
+
+        if vector_store is not None:
+            save_vector_store(vector_store, project.faiss_index_path)
+
         return vector_store
 
     def similarity_search(self, project: Project, query: str, k: int = 3):

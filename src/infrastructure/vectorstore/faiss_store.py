@@ -32,21 +32,24 @@ def save_vector_store(vector_store, index_path: Path):
 def create_or_update_vector_store(chunks: List[Document], index_path: Path):
     """
     Create or update a FAISS vector store while avoiding duplicate
-    document indexing based on document_id metadata.
+    indexing based on doc_id metadata.
     """
+    if not chunks:
+        return None
+
     vector_store = load_vector_store(index_path)
 
     if vector_store is None:
         return FAISS.from_documents(chunks, EMBEDDINGS)
 
     existing_doc_ids = {
-        doc.metadata.get("document_id")
+        doc.metadata.get("doc_id")
         for doc in vector_store.docstore._dict.values()
     }
 
     new_chunks = [
         chunk for chunk in chunks
-        if chunk.metadata.get("document_id") not in existing_doc_ids
+        if chunk.metadata.get("doc_id") not in existing_doc_ids
     ]
 
     if new_chunks:

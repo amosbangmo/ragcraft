@@ -28,24 +28,24 @@ project = app.get_project(user_id, project_id)
 query = st.text_input("Search query", placeholder="Type a semantic query...")
 
 if query:
-    docs = app.vectorstore_service.similarity_search(project, query, k=3)
+    docs = app.vectorstore_service.similarity_search(project, query, k=5)
 
     if not docs:
         st.info("No documents found.")
         st.stop()
 
-    st.metric("Retrieved chunks", len(docs))
-
-    st.markdown("### Retrieved Documents")
+    st.metric("Retrieved summaries", len(docs))
+    st.markdown("### Retrieved summaries from FAISS")
 
     for doc in docs:
         file_name = doc.metadata.get("file_name", "unknown")
-        chunk_id = doc.metadata.get("chunk_id", "?")
+        doc_id = doc.metadata.get("doc_id", "?")
+        content_type = doc.metadata.get("content_type", "unknown")
 
         st.markdown(
             f"""
             <div class="source-card">
-                <div class="source-title">{file_name} — chunk {chunk_id}</div>
+                <div class="source-title">{file_name} — {content_type} — doc_id {doc_id}</div>
                 <div class="source-preview">{doc.page_content}</div>
             </div>
             """,

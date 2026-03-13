@@ -18,6 +18,6 @@ class ProjectService:
         if not user_id:
             return []
 
-        user_path = self.data_root / f"user_{user_id}"
-        user_path.mkdir(parents=True, exist_ok=True)
-        return sorted([p.name for p in user_path.iterdir() if p.is_dir()])
+        user_projects_path = self.data_root / "users" / user_id / "projects"
+        user_projects_path.mkdir(parents=True, exist_ok=True)
+        return sorted([p.name for p in user_projects_path.iterdir() if p.is_dir()])

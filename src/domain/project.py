@@ -10,11 +10,15 @@ class Project:
 
     @property
     def user_path(self) -> Path:
-        return self.data_root / f"user_{self.user_id}"
+        return self.data_root / "users" / self.user_id
+
+    @property
+    def projects_path(self) -> Path:
+        return self.user_path / "projects"
 
     @property
     def path(self) -> Path:
-        return self.user_path / self.project_id
+        return self.projects_path / self.project_id
 
     @property
     def faiss_index_path(self) -> Path:
