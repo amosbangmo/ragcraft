@@ -1,6 +1,11 @@
 import streamlit as st
 
 from src.ui.layout import apply_layout
+from src.auth.guards import require_authentication
+
+
+apply_layout()
+require_authentication("streamlit_app.py")
 
 
 st.set_page_config(
@@ -10,7 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-apply_layout()
 
 st.markdown(
     """

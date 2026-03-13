@@ -2,9 +2,12 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.auth.guards import require_authentication
 
 
 apply_layout()
+require_authentication("pages/search.py")
+
 
 header = render_page_header(
     badge="Search",

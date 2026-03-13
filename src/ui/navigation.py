@@ -2,17 +2,56 @@ import streamlit as st
 
 from src.core.session import get_user_id
 from src.core.app_state import get_app
+from src.auth.auth_service import AuthService
 
 
-def render_navigation():
+def render_navigation(hide_sidebar: bool = False):
+    """
+    Render the main navigation sidebar.
+
+    Parameters
+    ----------
+    hide_sidebar : bool
+        If True, hide the sidebar completely (used for login page).
+    """
+
+    if hide_sidebar:
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] {
+                display: none;
+            }
+
+            [data-testid="stSidebarNav"] {
+                display: none;
+            }
+
+            header {
+                visibility: hidden;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
     app = get_app()
+    auth_service = AuthService()
+
     user_id = get_user_id()
     project_id = st.session_state.get("project_id")
     projects = app.list_projects(user_id)
 
     with st.sidebar:
+
         st.markdown('<div class="nav-title">🚀 RAGCraft</div>', unsafe_allow_html=True)
         st.markdown('<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True)
+
+        if auth_service.is_authenticated():
+            st.caption(f"Signed in as **{auth_service.get_display_name()}**")
+        else:
+            st.caption("Not signed in")
 
         st.page_link("streamlit_app.py", label="🏠 Home")
         st.page_link("pages/projects.py", label="📁 Projects")
@@ -21,11 +60,17 @@ def render_navigation():
         st.page_link("pages/search.py", label="🔎 Search")
         st.page_link("pages/evaluation.py", label="📊 Evaluation")
 
+        if auth_service.is_authenticated():
+            if st.button("Logout", use_container_width=True):
+                auth_service.logout()
+                st.switch_page("pages/login.py")
+
         st.markdown("---")
 
         st.markdown('<div class="sidebar-project-box">', unsafe_allow_html=True)
 
         st.caption("Current project")
+
         if project_id:
             st.success(project_id)
         else:
@@ -41,4 +86,5 @@ def render_navigation():
             """,
             unsafe_allow_html=True
         )
+
         st.markdown("</div>", unsafe_allow_html=True)

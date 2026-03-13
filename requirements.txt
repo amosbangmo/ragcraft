@@ -29,5 +29,10 @@ uuid
 >>>>>>> 0b09946 (Document ingestion with Unstructured and Langchain)
 =======
 rank-bm25
+<<<<<<< HEAD
 sentence-transformers
 >>>>>>> fb0d8fd (enhancing the chat page)
+=======
+bcrypt
+sentence-transformers
+>>>>>>> 50b6b7e (Settings the authentication)

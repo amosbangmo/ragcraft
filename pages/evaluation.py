@@ -2,9 +2,11 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.auth.guards import require_authentication
 
 
 apply_layout()
+require_authentication("pages/evaluation.py")
 
 
 def render_eval_sources(docs):

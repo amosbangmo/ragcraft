@@ -2,12 +2,14 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_hero
+from src.ui.project_selector import render_project_selector
+from src.auth.guards import require_authentication
 from src.core.session import get_user_id
 from src.core.app_state import get_app
-from src.ui.project_selector import render_project_selector
 
 
 apply_layout()
+require_authentication("pages/projects.py")
 
 render_hero(
     badge="Projects",
