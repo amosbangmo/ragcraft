@@ -12,6 +12,8 @@ from src.auth.user_repository import UserRepository
 
 
 DATA_ROOT = Path(os.getenv("RAGCRAFT_DATA_PATH", "data"))
+MAX_AVATAR_SIZE_MB = 2
+ALLOWED_AVATAR_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 class AuthService:
@@ -40,6 +42,25 @@ class AuthService:
 
     def _get_user_root(self, user_id: str) -> Path:
         return DATA_ROOT / "users" / user_id
+
+    def _validate_avatar_file(self, uploaded_file) -> tuple[bool, str]:
+        if uploaded_file is None:
+            return False, "Please choose an image."
+
+        suffix = Path(uploaded_file.name).suffix.lower()
+        if suffix not in ALLOWED_AVATAR_EXTENSIONS:
+            return False, "Supported formats: PNG, JPG, JPEG, WEBP."
+
+        file_size = getattr(uploaded_file, "size", None)
+        if file_size is None:
+            uploaded_bytes = uploaded_file.getbuffer()
+            file_size = len(uploaded_bytes)
+
+        max_size_bytes = MAX_AVATAR_SIZE_MB * 1024 * 1024
+        if file_size > max_size_bytes:
+            return False, f"Image is too large. Maximum size is {MAX_AVATAR_SIZE_MB} MB."
+
+        return True, "Avatar file is valid."
 
     def register(
         self,
@@ -213,19 +234,16 @@ class AuthService:
         return True, "Password updated successfully."
 
     def save_avatar(self, user_id: str, uploaded_file) -> tuple[bool, str]:
-        if uploaded_file is None:
-            return False, "Please choose an image."
+        is_valid, message = self._validate_avatar_file(uploaded_file)
+        if not is_valid:
+            return False, message
 
         suffix = Path(uploaded_file.name).suffix.lower()
-        if suffix not in {".png", ".jpg", ".jpeg", ".webp"}:
-            return False, "Supported formats: PNG, JPG, JPEG, WEBP."
-
         avatar_dir = self._get_user_root(user_id) / "profile"
         avatar_dir.mkdir(parents=True, exist_ok=True)
 
         avatar_path = avatar_dir / f"avatar{suffix}"
 
-        # Remove older avatar variants
         for existing in avatar_dir.glob("avatar.*"):
             if existing != avatar_path:
                 existing.unlink(missing_ok=True)
@@ -278,10 +296,8 @@ class AuthService:
         if not verify_password(current_password, user["password_hash"]):
             return False, "Current password is incorrect."
 
-        # Delete DB record
         self.user_repository.delete_user(user_id)
 
-        # Delete user storage
         user_root = self._get_user_root(user_id)
         if user_root.exists():
             shutil.rmtree(user_root, ignore_errors=True)
@@ -289,3 +305,4 @@ class AuthService:
         self.logout()
 
         return True, "Your account has been deleted."
+    

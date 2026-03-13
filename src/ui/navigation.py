@@ -3,6 +3,7 @@ import streamlit as st
 from src.core.session import get_user_id
 from src.core.app_state import get_app
 from src.auth.auth_service import AuthService
+from src.ui.avatar import render_user_avatar
 
 
 def render_navigation(hide_sidebar: bool = False):
@@ -39,6 +40,11 @@ def render_navigation(hide_sidebar: bool = False):
         st.markdown('<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True)
 
         if auth_service.is_authenticated():
+            render_user_avatar(
+                avatar_path=auth_service.get_current_avatar_path(),
+                display_name=auth_service.get_display_name(),
+                size=88,
+            )
             st.caption(f"Signed in as **{auth_service.get_display_name()}**")
         else:
             st.caption("Not signed in")

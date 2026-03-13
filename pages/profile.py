@@ -1,5 +1,6 @@
 import streamlit as st
 
+from src.ui.avatar import render_user_avatar
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_hero
 from src.auth.guards import require_authentication
@@ -62,6 +63,25 @@ def confirm_password_change_dialog(
                 new_password=new_password,
                 confirm_new_password=confirm_new_password,
             )
+            if success:
+                st.session_state["profile_success_message"] = message
+            else:
+                st.session_state["profile_error_message"] = message
+            st.rerun()
+
+
+@st.dialog("Confirm avatar removal")
+def confirm_avatar_removal_dialog(user_id: str):
+    st.write("Are you sure you want to remove your avatar?")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("Cancel", use_container_width=True, key="cancel_avatar_removal"):
+            st.rerun()
+
+    with col2:
+        if st.button("Remove avatar", use_container_width=True, key="confirm_avatar_removal"):
+            success, message = auth_service.remove_avatar(user_id)
             if success:
                 st.session_state["profile_success_message"] = message
             else:
@@ -134,13 +154,13 @@ with col_left:
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Avatar / photo</div>', unsafe_allow_html=True)
-    st.markdown('<div class="card-subtitle">Upload a profile image for your account.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-subtitle">Upload a profile image (PNG, JPG, JPEG, WEBP, max 2 MB).</div>', unsafe_allow_html=True)
 
-    avatar_path = user["avatar_path"]
-    if avatar_path:
-        st.image(avatar_path, width=140)
-    else:
-        st.info("No avatar uploaded yet.")
+    render_user_avatar(
+        avatar_path=user["avatar_path"],
+        display_name=user["display_name"],
+        size=140,
+    )
 
     avatar_file = st.file_uploader(
         "Upload avatar",
@@ -160,12 +180,7 @@ with col_left:
 
     with col_b:
         if st.button("Remove avatar", use_container_width=True):
-            success, message = auth_service.remove_avatar(user["user_id"])
-            if success:
-                st.session_state["profile_success_message"] = message
-            else:
-                st.session_state["profile_error_message"] = message
-            st.rerun()
+            confirm_avatar_removal_dialog(user["user_id"])
 
     st.markdown("</div>", unsafe_allow_html=True)
 
