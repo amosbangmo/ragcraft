@@ -43,9 +43,12 @@ def render_navigation(hide_sidebar: bool = False):
             render_user_avatar(
                 avatar_path=auth_service.get_current_avatar_path(),
                 display_name=auth_service.get_display_name(),
-                size=88,
+                size=64,
             )
-            st.caption(f"Signed in as **{auth_service.get_display_name()}**")
+            st.markdown(
+                f'<div style="text-align:center;font-weight:600;margin-bottom:30px">{auth_service.get_display_name()}</div>',
+                unsafe_allow_html=True,
+            )            
         else:
             st.caption("Not signed in")
 
