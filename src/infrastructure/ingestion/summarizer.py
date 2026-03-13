@@ -1,5 +1,3 @@
-import json
-
 from src.core.config import LLM
 
 
@@ -58,18 +56,8 @@ TEXT:
 {trimmed_content}
 """
         elif content_type == "table":
-            try:
-                table_payload = json.loads(trimmed_content)
-            except Exception:
-                table_payload = {
-                    "title": None,
-                    "html": None,
-                    "text": trimmed_content,
-                }
-
-            table_title = table_payload.get("title")
-            table_html = table_payload.get("html")
-            table_text = table_payload.get("text") or ""
+            table_title = metadata.get("table_title")
+            table_text = metadata.get("table_text") or ""
 
             prompt = f"""
 You are generating a retrieval summary for a table.
@@ -85,7 +73,7 @@ TABLE TITLE:
 {table_title}
 
 TABLE HTML:
-{(table_html or "")[:3000]}
+{trimmed_content[:3000]}
 
 TABLE TEXT:
 {table_text[:3000]}

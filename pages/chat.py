@@ -1,5 +1,4 @@
 import base64
-import json
 
 import streamlit as st
 
@@ -30,21 +29,6 @@ def _render_base64_image(base64_content: str, title: str | None = None):
         st.image(image_bytes)
     except Exception:
         st.warning("Unable to render image asset.")
-
-
-def _parse_table_raw_content(raw_content: str) -> dict:
-    try:
-        payload = json.loads(raw_content)
-        if isinstance(payload, dict):
-            return payload
-    except Exception:
-        pass
-
-    return {
-        "title": None,
-        "html": None,
-        "text": raw_content,
-    }
 
 
 def render_raw_assets(raw_assets):
@@ -78,18 +62,11 @@ def render_raw_assets(raw_assets):
                 continue
 
             if content_type == "table":
-                table_payload = _parse_table_raw_content(raw_content)
-                parsed_table_title = table_payload.get("title")
-                table_html = table_payload.get("html")
-                table_text = table_payload.get("text")
+                if table_title:
+                    st.markdown(f"**{table_title}**")
 
-                if parsed_table_title:
-                    st.markdown(f"**{parsed_table_title}**")
-
-                if table_html:
-                    _render_html_table(table_html)
-                elif table_text:
-                    st.write(table_text)
+                if raw_content:
+                    _render_html_table(raw_content)
                 else:
                     st.caption("Empty table payload.")
                 continue

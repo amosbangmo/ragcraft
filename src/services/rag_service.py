@@ -1,5 +1,3 @@
-import json
-
 from src.core.config import LLM
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -64,18 +62,8 @@ Raw text:
 """
 
         if content_type == "table":
-            try:
-                table_payload = json.loads(raw_content)
-            except Exception:
-                table_payload = {
-                    "title": None,
-                    "html": None,
-                    "text": raw_content,
-                }
-
-            table_title = table_payload.get("title")
-            table_html = table_payload.get("html") or ""
-            table_text = table_payload.get("text") or ""
+            table_title = metadata.get("table_title")
+            table_text = metadata.get("table_text") or ""
 
             return f"""Asset {index}
 Type: table
@@ -87,7 +75,7 @@ Table title:
 {table_title}
 
 Raw table HTML:
-{table_html[:3000]}
+{raw_content[:3000]}
 
 Raw table text:
 {table_text[:3000]}

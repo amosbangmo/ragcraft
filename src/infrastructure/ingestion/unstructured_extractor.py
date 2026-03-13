@@ -1,4 +1,3 @@
-import json
 import uuid
 import zipfile
 from pathlib import Path
@@ -226,21 +225,17 @@ def _extract_pdf_elements(
             text_buffer_start_index = None
             current_text_chars = 0
 
-            if text:
-                table_title = _infer_table_title(elements, index)
-                table_html = getattr(metadata, "text_as_html", None)
+            table_html = getattr(metadata, "text_as_html", None)
+            raw_table_content = table_html or text
 
-                table_payload = {
-                    "title": table_title,
-                    "html": table_html,
-                    "text": text,
-                }
+            if raw_table_content:
+                table_title = _infer_table_title(elements, index)
 
                 extracted.append(
                     {
                         "doc_id": str(uuid.uuid4()),
                         "content_type": "table",
-                        "raw_content": json.dumps(table_payload, ensure_ascii=False),
+                        "raw_content": raw_table_content,
                         "metadata": {
                             "source_file": source_file,
                             "element_index": index,
@@ -248,6 +243,7 @@ def _extract_pdf_elements(
                             "page_number": getattr(metadata, "page_number", None),
                             "text_as_html": table_html,
                             "table_title": table_title,
+                            "table_text": text,
                             "image_block_extraction_enabled": image_block_extraction_enabled,
                         },
                     }
@@ -359,21 +355,17 @@ def _extract_docx_or_pptx_text_and_tables(
             text_buffer_start_index = None
             current_text_chars = 0
 
-            if text:
-                table_html = getattr(metadata, "text_as_html", None)
-                table_title = None
+            table_html = getattr(metadata, "text_as_html", None)
+            raw_table_content = table_html or text
 
-                table_payload = {
-                    "title": table_title,
-                    "html": table_html,
-                    "text": text,
-                }
+            if raw_table_content:
+                table_title = None
 
                 extracted.append(
                     {
                         "doc_id": str(uuid.uuid4()),
                         "content_type": "table",
-                        "raw_content": json.dumps(table_payload, ensure_ascii=False),
+                        "raw_content": raw_table_content,
                         "metadata": {
                             "source_file": source_file,
                             "element_index": index,
@@ -381,6 +373,7 @@ def _extract_docx_or_pptx_text_and_tables(
                             "page_number": getattr(metadata, "page_number", None),
                             "text_as_html": table_html,
                             "table_title": table_title,
+                            "table_text": text,
                         },
                     }
                 )
