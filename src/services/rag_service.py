@@ -12,6 +12,14 @@ MAX_TABLE_CHARS_PER_ASSET = 4000
 
 
 class RAGService:
+    """
+    Multi-step RAG service:
+    1. retrieve summary documents from FAISS
+    2. rehydrate raw assets from SQLite using doc_id
+    3. build a custom multimodal prompt
+    4. answer from raw assets only
+    """
+
     def __init__(
         self,
         vectorstore_service: VectorStoreService,
@@ -24,8 +32,8 @@ class RAGService:
 
     def build_chain(self, project: Project):
         """
-        Kept for compatibility with existing cache plumbing.
-        The answering flow no longer relies on a retrieval chain object.
+        Kept only for cache compatibility with the current app state design.
+        Returns the project vector store instead of a LangChain retrieval chain.
         """
         return self.vectorstore_service.load(project)
 

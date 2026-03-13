@@ -91,23 +91,23 @@ class RAGCraftApp:
 
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
-        Return a cached RAG chain for the given project,
-        or build and cache it if missing.
+        Legacy-compatible cache API.
+        The cached object is now the project vector store rather than a LangChain QA chain.
         """
         project = self.get_project(user_id, project_id)
         project_key = project.project_id
 
-        cached_chain = get_cached_chain(project_key)
+        cached_object = get_cached_chain(project_key)
 
-        if cached_chain is not None:
-            return cached_chain
+        if cached_object is not None:
+            return cached_object
 
-        chain = self.rag_service.build_chain(project)
+        cached_object = self.rag_service.build_chain(project)
 
-        if chain is not None:
-            set_cached_chain(project_key, chain)
+        if cached_object is not None:
+            set_cached_chain(project_key, cached_object)
 
-        return chain
+        return cached_object
 
     def invalidate_project_chain(self, user_id: str, project_id: str):
         project = self.get_project(user_id, project_id)
