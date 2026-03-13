@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.source_citations import render_source_citations
 from src.auth.guards import require_authentication
 
 
@@ -46,6 +47,10 @@ def render_raw_assets(raw_assets):
         table_title = metadata.get("table_title")
         image_title = metadata.get("image_title")
         page_number = metadata.get("page_number")
+        page_start = metadata.get("page_start")
+        page_end = metadata.get("page_end")
+        start_element_index = metadata.get("start_element_index")
+        end_element_index = metadata.get("end_element_index")
 
         title_parts = [f"[{i}] {source_file}"]
 
@@ -53,8 +58,20 @@ def render_raw_assets(raw_assets):
             title_parts.append(f"— {table_title}")
         elif content_type == "image" and image_title:
             title_parts.append(f"— {image_title}")
-        elif page_number:
+
+        if page_number is not None:
             title_parts.append(f"— page {page_number}")
+        elif page_start is not None and page_end is not None:
+            if page_start == page_end:
+                title_parts.append(f"— page {page_start}")
+            else:
+                title_parts.append(f"— pages {page_start}-{page_end}")
+
+        if content_type == "text" and start_element_index is not None and end_element_index is not None:
+            if start_element_index == end_element_index:
+                title_parts.append(f"— element {start_element_index}")
+            else:
+                title_parts.append(f"— elements {start_element_index}-{end_element_index}")
 
         with st.expander(" ".join(title_parts)):
             if content_type == "text":
@@ -146,6 +163,7 @@ with st.chat_message("assistant"):
     st.markdown(response.answer)
     st.markdown(f"**Confidence:** {response.confidence}")
 
+    render_source_citations(response.citations)
     render_raw_assets(response.raw_assets)
 
     app.chat_service.add_assistant_message(response.answer)

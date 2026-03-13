@@ -6,6 +6,7 @@ from typing import Any
 class RAGResponse:
     question: str
     answer: str
-    source_documents: list[Any] = field(default_factory=list)  # summaries retrieved from FAISS
-    raw_assets: list[Any] = field(default_factory=list)        # rehydrated raw assets from SQLite
+    source_documents: list[Any] = field(default_factory=list)
+    raw_assets: list[Any] = field(default_factory=list)
+    citations: list[Any] = field(default_factory=list)
     confidence: float = 0.0

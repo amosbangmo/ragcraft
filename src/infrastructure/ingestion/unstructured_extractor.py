@@ -28,6 +28,8 @@ def _flush_text_buffer(
     source_file: str,
     start_index: int,
     end_index: int,
+    page_start: int | None = None,
+    page_end: int | None = None,
 ):
     if not text_buffer:
         return
@@ -47,6 +49,8 @@ def _flush_text_buffer(
                 "element_category": "merged_text",
                 "start_element_index": start_index,
                 "end_element_index": end_index,
+                "page_start": page_start,
+                "page_end": page_end,
             },
         }
     )
@@ -203,12 +207,15 @@ def _extract_pdf_elements(
     extracted: list[dict] = []
     text_buffer: list[str] = []
     text_buffer_start_index: int | None = None
+    text_buffer_page_start: int | None = None
+    text_buffer_page_end: int | None = None
     current_text_chars = 0
 
     for index, element in enumerate(elements):
         category = getattr(element, "category", None)
         text = (getattr(element, "text", None) or "").strip()
         metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
 
         if category in TEXTUAL_CATEGORIES_TO_SKIP:
             continue
@@ -220,9 +227,13 @@ def _extract_pdf_elements(
                 source_file=source_file,
                 start_index=text_buffer_start_index or index,
                 end_index=index - 1,
+                page_start=text_buffer_page_start,
+                page_end=text_buffer_page_end,
             )
             text_buffer = []
             text_buffer_start_index = None
+            text_buffer_page_start = None
+            text_buffer_page_end = None
             current_text_chars = 0
 
             table_html = getattr(metadata, "text_as_html", None)
@@ -257,9 +268,13 @@ def _extract_pdf_elements(
                 source_file=source_file,
                 start_index=text_buffer_start_index or index,
                 end_index=index - 1,
+                page_start=text_buffer_page_start,
+                page_end=text_buffer_page_end,
             )
             text_buffer = []
             text_buffer_start_index = None
+            text_buffer_page_start = None
+            text_buffer_page_end = None
             current_text_chars = 0
 
             image_base64 = getattr(metadata, "image_base64", None)
@@ -289,6 +304,12 @@ def _extract_pdf_elements(
 
         if text_buffer_start_index is None:
             text_buffer_start_index = index
+            text_buffer_page_start = page_number
+
+        if page_number is not None:
+            if text_buffer_page_start is None:
+                text_buffer_page_start = page_number
+            text_buffer_page_end = page_number
 
         if current_text_chars + len(text) > max_text_chars_per_asset and text_buffer:
             _flush_text_buffer(
@@ -297,9 +318,13 @@ def _extract_pdf_elements(
                 source_file=source_file,
                 start_index=text_buffer_start_index,
                 end_index=index - 1,
+                page_start=text_buffer_page_start,
+                page_end=text_buffer_page_end,
             )
             text_buffer = [text]
             text_buffer_start_index = index
+            text_buffer_page_start = page_number
+            text_buffer_page_end = page_number
             current_text_chars = len(text)
         else:
             text_buffer.append(text)
@@ -311,6 +336,8 @@ def _extract_pdf_elements(
         source_file=source_file,
         start_index=text_buffer_start_index or 0,
         end_index=len(elements) - 1,
+        page_start=text_buffer_page_start,
+        page_end=text_buffer_page_end,
     )
 
     return extracted
@@ -333,12 +360,15 @@ def _extract_docx_or_pptx_text_and_tables(
     extracted: list[dict] = []
     text_buffer: list[str] = []
     text_buffer_start_index: int | None = None
+    text_buffer_page_start: int | None = None
+    text_buffer_page_end: int | None = None
     current_text_chars = 0
 
     for index, element in enumerate(elements):
         category = getattr(element, "category", None)
         text = (getattr(element, "text", None) or "").strip()
         metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
 
         if category in TEXTUAL_CATEGORIES_TO_SKIP:
             continue
@@ -350,9 +380,13 @@ def _extract_docx_or_pptx_text_and_tables(
                 source_file=source_file,
                 start_index=text_buffer_start_index or index,
                 end_index=index - 1,
+                page_start=text_buffer_page_start,
+                page_end=text_buffer_page_end,
             )
             text_buffer = []
             text_buffer_start_index = None
+            text_buffer_page_start = None
+            text_buffer_page_end = None
             current_text_chars = 0
 
             table_html = getattr(metadata, "text_as_html", None)
@@ -384,6 +418,12 @@ def _extract_docx_or_pptx_text_and_tables(
 
         if text_buffer_start_index is None:
             text_buffer_start_index = index
+            text_buffer_page_start = page_number
+
+        if page_number is not None:
+            if text_buffer_page_start is None:
+                text_buffer_page_start = page_number
+            text_buffer_page_end = page_number
 
         if current_text_chars + len(text) > max_text_chars_per_asset and text_buffer:
             _flush_text_buffer(
@@ -392,9 +432,13 @@ def _extract_docx_or_pptx_text_and_tables(
                 source_file=source_file,
                 start_index=text_buffer_start_index,
                 end_index=index - 1,
+                page_start=text_buffer_page_start,
+                page_end=text_buffer_page_end,
             )
             text_buffer = [text]
             text_buffer_start_index = index
+            text_buffer_page_start = page_number
+            text_buffer_page_end = page_number
             current_text_chars = len(text)
         else:
             text_buffer.append(text)
@@ -406,6 +450,8 @@ def _extract_docx_or_pptx_text_and_tables(
         source_file=source_file,
         start_index=text_buffer_start_index or 0,
         end_index=len(elements) - 1,
+        page_start=text_buffer_page_start,
+        page_end=text_buffer_page_end,
     )
 
     return extracted
