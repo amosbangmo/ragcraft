@@ -2,6 +2,7 @@ import uuid
 import zipfile
 from pathlib import Path
 
+from unstructured.chunking.title import chunk_by_title
 from unstructured.partition.docx import partition_docx
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.pptx import partition_pptx
@@ -24,38 +25,62 @@ def _is_tesseract_missing_error(exc: Exception) -> bool:
     return "tesseract is not installed" in message or "tesseractnotfounderror" in message
 
 
-def _flush_text_buffer(
-    extracted: list[dict],
-    text_buffer: list[str],
-    source_file: str,
-    start_index: int,
-    end_index: int,
-    page_start: int | None = None,
-    page_end: int | None = None,
-):
-    if not text_buffer:
+def _set_runtime_element_metadata(element, source_file: str, element_index: int) -> None:
+    """
+    Attach runtime-only metadata used to reconstruct chunk traceability
+    after chunk_by_title() grouping.
+    """
+    metadata = getattr(element, "metadata", None)
+
+    try:
+        setattr(element, "_rag_element_index", element_index)
+    except Exception:
+        pass
+
+    try:
+        setattr(element, "_rag_source_file", source_file)
+    except Exception:
+        pass
+
+    if metadata is None:
         return
 
-    raw_text = "\n\n".join(part for part in text_buffer if part.strip()).strip()
+    try:
+        setattr(metadata, "rag_element_index", element_index)
+    except Exception:
+        pass
 
-    if not raw_text:
-        return
+    try:
+        setattr(metadata, "rag_source_file", source_file)
+    except Exception:
+        pass
 
-    extracted.append(
-        {
-            "doc_id": str(uuid.uuid4()),
-            "content_type": "text",
-            "raw_content": raw_text,
-            "metadata": {
-                "source_file": source_file,
-                "element_category": "merged_text",
-                "start_element_index": start_index,
-                "end_element_index": end_index,
-                "page_start": page_start,
-                "page_end": page_end,
-            },
-        }
-    )
+
+def _get_runtime_element_index(element) -> int | None:
+    index = getattr(element, "_rag_element_index", None)
+    if index is not None:
+        return index
+
+    metadata = getattr(element, "metadata", None)
+    return getattr(metadata, "rag_element_index", None)
+
+
+def _get_page_number(element) -> int | None:
+    metadata = getattr(element, "metadata", None)
+    return getattr(metadata, "page_number", None)
+
+
+def _is_textual_element(element) -> bool:
+    category = getattr(element, "category", None)
+    text = (getattr(element, "text", None) or "").strip()
+
+    if category in TEXTUAL_CATEGORIES_TO_SKIP:
+        return False
+
+    if category in {"Table", "Image"}:
+        return False
+
+    return bool(text)
 
 
 def _partition_pdf_with_fallback(file_path: str):
@@ -208,13 +233,240 @@ def _infer_table_title(elements, table_index: int) -> str | None:
     return title or None
 
 
+def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
+    raw_text = (getattr(chunk, "text", None) or "").strip()
+    if not raw_text:
+        return None
+
+    chunk_metadata = getattr(chunk, "metadata", None)
+    orig_elements = getattr(chunk_metadata, "orig_elements", None) or []
+
+    element_indices: list[int] = []
+    page_numbers: list[int] = []
+    orig_categories: list[str] = []
+
+    for orig_element in orig_elements:
+        element_index = _get_runtime_element_index(orig_element)
+        if element_index is not None:
+            element_indices.append(element_index)
+
+        page_number = _get_page_number(orig_element)
+        if page_number is not None:
+            page_numbers.append(page_number)
+
+        category = getattr(orig_element, "category", None)
+        if category:
+            orig_categories.append(category)
+
+    start_index = min(element_indices) if element_indices else None
+    end_index = max(element_indices) if element_indices else None
+    page_start = min(page_numbers) if page_numbers else None
+    page_end = max(page_numbers) if page_numbers else None
+
+    return {
+        "doc_id": str(uuid.uuid4()),
+        "content_type": "text",
+        "raw_content": raw_text,
+        "metadata": {
+            "source_file": source_file,
+            "element_category": getattr(chunk, "category", "CompositeElement"),
+            "start_element_index": start_index,
+            "end_element_index": end_index,
+            "page_start": page_start,
+            "page_end": page_end,
+            "chunking_strategy": "by_title",
+            "orig_element_count": len(orig_elements),
+            "orig_element_categories": sorted(set(orig_categories)),
+            "chunk_char_count": len(raw_text),
+        },
+    }
+
+
+def _flush_text_run(
+    extracted: list[dict],
+    text_run: list,
+    source_file: str,
+) -> None:
+    if not text_run:
+        return
+
+    if not INGESTION_CONFIG.enable_text_chunking_by_title:
+        raw_text = "\n\n".join(
+            (getattr(element, "text", None) or "").strip()
+            for element in text_run
+            if (getattr(element, "text", None) or "").strip()
+        ).strip()
+
+        if not raw_text:
+            return
+
+        element_indices = [idx for idx in (_get_runtime_element_index(e) for e in text_run) if idx is not None]
+        page_numbers = [pn for pn in (_get_page_number(e) for e in text_run) if pn is not None]
+
+        extracted.append(
+            {
+                "doc_id": str(uuid.uuid4()),
+                "content_type": "text",
+                "raw_content": raw_text,
+                "metadata": {
+                    "source_file": source_file,
+                    "element_category": "merged_text",
+                    "start_element_index": min(element_indices) if element_indices else None,
+                    "end_element_index": max(element_indices) if element_indices else None,
+                    "page_start": min(page_numbers) if page_numbers else None,
+                    "page_end": max(page_numbers) if page_numbers else None,
+                    "chunking_strategy": "none",
+                    "orig_element_count": len(text_run),
+                    "chunk_char_count": len(raw_text),
+                },
+            }
+        )
+        return
+
+    chunks = chunk_by_title(
+        text_run,
+        max_characters=INGESTION_CONFIG.text_chunking_max_characters,
+        combine_text_under_n_chars=INGESTION_CONFIG.text_chunking_combine_text_under_n_chars,
+        new_after_n_chars=INGESTION_CONFIG.text_chunking_new_after_n_chars,
+        multipage_sections=INGESTION_CONFIG.text_chunking_multipage_sections,
+    )
+
+    for chunk in chunks:
+        asset = _build_text_asset_from_chunk(chunk, source_file)
+        if asset:
+            extracted.append(asset)
+
+
+def _append_table_asset(
+    extracted: list[dict],
+    elements: list,
+    element_index: int,
+    element,
+    source_file: str,
+    image_block_extraction_enabled: bool,
+) -> None:
+    metadata = getattr(element, "metadata", None)
+    text = (getattr(element, "text", None) or "").strip()
+
+    table_html = getattr(metadata, "text_as_html", None)
+    raw_table_content = table_html or text
+
+    if not raw_table_content:
+        return
+
+    extracted.append(
+        {
+            "doc_id": str(uuid.uuid4()),
+            "content_type": "table",
+            "raw_content": raw_table_content,
+            "metadata": {
+                "source_file": source_file,
+                "element_index": element_index,
+                "element_category": "Table",
+                "page_number": getattr(metadata, "page_number", None),
+                "text_as_html": table_html,
+                "table_title": _infer_table_title(elements, element_index),
+                "table_text": text,
+                "image_block_extraction_enabled": image_block_extraction_enabled,
+            },
+        }
+    )
+
+
+def _append_image_asset(
+    extracted: list[dict],
+    elements: list,
+    element_index: int,
+    element,
+    source_file: str,
+    image_block_extraction_enabled: bool,
+) -> None:
+    metadata = getattr(element, "metadata", None)
+    image_base64 = getattr(metadata, "image_base64", None)
+
+    if not image_base64:
+        return
+
+    extracted.append(
+        {
+            "doc_id": str(uuid.uuid4()),
+            "content_type": "image",
+            "raw_content": image_base64,
+            "metadata": {
+                "source_file": source_file,
+                "element_index": element_index,
+                "element_category": "Image",
+                "page_number": getattr(metadata, "page_number", None),
+                "image_mime_type": getattr(metadata, "image_mime_type", None),
+                "image_title": _infer_image_title(elements, element_index),
+                "image_block_extraction_enabled": image_block_extraction_enabled,
+            },
+        }
+    )
+
+
+def _extract_partitioned_elements(
+    elements: list,
+    source_file: str,
+    *,
+    image_block_extraction_enabled: bool,
+) -> list[dict]:
+    """
+    Build multimodal assets while only chunking textual runs.
+    Tables and images remain isolated and unchanged.
+    """
+    extracted: list[dict] = []
+    text_run: list = []
+
+    for index, element in enumerate(elements):
+        _set_runtime_element_metadata(element, source_file, index)
+
+        category = getattr(element, "category", None)
+
+        if category in TEXTUAL_CATEGORIES_TO_SKIP:
+            continue
+
+        if _is_textual_element(element):
+            text_run.append(element)
+            continue
+
+        _flush_text_run(extracted, text_run, source_file)
+        text_run = []
+
+        if category == "Table":
+            _append_table_asset(
+                extracted=extracted,
+                elements=elements,
+                element_index=index,
+                element=element,
+                source_file=source_file,
+                image_block_extraction_enabled=image_block_extraction_enabled,
+            )
+            continue
+
+        if category == "Image":
+            _append_image_asset(
+                extracted=extracted,
+                elements=elements,
+                element_index=index,
+                element=element,
+                source_file=source_file,
+                image_block_extraction_enabled=image_block_extraction_enabled,
+            )
+            continue
+
+    _flush_text_run(extracted, text_run, source_file)
+
+    return extracted
+
+
 def _extract_pdf_elements(
     file_path: str,
     source_file: str,
     max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
     """
-    PDF extraction using Unstructured in raw hi_res mode.
+    PDF extraction using Unstructured in raw hi_res mode, then text-only chunking.
 
     Primary extraction:
     - strategy="hi_res"
@@ -222,151 +474,17 @@ def _extract_pdf_elements(
     - extract_image_block_types=["Image"]
     - extract_image_block_to_payload=True
 
-    Fallback:
-    - configured fallback strategy when OCR dependency is missing
+    Then:
+    - only textual runs are chunked with chunk_by_title(...)
+    - tables and images are preserved as separate assets
     """
-    if max_text_chars_per_asset is None:
-        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
-
     elements, image_block_extraction_enabled = _partition_pdf_with_fallback(file_path)
 
-    extracted: list[dict] = []
-    text_buffer: list[str] = []
-    text_buffer_start_index: int | None = None
-    text_buffer_page_start: int | None = None
-    text_buffer_page_end: int | None = None
-    current_text_chars = 0
-
-    for index, element in enumerate(elements):
-        category = getattr(element, "category", None)
-        text = (getattr(element, "text", None) or "").strip()
-        metadata = getattr(element, "metadata", None)
-        page_number = getattr(metadata, "page_number", None)
-
-        if category in TEXTUAL_CATEGORIES_TO_SKIP:
-            continue
-
-        if category == "Table":
-            _flush_text_buffer(
-                extracted=extracted,
-                text_buffer=text_buffer,
-                source_file=source_file,
-                start_index=text_buffer_start_index or index,
-                end_index=index - 1,
-                page_start=text_buffer_page_start,
-                page_end=text_buffer_page_end,
-            )
-            text_buffer = []
-            text_buffer_start_index = None
-            text_buffer_page_start = None
-            text_buffer_page_end = None
-            current_text_chars = 0
-
-            table_html = getattr(metadata, "text_as_html", None)
-            raw_table_content = table_html or text
-
-            if raw_table_content:
-                table_title = _infer_table_title(elements, index)
-
-                extracted.append(
-                    {
-                        "doc_id": str(uuid.uuid4()),
-                        "content_type": "table",
-                        "raw_content": raw_table_content,
-                        "metadata": {
-                            "source_file": source_file,
-                            "element_index": index,
-                            "element_category": category,
-                            "page_number": getattr(metadata, "page_number", None),
-                            "text_as_html": table_html,
-                            "table_title": table_title,
-                            "table_text": text,
-                            "image_block_extraction_enabled": image_block_extraction_enabled,
-                        },
-                    }
-                )
-            continue
-
-        if category == "Image":
-            _flush_text_buffer(
-                extracted=extracted,
-                text_buffer=text_buffer,
-                source_file=source_file,
-                start_index=text_buffer_start_index or index,
-                end_index=index - 1,
-                page_start=text_buffer_page_start,
-                page_end=text_buffer_page_end,
-            )
-            text_buffer = []
-            text_buffer_start_index = None
-            text_buffer_page_start = None
-            text_buffer_page_end = None
-            current_text_chars = 0
-
-            image_base64 = getattr(metadata, "image_base64", None)
-            image_mime_type = getattr(metadata, "image_mime_type", None)
-
-            if image_base64:
-                extracted.append(
-                    {
-                        "doc_id": str(uuid.uuid4()),
-                        "content_type": "image",
-                        "raw_content": image_base64,
-                        "metadata": {
-                            "source_file": source_file,
-                            "element_index": index,
-                            "element_category": category,
-                            "page_number": getattr(metadata, "page_number", None),
-                            "image_mime_type": image_mime_type,
-                            "image_title": _infer_image_title(elements, index),
-                            "image_block_extraction_enabled": image_block_extraction_enabled,
-                        },
-                    }
-                )
-            continue
-
-        if not text:
-            continue
-
-        if text_buffer_start_index is None:
-            text_buffer_start_index = index
-            text_buffer_page_start = page_number
-
-        if page_number is not None:
-            if text_buffer_page_start is None:
-                text_buffer_page_start = page_number
-            text_buffer_page_end = page_number
-
-        if current_text_chars + len(text) > max_text_chars_per_asset and text_buffer:
-            _flush_text_buffer(
-                extracted=extracted,
-                text_buffer=text_buffer,
-                source_file=source_file,
-                start_index=text_buffer_start_index,
-                end_index=index - 1,
-                page_start=text_buffer_page_start,
-                page_end=text_buffer_page_end,
-            )
-            text_buffer = [text]
-            text_buffer_start_index = index
-            text_buffer_page_start = page_number
-            text_buffer_page_end = page_number
-            current_text_chars = len(text)
-        else:
-            text_buffer.append(text)
-            current_text_chars += len(text)
-
-    _flush_text_buffer(
-        extracted=extracted,
-        text_buffer=text_buffer,
+    return _extract_partitioned_elements(
+        elements=elements,
         source_file=source_file,
-        start_index=text_buffer_start_index or 0,
-        end_index=len(elements) - 1,
-        page_start=text_buffer_page_start,
-        page_end=text_buffer_page_end,
+        image_block_extraction_enabled=image_block_extraction_enabled,
     )
-
-    return extracted
 
 
 def _extract_docx_or_pptx_text_and_tables(
@@ -374,9 +492,6 @@ def _extract_docx_or_pptx_text_and_tables(
     source_file: str,
     max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
-    if max_text_chars_per_asset is None:
-        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
-
     suffix = Path(file_path).suffix.lower()
 
     if suffix == ".docx":
@@ -386,102 +501,11 @@ def _extract_docx_or_pptx_text_and_tables(
     else:
         raise ValueError(f"Unsupported file type: {suffix}")
 
-    extracted: list[dict] = []
-    text_buffer: list[str] = []
-    text_buffer_start_index: int | None = None
-    text_buffer_page_start: int | None = None
-    text_buffer_page_end: int | None = None
-    current_text_chars = 0
-
-    for index, element in enumerate(elements):
-        category = getattr(element, "category", None)
-        text = (getattr(element, "text", None) or "").strip()
-        metadata = getattr(element, "metadata", None)
-        page_number = getattr(metadata, "page_number", None)
-
-        if category in TEXTUAL_CATEGORIES_TO_SKIP:
-            continue
-
-        if category == "Table":
-            _flush_text_buffer(
-                extracted=extracted,
-                text_buffer=text_buffer,
-                source_file=source_file,
-                start_index=text_buffer_start_index or index,
-                end_index=index - 1,
-                page_start=text_buffer_page_start,
-                page_end=text_buffer_page_end,
-            )
-            text_buffer = []
-            text_buffer_start_index = None
-            text_buffer_page_start = None
-            text_buffer_page_end = None
-            current_text_chars = 0
-
-            table_html = getattr(metadata, "text_as_html", None)
-            raw_table_content = table_html or text
-
-            if raw_table_content:
-                extracted.append(
-                    {
-                        "doc_id": str(uuid.uuid4()),
-                        "content_type": "table",
-                        "raw_content": raw_table_content,
-                        "metadata": {
-                            "source_file": source_file,
-                            "element_index": index,
-                            "element_category": category,
-                            "page_number": getattr(metadata, "page_number", None),
-                            "text_as_html": table_html,
-                            "table_title": None,
-                            "table_text": text,
-                        },
-                    }
-                )
-            continue
-
-        if not text:
-            continue
-
-        if text_buffer_start_index is None:
-            text_buffer_start_index = index
-            text_buffer_page_start = page_number
-
-        if page_number is not None:
-            if text_buffer_page_start is None:
-                text_buffer_page_start = page_number
-            text_buffer_page_end = page_number
-
-        if current_text_chars + len(text) > max_text_chars_per_asset and text_buffer:
-            _flush_text_buffer(
-                extracted=extracted,
-                text_buffer=text_buffer,
-                source_file=source_file,
-                start_index=text_buffer_start_index,
-                end_index=index - 1,
-                page_start=text_buffer_page_start,
-                page_end=text_buffer_page_end,
-            )
-            text_buffer = [text]
-            text_buffer_start_index = index
-            text_buffer_page_start = page_number
-            text_buffer_page_end = page_number
-            current_text_chars = len(text)
-        else:
-            text_buffer.append(text)
-            current_text_chars += len(text)
-
-    _flush_text_buffer(
-        extracted=extracted,
-        text_buffer=text_buffer,
+    return _extract_partitioned_elements(
+        elements=elements,
         source_file=source_file,
-        start_index=text_buffer_start_index or 0,
-        end_index=len(elements) - 1,
-        page_start=text_buffer_page_start,
-        page_end=text_buffer_page_end,
+        image_block_extraction_enabled=False,
     )
-
-    return extracted
 
 
 def _extract_embedded_images_from_zip(
@@ -533,9 +557,6 @@ def extract_elements(
     max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
     suffix = Path(file_path).suffix.lower()
-
-    if max_text_chars_per_asset is None:
-        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
 
     if suffix == ".pdf":
         return _extract_pdf_elements(

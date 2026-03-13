@@ -65,6 +65,21 @@ class IngestionConfig:
     infer_table_structure: bool = field(
         default_factory=lambda: _get_bool_env("RAG_INFER_TABLE_STRUCTURE", True)
     )
+    enable_text_chunking_by_title: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_ENABLE_TEXT_CHUNKING_BY_TITLE", True)
+    )
+    text_chunking_max_characters: int = field(
+        default_factory=lambda: _get_int_env("RAG_TEXT_CHUNKING_MAX_CHARACTERS", 10000)
+    )
+    text_chunking_combine_text_under_n_chars: int = field(
+        default_factory=lambda: _get_int_env("RAG_TEXT_CHUNKING_COMBINE_UNDER", 2000)
+    )
+    text_chunking_new_after_n_chars: int = field(
+        default_factory=lambda: _get_int_env("RAG_TEXT_CHUNKING_NEW_AFTER", 6000)
+    )
+    text_chunking_multipage_sections: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_TEXT_CHUNKING_MULTIPAGE_SECTIONS", False)
+    )
 
 
 @dataclass(frozen=True)
