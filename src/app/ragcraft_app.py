@@ -269,6 +269,10 @@ class RAGCraftApp:
             "replacement_info": replacement_info,
         }
 
+    def inspect_retrieval(self, user_id: str, project_id: str, question: str, chat_history=None):
+        project = self.get_project(user_id, project_id)
+        return self.rag_service.inspect_pipeline(project, question, chat_history)
+
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)
         return self.rag_service.ask(project, question, chat_history)

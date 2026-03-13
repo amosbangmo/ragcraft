@@ -256,7 +256,7 @@ Instructions:
 - Never invent document content that is not explicitly present in the raw context.
 """
 
-    def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
+    def _run_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
         if chat_history is None:
             chat_history = []
 
@@ -304,8 +304,35 @@ Instructions:
             raw_context=raw_context,
         )
 
+        confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
+        confidence = self.evaluation_service.compute_confidence(confidence_docs)
+
+        return {
+            "question": question,
+            "chat_history": chat_history,
+            "recalled_summary_docs": recalled_summary_docs,
+            "recalled_doc_ids": recalled_doc_ids,
+            "recalled_raw_assets": recalled_raw_assets,
+            "selected_summary_docs": selected_summary_docs,
+            "selected_doc_ids": selected_doc_ids,
+            "reranked_raw_assets": reranked_raw_assets,
+            "source_references": source_references,
+            "raw_context": raw_context,
+            "prompt": prompt,
+            "confidence": confidence,
+        }
+
+    def inspect_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
+        return self._run_pipeline(project, question, chat_history)
+
+    def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
+        pipeline = self._run_pipeline(project, question, chat_history)
+
+        if pipeline is None:
+            return None
+
         try:
-            response = LLM.invoke(prompt)
+            response = LLM.invoke(pipeline["prompt"])
         except Exception as exc:
             raise LLMServiceError(
                 f"Failed to generate answer for project '{project.project_id}': {exc}",
@@ -314,14 +341,11 @@ Instructions:
 
         answer = getattr(response, "content", str(response)).strip()
 
-        confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
-        confidence = self.evaluation_service.compute_confidence(confidence_docs)
-
         return RAGResponse(
             question=question,
             answer=answer,
-            source_documents=selected_summary_docs,
-            raw_assets=reranked_raw_assets,
-            citations=source_references,
-            confidence=confidence,
+            source_documents=pipeline["selected_summary_docs"],
+            raw_assets=pipeline["reranked_raw_assets"],
+            citations=pipeline["source_references"],
+            confidence=pipeline["confidence"],
         )
