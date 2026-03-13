@@ -2,23 +2,20 @@ import streamlit as st
 
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.document_table import render_document_table
+from src.ui.document_actions import handle_document_action
 from src.auth.guards import require_authentication
-from src.core.exceptions import VectorStoreError
 
 
-require_authentication("pages/search.py")
+require_authentication("pages/ingestion.py")
 apply_layout()
 
 
-def _get_user_error_message(exc: Exception, default_message: str) -> str:
-    return getattr(exc, "user_message", default_message)
-
-
 header = render_page_header(
-    badge="Search",
-    title="Inspect vector retrieval",
-    subtitle="Debug summary retrieval from FAISS before raw asset rehydration.",
-    selector_label="Project for search",
+    badge="Ingestion",
+    title="Add documents to a project",
+    subtitle="Upload PDF, DOCX or PPTX files and turn them into searchable multimodal assets.",
+    selector_label="Project for ingestion",
 )
 
 app = header["app"]
@@ -28,36 +25,83 @@ project_id = header["project_id"]
 if not project_id:
     st.stop()
 
-project = app.get_project(user_id, project_id)
+if "ingestion_success_message" in st.session_state:
+    st.success(st.session_state.pop("ingestion_success_message"))
 
-query = st.text_input("Search query", placeholder="Type a semantic query...")
+if "ingestion_error_message" in st.session_state:
+    st.error(st.session_state.pop("ingestion_error_message"))
 
-if query:
-    try:
-        docs = app.vectorstore_service.similarity_search(project, query, k=5)
+documents = app.list_project_documents(user_id, project_id)
 
-        if not docs:
-            st.info("No summaries found.")
-            st.stop()
+st.metric("Existing documents", len(documents))
 
-        st.metric("Retrieved summaries", len(docs))
-        st.markdown("### Retrieved summaries from FAISS")
+uploaded_files = st.file_uploader(
+    "Upload documents",
+    type=["pdf", "docx", "pptx"],
+    accept_multiple_files=True,
+)
 
-        for doc in docs:
-            file_name = doc.metadata.get("file_name", "unknown")
-            doc_id = doc.metadata.get("doc_id", "?")
-            content_type = doc.metadata.get("content_type", "unknown")
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        try:
+            with st.spinner(f"Processing {uploaded_file.name}..."):
+                result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
 
-            st.markdown(
-                f"""
-                <div class="source-card">
-                    <div class="source-title">{file_name} — {content_type} — doc_id {doc_id}</div>
-                    <div class="source-preview">{doc.page_content}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    except VectorStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to query the FAISS index for this search."))
-    except Exception as exc:
-        st.error(_get_user_error_message(exc, f"Unexpected error while searching: {exc}"))
+            assets = result["raw_assets"]
+            replacement_info = result["replacement_info"]
+
+            type_counts: dict[str, int] = {}
+            for asset in assets:
+                asset_type = asset["content_type"]
+                type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
+
+            deleted_assets = replacement_info.get("deleted_assets", 0)
+            deleted_vectors = replacement_info.get("deleted_vectors", 0)
+
+            if deleted_assets or deleted_vectors:
+                st.success(
+                    f"{uploaded_file.name}: replaced previous ingestion "
+                    f"({deleted_assets} SQLite asset(s) removed, {deleted_vectors} FAISS vector(s) removed), "
+                    f"then processed {len(assets)} multimodal asset(s) {type_counts}"
+                )
+            else:
+                st.success(
+                    f"{uploaded_file.name}: processed {len(assets)} multimodal asset(s) {type_counts}"
+                )
+
+        except Exception as exc:
+            error_message = str(exc)
+
+            if "tesseract is not installed" in error_message.lower():
+                st.error(
+                    f"Failed to process {uploaded_file.name}: "
+                    "Tesseract OCR is required for hi_res PDF parsing. "
+                    "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
+                )
+            else:
+                st.error(f"Failed to process {uploaded_file.name}: {exc}")
+
+updated_documents = app.get_project_document_details(user_id, project_id)
+
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Documents in current project</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card-subtitle">Review and manage files already indexed in this workspace.</div>',
+    unsafe_allow_html=True,
+)
+
+document_action = render_document_table(
+    documents=updated_documents,
+    key_prefix=f"ingestion_{project_id}",
+)
+
+handle_document_action(
+    app,
+    action_payload=document_action,
+    user_id=user_id,
+    project_id=project_id,
+    success_message_key="ingestion_success_message",
+    error_message_key="ingestion_error_message",
+)
+
+st.markdown("</div>", unsafe_allow_html=True)
