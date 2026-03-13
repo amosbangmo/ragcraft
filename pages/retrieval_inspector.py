@@ -63,6 +63,90 @@ def _render_doc_ids(doc_ids: list[str], empty_message: str):
     st.code("\n".join(doc_ids), language="text")
 
 
+def _render_text_chunk_lineage(asset: dict):
+    metadata = asset.get("metadata", {}) or {}
+    chunking_strategy = metadata.get("chunking_strategy")
+    orig_element_count = metadata.get("orig_element_count", 0)
+    chunk_char_count = metadata.get("chunk_char_count", 0)
+    orig_total_text_chars = metadata.get("orig_total_text_chars", 0)
+    chunk_title = metadata.get("chunk_title")
+    orig_categories = metadata.get("orig_element_categories", []) or []
+    orig_previews = metadata.get("orig_elements_preview", []) or []
+    previews_truncated = metadata.get("orig_elements_preview_truncated", False)
+
+    if chunking_strategy not in {"by_title", "none"}:
+        return
+
+    st.markdown("### Text chunk lineage")
+
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        st.metric("Chunking", chunking_strategy)
+    with m2:
+        st.metric("Original elements", orig_element_count)
+    with m3:
+        st.metric("Chunk chars", chunk_char_count)
+
+    if orig_total_text_chars:
+        st.caption(f"Original combined text chars: {orig_total_text_chars}")
+
+    if chunk_title:
+        st.markdown(f"**Chunk title:** {chunk_title}")
+
+    if orig_categories:
+        st.markdown(f"**Original categories:** {', '.join(orig_categories)}")
+
+    st.markdown("### Final chunk injected / stored")
+    st.code((asset.get("raw_content", "") or "")[:4000], language="text")
+
+    st.markdown("### Original extracted text elements before chunking")
+
+    if not orig_previews:
+        st.info("No original text element previews available for this chunk.")
+        return
+
+    for preview in orig_previews:
+        element_index = preview.get("element_index")
+        page_number = preview.get("page_number")
+        category = preview.get("category", "unknown")
+        text_preview = preview.get("text_preview", "")
+
+        title_parts = [f"Element {element_index}" if element_index is not None else "Element ?"]
+        title_parts.append(f"— {category}")
+        if page_number is not None:
+            title_parts.append(f"— page {page_number}")
+
+        with st.expander(" ".join(title_parts)):
+            st.code(text_preview or "[empty]", language="text")
+
+    if previews_truncated:
+        st.caption("Preview truncated: not all original text elements are shown.")
+
+
+def _render_raw_asset_detail(asset: dict):
+    metadata = asset.get("metadata", {}) or {}
+    content_type = asset.get("content_type", "unknown")
+    raw_content = asset.get("raw_content", "") or ""
+    summary = asset.get("summary", "") or ""
+
+    if summary:
+        st.markdown("**Summary**")
+        st.write(summary)
+
+    st.markdown("**Metadata**")
+    st.json(metadata)
+
+    if content_type == "text":
+        _render_text_chunk_lineage(asset)
+        return
+
+    st.markdown("**Raw preview**")
+    if content_type == "table":
+        st.markdown(raw_content[:3000], unsafe_allow_html=True)
+    else:
+        st.code(raw_content[:3000] if raw_content else "[empty]", language="text")
+
+
 def _render_raw_assets(assets: list[dict], title_prefix: str):
     if not assets:
         st.info("No raw assets available.")
@@ -75,8 +159,6 @@ def _render_raw_assets(assets: list[dict], title_prefix: str):
         source_file = asset.get("source_file", "unknown")
         content_type = asset.get("content_type", "unknown")
         doc_id = asset.get("doc_id", "?")
-        summary = asset.get("summary", "") or ""
-        raw_content = asset.get("raw_content", "") or ""
         rerank_score = metadata.get("rerank_score")
 
         title_parts = [f"{title_prefix} {index} — {source_file} — {content_type} — doc_id {doc_id}"]
@@ -85,24 +167,22 @@ def _render_raw_assets(assets: list[dict], title_prefix: str):
             title_parts.append(f"— {metadata.get('table_title')}")
         if metadata.get("image_title"):
             title_parts.append(f"— {metadata.get('image_title')}")
+        if metadata.get("chunk_title"):
+            title_parts.append(f"— chunk {metadata.get('chunk_title')}")
         if metadata.get("page_number") is not None:
             title_parts.append(f"— page {metadata.get('page_number')}")
+        elif metadata.get("page_start") is not None and metadata.get("page_end") is not None:
+            start_page = metadata.get("page_start")
+            end_page = metadata.get("page_end")
+            if start_page == end_page:
+                title_parts.append(f"— page {start_page}")
+            else:
+                title_parts.append(f"— pages {start_page}-{end_page}")
         if rerank_score is not None:
             title_parts.append(f"— rerank {float(rerank_score):.4f}")
 
         with st.expander(" ".join(title_parts)):
-            if summary:
-                st.markdown("**Summary**")
-                st.write(summary)
-
-            st.markdown("**Metadata**")
-            st.json(metadata)
-
-            st.markdown("**Raw preview**")
-            if content_type == "table":
-                st.markdown(raw_content[:3000], unsafe_allow_html=True)
-            else:
-                st.code(raw_content[:3000] if raw_content else "[empty]", language="text")
+            _render_raw_asset_detail(asset)
 
 
 def _render_source_references(source_references: list[dict]):
@@ -188,6 +268,10 @@ if run_clicked and question:
             )
 
         with st.expander("4. Raw assets reloaded from SQLite", expanded=False):
+            st.caption(
+                "For text assets chunked with by_title, each expander now shows both the final chunk "
+                "and the original extracted text elements that were grouped into it."
+            )
             _render_raw_assets(
                 pipeline["recalled_raw_assets"],
                 title_prefix="Raw asset",
@@ -201,6 +285,10 @@ if run_clicked and question:
             st.markdown("### Source references")
             _render_source_references(pipeline["source_references"])
             st.markdown("### Final prompt assets")
+            st.caption(
+                "For text chunks, inspect the lineage section to compare the pre-chunk extracted elements "
+                "with the final stored/injected chunk."
+            )
             _render_raw_assets(
                 pipeline["reranked_raw_assets"],
                 title_prefix="Prompt asset",

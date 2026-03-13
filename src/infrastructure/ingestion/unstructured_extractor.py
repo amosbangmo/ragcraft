@@ -19,6 +19,9 @@ TEXTUAL_CATEGORIES_TO_SKIP = {"Header", "Footer", "PageBreak"}
 DOCX_MEDIA_PREFIX = "word/media/"
 PPTX_MEDIA_PREFIX = "ppt/media/"
 
+MAX_ORIG_ELEMENT_PREVIEWS = 12
+MAX_ORIG_ELEMENT_TEXT_PREVIEW_CHARS = 240
+
 
 def _is_tesseract_missing_error(exc: Exception) -> bool:
     message = str(exc).lower()
@@ -81,6 +84,28 @@ def _is_textual_element(element) -> bool:
         return False
 
     return bool(text)
+
+
+def _build_orig_element_preview(element) -> dict | None:
+    text = (getattr(element, "text", None) or "").strip()
+    category = getattr(element, "category", None)
+    page_number = _get_page_number(element)
+    element_index = _get_runtime_element_index(element)
+
+    if not text and not category:
+        return None
+
+    if len(text) > MAX_ORIG_ELEMENT_TEXT_PREVIEW_CHARS:
+        text_preview = text[: MAX_ORIG_ELEMENT_TEXT_PREVIEW_CHARS - 3] + "..."
+    else:
+        text_preview = text
+
+    return {
+        "element_index": element_index,
+        "page_number": page_number,
+        "category": category,
+        "text_preview": text_preview,
+    }
 
 
 def _partition_pdf_with_fallback(file_path: str):
@@ -244,6 +269,9 @@ def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
     element_indices: list[int] = []
     page_numbers: list[int] = []
     orig_categories: list[str] = []
+    orig_previews: list[dict] = []
+    orig_total_text_chars = 0
+    title_candidates: list[str] = []
 
     for orig_element in orig_elements:
         element_index = _get_runtime_element_index(orig_element)
@@ -257,6 +285,16 @@ def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
         category = getattr(orig_element, "category", None)
         if category:
             orig_categories.append(category)
+
+        orig_text = (getattr(orig_element, "text", None) or "").strip()
+        orig_total_text_chars += len(orig_text)
+
+        if category == "Title" and orig_text:
+            title_candidates.append(orig_text[:160])
+
+        preview = _build_orig_element_preview(orig_element)
+        if preview is not None and len(orig_previews) < MAX_ORIG_ELEMENT_PREVIEWS:
+            orig_previews.append(preview)
 
     start_index = min(element_indices) if element_indices else None
     end_index = max(element_indices) if element_indices else None
@@ -277,7 +315,11 @@ def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
             "chunking_strategy": "by_title",
             "orig_element_count": len(orig_elements),
             "orig_element_categories": sorted(set(orig_categories)),
+            "orig_elements_preview": orig_previews,
+            "orig_elements_preview_truncated": len(orig_elements) > len(orig_previews),
+            "orig_total_text_chars": orig_total_text_chars,
             "chunk_char_count": len(raw_text),
+            "chunk_title": title_candidates[0] if title_candidates else None,
         },
     }
 
@@ -302,6 +344,11 @@ def _flush_text_run(
 
         element_indices = [idx for idx in (_get_runtime_element_index(e) for e in text_run) if idx is not None]
         page_numbers = [pn for pn in (_get_page_number(e) for e in text_run) if pn is not None]
+        orig_previews = [
+            preview
+            for preview in (_build_orig_element_preview(element) for element in text_run)
+            if preview is not None
+        ]
 
         extracted.append(
             {
@@ -317,7 +364,18 @@ def _flush_text_run(
                     "page_end": max(page_numbers) if page_numbers else None,
                     "chunking_strategy": "none",
                     "orig_element_count": len(text_run),
+                    "orig_element_categories": sorted(
+                        {
+                            getattr(element, "category", None)
+                            for element in text_run
+                            if getattr(element, "category", None)
+                        }
+                    ),
+                    "orig_elements_preview": orig_previews[:MAX_ORIG_ELEMENT_PREVIEWS],
+                    "orig_elements_preview_truncated": len(orig_previews) > MAX_ORIG_ELEMENT_PREVIEWS,
+                    "orig_total_text_chars": len(raw_text),
                     "chunk_char_count": len(raw_text),
+                    "chunk_title": None,
                 },
             }
         )
