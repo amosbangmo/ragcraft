@@ -12,11 +12,14 @@ COPY streamlit_app.py ./
 COPY requirements.txt ./
 COPY src/ ./src/
 COPY pages/ ./pages/
+COPY scripts/ ./scripts/
 
-RUN pip3 install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN chmod +x scripts/generate_secrets.sh
 
 EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["bash", "-c", "scripts/generate_secrets.sh && streamlit run streamlit_app.py --server.port=8501 --server.address=0.0.0.0"]
