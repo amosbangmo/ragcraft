@@ -1,3 +1,4 @@
+import json
 import uuid
 import zipfile
 from pathlib import Path
@@ -79,32 +80,9 @@ def _partition_pdf_with_fallback(file_path: str):
     return elements, False
 
 
-def _extract_neighbor_text(elements, start_index: int, direction: int, max_hops: int = 3) -> str | None:
-    """
-    Look for a nearby textual element that can serve as a caption/title.
-    direction = -1 looks backward, +1 looks forward.
-    """
-    index = start_index
-    hops = 0
-
-    while 0 <= index < len(elements) and hops < max_hops:
-        element = elements[index]
-        category = getattr(element, "category", None)
-        text = (getattr(element, "text", None) or "").strip()
-
-        if text and category not in {"Image", "Table"}:
-            return text[:200]
-
-        index += direction
-        hops += 1
-
-    return None
-
-
 def _infer_image_title(elements, image_index: int) -> str | None:
     """
-    Unstructured documents image payload fields, but not a native image title field.
-    We infer a title/caption from nearby text/title elements in document order.
+    Infer an image title/caption from nearby text on the same page.
     """
     current = elements[image_index]
     current_metadata = getattr(current, "metadata", None)
@@ -112,7 +90,6 @@ def _infer_image_title(elements, image_index: int) -> str | None:
 
     candidates: list[str] = []
 
-    # Prefer nearest previous text on same page
     for offset in range(1, 4):
         idx = image_index - offset
         if idx < 0:
@@ -127,11 +104,10 @@ def _infer_image_title(elements, image_index: int) -> str | None:
         if current_page is not None and page_number != current_page:
             continue
 
-        if text and category not in {"Image"}:
+        if text and category != "Image":
             candidates.append(text[:200])
             break
 
-    # Then nearest next text on same page
     for offset in range(1, 3):
         idx = image_index + offset
         if idx >= len(elements):
@@ -146,7 +122,60 @@ def _infer_image_title(elements, image_index: int) -> str | None:
         if current_page is not None and page_number != current_page:
             continue
 
-        if text and category not in {"Image"}:
+        if text and category != "Image":
+            candidates.append(text[:200])
+            break
+
+    if not candidates:
+        return None
+
+    title = candidates[0].strip()
+    if len(title) > 160:
+        title = title[:157] + "..."
+
+    return title or None
+
+
+def _infer_table_title(elements, table_index: int) -> str | None:
+    current = elements[table_index]
+    current_metadata = getattr(current, "metadata", None)
+    current_page = getattr(current_metadata, "page_number", None)
+
+    candidates: list[str] = []
+
+    for offset in range(1, 4):
+        idx = table_index - offset
+        if idx < 0:
+            break
+
+        element = elements[idx]
+        metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
+        category = getattr(element, "category", None)
+        text = (getattr(element, "text", None) or "").strip()
+
+        if current_page is not None and page_number != current_page:
+            continue
+
+        if text and category != "Image":
+            candidates.append(text[:200])
+            break
+
+    for offset in range(1, 3):
+        idx = table_index + offset
+        if idx >= len(elements):
+            break
+
+        element = elements[idx]
+        metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
+        category = getattr(element, "category", None)
+        text = (getattr(element, "text", None) or "").strip()
+
+        if current_page is not None and page_number != current_page:
+            continue
+
+        if text and category != "Image":
             candidates.append(text[:200])
             break
 
@@ -198,17 +227,27 @@ def _extract_pdf_elements(
             current_text_chars = 0
 
             if text:
+                table_title = _infer_table_title(elements, index)
+                table_html = getattr(metadata, "text_as_html", None)
+
+                table_payload = {
+                    "title": table_title,
+                    "html": table_html,
+                    "text": text,
+                }
+
                 extracted.append(
                     {
                         "doc_id": str(uuid.uuid4()),
                         "content_type": "table",
-                        "raw_content": text,
+                        "raw_content": json.dumps(table_payload, ensure_ascii=False),
                         "metadata": {
                             "source_file": source_file,
                             "element_index": index,
                             "element_category": category,
                             "page_number": getattr(metadata, "page_number", None),
-                            "text_as_html": getattr(metadata, "text_as_html", None),
+                            "text_as_html": table_html,
+                            "table_title": table_title,
                             "image_block_extraction_enabled": image_block_extraction_enabled,
                         },
                     }
@@ -321,17 +360,27 @@ def _extract_docx_or_pptx_text_and_tables(
             current_text_chars = 0
 
             if text:
+                table_html = getattr(metadata, "text_as_html", None)
+                table_title = None
+
+                table_payload = {
+                    "title": table_title,
+                    "html": table_html,
+                    "text": text,
+                }
+
                 extracted.append(
                     {
                         "doc_id": str(uuid.uuid4()),
                         "content_type": "table",
-                        "raw_content": text,
+                        "raw_content": json.dumps(table_payload, ensure_ascii=False),
                         "metadata": {
                             "source_file": source_file,
                             "element_index": index,
                             "element_category": category,
                             "page_number": getattr(metadata, "page_number", None),
-                            "text_as_html": getattr(metadata, "text_as_html", None),
+                            "text_as_html": table_html,
+                            "table_title": table_title,
                         },
                     }
                 )

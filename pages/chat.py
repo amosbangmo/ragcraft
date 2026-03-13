@@ -1,4 +1,5 @@
 import base64
+import json
 
 import streamlit as st
 
@@ -31,6 +32,21 @@ def _render_base64_image(base64_content: str, title: str | None = None):
         st.warning("Unable to render image asset.")
 
 
+def _parse_table_raw_content(raw_content: str) -> dict:
+    try:
+        payload = json.loads(raw_content)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        pass
+
+    return {
+        "title": None,
+        "html": None,
+        "text": raw_content,
+    }
+
+
 def render_raw_assets(raw_assets):
     if not raw_assets:
         return
@@ -43,11 +59,15 @@ def render_raw_assets(raw_assets):
         raw_content = asset.get("raw_content", "")
         metadata = asset.get("metadata", {}) or {}
 
+        table_title = metadata.get("table_title")
         image_title = metadata.get("image_title")
         page_number = metadata.get("page_number")
 
         title_parts = [f"[{i}] {source_file}"]
-        if image_title and content_type == "image":
+
+        if content_type == "table" and table_title:
+            title_parts.append(f"— {table_title}")
+        elif content_type == "image" and image_title:
             title_parts.append(f"— {image_title}")
         elif page_number:
             title_parts.append(f"— page {page_number}")
@@ -58,11 +78,20 @@ def render_raw_assets(raw_assets):
                 continue
 
             if content_type == "table":
-                table_html = metadata.get("text_as_html")
+                table_payload = _parse_table_raw_content(raw_content)
+                parsed_table_title = table_payload.get("title")
+                table_html = table_payload.get("html")
+                table_text = table_payload.get("text")
+
+                if parsed_table_title:
+                    st.markdown(f"**{parsed_table_title}**")
+
                 if table_html:
                     _render_html_table(table_html)
+                elif table_text:
+                    st.write(table_text)
                 else:
-                    st.write(raw_content)
+                    st.caption("Empty table payload.")
                 continue
 
             if content_type == "image":

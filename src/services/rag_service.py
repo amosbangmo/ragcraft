@@ -1,3 +1,5 @@
+import json
+
 from src.core.config import LLM
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -9,7 +11,6 @@ from src.services.docstore_service import DocStoreService
 MAX_RETRIEVED_SUMMARIES = 6
 MAX_TEXT_CHARS_PER_ASSET = 4000
 MAX_TABLE_CHARS_PER_ASSET = 4000
-MAX_IMAGE_BASE64_PREVIEW_CHARS = 0  # do not inject base64 into final prompt
 
 
 class RAGService:
@@ -26,7 +27,7 @@ class RAGService:
     def build_chain(self, project: Project):
         """
         Kept for compatibility with existing cache plumbing.
-        In PR2, the answering flow no longer relies on a retrieval chain object.
+        The answering flow no longer relies on a retrieval chain object.
         """
         return self.vectorstore_service.load(project)
 
@@ -63,26 +64,53 @@ Raw text:
 """
 
         if content_type == "table":
-            trimmed = raw_content[:MAX_TABLE_CHARS_PER_ASSET]
+            try:
+                table_payload = json.loads(raw_content)
+            except Exception:
+                table_payload = {
+                    "title": None,
+                    "html": None,
+                    "text": raw_content,
+                }
+
+            table_title = table_payload.get("title")
+            table_html = table_payload.get("html") or ""
+            table_text = table_payload.get("text") or ""
+
             return f"""Asset {index}
 Type: table
 Doc ID: {doc_id}
 Source file: {source_file}
 Metadata: {metadata}
 
-Raw table:
-{trimmed}
+Table title:
+{table_title}
+
+Raw table HTML:
+{table_html[:3000]}
+
+Raw table text:
+{table_text[:3000]}
 """
 
         if content_type == "image":
+            image_context = {
+                "page_number": metadata.get("page_number"),
+                "image_index": metadata.get("image_index"),
+                "image_mime_type": metadata.get("image_mime_type"),
+                "element_category": metadata.get("element_category"),
+                "embedded_path": metadata.get("embedded_path"),
+                "image_title": metadata.get("image_title"),
+            }
+
             return f"""Asset {index}
 Type: image
 Doc ID: {doc_id}
 Source file: {source_file}
-Metadata: {metadata}
+Metadata: {image_context}
 
 Raw image:
-[Base64 asset stored in SQLite docstore and intentionally omitted from the final LLM prompt in PR2.]
+[Binary image asset stored in SQLite as base64 and intentionally omitted from this final prompt.]
 """
 
         trimmed = raw_content[:2000]
@@ -126,10 +154,11 @@ Raw multimodal context:
 
 Instructions:
 - Use only the provided raw context.
-- Do not rely on the summary retrieval layer; it was used only to find relevant assets.
+- The summary retrieval layer was used only to find relevant assets.
 - If the answer is not supported by the raw context, say you don't know.
 - Be precise and concise.
-- When useful, mention whether the evidence came from text, table, or image-derived assets.
+- When useful, mention whether the evidence came from text, table, or image assets.
+- For image assets, rely only on their provided metadata and retrieval summaries already used upstream; do not invent unseen visual details.
 - Never invent document content that is not explicitly present in the raw context.
 """
 
