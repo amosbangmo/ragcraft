@@ -1,7 +1,4 @@
-from src.core.config import LLM
-
-
-MAX_SUMMARY_INPUT_CHARS = 4000
+from src.core.config import INGESTION_CONFIG, LLM
 
 
 class ElementSummarizer:
@@ -12,6 +9,7 @@ class ElementSummarizer:
         metadata: dict | None = None,
     ) -> str:
         metadata = metadata or {}
+        max_summary_input_chars = INGESTION_CONFIG.summary_max_input_chars
 
         if content_type == "image":
             prompt = f"""
@@ -37,7 +35,7 @@ Instructions:
             response = LLM.invoke(prompt)
             return getattr(response, "content", str(response)).strip()
 
-        trimmed_content = (raw_content or "").strip()[:MAX_SUMMARY_INPUT_CHARS]
+        trimmed_content = (raw_content or "").strip()[:max_summary_input_chars]
 
         if not trimmed_content:
             return f"Empty or non-textual {content_type} asset."

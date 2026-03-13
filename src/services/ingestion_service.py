@@ -2,15 +2,16 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
+from src.core.config import INGESTION_CONFIG
+from src.core.exceptions import (
+    DocumentExtractionError,
+    LLMServiceError,
+    OCRDependencyError,
+)
 from src.domain.project import Project
 from src.infrastructure.ingestion.loader import save_uploaded_file
 from src.infrastructure.ingestion.unstructured_extractor import extract_elements
 from src.infrastructure.ingestion.summarizer import ElementSummarizer
-from src.core.exceptions import (
-    DocumentExtractionError,
-    OCRDependencyError,
-    LLMServiceError,
-)
 
 
 def _is_ocr_dependency_error(exc: Exception) -> bool:
@@ -21,6 +22,7 @@ def _is_ocr_dependency_error(exc: Exception) -> bool:
 class IngestionService:
     def __init__(self):
         self.summarizer = ElementSummarizer()
+        self.config = INGESTION_CONFIG
 
     def ingest_uploaded_file(self, project: Project, uploaded_file) -> tuple[list[Document], list[dict]]:
         try:
@@ -53,7 +55,11 @@ class IngestionService:
         source_file: str,
     ) -> tuple[list[Document], list[dict]]:
         try:
-            raw_elements = extract_elements(str(file_path), source_file)
+            raw_elements = extract_elements(
+                str(file_path),
+                source_file,
+                max_text_chars_per_asset=self.config.extraction_max_text_chars_per_asset,
+            )
         except OCRDependencyError:
             raise
         except Exception as exc:

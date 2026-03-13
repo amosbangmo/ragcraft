@@ -6,6 +6,8 @@ from unstructured.partition.docx import partition_docx
 from unstructured.partition.pdf import partition_pdf
 from unstructured.partition.pptx import partition_pptx
 
+from src.core.config import INGESTION_CONFIG
+from src.core.exceptions import OCRDependencyError
 from src.infrastructure.ingestion.image_utils import (
     bytes_to_base64,
     guess_mime_type_from_suffix,
@@ -58,28 +60,43 @@ def _flush_text_buffer(
 
 def _partition_pdf_with_fallback(file_path: str):
     """
-    Try hi_res first to get Image blocks from Unstructured.
-    If Tesseract is unavailable, degrade to fast mode.
-    In fast mode, no image blocks are expected.
+    Try the configured default PDF strategy first.
+    If OCR-related extraction fails and fallback is enabled,
+    degrade to the configured fallback strategy.
     """
+    partition_kwargs = {
+        "filename": file_path,
+        "strategy": INGESTION_CONFIG.pdf_strategy_default,
+        "infer_table_structure": INGESTION_CONFIG.infer_table_structure,
+    }
+
+    if INGESTION_CONFIG.enable_pdf_image_extraction:
+        partition_kwargs["extract_image_block_types"] = ["Image"]
+        partition_kwargs["extract_image_block_to_payload"] = True
+
     try:
-        elements = partition_pdf(
-            filename=file_path,
-            strategy="hi_res",
-            infer_table_structure=True,
-            extract_image_block_types=["Image"],
-            extract_image_block_to_payload=True,
-        )
-        return elements, True
+        elements = partition_pdf(**partition_kwargs)
+        return elements, INGESTION_CONFIG.enable_pdf_image_extraction
     except Exception as exc:
         if not _is_tesseract_missing_error(exc):
             raise
 
-    elements = partition_pdf(
-        filename=file_path,
-        strategy="fast",
-        infer_table_structure=True,
-    )
+        if not INGESTION_CONFIG.enable_pdf_ocr_fallback:
+            raise OCRDependencyError(
+                f"OCR dependency error while extracting PDF '{file_path}': {exc}",
+                user_message=(
+                    "OCR dependency is missing for this PDF and OCR fallback is disabled. "
+                    "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
+                ),
+            ) from exc
+
+    fallback_kwargs = {
+        "filename": file_path,
+        "strategy": INGESTION_CONFIG.pdf_strategy_fallback,
+        "infer_table_structure": INGESTION_CONFIG.infer_table_structure,
+    }
+
+    elements = partition_pdf(**fallback_kwargs)
     return elements, False
 
 
@@ -195,13 +212,16 @@ def _infer_table_title(elements, table_index: int) -> str | None:
 def _extract_pdf_elements(
     file_path: str,
     source_file: str,
-    max_text_chars_per_asset: int = 2500,
+    max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
     """
     PDF extraction using Unstructured.
-    We only keep true detected Image blocks.
+    We only keep true detected Image blocks when enabled in config.
     No full-page rendering, no document-wide image fallback.
     """
+    if max_text_chars_per_asset is None:
+        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
+
     elements, image_block_extraction_enabled = _partition_pdf_with_fallback(file_path)
 
     extracted: list[dict] = []
@@ -346,8 +366,11 @@ def _extract_pdf_elements(
 def _extract_docx_or_pptx_text_and_tables(
     file_path: str,
     source_file: str,
-    max_text_chars_per_asset: int = 2500,
+    max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
+    if max_text_chars_per_asset is None:
+        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
+
     suffix = Path(file_path).suffix.lower()
 
     if suffix == ".docx":
@@ -393,8 +416,6 @@ def _extract_docx_or_pptx_text_and_tables(
             raw_table_content = table_html or text
 
             if raw_table_content:
-                table_title = None
-
                 extracted.append(
                     {
                         "doc_id": str(uuid.uuid4()),
@@ -406,7 +427,7 @@ def _extract_docx_or_pptx_text_and_tables(
                             "element_category": category,
                             "page_number": getattr(metadata, "page_number", None),
                             "text_as_html": table_html,
-                            "table_title": table_title,
+                            "table_title": None,
                             "table_text": text,
                         },
                     }
@@ -503,9 +524,12 @@ def _extract_embedded_images_from_zip(
 def extract_elements(
     file_path: str,
     source_file: str,
-    max_text_chars_per_asset: int = 2500,
+    max_text_chars_per_asset: int | None = None,
 ) -> list[dict]:
     suffix = Path(file_path).suffix.lower()
+
+    if max_text_chars_per_asset is None:
+        max_text_chars_per_asset = INGESTION_CONFIG.extraction_max_text_chars_per_asset
 
     if suffix == ".pdf":
         return _extract_pdf_elements(

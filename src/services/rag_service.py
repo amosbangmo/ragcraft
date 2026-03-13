@@ -1,17 +1,11 @@
-from src.core.config import LLM
+from src.core.config import LLM, RETRIEVAL_CONFIG
+from src.core.exceptions import LLMServiceError
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
-from src.services.vectorstore_service import VectorStoreService
-from src.services.evaluation_service import EvaluationService
 from src.services.docstore_service import DocStoreService
+from src.services.evaluation_service import EvaluationService
 from src.services.reranking_service import RerankingService
-from src.core.exceptions import LLMServiceError
-
-
-MAX_RECALL_SUMMARIES = 15
-MAX_RERANKED_ASSETS = 5
-MAX_TEXT_CHARS_PER_ASSET = 4000
-MAX_TABLE_CHARS_PER_ASSET = 4000
+from src.services.vectorstore_service import VectorStoreService
 
 
 class RAGService:
@@ -34,6 +28,7 @@ class RAGService:
         self.evaluation_service = evaluation_service
         self.docstore_service = docstore_service
         self.reranking_service = reranking_service
+        self.config = RETRIEVAL_CONFIG
 
     def build_chain(self, project: Project):
         """
@@ -142,7 +137,7 @@ class RAGService:
         citation_label = source_reference["inline_label"]
 
         if content_type == "text":
-            trimmed = raw_content[:MAX_TEXT_CHARS_PER_ASSET]
+            trimmed = raw_content[: self.config.max_text_chars_per_asset]
             return f"""Asset {source_reference["source_number"]}
 Citation: {citation_label}
 Type: text
@@ -169,10 +164,10 @@ Table title:
 {table_title}
 
 Raw table HTML:
-{raw_content[:3000]}
+{raw_content[: self.config.max_table_chars_per_asset]}
 
 Raw table text:
-{table_text[:3000]}
+{table_text[: self.config.max_table_chars_per_asset]}
 """
 
         if content_type == "image":
@@ -268,7 +263,7 @@ Instructions:
         recalled_summary_docs = self.vectorstore_service.similarity_search(
             project,
             question,
-            k=MAX_RECALL_SUMMARIES,
+            k=self.config.retrieval_k,
         )
 
         if not recalled_summary_docs:
@@ -285,7 +280,7 @@ Instructions:
         reranked_raw_assets = self.reranking_service.rerank(
             query=question,
             raw_assets=recalled_raw_assets,
-            top_k=MAX_RERANKED_ASSETS,
+            top_k=self.config.max_prompt_assets,
         )
 
         if not reranked_raw_assets:
