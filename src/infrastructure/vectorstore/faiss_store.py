@@ -37,22 +37,52 @@ def create_or_update_vector_store(chunks: List[Document], index_path: Path):
     if not chunks:
         return None
 
+    ids = [chunk.metadata["doc_id"] for chunk in chunks]
     vector_store = load_vector_store(index_path)
 
     if vector_store is None:
-        return FAISS.from_documents(chunks, EMBEDDINGS)
+        return FAISS.from_documents(
+            documents=chunks,
+            embedding=EMBEDDINGS,
+            ids=ids,
+        )
 
     existing_doc_ids = {
         doc.metadata.get("doc_id")
         for doc in vector_store.docstore._dict.values()
     }
 
-    new_chunks = [
-        chunk for chunk in chunks
-        if chunk.metadata.get("doc_id") not in existing_doc_ids
-    ]
+    new_chunks = []
+    new_ids = []
+
+    for chunk, chunk_id in zip(chunks, ids):
+        if chunk_id in existing_doc_ids:
+            continue
+        new_chunks.append(chunk)
+        new_ids.append(chunk_id)
 
     if new_chunks:
-        vector_store.add_documents(new_chunks)
+        vector_store.add_documents(documents=new_chunks, ids=new_ids)
+
+    return vector_store
+
+
+def delete_documents_from_vector_store(index_path: Path, doc_ids: list[str]):
+    """
+    Delete documents from FAISS using doc_id as vector store id.
+    """
+    if not doc_ids:
+        return None
+
+    vector_store = load_vector_store(index_path)
+
+    if vector_store is None:
+        return None
+
+    try:
+        vector_store.delete(ids=doc_ids)
+    except Exception:
+        # If deletion fails for any reason, keep the store as-is.
+        return vector_store
 
     return vector_store

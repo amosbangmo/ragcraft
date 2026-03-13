@@ -54,8 +54,9 @@ def _flush_text_buffer(
 
 def _partition_pdf_with_fallback(file_path: str):
     """
-    First try hi_res to get true Image blocks from Unstructured.
-    If Tesseract is unavailable, degrade to fast mode so ingestion can continue.
+    Try hi_res first to get Image blocks from Unstructured.
+    If Tesseract is unavailable, degrade to fast mode.
+    In fast mode, no image blocks are expected.
     """
     try:
         elements = partition_pdf(
@@ -78,18 +79,96 @@ def _partition_pdf_with_fallback(file_path: str):
     return elements, False
 
 
+def _extract_neighbor_text(elements, start_index: int, direction: int, max_hops: int = 3) -> str | None:
+    """
+    Look for a nearby textual element that can serve as a caption/title.
+    direction = -1 looks backward, +1 looks forward.
+    """
+    index = start_index
+    hops = 0
+
+    while 0 <= index < len(elements) and hops < max_hops:
+        element = elements[index]
+        category = getattr(element, "category", None)
+        text = (getattr(element, "text", None) or "").strip()
+
+        if text and category not in {"Image", "Table"}:
+            return text[:200]
+
+        index += direction
+        hops += 1
+
+    return None
+
+
+def _infer_image_title(elements, image_index: int) -> str | None:
+    """
+    Unstructured documents image payload fields, but not a native image title field.
+    We infer a title/caption from nearby text/title elements in document order.
+    """
+    current = elements[image_index]
+    current_metadata = getattr(current, "metadata", None)
+    current_page = getattr(current_metadata, "page_number", None)
+
+    candidates: list[str] = []
+
+    # Prefer nearest previous text on same page
+    for offset in range(1, 4):
+        idx = image_index - offset
+        if idx < 0:
+            break
+
+        element = elements[idx]
+        metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
+        category = getattr(element, "category", None)
+        text = (getattr(element, "text", None) or "").strip()
+
+        if current_page is not None and page_number != current_page:
+            continue
+
+        if text and category not in {"Image"}:
+            candidates.append(text[:200])
+            break
+
+    # Then nearest next text on same page
+    for offset in range(1, 3):
+        idx = image_index + offset
+        if idx >= len(elements):
+            break
+
+        element = elements[idx]
+        metadata = getattr(element, "metadata", None)
+        page_number = getattr(metadata, "page_number", None)
+        category = getattr(element, "category", None)
+        text = (getattr(element, "text", None) or "").strip()
+
+        if current_page is not None and page_number != current_page:
+            continue
+
+        if text and category not in {"Image"}:
+            candidates.append(text[:200])
+            break
+
+    if not candidates:
+        return None
+
+    title = candidates[0].strip()
+    if len(title) > 160:
+        title = title[:157] + "..."
+
+    return title or None
+
+
 def _extract_pdf_elements(
     file_path: str,
     source_file: str,
     max_text_chars_per_asset: int = 2500,
 ) -> list[dict]:
     """
-    PDF path using Unstructured layout extraction.
-
-    Returns:
-    - text assets
-    - table assets
-    - image assets only when hi_res succeeds
+    PDF extraction using Unstructured.
+    We only keep true detected Image blocks.
+    No full-page rendering, no document-wide image fallback.
     """
     elements, image_block_extraction_enabled = _partition_pdf_with_fallback(file_path)
 
@@ -163,6 +242,7 @@ def _extract_pdf_elements(
                             "element_category": category,
                             "page_number": getattr(metadata, "page_number", None),
                             "image_mime_type": image_mime_type,
+                            "image_title": _infer_image_title(elements, index),
                             "image_block_extraction_enabled": image_block_extraction_enabled,
                         },
                     }
@@ -320,6 +400,7 @@ def _extract_embedded_images_from_zip(
                                 "embedded_path": media_name,
                                 "image_index": image_index,
                                 "image_mime_type": guess_mime_type_from_suffix(media_name),
+                                "image_title": Path(media_name).stem,
                             },
                         }
                     )

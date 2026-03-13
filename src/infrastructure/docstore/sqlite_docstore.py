@@ -130,3 +130,71 @@ class SQLiteDocStore:
             }
 
         return [assets_by_id[doc_id] for doc_id in doc_ids if doc_id in assets_by_id]
+
+    def get_doc_ids_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> list[str]:
+        conn = get_connection()
+        rows = conn.execute(
+            """
+            SELECT doc_id
+            FROM rag_assets
+            WHERE user_id = ?
+              AND project_id = ?
+              AND source_file = ?
+            ORDER BY id ASC
+            """,
+            (user_id, project_id, source_file),
+        ).fetchall()
+        conn.close()
+
+        return [row["doc_id"] for row in rows]
+
+    def count_assets_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> int:
+        conn = get_connection()
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS total
+            FROM rag_assets
+            WHERE user_id = ?
+              AND project_id = ?
+              AND source_file = ?
+            """,
+            (user_id, project_id, source_file),
+        ).fetchone()
+        conn.close()
+
+        return int(row["total"]) if row else 0
+
+    def delete_assets_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> int:
+        conn = get_connection()
+        cursor = conn.execute(
+            """
+            DELETE FROM rag_assets
+            WHERE user_id = ?
+              AND project_id = ?
+              AND source_file = ?
+            """,
+            (user_id, project_id, source_file),
+        )
+        conn.commit()
+        deleted_count = cursor.rowcount
+        conn.close()
+
+        return deleted_count

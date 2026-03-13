@@ -33,3 +33,42 @@ class DocStoreService:
 
     def get_assets_by_doc_ids(self, doc_ids: list[str]) -> list[dict]:
         return self.docstore.get_assets_by_doc_ids(doc_ids)
+
+    def get_doc_ids_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> list[str]:
+        return self.docstore.get_doc_ids_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+    def count_assets_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> int:
+        return self.docstore.count_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+    def delete_assets_for_source_file(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+    ) -> int:
+        return self.docstore.delete_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )

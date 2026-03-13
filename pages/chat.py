@@ -1,3 +1,5 @@
+import base64
+
 import streamlit as st
 
 from src.ui.layout import apply_layout
@@ -15,26 +17,59 @@ def render_chat_history(messages):
             st.markdown(msg["content"])
 
 
+def _render_html_table(table_html: str):
+    st.markdown(table_html, unsafe_allow_html=True)
+
+
+def _render_base64_image(base64_content: str, title: str | None = None):
+    try:
+        image_bytes = base64.b64decode(base64_content)
+        if title:
+            st.markdown(f"**{title}**")
+        st.image(image_bytes)
+    except Exception:
+        st.warning("Unable to render image asset.")
+
+
 def render_raw_assets(raw_assets):
     if not raw_assets:
         return
 
-    st.markdown("### Raw sources used")
+    st.markdown("### Sources utilisées")
 
     for i, asset in enumerate(raw_assets, start=1):
         source_file = asset.get("source_file", "unknown")
         content_type = asset.get("content_type", "unknown")
         raw_content = asset.get("raw_content", "")
-        doc_id = asset.get("doc_id", "?")
         metadata = asset.get("metadata", {}) or {}
 
-        with st.expander(f"[{i}] {source_file} — {content_type} — doc_id {doc_id}"):
-            st.caption(f"Metadata: {metadata}")
+        image_title = metadata.get("image_title")
+        page_number = metadata.get("page_number")
+
+        title_parts = [f"[{i}] {source_file}"]
+        if image_title and content_type == "image":
+            title_parts.append(f"— {image_title}")
+        elif page_number:
+            title_parts.append(f"— page {page_number}")
+
+        with st.expander(" ".join(title_parts)):
+            if content_type == "text":
+                st.write(raw_content)
+                continue
+
+            if content_type == "table":
+                table_html = metadata.get("text_as_html")
+                if table_html:
+                    _render_html_table(table_html)
+                else:
+                    st.write(raw_content)
+                continue
 
             if content_type == "image":
-                st.info("Image asset stored as base64 in SQLite. Raw payload hidden in UI for readability.")
-            else:
-                st.write(raw_content)
+                _render_base64_image(raw_content, title=image_title)
+                continue
+
+            st.write(raw_content)
 
 
 def build_chat_history(messages, max_messages: int = 6):
@@ -45,7 +80,7 @@ def build_chat_history(messages, max_messages: int = 6):
 header = render_page_header(
     badge="Chat",
     title="Talk to your documents",
-    subtitle="Ask questions, inspect raw evidence, and refresh the project retrieval state when needed.",
+    subtitle="Ask questions and inspect the original raw evidence used by the system.",
     selector_label="Project for chat",
     show_project_selector=True,
     show_refresh_button=True,

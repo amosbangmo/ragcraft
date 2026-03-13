@@ -1,3 +1,4 @@
+from src.auth.db import init_auth_db
 from src.services.project_service import ProjectService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
@@ -13,11 +14,8 @@ from src.core.chain_state import (
     invalidate_all_project_chains,
 )
 
-from src.auth.db import init_auth_db
-
 
 class RAGCraftApp:
-
     def __init__(self):
         init_auth_db()
 
@@ -93,8 +91,44 @@ class RAGCraftApp:
     def invalidate_all_project_chains(self):
         invalidate_all_project_chains()
 
+    def replace_document_assets(self, user_id: str, project_id: str, source_file: str) -> dict:
+        project = self.get_project(user_id, project_id)
+
+        existing_doc_ids = self.docstore_service.get_doc_ids_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+        deleted_vectors = 0
+        deleted_assets = 0
+
+        if existing_doc_ids:
+            self.vectorstore_service.delete_documents(project, existing_doc_ids)
+            deleted_vectors = len(existing_doc_ids)
+
+            deleted_assets = self.docstore_service.delete_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=source_file,
+            )
+
+            self.invalidate_project_chain(user_id, project_id)
+
+        return {
+            "existing_doc_ids": existing_doc_ids,
+            "deleted_vectors": deleted_vectors,
+            "deleted_assets": deleted_assets,
+        }
+
     def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
         project = self.get_project(user_id, project_id)
+
+        replacement_info = self.replace_document_assets(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=uploaded_file.name,
+        )
 
         summary_documents, raw_assets = self.ingestion_service.ingest_uploaded_file(
             project,
@@ -113,7 +147,10 @@ class RAGCraftApp:
         # Important: the index changed, so the chain must be rebuilt
         self.invalidate_project_chain(user_id, project_id)
 
-        return raw_assets
+        return {
+            "raw_assets": raw_assets,
+            "replacement_info": replacement_info,
+        }
 
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)

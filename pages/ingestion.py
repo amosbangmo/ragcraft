@@ -37,24 +37,37 @@ if uploaded_files:
     for uploaded_file in uploaded_files:
         try:
             with st.spinner(f"Processing {uploaded_file.name}..."):
-                assets = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+                result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+
+            assets = result["raw_assets"]
+            replacement_info = result["replacement_info"]
 
             type_counts: dict[str, int] = {}
             for asset in assets:
                 asset_type = asset["content_type"]
                 type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
 
-            st.success(
-                f"{uploaded_file.name}: {len(assets)} multimodal asset(s) processed "
-                f"({type_counts})"
-            )
+            deleted_assets = replacement_info.get("deleted_assets", 0)
+            deleted_vectors = replacement_info.get("deleted_vectors", 0)
+
+            if deleted_assets or deleted_vectors:
+                st.success(
+                    f"{uploaded_file.name}: replaced previous ingestion "
+                    f"({deleted_assets} SQLite asset(s) removed, {deleted_vectors} FAISS vector(s) removed), "
+                    f"then processed {len(assets)} multimodal asset(s) {type_counts}"
+                )
+            else:
+                st.success(
+                    f"{uploaded_file.name}: processed {len(assets)} multimodal asset(s) {type_counts}"
+                )
 
         except Exception as exc:
             error_message = str(exc)
 
             if "tesseract is not installed" in error_message.lower():
                 st.error(
-                    f"Failed to process {uploaded_file.name}: Tesseract OCR is required for hi_res PDF parsing. "
+                    f"Failed to process {uploaded_file.name}: "
+                    "Tesseract OCR is required for hi_res PDF parsing. "
                     "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
                 )
             else:
