@@ -14,7 +14,10 @@ class ProjectService:
         project.path.mkdir(parents=True, exist_ok=True)
         return project
 
-    def list_projects(self, user_id: str) -> list[str]:
+    def list_projects(self, user_id: str | None) -> list[str]:
+        if not user_id:
+            return []
+
         user_path = self.data_root / f"user_{user_id}"
         user_path.mkdir(parents=True, exist_ok=True)
         return sorted([p.name for p in user_path.iterdir() if p.is_dir()])

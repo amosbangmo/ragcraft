@@ -5,8 +5,8 @@ from src.ui.page_header import render_page_header
 from src.auth.guards import require_authentication
 
 
-apply_layout()
 require_authentication("pages/chat.py")
+apply_layout()
 
 
 def render_chat_history(messages):

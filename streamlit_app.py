@@ -4,8 +4,8 @@ from src.ui.layout import apply_layout
 from src.auth.guards import require_authentication
 
 
-apply_layout()
 require_authentication("streamlit_app.py")
+apply_layout()
 
 
 st.set_page_config(

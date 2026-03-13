@@ -8,8 +8,8 @@ from src.auth.guards import require_authentication
 from src.auth.auth_service import AuthService
 
 
-apply_layout()
 require_authentication("pages/profile.py")
+apply_layout()
 
 auth_service = AuthService()
 user = auth_service.get_current_user_record()

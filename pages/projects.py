@@ -8,8 +8,8 @@ from src.core.session import get_user_id
 from src.core.app_state import get_app
 
 
-apply_layout()
 require_authentication("pages/projects.py")
+apply_layout()
 
 render_hero(
     badge="Projects",

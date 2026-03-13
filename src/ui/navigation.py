@@ -28,12 +28,18 @@ def render_navigation(hide_sidebar: bool = False):
         )
         return
 
-    app = get_app()
     auth_service = AuthService()
 
-    user_id = get_user_id()
-    project_id = st.session_state.get("project_id")
-    projects = app.list_projects(user_id)
+    if auth_service.is_authenticated():
+        app = get_app()
+        user_id = get_user_id()
+        project_id = st.session_state.get("project_id")
+        projects = app.list_projects(user_id)
+    else:
+        app = None
+        user_id = None
+        project_id = None
+        projects = []
 
     with st.sidebar:
         st.markdown('<div class="nav-title">🚀 RAGCraft</div>', unsafe_allow_html=True)
@@ -48,7 +54,7 @@ def render_navigation(hide_sidebar: bool = False):
             st.markdown(
                 f'<div style="text-align:center;font-weight:600;margin-bottom:30px">{auth_service.get_display_name()}</div>',
                 unsafe_allow_html=True,
-            )            
+            )
         else:
             st.caption("Not signed in")
 
