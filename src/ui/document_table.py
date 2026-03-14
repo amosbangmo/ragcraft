@@ -3,92 +3,13 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.ui.document_actions import is_document_reindexing
+
 
 def inject_document_table_styles():
     st.markdown(
         """
         <style>
-        .rc-doc-main {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            min-width: 0;
-        }
-
-        .rc-doc-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8fafc;
-            border: 1px solid rgba(15,23,42,0.06);
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-
-        .rc-doc-meta {
-            min-width: 0;
-            flex: 1;
-            padding-bottom: 8px;
-        }
-
-        .rc-doc-name {
-            font-weight: 650;
-            color: #0f172a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.3;
-        }
-
-        .rc-doc-subtitle {
-            color: #64748b;
-            font-size: 0.86rem;
-            margin-top: 4px;
-        }
-
-        .rc-doc-badges {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 8px;
-            margin-bottom: 6px;
-        }
-
-        .rc-doc-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(37,99,235,0.08);
-            border: 1px solid rgba(37,99,235,0.16);
-            color: #1d4ed8;
-            font-size: 0.76rem;
-            font-weight: 700;
-        }
-
-        .rc-doc-badge-neutral {
-            background: rgba(15,23,42,0.05);
-            border: 1px solid rgba(15,23,42,0.08);
-            color: #475569;
-        }
-
-        .rc-doc-extra {
-            color: #64748b;
-            font-size: 0.84rem;
-            margin-top: 4px;
-            line-height: 1.5;
-        }
-
-        .rc-doc-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
         .rc-doc-empty {
             padding: 16px;
             border-radius: 14px;
@@ -98,27 +19,17 @@ def inject_document_table_styles():
             text-align: center;
         }
 
-        div[data-testid="stButton"] button.rc-delete-icon-btn,
-        .stButton > button.rc-delete-icon-btn {
-            background: transparent !important;
-            color: #dc2626 !important;
-            border: none !important;
-            box-shadow: none !important;
-            width: 30px !important;
-            height: 30px !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            font-size: 0.95rem !important;
-            line-height: 1 !important;
+        .rc-doc-title {
+            font-weight: 650;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-bottom: 2px;
         }
 
-        div[data-testid="stButton"] button.rc-delete-icon-btn:hover,
-        .stButton > button.rc-delete-icon-btn:hover {
-            background: rgba(220,38,38,0.08) !important;
-            border-radius: 8px !important;
-            color: #b91c1c !important;
+        .rc-doc-subtitle {
+            color: #64748b;
+            font-size: 0.86rem;
+            margin-bottom: 8px;
         }
 
         [class*="st-key-doc-card"] {
@@ -187,12 +98,14 @@ def render_document_table(
 
     for index, doc in enumerate(documents):
         doc_name = doc["name"]
+        project_id = doc.get("project_id") or key_prefix.split("_", 1)[-1]
         size_bytes = int(doc.get("size_bytes", 0))
         asset_count = int(doc.get("asset_count", 0))
         text_count = int(doc.get("text_count", 0))
         table_count = int(doc.get("table_count", 0))
         image_count = int(doc.get("image_count", 0))
         latest_ingested_at = _format_ingested_at(doc.get("latest_ingested_at"))
+        is_reindexing = is_document_reindexing(project_id, doc_name)
 
         badge, icon = _get_file_badge_and_icon(doc_name)
         size_label = _format_file_size(size_bytes)
@@ -203,38 +116,38 @@ def render_document_table(
             col_main, col_actions = st.columns([8, 4], vertical_alignment="center")
 
             with col_main:
-                st.markdown(
-                    f"""
-                    <div class="rc-doc-main">
-                        <div class="rc-doc-icon">{icon}</div>
-                        <div class="rc-doc-meta">
-                            <div class="rc-doc-name">{doc_name}</div>
-                            <div class="rc-doc-subtitle">
-                                Indexed and available in the current workspace
-                            </div>
-                            <div class="rc-doc-badges">
-                                <span class="rc-doc-badge">{badge}</span>
-                                <span class="rc-doc-badge rc-doc-badge-neutral">{size_label}</span>
-                                <span class="rc-doc-badge rc-doc-badge-neutral">{asset_label}</span>
-                            </div>
-                            <div class="rc-doc-extra">
-                                Composition: {composition_label}<br/>
-                                Ingested: {latest_ingested_at}
-                            </div>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                icon_col, body_col = st.columns([1, 12], vertical_alignment="top")
+
+                with icon_col:
+                    st.write("")
+                    st.markdown(f"### {icon}")
+
+                with body_col:
+                    st.markdown(f'<div class="rc-doc-title">{doc_name}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        '<div class="rc-doc-subtitle">Indexed and available in the current workspace</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    if is_reindexing:
+                        st.warning(
+                            f"⏳ Reindexing in progress — {badge} • {size_label} • {asset_label}"
+                        )
+                    else:
+                        st.caption(f"{badge} • {size_label} • {asset_label}")
+
+                    st.caption(f"Composition: {composition_label}")
+                    st.caption(f"Ingested: {latest_ingested_at}")
 
             with col_actions:
-                action_cols = st.columns([1.3, 1.3, 0.8])
+                action_cols = st.columns([1.3, 1.3, 1.0])
 
                 with action_cols[0]:
                     inspect_clicked = st.button(
                         "Inspect",
                         key=f"{key_prefix}_inspect_{index}_{doc_name}",
                         use_container_width=True,
+                        disabled=is_reindexing,
                     )
 
                 with action_cols[1]:
@@ -242,28 +155,16 @@ def render_document_table(
                         "Reindex",
                         key=f"{key_prefix}_reindex_{index}_{doc_name}",
                         use_container_width=True,
+                        disabled=is_reindexing,
                     )
 
                 with action_cols[2]:
                     delete_clicked = st.button(
-                        "🗑",
+                        "Delete",
                         key=f"{key_prefix}_delete_{index}_{doc_name}",
-                        help=f"Delete {doc_name}",
+                        use_container_width=True,
+                        disabled=is_reindexing,
                     )
-
-                st.markdown(
-                    """
-                    <script>
-                    const buttons = window.parent.document.querySelectorAll('button');
-                    buttons.forEach(btn => {
-                        if (btn.innerText.trim() === '🗑') {
-                            btn.classList.add('rc-delete-icon-btn');
-                        }
-                    });
-                    </script>
-                    """,
-                    unsafe_allow_html=True,
-                )
 
                 if inspect_clicked:
                     selected_action = {"action": "inspect", "doc_name": doc_name}

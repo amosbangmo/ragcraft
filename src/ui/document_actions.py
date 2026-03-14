@@ -3,16 +3,18 @@ import base64
 import streamlit as st
 
 
+REINDEXING_DOC_KEY = "reindexing_document_key"
+PENDING_REINDEX_DIALOG_KEY = "pending_reindex_dialog_payload"
+
+
 def _inject_document_dialog_styles():
     st.markdown(
         """
         <style>
-        /* Full dialog overlay area */
         [data-testid="stDialog"] {
             width: 100vw !important;
         }
 
-        /* Centering wrapper */
         [data-testid="stDialog"] > div {
             width: 100vw !important;
             max-width: 100vw !important;
@@ -21,7 +23,6 @@ def _inject_document_dialog_styles():
             align-items: flex-start !important;
         }
 
-        /* White modal panel */
         [data-testid="stDialog"] [role="dialog"] {
             width: 92vw !important;
             max-width: 1280px !important;
@@ -94,6 +95,51 @@ def _filter_assets(assets: list[dict], selected_filter: str) -> list[dict]:
     return [asset for asset in assets if asset.get("content_type") == expected_type]
 
 
+def _build_reindexing_doc_key(project_id: str, doc_name: str) -> str:
+    return f"{project_id}::{doc_name}"
+
+
+def get_reindexing_document_key() -> str | None:
+    return st.session_state.get(REINDEXING_DOC_KEY)
+
+
+def is_document_reindexing(project_id: str, doc_name: str) -> bool:
+    return get_reindexing_document_key() == _build_reindexing_doc_key(project_id, doc_name)
+
+
+def set_document_reindexing(project_id: str, doc_name: str):
+    st.session_state[REINDEXING_DOC_KEY] = _build_reindexing_doc_key(project_id, doc_name)
+
+
+def clear_document_reindexing():
+    st.session_state.pop(REINDEXING_DOC_KEY, None)
+
+
+def set_pending_reindex_dialog(
+    *,
+    user_id: str,
+    project_id: str,
+    doc_name: str,
+    success_message_key: str,
+    error_message_key: str,
+):
+    st.session_state[PENDING_REINDEX_DIALOG_KEY] = {
+        "user_id": user_id,
+        "project_id": project_id,
+        "doc_name": doc_name,
+        "success_message_key": success_message_key,
+        "error_message_key": error_message_key,
+    }
+
+
+def get_pending_reindex_dialog():
+    return st.session_state.get(PENDING_REINDEX_DIALOG_KEY)
+
+
+def clear_pending_reindex_dialog():
+    st.session_state.pop(PENDING_REINDEX_DIALOG_KEY, None)
+
+
 @st.dialog("Delete document")
 def confirm_delete_document_dialog(
     app,
@@ -160,22 +206,8 @@ def confirm_reindex_document_dialog(
         "refresh its FAISS vectors, and invalidate the project retrieval cache."
     )
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button(
-            "Cancel",
-            use_container_width=True,
-            key=f"cancel_reindex_{project_id}_{doc_name}_{success_message_key}",
-        ):
-            st.rerun()
-
-    with col2:
-        if st.button(
-            "Reindex",
-            use_container_width=True,
-            key=f"confirm_reindex_{project_id}_{doc_name}_{success_message_key}",
-        ):
+    if is_document_reindexing(project_id, doc_name):
+        with st.spinner(f"Reindexing {doc_name}..."):
             try:
                 result = app.reindex_project_document(
                     user_id=user_id,
@@ -201,7 +233,39 @@ def confirm_reindex_document_dialog(
                     exc,
                     f"Failed to reindex '{doc_name}'.",
                 )
+            finally:
+                clear_document_reindexing()
+                clear_pending_reindex_dialog()
 
+        st.rerun()
+        return
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "Cancel",
+            use_container_width=True,
+            key=f"cancel_reindex_{project_id}_{doc_name}_{success_message_key}",
+        ):
+            clear_pending_reindex_dialog()
+            clear_document_reindexing()
+            st.rerun()
+
+    with col2:
+        if st.button(
+            "Reindex",
+            use_container_width=True,
+            key=f"confirm_reindex_{project_id}_{doc_name}_{success_message_key}",
+        ):
+            set_document_reindexing(project_id, doc_name)
+            set_pending_reindex_dialog(
+                user_id=user_id,
+                project_id=project_id,
+                doc_name=doc_name,
+                success_message_key=success_message_key,
+                error_message_key=error_message_key,
+            )
             st.rerun()
 
 
@@ -345,6 +409,20 @@ def handle_document_action(
     success_message_key: str,
     error_message_key: str | None = None,
 ):
+    resolved_error_key = error_message_key or "document_action_error_message"
+
+    pending_reindex = get_pending_reindex_dialog()
+    if pending_reindex:
+        confirm_reindex_document_dialog(
+            app,
+            user_id=pending_reindex["user_id"],
+            project_id=pending_reindex["project_id"],
+            doc_name=pending_reindex["doc_name"],
+            success_message_key=pending_reindex["success_message_key"],
+            error_message_key=pending_reindex["error_message_key"],
+        )
+        return
+
     if not action_payload:
         return
 
@@ -353,8 +431,6 @@ def handle_document_action(
 
     if not doc_name:
         return
-
-    resolved_error_key = error_message_key or "document_action_error_message"
 
     if action == "delete":
         confirm_delete_document_dialog(

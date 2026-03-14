@@ -90,6 +90,7 @@ class RAGCraftApp:
             details.append(
                 {
                     "name": doc_name,
+                    "project_id": project_id,
                     "path": str(file_path),
                     "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
                     "asset_count": asset_count,
