@@ -3,6 +3,75 @@ import base64
 import streamlit as st
 
 
+def _inject_document_dialog_styles():
+    st.markdown(
+        """
+        <style>
+        /* Full dialog overlay area */
+        [data-testid="stDialog"] {
+            width: 100vw !important;
+        }
+
+        /* Centering wrapper */
+        [data-testid="stDialog"] > div {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+        }
+
+        /* White modal panel */
+        [data-testid="stDialog"] [role="dialog"] {
+            width: 92vw !important;
+            max-width: 1280px !important;
+        }
+
+        .rc-inspect-sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: #ffffff;
+            padding-top: 4px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            margin-bottom: 12px;
+        }
+
+        .rc-inspect-assets-container {
+            max-height: 68vh;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .rc-inspect-assets-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .rc-inspect-assets-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .rc-inspect-assets-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .rc-inspect-empty {
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px dashed rgba(15, 23, 42, 0.12);
+            background: #ffffff;
+            color: #64748b;
+            text-align: center;
+            margin-top: 8px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_image_asset(base64_content: str, title: str | None = None):
     try:
         image_bytes = base64.b64decode(base64_content)
@@ -15,6 +84,14 @@ def _render_image_asset(base64_content: str, title: str | None = None):
 
 def _get_user_error_message(exc: Exception, default_message: str) -> str:
     return getattr(exc, "user_message", default_message)
+
+
+def _filter_assets(assets: list[dict], selected_filter: str) -> list[dict]:
+    if selected_filter == "All":
+        return assets
+
+    expected_type = selected_filter.lower()
+    return [asset for asset in assets if asset.get("content_type") == expected_type]
 
 
 @st.dialog("Delete document")
@@ -136,6 +213,8 @@ def inspect_document_dialog(
     project_id: str,
     doc_name: str,
 ):
+    _inject_document_dialog_styles()
+
     try:
         assets = app.get_document_assets(
             user_id=user_id,
@@ -146,9 +225,6 @@ def inspect_document_dialog(
         st.error(_get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
         return
 
-    st.markdown(f"### {doc_name}")
-    st.caption("Review the indexed assets currently stored for this document.")
-
     if not assets:
         st.info("No indexed assets found for this document.")
         return
@@ -157,7 +233,22 @@ def inspect_document_dialog(
     table_count = sum(1 for asset in assets if asset.get("content_type") == "table")
     image_count = sum(1 for asset in assets if asset.get("content_type") == "image")
 
-    c1, c2, c3, c4 = st.columns(4)
+    filter_options = ["All", "Text", "Table", "Image"]
+    selected_filter = st.segmented_control(
+        "Filter assets",
+        options=filter_options,
+        default="All",
+        selection_mode="single",
+        key=f"inspect_filter_{project_id}_{doc_name}",
+    )
+
+    filtered_assets = _filter_assets(assets, selected_filter or "All")
+
+    st.markdown('<div class="rc-inspect-sticky-header">', unsafe_allow_html=True)
+    st.markdown(f"### {doc_name}")
+    st.caption("Review the indexed assets currently stored for this document.")
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
         st.metric("Assets", len(assets))
     with c2:
@@ -166,15 +257,33 @@ def inspect_document_dialog(
         st.metric("Tables", table_count)
     with c4:
         st.metric("Images", image_count)
+    with c5:
+        st.metric("Visible", len(filtered_assets))
 
-    for index, asset in enumerate(assets, start=1):
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if not filtered_assets:
+        st.markdown(
+            '<div class="rc-inspect-empty">No assets match the selected filter.</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    st.markdown('<div class="rc-inspect-assets-container">', unsafe_allow_html=True)
+
+    for index, asset in enumerate(filtered_assets, start=1):
         content_type = asset.get("content_type", "unknown")
         metadata = asset.get("metadata", {}) or {}
         summary = asset.get("summary", "") or ""
         raw_content = asset.get("raw_content", "") or ""
         page_number = metadata.get("page_number")
+        page_start = metadata.get("page_start")
+        page_end = metadata.get("page_end")
         table_title = metadata.get("table_title")
         image_title = metadata.get("image_title")
+        chunk_title = metadata.get("chunk_title")
+        start_element_index = metadata.get("start_element_index")
+        end_element_index = metadata.get("end_element_index")
 
         title_parts = [f"Asset {index} — {content_type}"]
 
@@ -182,13 +291,30 @@ def inspect_document_dialog(
             title_parts.append(f"— {table_title}")
         if image_title:
             title_parts.append(f"— {image_title}")
+        if chunk_title:
+            title_parts.append(f"— {chunk_title}")
+
         if page_number is not None:
             title_parts.append(f"— page {page_number}")
+        elif page_start is not None and page_end is not None:
+            if page_start == page_end:
+                title_parts.append(f"— page {page_start}")
+            else:
+                title_parts.append(f"— pages {page_start}-{page_end}")
+
+        if content_type == "text" and start_element_index is not None and end_element_index is not None:
+            if start_element_index == end_element_index:
+                title_parts.append(f"— element {start_element_index}")
+            else:
+                title_parts.append(f"— elements {start_element_index}-{end_element_index}")
 
         with st.expander(" ".join(title_parts)):
             if summary:
                 st.markdown("**Summary**")
                 st.write(summary)
+
+            st.markdown("**Metadata**")
+            st.json(metadata)
 
             if content_type == "text":
                 st.markdown("**Raw text**")
@@ -206,6 +332,8 @@ def inspect_document_dialog(
                 continue
 
             st.write(raw_content[:4000])
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def handle_document_action(
