@@ -12,12 +12,18 @@ langchain-community
 langchain-openai
 langchain-text-splitters
 
-# Unstructured (text extraction)
+# Unstructured / parsing
 unstructured
 unstructured-inference
 unstructured[pdf]
 
-# Vector store (used next week)
+# Explicit file-type deps for HF stability
+python-docx
+python-pptx
+pypdf
+lxml
+
+# Vector store
 faiss-cpu
 
 # Utils
@@ -38,4 +44,8 @@ sentence-transformers
 =======
 bcrypt
 sentence-transformers
+<<<<<<< HEAD
 >>>>>>> 50b6b7e (Settings the authentication)
+=======
+pillow
+>>>>>>> adb99c0 (Updating dependencies)
