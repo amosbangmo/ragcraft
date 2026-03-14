@@ -18,6 +18,7 @@ unstructured-inference
 unstructured[pdf]
 
 # Explicit file-type deps for HF stability
+opencv-python-headless
 python-docx
 python-pptx
 pypdf
