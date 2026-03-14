@@ -10,6 +10,12 @@ from src.core.session import get_user_id
 from src.core.app_state import get_app
 
 
+st.set_page_config(
+    page_title="Projects | RAGCraft",
+    page_icon="📁",
+    layout="wide",
+)
+
 require_authentication("pages/projects.py")
 apply_layout()
 

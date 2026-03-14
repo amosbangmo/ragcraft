@@ -6,6 +6,12 @@ from src.auth.guards import require_authentication
 from src.core.exceptions import VectorStoreError
 
 
+st.set_page_config(
+    page_title="Search | RAGCraft",
+    page_icon="🔎",
+    layout="wide",
+)
+
 require_authentication("pages/search.py")
 apply_layout()
 

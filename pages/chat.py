@@ -13,6 +13,12 @@ from src.core.exceptions import (
 )
 
 
+st.set_page_config(
+    page_title="Chat | RAGCraft",
+    page_icon="💬",
+    layout="wide",
+)
+
 require_authentication("pages/chat.py")
 apply_layout()
 

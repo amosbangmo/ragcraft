@@ -11,6 +11,12 @@ require_authentication("pages/ingestion.py")
 apply_layout()
 
 
+st.set_page_config(
+    page_title="Ingestion | RAGCraft",
+    page_icon="📄",
+    layout="wide",
+)
+
 header = render_page_header(
     badge="Ingestion",
     title="Add documents to a project",

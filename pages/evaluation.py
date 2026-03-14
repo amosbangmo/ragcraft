@@ -13,6 +13,12 @@ from src.core.exceptions import (
 )
 
 
+st.set_page_config(
+    page_title="Evaluation | RAGCraft",
+    page_icon="📊",
+    layout="wide",
+)
+
 require_authentication("pages/evaluation.py")
 apply_layout()
 

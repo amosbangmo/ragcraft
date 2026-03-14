@@ -8,6 +8,12 @@ from src.auth.guards import require_authentication
 from src.auth.auth_service import AuthService
 
 
+st.set_page_config(
+    page_title="Profile | RAGCraft",
+    page_icon="👤",
+    layout="wide",
+)
+
 require_authentication("pages/profile.py")
 apply_layout()
 

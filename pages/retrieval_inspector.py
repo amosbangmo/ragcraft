@@ -8,6 +8,12 @@ from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 
 
+st.set_page_config(
+    page_title="Retrieval Inspector | RAGCraft",
+    page_icon="🧠",
+    layout="wide",
+)
+
 require_authentication("pages/retrieval_inspector.py")
 apply_layout()
 
