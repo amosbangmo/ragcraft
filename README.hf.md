@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# ragcraft
-RAGCraft is a **multi-user, multi-project RAG platform** designed to showcase how modern document intelligence systems can be built with inspectable retrieval pipelines, multimodal document extraction, and structured asset storage.
-=======
 ---
 title: RAGCraft
 emoji: 🚀
@@ -402,14 +398,5 @@ This project is developed for **educational and portfolio purposes only** and is
 
 # 👤 Author
 
-<<<<<<< HEAD
-Developed by *Amos Bangmo* (Software & AI Engineer)
->>>>>>> 6d1d13e (Fixing short_description config)
-=======
 Developed by **Amos Bangmo**  
-<<<<<<< HEAD
 *Software & AI Engineer*
->>>>>>> 739a7c5 (README enhancement)
-=======
-*Software & AI Engineer*
->>>>>>> 8ec2f60 (README update)
