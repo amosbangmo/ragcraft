@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-altair
-pandas
-streamlit
-=======
 streamlit
 
 # RAG core
@@ -31,22 +26,7 @@ faiss-cpu
 python-dotenv
 tiktoken
 tqdm
-<<<<<<< HEAD
-uuid
-<<<<<<< HEAD
->>>>>>> 0b09946 (Document ingestion with Unstructured and Langchain)
-=======
-=======
->>>>>>> 19b51ec (PR1: setting up multi-modal RAG)
 rank-bm25
-<<<<<<< HEAD
-sentence-transformers
->>>>>>> fb0d8fd (enhancing the chat page)
-=======
 bcrypt
 sentence-transformers
-<<<<<<< HEAD
->>>>>>> 50b6b7e (Settings the authentication)
-=======
 pillow
->>>>>>> adb99c0 (Updating dependencies)
