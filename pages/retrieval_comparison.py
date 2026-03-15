@@ -7,6 +7,11 @@ from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.request_state import (
+    is_request_running,
+    trigger_request,
+    finish_request,
+)
 
 
 st.set_page_config(
@@ -18,6 +23,9 @@ st.set_page_config(
 require_authentication("pages/retrieval_comparison.py")
 apply_layout()
 
+
+COMPARISON_REQUEST_KEY = "retrieval_comparison_request_running"
+COMPARISON_RESULT_KEY = "retrieval_comparison_result_payload"
 
 def _parse_questions(raw_text: str) -> list[str]:
     return [line.strip() for line in raw_text.splitlines() if line.strip()]
@@ -53,7 +61,11 @@ enable_query_rewrite = st.toggle(
     help="Keep the rewrite setting identical across FAISS and Hybrid so the comparison isolates retrieval mode.",
 )
 
-run_clicked = st.button("Run FAISS vs Hybrid comparison", use_container_width=True)
+run_clicked = st.button(
+    "Run FAISS vs Hybrid comparison",
+    use_container_width=True,
+    disabled=is_request_running(COMPARISON_REQUEST_KEY),
+)
 
 if run_clicked:
     questions = _parse_questions(questions_text)
@@ -62,80 +74,100 @@ if run_clicked:
         st.warning("Please enter at least one evaluation question.")
         st.stop()
 
+    st.session_state[COMPARISON_RESULT_KEY] = None
+    trigger_request(COMPARISON_REQUEST_KEY)
+
+if is_request_running(COMPARISON_REQUEST_KEY):
+    questions = _parse_questions(questions_text)
+
     try:
-        comparison = app.compare_retrieval_modes(
-            user_id=user_id,
-            project_id=project_id,
-            questions=questions,
-            enable_query_rewrite=enable_query_rewrite,
-        )
+        with st.spinner("Running FAISS vs Hybrid comparison..."):
+            comparison = app.compare_retrieval_modes(
+                user_id=user_id,
+                project_id=project_id,
+                questions=questions,
+                enable_query_rewrite=enable_query_rewrite,
+            )
 
-        summary = comparison["summary"]
-        rows = comparison["rows"]
+        st.session_state[COMPARISON_RESULT_KEY] = comparison
 
-        st.markdown("### Comparison summary")
+    except VectorStoreError as exc:
+        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to query the FAISS index for this comparison.")}
+    except DocStoreError as exc:
+        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to inspect project assets from SQLite.")}
+    except LLMServiceError as exc:
+        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "The language model failed while rewriting one or more retrieval queries.")}
+    except Exception as exc:
+        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, f"Unexpected error while running the comparison: {exc}")}
+    finally:
+        finish_request(COMPARISON_REQUEST_KEY)
 
-        top_metrics = st.columns(6)
-        with top_metrics[0]:
-            st.metric("Questions", summary["total_questions"])
-        with top_metrics[1]:
-            st.metric("Rewrite", "On" if summary["query_rewrite_enabled"] else "Off")
-        with top_metrics[2]:
-            st.metric("Avg FAISS recall doc_ids", summary["avg_faiss_recall_doc_ids"])
-        with top_metrics[3]:
-            st.metric("Avg Hybrid recall doc_ids", summary["avg_hybrid_recall_doc_ids"])
-        with top_metrics[4]:
-            st.metric("Avg FAISS confidence", summary["avg_faiss_confidence"])
-        with top_metrics[5]:
-            st.metric("Avg Hybrid confidence", summary["avg_hybrid_confidence"])
+result_payload = st.session_state.get(COMPARISON_RESULT_KEY)
 
-        second_metrics = st.columns(6)
-        with second_metrics[0]:
-            st.metric("Avg FAISS latency (ms)", summary["avg_faiss_latency_ms"])
-        with second_metrics[1]:
-            st.metric("Avg Hybrid latency (ms)", summary["avg_hybrid_latency_ms"])
-        with second_metrics[2]:
-            st.metric("Hybrid wins on recall", summary["hybrid_wins_on_recall_doc_ids"])
-        with second_metrics[3]:
-            st.metric("Hybrid wins on confidence", summary["hybrid_wins_on_confidence"])
-        with second_metrics[4]:
-            st.metric("Avg FAISS prompt assets", summary["avg_faiss_prompt_assets"])
-        with second_metrics[5]:
-            st.metric("Avg Hybrid prompt assets", summary["avg_hybrid_prompt_assets"])
+if result_payload:
 
-        st.markdown("### Per-question comparison")
-        st.dataframe(rows, use_container_width=True)
+    if isinstance(result_payload, dict) and "error" in result_payload:
+        st.error(result_payload["error"])
+        st.stop()
 
-        st.markdown("### Portfolio takeaways")
+    comparison = result_payload
+    summary = comparison["summary"]
+    rows = comparison["rows"]
 
-        recall_delta = round(
-            summary["avg_hybrid_recall_doc_ids"] - summary["avg_faiss_recall_doc_ids"],
-            2,
-        )
-        confidence_delta = round(
-            summary["avg_hybrid_confidence"] - summary["avg_faiss_confidence"],
-            2,
-        )
-        latency_delta = round(
-            summary["avg_hybrid_latency_ms"] - summary["avg_faiss_latency_ms"],
-            2,
-        )
+    st.markdown("### Comparison summary")
 
-        st.markdown(
-            f"""
+    top_metrics = st.columns(6)
+    with top_metrics[0]:
+        st.metric("Questions", summary["total_questions"])
+    with top_metrics[1]:
+        st.metric("Rewrite", "On" if summary["query_rewrite_enabled"] else "Off")
+    with top_metrics[2]:
+        st.metric("Avg FAISS recall doc_ids", summary["avg_faiss_recall_doc_ids"])
+    with top_metrics[3]:
+        st.metric("Avg Hybrid recall doc_ids", summary["avg_hybrid_recall_doc_ids"])
+    with top_metrics[4]:
+        st.metric("Avg FAISS confidence", summary["avg_faiss_confidence"])
+    with top_metrics[5]:
+        st.metric("Avg Hybrid confidence", summary["avg_hybrid_confidence"])
+
+    second_metrics = st.columns(6)
+    with second_metrics[0]:
+        st.metric("Avg FAISS latency (ms)", summary["avg_faiss_latency_ms"])
+    with second_metrics[1]:
+        st.metric("Avg Hybrid latency (ms)", summary["avg_hybrid_latency_ms"])
+    with second_metrics[2]:
+        st.metric("Hybrid wins on recall", summary["hybrid_wins_on_recall_doc_ids"])
+    with second_metrics[3]:
+        st.metric("Hybrid wins on confidence", summary["hybrid_wins_on_confidence"])
+    with second_metrics[4]:
+        st.metric("Avg FAISS prompt assets", summary["avg_faiss_prompt_assets"])
+    with second_metrics[5]:
+        st.metric("Avg Hybrid prompt assets", summary["avg_hybrid_prompt_assets"])
+
+    st.markdown("### Per-question comparison")
+    st.dataframe(rows, use_container_width=True)
+
+    st.markdown("### Portfolio takeaways")
+
+    recall_delta = round(
+        summary["avg_hybrid_recall_doc_ids"] - summary["avg_faiss_recall_doc_ids"],
+        2,
+    )
+    confidence_delta = round(
+        summary["avg_hybrid_confidence"] - summary["avg_faiss_confidence"],
+        2,
+    )
+    latency_delta = round(
+        summary["avg_hybrid_latency_ms"] - summary["avg_faiss_latency_ms"],
+        2,
+    )
+
+    st.markdown(
+        f"""
 - **Recall delta:** Hybrid retrieves on average **{recall_delta:+.2f} doc_ids** versus FAISS only.
 - **Confidence delta:** Hybrid changes confidence by **{confidence_delta:+.2f}** on average.
 - **Latency delta:** Hybrid adds **{latency_delta:+.2f} ms** on average compared with FAISS only.
 - **Hybrid recall wins:** {summary["hybrid_wins_on_recall_doc_ids"]}/{summary["total_questions"]} question(s).
 - **Hybrid confidence wins:** {summary["hybrid_wins_on_confidence"]}/{summary["total_questions"]} question(s).
 """
-        )
-
-    except VectorStoreError as exc:
-        st.error(get_user_error_message(exc, "Unable to query the FAISS index for this comparison."))
-    except DocStoreError as exc:
-        st.error(get_user_error_message(exc, "Unable to inspect project assets from SQLite."))
-    except LLMServiceError as exc:
-        st.error(get_user_error_message(exc, "The language model failed while rewriting one or more retrieval queries."))
-    except Exception as exc:
-        st.error(get_user_error_message(exc, f"Unexpected error while running the comparison: {exc}"))
+    )

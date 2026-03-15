@@ -39,7 +39,8 @@ query = st.text_input("Search query", placeholder="Type a semantic query...")
 
 if query:
     try:
-        docs = app.vectorstore_service.similarity_search(project, query, k=5)
+        with st.spinner("Searching summaries..."):
+            docs = app.vectorstore_service.similarity_search(project, query, k=5)
 
         if not docs:
             st.info("No summaries found.")

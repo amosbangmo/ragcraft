@@ -1,6 +1,5 @@
-import json
-
 import streamlit as st
+import json
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
@@ -9,6 +8,11 @@ from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.request_state import (
+    is_request_running,
+    trigger_request,
+    finish_request,
+)
 
 
 st.set_page_config(
@@ -20,6 +24,9 @@ st.set_page_config(
 require_authentication("pages/retrieval_inspector.py")
 apply_layout()
 
+
+INSPECT_REQUEST_KEY = "retrieval_inspector_request_running"
+INSPECT_RESULT_KEY = "retrieval_inspector_result_payload"
 
 def _render_summary_docs(docs: list):
     if not docs:
@@ -258,117 +265,168 @@ if chat_history_mode:
     chat_history = app.chat_service.get_messages()
     chat_history = [f"{msg['role']}: {msg['content']}" for msg in chat_history[-6:]]
 
-run_clicked = st.button("Inspect retrieval pipeline", use_container_width=True)
+run_clicked = st.button(
+    "Inspect retrieval pipeline",
+    use_container_width=True,
+    disabled=is_request_running(INSPECT_REQUEST_KEY),
+)
 
-if run_clicked and question:
+if run_clicked:
+    if not question.strip():
+        st.warning("Please enter a query.")
+        st.stop()
+
+    st.session_state[INSPECT_RESULT_KEY] = None
+    trigger_request(INSPECT_REQUEST_KEY)
+
+if is_request_running(INSPECT_REQUEST_KEY):
     try:
-        pipeline = app.inspect_retrieval(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            chat_history=chat_history,
-            enable_query_rewrite_override=enable_query_rewrite,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval,
-        )
-
-        if pipeline is None:
-            st.warning("No retrieval result available for this query.")
-            st.stop()
-
-        top_metrics = st.columns(7)
-        with top_metrics[0]:
-            st.metric("Mode", pipeline["retrieval_mode"])
-        with top_metrics[1]:
-            st.metric("Rewrite", "On" if pipeline["query_rewrite_enabled"] else "Off")
-        with top_metrics[2]:
-            st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
-        with top_metrics[3]:
-            st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
-        with top_metrics[4]:
-            st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
-        with top_metrics[5]:
-            st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
-        with top_metrics[6]:
-            st.metric("Confidence", pipeline["confidence"])
-
-        with st.expander("1. Original query and rewritten retrieval query", expanded=True):
-            st.markdown("**Original user query**")
-            st.write(pipeline["question"])
-
-            st.markdown("**Rewritten retrieval query**")
-            st.write(pipeline["rewritten_question"])
-
-            if pipeline["rewritten_question"].strip() == pipeline["question"].strip():
-                st.caption("The rewrite stage kept the query unchanged or almost unchanged.")
-
-        with st.expander("2. FAISS summaries retrieved from vector search", expanded=True):
-            _render_summary_docs(pipeline["vector_summary_docs"])
-
-        with st.expander("3. BM25 summaries retrieved from lexical search", expanded=False):
-            _render_summary_docs(pipeline["bm25_summary_docs"])
-
-        with st.expander("4. Merged summaries retained after hybrid recall", expanded=True):
-            _render_summary_docs(pipeline["recalled_summary_docs"])
-
-        with st.expander("5. Doc IDs retained after merged recall", expanded=False):
-            _render_doc_ids(
-                pipeline["recalled_doc_ids"],
-                empty_message="No doc_ids were retained from the recall stage.",
+        with st.spinner("Inspecting retrieval pipeline..."):
+            pipeline = app.inspect_retrieval(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                chat_history=chat_history,
+                enable_query_rewrite_override=enable_query_rewrite,
+                enable_hybrid_retrieval_override=enable_hybrid_retrieval,
             )
 
-        with st.expander("6. Raw assets reloaded from SQLite", expanded=False):
-            st.caption(
-                "For text assets chunked with by_title, each expander now shows both the final chunk "
-                "and the original extracted text elements that were grouped into it."
-            )
-            _render_raw_assets(
-                pipeline["recalled_raw_assets"],
-                title_prefix="Raw asset",
-            )
-
-        with st.expander("7. Final assets injected into the prompt", expanded=True):
-            _render_doc_ids(
-                pipeline["selected_doc_ids"],
-                empty_message="No doc_ids were retained after reranking.",
-            )
-            st.markdown("### Source references")
-            _render_source_references(pipeline["source_references"])
-            st.markdown("### Final prompt assets")
-            st.caption(
-                "For text chunks, inspect the lineage section to compare the pre-chunk extracted elements "
-                "with the final stored/injected chunk."
-            )
-            _render_raw_assets(
-                pipeline["reranked_raw_assets"],
-                title_prefix="Prompt asset",
-            )
-
-        with st.expander("8. Raw context injected into the prompt", expanded=False):
-            st.code(pipeline["raw_context"], language="text")
-
-        with st.expander("9. Final prompt generated", expanded=False):
-            st.code(pipeline["prompt"], language="text")
-
-        with st.expander("10. Structured pipeline payload", expanded=False):
-            debug_payload = {
-                "question": pipeline["question"],
-                "rewritten_question": pipeline["rewritten_question"],
-                "chat_history": pipeline["chat_history"],
-                "retrieval_mode": pipeline["retrieval_mode"],
-                "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
-                "hybrid_retrieval_enabled": pipeline["hybrid_retrieval_enabled"],
-                "recalled_doc_ids": pipeline["recalled_doc_ids"],
-                "selected_doc_ids": pipeline["selected_doc_ids"],
-                "confidence": pipeline["confidence"],
-                "source_references": pipeline["source_references"],
-            }
-            st.code(json.dumps(debug_payload, indent=2, ensure_ascii=False), language="json")
+        st.session_state[INSPECT_RESULT_KEY] = pipeline
 
     except VectorStoreError as exc:
-        st.error(get_user_error_message(exc, "Unable to query the FAISS index for this inspection."))
+        st.session_state[INSPECT_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to query the FAISS index for this inspection.")}
     except DocStoreError as exc:
-        st.error(get_user_error_message(exc, "Unable to reload retrieved assets from SQLite."))
+        st.session_state[INSPECT_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to reload retrieved assets from SQLite.")}
     except LLMServiceError as exc:
-        st.error(get_user_error_message(exc, "The language model failed while preparing the final prompt or answer."))
+        st.session_state[INSPECT_RESULT_KEY] = {"error": get_user_error_message(exc, "The language model failed while preparing the final prompt or answer.")}
     except Exception as exc:
-        st.error(get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}"))
+        st.session_state[INSPECT_RESULT_KEY] = {"error": get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}")}
+    finally:
+        finish_request(INSPECT_REQUEST_KEY)
+
+result_payload = st.session_state.get(INSPECT_RESULT_KEY)
+
+if result_payload:
+
+    if isinstance(result_payload, dict) and "error" in result_payload:
+        st.error(result_payload["error"])
+        st.stop()
+
+    pipeline = result_payload
+
+    top_metrics = st.columns(7)
+
+    with top_metrics[0]:
+        st.metric("Mode", pipeline["retrieval_mode"])
+
+    with top_metrics[1]:
+        st.metric("Rewrite", "On" if pipeline["query_rewrite_enabled"] else "Off")
+
+    with top_metrics[2]:
+        st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
+
+    with top_metrics[3]:
+        st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
+
+    with top_metrics[4]:
+        st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
+
+    with top_metrics[5]:
+        st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+
+    with top_metrics[6]:
+        st.metric("Confidence", pipeline["confidence"])
+
+
+    with st.expander("1. Original query and rewritten retrieval query", expanded=True):
+
+        st.markdown("**Original user query**")
+        st.write(pipeline["question"])
+
+        st.markdown("**Rewritten retrieval query**")
+        st.write(pipeline["rewritten_question"])
+
+        if pipeline["rewritten_question"].strip() == pipeline["question"].strip():
+            st.caption("The rewrite stage kept the query unchanged or almost unchanged.")
+
+
+    with st.expander("2. FAISS summaries retrieved from vector search", expanded=True):
+        _render_summary_docs(pipeline["vector_summary_docs"])
+
+
+    with st.expander("3. BM25 summaries retrieved from lexical search", expanded=False):
+        _render_summary_docs(pipeline["bm25_summary_docs"])
+
+
+    with st.expander("4. Merged summaries retained after hybrid recall", expanded=True):
+        _render_summary_docs(pipeline["recalled_summary_docs"])
+
+
+    with st.expander("5. Doc IDs retained after merged recall", expanded=False):
+        _render_doc_ids(
+            pipeline["recalled_doc_ids"],
+            empty_message="No doc_ids were retained from the recall stage.",
+        )
+
+
+    with st.expander("6. Raw assets reloaded from SQLite", expanded=False):
+
+        st.caption(
+            "For text assets chunked with by_title, each expander shows both the final chunk "
+            "and the original extracted text elements grouped into it."
+        )
+
+        _render_raw_assets(
+            pipeline["recalled_raw_assets"],
+            title_prefix="Raw asset",
+        )
+
+
+    with st.expander("7. Final assets injected into the prompt", expanded=True):
+
+        _render_doc_ids(
+            pipeline["selected_doc_ids"],
+            empty_message="No doc_ids were retained after reranking.",
+        )
+
+        st.markdown("### Source references")
+        _render_source_references(pipeline["source_references"])
+
+        st.markdown("### Final prompt assets")
+
+        st.caption(
+            "Inspect the lineage section to compare the original extracted elements "
+            "with the final stored chunk."
+        )
+
+        _render_raw_assets(
+            pipeline["reranked_raw_assets"],
+            title_prefix="Prompt asset",
+        )
+
+
+    with st.expander("8. Raw context injected into the prompt", expanded=False):
+        st.code(pipeline["raw_context"], language="text")
+
+
+    with st.expander("9. Final prompt generated", expanded=False):
+        st.code(pipeline["prompt"], language="text")
+
+
+    with st.expander("10. Structured pipeline payload", expanded=False):
+
+        debug_payload = {
+            "question": pipeline["question"],
+            "rewritten_question": pipeline["rewritten_question"],
+            "chat_history": pipeline["chat_history"],
+            "retrieval_mode": pipeline["retrieval_mode"],
+            "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
+            "hybrid_retrieval_enabled": pipeline["hybrid_retrieval_enabled"],
+            "recalled_doc_ids": pipeline["recalled_doc_ids"],
+            "selected_doc_ids": pipeline["selected_doc_ids"],
+            "confidence": pipeline["confidence"],
+            "source_references": pipeline["source_references"],
+        }
+
+        st.code(json.dumps(debug_payload, indent=2, ensure_ascii=False), language="json")
+
