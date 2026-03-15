@@ -17,7 +17,7 @@ header = render_page_header(
     badge="Profile",
     title="Manage your account",
     subtitle="Update your personal information, avatar and password.",
-    selector_label="Project for search",
+    show_project_selector=False
 )
 
 app = cast(RAGCraftApp, header["app"])

@@ -1,13 +1,13 @@
-import base64
-
 import streamlit as st
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.raw_assets import render_raw_assets
 from src.ui.source_citations import render_source_citations
 from src.auth.guards import require_authentication
+from src.core.error_utils import get_user_error_message
 from src.core.exceptions import (
     LLMServiceError,
     VectorStoreError,
@@ -23,81 +23,6 @@ st.set_page_config(
 
 require_authentication("pages/evaluation.py")
 apply_layout()
-
-
-def _get_user_error_message(exc: Exception, default_message: str) -> str:
-    return getattr(exc, "user_message", default_message)
-
-
-def _render_image_asset(base64_content: str, title: str | None = None):
-    try:
-        image_bytes = base64.b64decode(base64_content)
-        if title:
-            st.markdown(f"**{title}**")
-        st.image(image_bytes)
-    except Exception:
-        st.warning("Unable to render image asset.")
-
-
-def render_eval_raw_assets(raw_assets):
-    if not raw_assets:
-        return
-
-    for i, asset in enumerate(raw_assets, start=1):
-        source_file = asset.get("source_file", "unknown")
-        content_type = asset.get("content_type", "unknown")
-        raw_content = asset.get("raw_content", "")
-        metadata = asset.get("metadata", {}) or {}
-
-        table_title = metadata.get("table_title")
-        image_title = metadata.get("image_title")
-        page_number = metadata.get("page_number")
-        page_start = metadata.get("page_start")
-        page_end = metadata.get("page_end")
-        start_element_index = metadata.get("start_element_index")
-        end_element_index = metadata.get("end_element_index")
-
-        title_parts = [f"Source {i} — {source_file}"]
-
-        if content_type == "table" and table_title:
-            title_parts.append(f"— {table_title}")
-        elif content_type == "image" and image_title:
-            title_parts.append(f"— {image_title}")
-
-        if page_number is not None:
-            title_parts.append(f"— page {page_number}")
-        elif page_start is not None and page_end is not None:
-            if page_start == page_end:
-                title_parts.append(f"— page {page_start}")
-            else:
-                title_parts.append(f"— pages {page_start}-{page_end}")
-
-        if content_type == "text" and start_element_index is not None and end_element_index is not None:
-            if start_element_index == end_element_index:
-                title_parts.append(f"— element {start_element_index}")
-            else:
-                title_parts.append(f"— elements {start_element_index}-{end_element_index}")
-
-        with st.expander(" ".join(title_parts)):
-            if content_type == "text":
-                st.write(raw_content)
-                continue
-
-            if content_type == "table":
-                if table_title:
-                    st.markdown(f"**{table_title}**")
-
-                if raw_content:
-                    st.markdown(raw_content, unsafe_allow_html=True)
-                else:
-                    st.caption("Empty table payload.")
-                continue
-
-            if content_type == "image":
-                _render_image_asset(raw_content, title=image_title)
-                continue
-
-            st.write(raw_content)
 
 
 header = render_page_header(
@@ -156,14 +81,17 @@ if st.button("Run evaluation", use_container_width=True) and question:
             '<div class="card-subtitle">Review the raw text, tables, and extracted images selected after summary retrieval.</div>',
             unsafe_allow_html=True,
         )
-        render_eval_raw_assets(response.raw_assets)
+        render_raw_assets(
+            response.raw_assets,
+            mode="evaluation",
+        )
         st.markdown("</div>", unsafe_allow_html=True)
 
     except VectorStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to query the FAISS index for this evaluation."))
+        st.error(get_user_error_message(exc, "Unable to query the FAISS index for this evaluation."))
     except DocStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite."))
+        st.error(get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite."))
     except LLMServiceError as exc:
-        st.error(_get_user_error_message(exc, "The language model failed while generating the evaluation answer."))
+        st.error(get_user_error_message(exc, "The language model failed while generating the evaluation answer."))
     except Exception as exc:
-        st.error(_get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}"))
+        st.error(get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}"))

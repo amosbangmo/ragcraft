@@ -5,6 +5,7 @@ from src.app.ragcraft_app import RAGCraftApp
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.auth.guards import require_authentication
+from src.core.error_utils import get_user_error_message
 from src.core.exceptions import VectorStoreError
 
 
@@ -16,10 +17,6 @@ st.set_page_config(
 
 require_authentication("pages/search.py")
 apply_layout()
-
-
-def _get_user_error_message(exc: Exception, default_message: str) -> str:
-    return getattr(exc, "user_message", default_message)
 
 
 header = render_page_header(
@@ -66,6 +63,6 @@ if query:
                 unsafe_allow_html=True,
             )
     except VectorStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to query the FAISS index for this search."))
+        st.error(get_user_error_message(exc, "Unable to query the FAISS index for this search."))
     except Exception as exc:
-        st.error(_get_user_error_message(exc, f"Unexpected error while searching: {exc}"))
+        st.error(get_user_error_message(exc, f"Unexpected error while searching: {exc}"))

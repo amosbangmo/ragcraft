@@ -2,6 +2,8 @@ import base64
 
 import streamlit as st
 
+from src.core.error_utils import get_user_error_message
+
 
 REINDEXING_DOC_KEY = "reindexing_document_key"
 PENDING_REINDEX_DIALOG_KEY = "pending_reindex_dialog_payload"
@@ -81,10 +83,6 @@ def _render_image_asset(base64_content: str, title: str | None = None):
         st.image(image_bytes)
     except Exception:
         st.warning("Unable to render image asset.")
-
-
-def _get_user_error_message(exc: Exception, default_message: str) -> str:
-    return getattr(exc, "user_message", default_message)
 
 
 def _filter_assets(assets: list[dict], selected_filter: str) -> list[dict]:
@@ -183,7 +181,7 @@ def confirm_delete_document_dialog(
                     f"FAISS vectors removed={result['deleted_vectors']}."
                 )
             except Exception as exc:
-                st.session_state[error_message_key] = _get_user_error_message(
+                st.session_state[error_message_key] = get_user_error_message(
                     exc,
                     f"Failed to delete '{doc_name}'.",
                 )
@@ -229,7 +227,7 @@ def confirm_reindex_document_dialog(
                     f"generated {len(assets)} multimodal asset(s) {type_counts}."
                 )
             except Exception as exc:
-                st.session_state[error_message_key] = _get_user_error_message(
+                st.session_state[error_message_key] = get_user_error_message(
                     exc,
                     f"Failed to reindex '{doc_name}'.",
                 )
@@ -286,7 +284,7 @@ def inspect_document_dialog(
             source_file=doc_name,
         )
     except Exception as exc:
-        st.error(_get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
+        st.error(get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
         return
 
     if not assets:

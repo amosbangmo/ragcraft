@@ -5,6 +5,7 @@ import streamlit as st
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.auth.guards import require_authentication
+from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
@@ -18,10 +19,6 @@ st.set_page_config(
 
 require_authentication("pages/retrieval_inspector.py")
 apply_layout()
-
-
-def _get_user_error_message(exc: Exception, default_message: str) -> str:
-    return getattr(exc, "user_message", default_message)
 
 
 def _render_summary_docs(docs: list):
@@ -320,10 +317,11 @@ if run_clicked and question:
             st.code(json.dumps(debug_payload, indent=2, ensure_ascii=False), language="json")
 
     except VectorStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to query the FAISS index for this inspection."))
+        st.error(get_user_error_message(exc, "Unable to query the FAISS index for this inspection."))
     except DocStoreError as exc:
-        st.error(_get_user_error_message(exc, "Unable to reload retrieved assets from SQLite."))
+        st.error(get_user_error_message(exc, "Unable to reload retrieved assets from SQLite."))
     except LLMServiceError as exc:
-        st.error(_get_user_error_message(exc, "The language model failed while preparing the final prompt or answer."))
+        st.error(get_user_error_message(exc, "The language model failed while preparing the final prompt or answer."))
     except Exception as exc:
-        st.error(_get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}"))
+        st.error(get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}"))
+        
