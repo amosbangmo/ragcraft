@@ -330,6 +330,21 @@ class RAGCraftApp:
         project = self.get_project(user_id, project_id)
         return self.rag_service.ask(project, question, chat_history)
 
-    def inspect_retrieval(self, user_id: str, project_id: str, question: str, chat_history=None):
+    def inspect_retrieval(
+        self,
+        user_id: str,
+        project_id: str,
+        question: str,
+        chat_history=None,
+        *,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+    ):
         project = self.get_project(user_id, project_id)
-        return self.rag_service.inspect_pipeline(project, question, chat_history)
+        return self.rag_service.inspect_pipeline(
+            project,
+            question,
+            chat_history,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )

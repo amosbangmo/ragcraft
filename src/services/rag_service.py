@@ -93,8 +93,14 @@ class RAGService:
             "rerank_score": rerank_score,
         }
 
-    def _rewrite_question(self, question: str, chat_history: list[str]) -> str:
-        if not self.config.enable_query_rewrite:
+    def _rewrite_question(
+        self,
+        question: str,
+        chat_history: list[str],
+        *,
+        enable_query_rewrite: bool,
+    ) -> str:
+        if not enable_query_rewrite:
             return question
 
         return self.query_rewrite_service.rewrite(
@@ -130,6 +136,7 @@ class RAGService:
         *,
         project: Project,
         retrieval_query: str,
+        enable_hybrid_retrieval: bool,
     ) -> dict:
         vector_summary_docs = self.vectorstore_service.similarity_search(
             project,
@@ -139,7 +146,7 @@ class RAGService:
 
         bm25_summary_docs: list[Document] = []
 
-        if self.config.enable_hybrid_retrieval:
+        if enable_hybrid_retrieval:
             project_assets = self.docstore_service.list_assets_for_project(
                 user_id=project.user_id,
                 project_id=project.project_id,
@@ -152,7 +159,7 @@ class RAGService:
             )
 
         merged_limit = self.config.retrieval_k
-        if self.config.enable_hybrid_retrieval:
+        if enable_hybrid_retrieval:
             merged_limit += self.config.hybrid_bm25_k
 
         recalled_summary_docs = self._merge_summary_docs(
@@ -167,15 +174,39 @@ class RAGService:
             "recalled_summary_docs": recalled_summary_docs,
         }
 
-    def _run_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
+    def _run_pipeline(
+        self,
+        project: Project,
+        question: str,
+        chat_history=None,
+        *,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+    ) -> dict | None:
         if chat_history is None:
             chat_history = []
 
-        rewritten_question = self._rewrite_question(question, chat_history)
+        enable_query_rewrite = (
+            self.config.enable_query_rewrite
+            if enable_query_rewrite_override is None
+            else enable_query_rewrite_override
+        )
+        enable_hybrid_retrieval = (
+            self.config.enable_hybrid_retrieval
+            if enable_hybrid_retrieval_override is None
+            else enable_hybrid_retrieval_override
+        )
+
+        rewritten_question = self._rewrite_question(
+            question,
+            chat_history,
+            enable_query_rewrite=enable_query_rewrite,
+        )
 
         retrieval_payload = self._retrieve_summary_docs(
             project=project,
             retrieval_query=rewritten_question,
+            enable_hybrid_retrieval=enable_hybrid_retrieval,
         )
 
         vector_summary_docs = retrieval_payload["vector_summary_docs"]
@@ -227,13 +258,15 @@ class RAGService:
             reranked_assets=reranked_raw_assets,
         )
 
-        retrieval_mode = "faiss+bm25" if self.config.enable_hybrid_retrieval else "faiss"
+        retrieval_mode = "faiss+bm25" if enable_hybrid_retrieval else "faiss"
 
         return {
             "question": question,
             "rewritten_question": rewritten_question,
             "chat_history": chat_history,
             "retrieval_mode": retrieval_mode,
+            "query_rewrite_enabled": enable_query_rewrite,
+            "hybrid_retrieval_enabled": enable_hybrid_retrieval,
             "vector_summary_docs": vector_summary_docs,
             "bm25_summary_docs": bm25_summary_docs,
             "recalled_summary_docs": recalled_summary_docs,
@@ -248,8 +281,22 @@ class RAGService:
             "confidence": confidence,
         }
 
-    def inspect_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
-        return self._run_pipeline(project, question, chat_history)
+    def inspect_pipeline(
+        self,
+        project: Project,
+        question: str,
+        chat_history=None,
+        *,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+    ) -> dict | None:
+        return self._run_pipeline(
+            project,
+            question,
+            chat_history,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )
 
     def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
         pipeline = self._run_pipeline(project, question, chat_history)

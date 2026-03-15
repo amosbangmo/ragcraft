@@ -234,6 +234,23 @@ question = st.text_area(
     height=120,
 )
 
+st.markdown("### Retrieval options")
+opt_col_1, opt_col_2 = st.columns(2)
+
+with opt_col_1:
+    enable_query_rewrite = st.toggle(
+        "Enable query rewrite",
+        value=True,
+        help="Rewrite the user query into a retrieval-optimized search query before recall.",
+    )
+
+with opt_col_2:
+    enable_hybrid_retrieval = st.toggle(
+        "Enable hybrid retrieval (FAISS + BM25)",
+        value=True,
+        help="Combine semantic retrieval from FAISS with lexical retrieval from BM25.",
+    )
+
 chat_history_mode = st.toggle("Include current chat history context", value=False)
 
 chat_history = []
@@ -250,6 +267,8 @@ if run_clicked and question:
             project_id=project_id,
             question=question,
             chat_history=chat_history,
+            enable_query_rewrite_override=enable_query_rewrite,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval,
         )
 
         if pipeline is None:
@@ -260,13 +279,13 @@ if run_clicked and question:
         with top_metrics[0]:
             st.metric("Mode", pipeline["retrieval_mode"])
         with top_metrics[1]:
-            st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
+            st.metric("Rewrite", "On" if pipeline["query_rewrite_enabled"] else "Off")
         with top_metrics[2]:
-            st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
+            st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
         with top_metrics[3]:
-            st.metric("Merged summaries", len(pipeline["recalled_summary_docs"]))
+            st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
         with top_metrics[4]:
-            st.metric("Recall doc_ids", len(pipeline["recalled_doc_ids"]))
+            st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
         with top_metrics[5]:
             st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
         with top_metrics[6]:
@@ -336,6 +355,8 @@ if run_clicked and question:
                 "rewritten_question": pipeline["rewritten_question"],
                 "chat_history": pipeline["chat_history"],
                 "retrieval_mode": pipeline["retrieval_mode"],
+                "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
+                "hybrid_retrieval_enabled": pipeline["hybrid_retrieval_enabled"],
                 "recalled_doc_ids": pipeline["recalled_doc_ids"],
                 "selected_doc_ids": pipeline["selected_doc_ids"],
                 "confidence": pipeline["confidence"],
