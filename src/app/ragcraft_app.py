@@ -8,6 +8,7 @@ from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
+from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -31,6 +32,7 @@ class RAGCraftApp:
         self.reranking_service = RerankingService()
 
         self._rag_service = None
+        self._retrieval_comparison_service = None
 
     @property
     def rag_service(self):
@@ -43,6 +45,14 @@ class RAGCraftApp:
             )
 
         return self._rag_service
+
+    @property
+    def retrieval_comparison_service(self):
+        if self._retrieval_comparison_service is None:
+            self._retrieval_comparison_service = RetrievalComparisonService(
+                rag_service=self.rag_service,
+            )
+        return self._retrieval_comparison_service
 
     # ------------------------------------------------------------------
     # Authentication / profile façade
@@ -347,4 +357,19 @@ class RAGCraftApp:
             chat_history,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )
+
+    def compare_retrieval_modes(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        questions: list[str],
+        enable_query_rewrite: bool,
+    ) -> dict:
+        project = self.get_project(user_id, project_id)
+        return self.retrieval_comparison_service.compare(
+            project=project,
+            questions=questions,
+            enable_query_rewrite=enable_query_rewrite,
         )

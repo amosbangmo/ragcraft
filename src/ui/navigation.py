@@ -65,6 +65,7 @@ def render_navigation(hide_sidebar: bool = False):
         st.page_link("pages/chat.py", label="💬 Chat")
         st.page_link("pages/search.py", label="🔎 Search")
         st.page_link("pages/retrieval_inspector.py", label="🧠 Retrieval Inspector")
+        st.page_link("pages/retrieval_comparison.py", label="⚖️ Retrieval Comparison")
         st.page_link("pages/evaluation.py", label="📊 Evaluation")
         st.page_link("pages/profile.py", label="👤 Profile")
 
