@@ -39,6 +39,7 @@ def render_page_header(
     show_refresh_button: bool = False,
     show_create_button_when_empty: bool = True,
     refresh_button_label: str = "🔄 Refresh chain",
+    refresh_button_disabled: bool = False,
     metrics: list[tuple[str, str | int | float]] | None = None,
 ):
     app = get_app()
@@ -69,6 +70,7 @@ def render_page_header(
                 refresh_clicked = st.button(
                     refresh_button_label,
                     use_container_width=True,
+                    disabled=refresh_button_disabled
                 )
         else:
             project_id = render_project_selector(

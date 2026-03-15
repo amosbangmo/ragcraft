@@ -8,6 +8,10 @@ def is_request_running(request_key: str) -> bool:
     return bool(st.session_state.get(request_key, False))
 
 
+def clear_result_payload(result_key: str) -> None:
+    st.session_state.pop(result_key, None)
+
+
 def _start_request(request_key: str) -> None:
     st.session_state[request_key] = True
 
@@ -37,16 +41,16 @@ def run_request_action(
     error_mapper: Callable[[Exception], str],
 ) -> None:
     """
-    Reusable request runner for Streamlit pages.
+    Reusable request runner for Streamlit pages and dialogs.
 
     Flow:
-    - user clicks a button
+    - user triggers an action
     - running state is set to True
     - page reruns so the button is rendered disabled
     - action is executed inside a spinner
     - result (or mapped error) is stored in session_state
     - running state is reset
-    - page reruns so the button becomes enabled again
+    - page reruns so the UI becomes interactive again
     """
 
     if trigger:

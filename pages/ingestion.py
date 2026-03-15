@@ -6,11 +6,12 @@ from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.document_table import render_document_table
 from src.ui.document_actions import handle_document_action
+from src.ui.request_runner import (
+    is_request_running,
+    run_request_action,
+    render_result_payload,
+)
 from src.auth.guards import require_authentication
-
-
-require_authentication("pages/ingestion.py")
-apply_layout()
 
 
 st.set_page_config(
@@ -18,6 +19,13 @@ st.set_page_config(
     page_icon="📄",
     layout="wide",
 )
+
+require_authentication("pages/ingestion.py")
+apply_layout()
+
+INGESTION_REQUEST_KEY = "ingestion_request_running"
+INGESTION_RESULT_KEY = "ingestion_result_payload"
+
 
 header = render_page_header(
     badge="Ingestion",
@@ -49,45 +57,94 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True,
 )
 
-if uploaded_files:
+process_clicked = st.button(
+    "Process uploaded documents",
+    use_container_width=True,
+    disabled=is_request_running(INGESTION_REQUEST_KEY),
+)
+
+
+def _run_ingestion():
+    results: list[dict] = []
+
     for uploaded_file in uploaded_files:
-        try:
-            with st.spinner(f"Processing {uploaded_file.name}..."):
-                result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+        result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
 
-            assets = result["raw_assets"]
-            replacement_info = result["replacement_info"]
+        assets = result["raw_assets"]
+        replacement_info = result["replacement_info"]
 
-            type_counts: dict[str, int] = {}
-            for asset in assets:
-                asset_type = asset["content_type"]
-                type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
+        type_counts: dict[str, int] = {}
+        for asset in assets:
+            asset_type = asset["content_type"]
+            type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
 
-            deleted_assets = replacement_info.get("deleted_assets", 0)
-            deleted_vectors = replacement_info.get("deleted_vectors", 0)
+        results.append(
+            {
+                "file_name": uploaded_file.name,
+                "asset_count": len(assets),
+                "type_counts": type_counts,
+                "replacement_info": replacement_info,
+            }
+        )
 
-            if deleted_assets or deleted_vectors:
-                st.success(
-                    f"{uploaded_file.name}: replaced previous ingestion "
-                    f"({deleted_assets} SQLite asset(s) removed, {deleted_vectors} FAISS vector(s) removed), "
-                    f"then processed {len(assets)} multimodal asset(s) {type_counts}"
-                )
-            else:
-                st.success(
-                    f"{uploaded_file.name}: processed {len(assets)} multimodal asset(s) {type_counts}"
-                )
+    return results
 
-        except Exception as exc:
-            error_message = str(exc)
 
-            if "tesseract is not installed" in error_message.lower():
-                st.error(
-                    f"Failed to process {uploaded_file.name}: "
-                    "Tesseract OCR is required for hi_res PDF parsing. "
-                    "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
-                )
-            else:
-                st.error(f"Failed to process {uploaded_file.name}: {exc}")
+def _map_ingestion_error(exc: Exception) -> str:
+    error_message = str(exc)
+
+    if "tesseract is not installed" in error_message.lower():
+        return (
+            "Tesseract OCR is required for hi_res PDF parsing. "
+            "Install `tesseract-ocr` in the runtime image and ensure it is available in PATH."
+        )
+
+    return f"Failed to process uploaded documents: {exc}"
+
+
+def _render_ingestion_result(results: list[dict]):
+    if not results:
+        st.info("No document was processed.")
+        return
+
+    for item in results:
+        file_name = item["file_name"]
+        asset_count = item["asset_count"]
+        type_counts = item["type_counts"]
+        replacement_info = item["replacement_info"]
+
+        deleted_assets = replacement_info.get("deleted_assets", 0)
+        deleted_vectors = replacement_info.get("deleted_vectors", 0)
+
+        if deleted_assets or deleted_vectors:
+            st.success(
+                f"{file_name}: replaced previous ingestion "
+                f"({deleted_assets} SQLite asset(s) removed, {deleted_vectors} FAISS vector(s) removed), "
+                f"then processed {asset_count} multimodal asset(s) {type_counts}"
+            )
+        else:
+            st.success(
+                f"{file_name}: processed {asset_count} multimodal asset(s) {type_counts}"
+            )
+
+
+if process_clicked and not uploaded_files:
+    st.warning("Please upload at least one document.")
+else:
+    run_request_action(
+        request_key=INGESTION_REQUEST_KEY,
+        result_key=INGESTION_RESULT_KEY,
+        trigger=process_clicked,
+        can_run=bool(uploaded_files),
+        action=_run_ingestion,
+        spinner_text="Processing uploaded documents...",
+        error_mapper=_map_ingestion_error,
+    )
+
+render_result_payload(
+    result_key=INGESTION_RESULT_KEY,
+    on_success=_render_ingestion_result,
+)
 
 updated_documents = app.get_project_document_details(user_id, project_id)
 

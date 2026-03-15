@@ -2,7 +2,12 @@ import base64
 
 import streamlit as st
 
-from src.core.error_utils import get_user_error_message
+from src.ui.request_runner import (
+    is_request_running,
+    run_request_action,
+    render_result_payload,
+    clear_result_payload,
+)
 
 
 REINDEXING_DOC_KEY = "reindexing_document_key"
@@ -85,6 +90,10 @@ def _render_image_asset(base64_content: str, title: str | None = None):
         st.warning("Unable to render image asset.")
 
 
+def _get_user_error_message(exc: Exception, default_message: str) -> str:
+    return getattr(exc, "user_message", default_message)
+
+
 def _filter_assets(assets: list[dict], selected_filter: str) -> list[dict]:
     if selected_filter == "All":
         return assets
@@ -97,12 +106,23 @@ def _build_reindexing_doc_key(project_id: str, doc_name: str) -> str:
     return f"{project_id}::{doc_name}"
 
 
+def _build_reindex_request_key(project_id: str, doc_name: str) -> str:
+    return f"reindex_request_running::{project_id}::{doc_name}"
+
+
+def _build_reindex_result_key(project_id: str, doc_name: str) -> str:
+    return f"reindex_result_payload::{project_id}::{doc_name}"
+
+
 def get_reindexing_document_key() -> str | None:
     return st.session_state.get(REINDEXING_DOC_KEY)
 
 
 def is_document_reindexing(project_id: str, doc_name: str) -> bool:
-    return get_reindexing_document_key() == _build_reindexing_doc_key(project_id, doc_name)
+    request_key = _build_reindex_request_key(project_id, doc_name)
+    return is_request_running(request_key) or (
+        get_reindexing_document_key() == _build_reindexing_doc_key(project_id, doc_name)
+    )
 
 
 def set_document_reindexing(project_id: str, doc_name: str):
@@ -181,7 +201,7 @@ def confirm_delete_document_dialog(
                     f"FAISS vectors removed={result['deleted_vectors']}."
                 )
             except Exception as exc:
-                st.session_state[error_message_key] = get_user_error_message(
+                st.session_state[error_message_key] = _get_user_error_message(
                     exc,
                     f"Failed to delete '{doc_name}'.",
                 )
@@ -199,44 +219,49 @@ def confirm_reindex_document_dialog(
     success_message_key: str,
     error_message_key: str,
 ):
+    request_key = _build_reindex_request_key(project_id, doc_name)
+    result_key = _build_reindex_result_key(project_id, doc_name)
+
     st.info(
         "This will reprocess the file already stored on disk, rebuild its SQLite assets, "
         "refresh its FAISS vectors, and invalidate the project retrieval cache."
     )
 
-    if is_document_reindexing(project_id, doc_name):
-        with st.spinner(f"Reindexing {doc_name}..."):
-            try:
-                result = app.reindex_project_document(
-                    user_id=user_id,
-                    project_id=project_id,
-                    source_file=doc_name,
-                )
-                assets = result["raw_assets"]
-                replacement_info = result["replacement_info"]
+    def _run_reindex():
+        return app.reindex_project_document(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=doc_name,
+        )
 
-                type_counts: dict[str, int] = {}
-                for asset in assets:
-                    asset_type = asset["content_type"]
-                    type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
+    def _map_reindex_error(exc: Exception) -> str:
+        return _get_user_error_message(
+            exc,
+            f"Failed to reindex '{doc_name}'.",
+        )
 
-                st.session_state[success_message_key] = (
-                    f"{doc_name}: reindexed successfully "
-                    f"({replacement_info.get('deleted_assets', 0)} SQLite asset(s) replaced, "
-                    f"{replacement_info.get('deleted_vectors', 0)} FAISS vector(s) replaced), "
-                    f"generated {len(assets)} multimodal asset(s) {type_counts}."
-                )
-            except Exception as exc:
-                st.session_state[error_message_key] = get_user_error_message(
-                    exc,
-                    f"Failed to reindex '{doc_name}'.",
-                )
-            finally:
-                clear_document_reindexing()
-                clear_pending_reindex_dialog()
+    def _render_reindex_result(result: dict):
+        assets = result["raw_assets"]
+        replacement_info = result["replacement_info"]
 
+        type_counts: dict[str, int] = {}
+        for asset in assets:
+            asset_type = asset["content_type"]
+            type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
+
+        st.session_state[success_message_key] = (
+            f"{doc_name}: reindexed successfully "
+            f"({replacement_info.get('deleted_assets', 0)} SQLite asset(s) replaced, "
+            f"{replacement_info.get('deleted_vectors', 0)} FAISS vector(s) replaced), "
+            f"generated {len(assets)} multimodal asset(s) {type_counts}."
+        )
+
+        clear_result_payload(result_key)
+        clear_document_reindexing()
+        clear_pending_reindex_dialog()
         st.rerun()
-        return
+
+    trigger_reindex = False
 
     col1, col2 = st.columns(2)
 
@@ -245,26 +270,53 @@ def confirm_reindex_document_dialog(
             "Cancel",
             use_container_width=True,
             key=f"cancel_reindex_{project_id}_{doc_name}_{success_message_key}",
+            disabled=is_request_running(request_key),
         ):
+            clear_result_payload(result_key)
             clear_pending_reindex_dialog()
             clear_document_reindexing()
             st.rerun()
 
     with col2:
-        if st.button(
+        trigger_reindex = st.button(
             "Reindex",
             use_container_width=True,
             key=f"confirm_reindex_{project_id}_{doc_name}_{success_message_key}",
-        ):
-            set_document_reindexing(project_id, doc_name)
-            set_pending_reindex_dialog(
-                user_id=user_id,
-                project_id=project_id,
-                doc_name=doc_name,
-                success_message_key=success_message_key,
-                error_message_key=error_message_key,
-            )
-            st.rerun()
+            disabled=is_request_running(request_key),
+        )
+
+    if trigger_reindex:
+        set_document_reindexing(project_id, doc_name)
+        set_pending_reindex_dialog(
+            user_id=user_id,
+            project_id=project_id,
+            doc_name=doc_name,
+            success_message_key=success_message_key,
+            error_message_key=error_message_key,
+        )
+
+    run_request_action(
+        request_key=request_key,
+        result_key=result_key,
+        trigger=trigger_reindex,
+        can_run=True,
+        action=_run_reindex,
+        spinner_text=f"Reindexing {doc_name}...",
+        error_mapper=_map_reindex_error,
+    )
+
+    render_result_payload(
+        result_key=result_key,
+        on_success=_render_reindex_result,
+    )
+
+    result_payload = st.session_state.get(result_key)
+    if isinstance(result_payload, dict) and "error" in result_payload:
+        st.session_state[error_message_key] = result_payload["error"]
+        clear_result_payload(result_key)
+        clear_document_reindexing()
+        clear_pending_reindex_dialog()
+        st.rerun()
 
 
 @st.dialog("Inspect document")
@@ -284,7 +336,7 @@ def inspect_document_dialog(
             source_file=doc_name,
         )
     except Exception as exc:
-        st.error(get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
+        st.error(_get_user_error_message(exc, f"Unable to inspect '{doc_name}'."))
         return
 
     if not assets:
