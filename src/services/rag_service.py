@@ -7,6 +7,7 @@ from src.domain.rag_response import RAGResponse
 from src.domain.source_citation import SourceCitation
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
+from src.services.prompt_builder_service import PromptBuilderService
 from src.services.reranking_service import RerankingService
 from src.services.source_citation_service import SourceCitationService
 from src.services.vectorstore_service import VectorStoreService
@@ -33,6 +34,10 @@ class RAGService:
         self.docstore_service = docstore_service
         self.reranking_service = reranking_service
         self.source_citation_service = SourceCitationService()
+        self.prompt_builder_service = PromptBuilderService(
+            max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
+            max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
+        )
         self.config = RETRIEVAL_CONFIG
 
     def build_chain(self, project: Project):
@@ -81,135 +86,6 @@ class RAGService:
             "rerank_score": rerank_score,
         }
 
-    def _format_raw_asset_for_prompt(self, asset: dict, citation: SourceCitation) -> str:
-        content_type = asset.get("content_type", "unknown")
-        source_file = asset.get("source_file", "unknown")
-        raw_content = asset.get("raw_content", "") or ""
-        metadata = asset.get("metadata", {}) or {}
-        summary = asset.get("summary", "") or ""
-        doc_id = asset.get("doc_id", "?")
-        citation_label = citation.prompt_label
-
-        if content_type == "text":
-            trimmed = raw_content[: self.config.max_text_chars_per_asset]
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
-Type: text
-Doc ID: {doc_id}
-Source file: {source_file}
-Metadata: {metadata}
-
-Raw text:
-{trimmed}
-"""
-
-        if content_type == "table":
-            table_title = metadata.get("table_title")
-            table_text = metadata.get("table_text") or ""
-
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
-Type: table
-Doc ID: {doc_id}
-Source file: {source_file}
-Metadata: {metadata}
-
-Table title:
-{table_title}
-
-Raw table HTML:
-{raw_content[: self.config.max_table_chars_per_asset]}
-
-Raw table text:
-{table_text[: self.config.max_table_chars_per_asset]}
-"""
-
-        if content_type == "image":
-            image_context = {
-                "page_number": metadata.get("page_number"),
-                "page_start": metadata.get("page_start"),
-                "page_end": metadata.get("page_end"),
-                "image_index": metadata.get("image_index"),
-                "image_mime_type": metadata.get("image_mime_type"),
-                "element_category": metadata.get("element_category"),
-                "embedded_path": metadata.get("embedded_path"),
-                "image_title": metadata.get("image_title"),
-                "rerank_score": metadata.get("rerank_score"),
-            }
-
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
-Type: image
-Doc ID: {doc_id}
-Source file: {source_file}
-Metadata: {image_context}
-
-Image retrieval summary:
-{summary}
-
-Raw image:
-[Binary image asset stored in SQLite as base64 and intentionally omitted from this final prompt.]
-"""
-
-        trimmed = raw_content[:2000]
-        return f"""Asset {citation.source_number}
-Citation: {citation_label}
-Type: {content_type}
-Doc ID: {doc_id}
-Source file: {source_file}
-Metadata: {metadata}
-
-Raw content:
-{trimmed}
-"""
-
-    def _build_raw_context(self, raw_assets: list[dict], citations: list[SourceCitation]) -> str:
-        blocks = [
-            self._format_raw_asset_for_prompt(asset, citation)
-            for asset, citation in zip(raw_assets, citations)
-        ]
-        return "\n\n".join(blocks)
-
-    def _build_prompt(
-        self,
-        *,
-        question: str,
-        chat_history: list[str],
-        raw_context: str,
-    ) -> str:
-        history_text = "\n".join(chat_history) if chat_history else "No prior chat history."
-
-        return f"""
-You are an AI assistant answering questions using only the provided raw multimodal context.
-
-Chat history:
-{history_text}
-
-Question:
-{question}
-
-Raw multimodal context:
-{raw_context}
-
-Instructions:
-- Use only the provided raw context.
-- Retrieval happened in two stages:
-  1. large recall retrieval over summary documents
-  2. strict reranking over rehydrated raw assets
-- Only the final reranked assets are included in the context.
-- If the answer is not supported by the raw context, say you don't know.
-- Be precise and concise.
-- Every factual claim grounded in a source should include its citation label.
-- Use the exact citation labels provided in each asset block.
-- Citations must be inline, for example:
-  - [Source 1]
-  - [Source 2][Tableau: Table 2]
-  - [Source 3][Figure: Attention map]
-- When useful, mention whether the evidence came from text, table, or image assets.
-- For image assets, rely only on their provided metadata and image retrieval summary; do not invent unseen visual details.
-- Never invent document content that is not explicitly present in the raw context.
-"""
-
     def _run_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
         if chat_history is None:
             chat_history = []
@@ -249,15 +125,21 @@ Instructions:
         citation_objects = self.source_citation_service.build_citations(reranked_raw_assets)
         source_references = [self._citation_to_dict(citation) for citation in citation_objects]
 
-        raw_context = self._build_raw_context(reranked_raw_assets, citation_objects)
-        prompt = self._build_prompt(
+        raw_context = self.prompt_builder_service.build_raw_context(
+            raw_assets=reranked_raw_assets,
+            citations=citation_objects,
+        )
+        prompt = self.prompt_builder_service.build_prompt(
             question=question,
             chat_history=chat_history,
             raw_context=raw_context,
         )
 
         confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
-        confidence = self.evaluation_service.compute_confidence(confidence_docs)
+        confidence = self.evaluation_service.compute_confidence(
+            docs=confidence_docs,
+            reranked_assets=reranked_raw_assets,
+        )
 
         return {
             "question": question,
