@@ -7,10 +7,10 @@ from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
-from src.ui.request_state import (
+from src.ui.request_runner import (
     is_request_running,
-    trigger_request,
-    finish_request,
+    run_request_action,
+    render_result_payload,
 )
 
 
@@ -23,9 +23,9 @@ st.set_page_config(
 require_authentication("pages/retrieval_comparison.py")
 apply_layout()
 
-
 COMPARISON_REQUEST_KEY = "retrieval_comparison_request_running"
 COMPARISON_RESULT_KEY = "retrieval_comparison_result_payload"
+
 
 def _parse_questions(raw_text: str) -> list[str]:
     return [line.strip() for line in raw_text.splitlines() if line.strip()]
@@ -61,56 +61,33 @@ enable_query_rewrite = st.toggle(
     help="Keep the rewrite setting identical across FAISS and Hybrid so the comparison isolates retrieval mode.",
 )
 
-run_clicked = st.button(
-    "Run FAISS vs Hybrid comparison",
-    use_container_width=True,
-    disabled=is_request_running(COMPARISON_REQUEST_KEY),
-)
+questions = _parse_questions(questions_text)
 
-if run_clicked:
-    questions = _parse_questions(questions_text)
 
-    if not questions:
-        st.warning("Please enter at least one evaluation question.")
-        st.stop()
+def _run_comparison():
+    return app.compare_retrieval_modes(
+        user_id=user_id,
+        project_id=project_id,
+        questions=questions,
+        enable_query_rewrite=enable_query_rewrite,
+    )
 
-    st.session_state[COMPARISON_RESULT_KEY] = None
-    trigger_request(COMPARISON_REQUEST_KEY)
 
-if is_request_running(COMPARISON_REQUEST_KEY):
-    questions = _parse_questions(questions_text)
+def _map_comparison_error(exc: Exception) -> str:
+    if isinstance(exc, VectorStoreError):
+        return get_user_error_message(exc, "Unable to query the FAISS index for this comparison.")
+    if isinstance(exc, DocStoreError):
+        return get_user_error_message(exc, "Unable to inspect project assets from SQLite.")
+    if isinstance(exc, LLMServiceError):
+        return get_user_error_message(exc, "The language model failed while rewriting one or more retrieval queries.")
+    return get_user_error_message(exc, f"Unexpected error while running the comparison: {exc}")
 
-    try:
-        with st.spinner("Running FAISS vs Hybrid comparison..."):
-            comparison = app.compare_retrieval_modes(
-                user_id=user_id,
-                project_id=project_id,
-                questions=questions,
-                enable_query_rewrite=enable_query_rewrite,
-            )
 
-        st.session_state[COMPARISON_RESULT_KEY] = comparison
+def _render_comparison_result(comparison):
+    if comparison is None:
+        st.warning("No comparison result available.")
+        return
 
-    except VectorStoreError as exc:
-        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to query the FAISS index for this comparison.")}
-    except DocStoreError as exc:
-        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "Unable to inspect project assets from SQLite.")}
-    except LLMServiceError as exc:
-        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, "The language model failed while rewriting one or more retrieval queries.")}
-    except Exception as exc:
-        st.session_state[COMPARISON_RESULT_KEY] = {"error": get_user_error_message(exc, f"Unexpected error while running the comparison: {exc}")}
-    finally:
-        finish_request(COMPARISON_REQUEST_KEY)
-
-result_payload = st.session_state.get(COMPARISON_RESULT_KEY)
-
-if result_payload:
-
-    if isinstance(result_payload, dict) and "error" in result_payload:
-        st.error(result_payload["error"])
-        st.stop()
-
-    comparison = result_payload
     summary = comparison["summary"]
     rows = comparison["rows"]
 
@@ -171,3 +148,28 @@ if result_payload:
 - **Hybrid confidence wins:** {summary["hybrid_wins_on_confidence"]}/{summary["total_questions"]} question(s).
 """
     )
+
+
+run_clicked = st.button(
+    "Run FAISS vs Hybrid comparison",
+    use_container_width=True,
+    disabled=is_request_running(COMPARISON_REQUEST_KEY),
+)
+
+if run_clicked and not questions:
+    st.warning("Please enter at least one evaluation question.")
+else:
+    run_request_action(
+        request_key=COMPARISON_REQUEST_KEY,
+        result_key=COMPARISON_RESULT_KEY,
+        trigger=run_clicked,
+        can_run=bool(questions),
+        action=_run_comparison,
+        spinner_text="Running FAISS vs Hybrid comparison...",
+        error_mapper=_map_comparison_error,
+    )
+
+render_result_payload(
+    result_key=COMPARISON_RESULT_KEY,
+    on_success=_render_comparison_result,
+)
