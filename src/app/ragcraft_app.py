@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from src.infrastructure.persistence.db import init_app_db
 from src.auth.auth_service import AuthService
 from src.services.project_service import ProjectService
@@ -7,6 +9,7 @@ from src.services.evaluation_service import EvaluationService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
+from src.services.reranking_service import RerankingService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -27,6 +30,7 @@ class RAGCraftApp:
         self.evaluation_service = EvaluationService()
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()
+        self.reranking_service = RerankingService()
 
         self._rag_service = None
 
@@ -37,6 +41,7 @@ class RAGCraftApp:
                 vectorstore_service=self.vectorstore_service,
                 evaluation_service=self.evaluation_service,
                 docstore_service=self.docstore_service,
+                reranking_service=self.reranking_service,
             )
 
         return self._rag_service
@@ -128,7 +133,14 @@ class RAGCraftApp:
 
         for doc_name in documents:
             file_path = project.path / doc_name
+
             asset_count = self.docstore_service.count_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+
+            asset_stats = self.docstore_service.get_asset_stats_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
                 source_file=doc_name,
@@ -137,13 +149,25 @@ class RAGCraftApp:
             details.append(
                 {
                     "name": doc_name,
+                    "project_id": project_id,
                     "path": str(file_path),
                     "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
                     "asset_count": asset_count,
+                    "text_count": int(asset_stats.get("text_count", 0)),
+                    "table_count": int(asset_stats.get("table_count", 0)),
+                    "image_count": int(asset_stats.get("image_count", 0)),
+                    "latest_ingested_at": asset_stats.get("latest_ingested_at"),
                 }
             )
 
         return details
+
+    def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]:
+        return self.docstore_service.list_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
 
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
@@ -269,6 +293,45 @@ class RAGCraftApp:
             "replacement_info": replacement_info,
         }
 
+    def reindex_project_document(self, user_id: str, project_id: str, source_file: str):
+        project = self.get_project(user_id, project_id)
+        file_path = project.path / source_file
+
+        if not file_path.exists() or not file_path.is_file():
+            raise FileNotFoundError(f"Document not found on disk: {source_file}")
+
+        replacement_info = self.replace_document_assets(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+        summary_documents, raw_assets = self.ingestion_service.ingest_file_path(
+            project=project,
+            file_path=file_path,
+            source_file=source_file,
+        )
+
+        if not raw_assets:
+            raise ValueError(f"No raw assets generated for file: {source_file}")
+
+        for asset in raw_assets:
+            self.docstore_service.save_asset(**asset)
+
+        if summary_documents:
+            self.vectorstore_service.index_documents(project, summary_documents)
+
+        self.invalidate_project_chain(user_id, project_id)
+
+        return {
+            "raw_assets": raw_assets,
+            "replacement_info": replacement_info,
+        }
+
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)
         return self.rag_service.ask(project, question, chat_history)
+
+    def inspect_retrieval(self, user_id: str, project_id: str, question: str, chat_history=None):
+        project = self.get_project(user_id, project_id)
+        return self.rag_service.inspect_pipeline(project, question, chat_history)
