@@ -21,20 +21,21 @@ tags:
   - semantic-search
 pinned: true
 short_description: Multi-project RAG system turning documents into answers
-
 ---
 
 # 📚 RAGCraft
 
 > **A portfolio-grade Retrieval-Augmented Generation (RAG) platform demonstrating how modern document intelligence systems can be built.**
 
-RAGCraft is a **multi-user, multi-project RAG platform** designed to showcase how modern document intelligence systems can be built with inspectable retrieval pipelines, multimodal document extraction, and structured asset storage.
+RAGCraft is a **multi-user, multi-project RAG platform** designed to showcase how modern document intelligence systems can be built with **inspectable retrieval pipelines, hybrid retrieval, query rewriting, multimodal document extraction, and structured asset storage**.
 
 Key capabilities include:
 
 - 🔎 Inspectable retrieval pipelines
+- 🔀 Hybrid retrieval (FAISS + BM25)
+- ✍️ Query rewriting before retrieval
 - 📦 Structured multimodal document assets
-- 🧠 Two-stage retrieval with reranking
+- ⚖️ Retrieval comparison tooling (FAISS vs Hybrid)
 
 ---
 
@@ -42,7 +43,7 @@ Key capabilities include:
 
 🎥 **[GIF – Application Demo]**
 
-*(Add a GIF showing: upload → ask question → inspect retrieval - to be done)*
+*(Add a GIF showing: upload → ask question → inspect retrieval → compare retrieval modes)*
 
 ```text
 Upload document
@@ -51,81 +52,90 @@ Ask question
       ↓
 Inspect retrieved assets
       ↓
-See generated answer
+Analyze pipeline
+      ↓
+Compare FAISS vs Hybrid retrieval
 ```
 
 ---
 
 # 📷 Application Screenshots
 
-### Chat Interface
+## Chat Interface
 
 📷 **[SCREENSHOT – Chat UI]**
 
-*(Show the conversation with citations - to be done)*
+*(Conversation with citations)*
 
 ---
 
-### Document Inspector
+## Document Inspector
 
 📷 **[SCREENSHOT – Inspect Document Modal]**
 
-*(Show text / tables / images extracted from a document - to be done)*
+*(Shows text / tables / images extracted from a document)*
 
 ---
 
-### Retrieval Inspector
+## Retrieval Inspector
 
 📷 **[SCREENSHOT – Retrieval Inspection Page]**
 
-*(Show retrieved summaries, assets selected, and final prompt - to be done)*
+*(Shows retrieval stages and final prompt)*
 
 ---
 
 # 🚀 Key Features
 
-### User Management
+## User Management
+
 - 👤 **User authentication with SQLite**
 - 🔑 **Secure password hashing (bcrypt)**
 - 📁 **User-scoped projects**
+- 🧑‍💻 Profile management and avatars
 
-### Document Intelligence
+## Document Intelligence
+
 - 📄 **Document ingestion** (PDF, DOCX, PPTX)
-- 🧩 **Advanced parsing** using **Unstructured**
+- 🧩 **Advanced parsing using Unstructured**
 - 🪄 **Table and image extraction**
-- ✂️ **Semantic chunking using title-aware chunking**
+- ✂️ **Title-aware semantic chunking**
+- 🔄 Document reindexing
 
-### Retrieval & RAG
-- 🔎 **Vector search with FAISS**
-- 🧠 **Two-stage retrieval pipeline**
-  - Large recall via embeddings
-  - Strict reranking of candidate assets
-- 📚 **Raw asset retrieval injected into prompts**
+## Retrieval & RAG
 
-### Asset-level Retrieval
+- 🔎 **Semantic search with FAISS**
+- 📚 **Lexical search with BM25**
+- 🔀 **Hybrid retrieval pipeline**
+- ✍️ **Query rewriting for better retrieval**
+- 🧠 **CrossEncoder reranking**
+- 📦 **Asset-level retrieval injected into prompts**
+
+## Asset-level Retrieval
+
 - 📦 Structured storage of extracted document elements
-- 🧠 Asset-level retrieval instead of traditional fixed-size chunk retrieval
+- 🧠 Retrieval based on document assets instead of fixed chunks
 - 🔍 Transparent prompt reconstruction
 
-### Multimodal Asset Storage
-- 📦 Structured storage of:
-  - text chunks
-  - tables (HTML representation)
-  - images (base64 payload)
-- 🗄 **SQLite-based document store**
+## Multimodal Asset Storage
 
-### Inspection & Debugging Tools
+Assets stored in SQLite:
+
+- text chunks
+- HTML tables
+- images (base64)
+
+## Inspection & Debugging Tools
+
 - 🔍 **Document inspection UI**
 - 🔎 **Retrieval inspection page**
-- 🧠 **Full RAG pipeline visibility**
+- ⚙️ Toggle **query rewrite**
+- ⚙️ Toggle **hybrid retrieval**
+- ⚖️ **FAISS vs Hybrid comparison page**
 
 ---
 
 # 🏗️ System Architecture
-
-📊 **[ARCHITECTURE DIAGRAM]**
-
-*(Draw a simple diagram and insert here - to be done)*
 
 ```text
 User (Browser)
@@ -138,7 +148,7 @@ Document Processing
 (Unstructured extraction + chunking)
       ↓
 Retrieval Pipeline
-(FAISS + reranking)
+(Query rewrite → FAISS / BM25 → merge → rerank)
       ↓
 Application Database
 (SQLite: users + rag_assets)
@@ -152,11 +162,11 @@ LLM
 
 # 📦 Data Model
 
-RAGCraft stores data in **two complementary layers**.
+RAGCraft uses **two complementary storage layers**.
 
 ## Vector layer
 
-Used for fast semantic retrieval.
+Used for semantic retrieval.
 
 ```text
 FAISS index
@@ -165,35 +175,20 @@ FAISS index
 
 ## Asset storage layer
 
-Document assets are stored in a **central SQLite database**.
-
 ```text
 SQLite database
 ├── users
 └── rag_assets
     ├── text chunks
-    ├── tables (HTML representation)
-    └── images (base64 payload)
+    ├── tables
+    └── images
 ```
 
-The `rag_assets` table stores extracted elements from documents and is used to reconstruct prompts during retrieval.
-
-
-This architecture ensures:
-
-- fast retrieval
-- traceability of answers
-- prompt transparency
-- easier debugging of RAG pipelines
+Assets are rehydrated from SQLite during retrieval to build grounded prompts.
 
 ---
 
 # 🧩 Data Isolation Model
-
-RAGCraft uses a **hybrid storage model**:
-
-1️⃣ **Application data stored in SQLite**  
-2️⃣ **Project-level vector indexes stored on disk**
 
 ```text
 data/
@@ -213,49 +208,49 @@ data/
                 └── faiss_index
 ```
 
-The SQLite database stores:
+SQLite stores:
 
-- user accounts
-- extracted document assets
+- users
+- extracted assets
 
-Vector indexes remain **project-specific** and are stored on disk using FAISS.
-
+FAISS indexes remain **project-specific**.
 
 ---
 
 # 🔐 Authentication
 
-User accounts are stored in the **main SQLite application database** in the `users` table.
+User accounts are stored in the **SQLite application database**.
 
 Passwords are securely stored using **bcrypt hashing**.
 
-Authentication features include:
+Features include:
 
 - account creation
 - login
-- secure password hashing
+- password change
+- profile management
 - user-scoped project isolation
-
-This lightweight model allows RAGCraft to demonstrate **multi-user RAG architecture** without requiring external infrastructure.
 
 ---
 
-# 🔎 RAG Pipeline (Step-by-Step)
-
-This system follows a **two-stage retrieval pipeline**.
+# 🔎 RAG Pipeline
 
 ```text
 User query
       ↓
-Embedding search (FAISS)
+Query rewriting
       ↓
-Top-K candidate summaries
+Recall retrieval
+  ├─ FAISS semantic search
+  └─ BM25 lexical search
       ↓
-Reranking
-      ↓
-Top-N assets selected
+Hybrid merge
       ↓
 Raw asset loading
+      ↓
+CrossEncoder reranking
+      ↓
+Top-N assets selected
       ↓
 Prompt construction
       ↓
@@ -264,56 +259,48 @@ LLM answer
 
 Benefits:
 
-- higher recall retrieval
-- improved precision
-- fewer hallucinations
-- grounded responses
+- improved recall
+- better robustness on vague queries
+- reduced hallucinations
+- transparent answer grounding
 
 ---
 
 # 🧠 Product & Technical Decisions
 
-### Why SQLite-based user management?
+## Why Hybrid Retrieval?
 
-RAGCraft stores user accounts in a lightweight **SQLite authentication store**.
+Combining **semantic search and lexical search** improves recall for:
 
-This approach provides:
+- exact terminology
+- acronyms
+- structured content like tables
 
-- persistent user accounts
-- credential-based authentication
-- isolated workspaces per user
-- minimal infrastructure complexity
+## Why Asset-Level Retrieval?
 
-SQLite was chosen because it is:
+Instead of retrieving arbitrary chunks, RAGCraft retrieves **document assets** such as:
 
-- lightweight and embedded
-- ideal for single-container deployments
-- sufficient for portfolio-grade multi-user applications
+- text sections
+- tables
+- figures
 
-### Why FAISS?
+This improves interpretability and debugging.
 
-- Lightweight and fast
-- Perfect for single-container environments
-- Ideal for portfolio-grade RAG systems
+## Why SQLite?
 
-### Why SQLite?
+SQLite provides:
 
-RAGCraft uses a lightweight **SQLite database** to store:
+- embedded persistence
+- zero infrastructure
+- multi-user capability
 
-- user accounts
-- extracted document assets
+Ideal for **portfolio-scale RAG systems**.
 
-This approach keeps the system simple while still enabling:
+## Why Streamlit?
 
-- multi-user support
-- persistent asset storage
-- efficient prompt reconstruction
-
-### Why Streamlit?
-
-- Rapid iteration
-- Clear workflows
-- Ideal for AI demos
+- rapid prototyping
+- interactive AI demos
+- easy pipeline inspection
 
 ---
 
@@ -321,72 +308,88 @@ This approach keeps the system simple while still enabling:
 
 RAGCraft is intentionally designed as a **portfolio-grade system**, not a production SaaS.
 
-Current limitations include:
+Current limitations:
 
-- SQLite-based authentication (not designed for high-scale production)
-- Single-container deployment
-- No distributed ingestion workers yet
-- No external object storage
+- SQLite database
+- single-container deployment
+- no distributed ingestion workers
+- limited dataset evaluation tools
 
-These trade-offs keep the system **simple to deploy, inspect, and experiment with**.
+These trade-offs keep the system **simple to deploy and explore**.
 
 ---
 
 # 🎯 What Makes This RAG System Different?
 
-Most RAG demos simply embed documents and retrieve text chunks.
+Most RAG demos only show:
 
-RAGCraft goes further by introducing:
+- embeddings
+- chunk retrieval
+- LLM answers
 
-- asset-level document storage
-- two-stage retrieval pipelines
-- inspection tooling for debugging RAG
+RAGCraft adds:
+
 - multimodal document extraction
+- hybrid retrieval
+- query rewriting
+- reranking
+- pipeline inspection
+- retrieval comparison tooling
+
+This makes the system **transparent, debuggable, and educational**.
 
 ---
 
 # 🛣️ Roadmap
 
-### Retrieval Improvements
-- Hybrid search (**BM25 + embeddings**)
-- Retrieval score comparison tools
-- Query analytics
+## Evaluation & Benchmarking
 
-### Evaluation Suite
-- RAG evaluation datasets
-- Answer correctness scoring
-- Retrieval success metrics
-- Regression testing for RAG pipelines
+- gold QA datasets per project
+- answer correctness scoring
+- citation precision/recall metrics
+- automated RAG regression tests
+- downloadable benchmark reports
 
-### LLM-as-a-Judge
-- Groundedness scoring
-- Citation verification
-- Answer relevance evaluation
+## LLM-as-a-Judge
 
-### Observability
-- Retrieval analytics
-- Pipeline metrics
-- Prompt inspection improvements
+- groundedness scoring
+- citation faithfulness checks
+- hallucination detection
+- answer relevance scoring
 
-### Multimodal Intelligence
-- Image understanding
-- Table-aware question answering
+## Retrieval Improvements
 
-### System Architecture
-- Optional **FastAPI backend**
-- Background ingestion workers
+- metadata-aware retrieval filters
+- query intent classification
+- contextual compression
+- section-aware retrieval
+
+## Observability
+
+- per-stage latency metrics
+- retrieval analytics dashboard
+- query logs
+- ingestion diagnostics
+
+## Multimodal Intelligence
+
+- richer image understanding
+- table-aware QA
+- layout-aware prompting
+
+## System Architecture
+
+- optional FastAPI backend
+- async ingestion workers
 - API access layer
+- experiment tracking
 
-### Agentic Retrieval Workflows
-- Tool-based retrieval agents
-- Query rewriting
-- Self-reflection loops
-- Multi-step retrieval
+## Product Features
 
-### Dataset & Benchmarking
-- Public evaluation datasets
-- Benchmark comparisons
-- Retrieval quality benchmarks
+- downloadable retrieval comparison reports
+- saved evaluation suites
+- configurable retrieval settings in UI
+- project analytics dashboard
 
 ---
 
