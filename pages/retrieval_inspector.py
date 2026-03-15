@@ -2,6 +2,8 @@ import json
 
 import streamlit as st
 
+from typing import cast
+from src.app.ragcraft_app import RAGCraftApp
 from src.auth.guards import require_authentication
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.ui.layout import apply_layout
@@ -214,9 +216,9 @@ header = render_page_header(
     selector_label="Project for retrieval inspection",
 )
 
-app = header["app"]
-user_id = header["user_id"]
-project_id = header["project_id"]
+app = cast(RAGCraftApp, header["app"])
+user_id = str(header["user_id"])
+project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()

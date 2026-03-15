@@ -7,6 +7,8 @@ from src.services.evaluation_service import EvaluationService
 from src.services.reranking_service import RerankingService
 from src.services.vectorstore_service import VectorStoreService
 
+from langchain_core.documents import Document
+
 
 class RAGService:
     """
@@ -37,7 +39,7 @@ class RAGService:
         """
         return self.vectorstore_service.load(project)
 
-    def _deduplicate_doc_ids(self, summary_docs: list) -> list[str]:
+    def _deduplicate_doc_ids(self, summary_docs: list[Document]) -> list[str]:
         seen = set()
         ordered_doc_ids: list[str] = []
 

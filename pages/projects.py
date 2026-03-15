@@ -1,13 +1,13 @@
 import streamlit as st
 
+from typing import cast
+from src.app.ragcraft_app import RAGCraftApp
 from src.ui.layout import apply_layout
-from src.ui.page_header import render_hero
+from src.ui.page_header import render_page_header
 from src.ui.project_selector import render_project_selector
 from src.ui.document_table import render_document_table
 from src.ui.document_actions import handle_document_action
 from src.auth.guards import require_authentication
-from src.core.session import get_user_id
-from src.core.app_state import get_app
 
 
 st.set_page_config(
@@ -20,14 +20,16 @@ require_authentication("pages/projects.py")
 apply_layout()
 
 
-render_hero(
+header = render_page_header(
     badge="Projects",
     title="Manage your knowledge bases",
     subtitle="Create projects, select the active workspace and inspect ingested documents.",
+    show_project_selector=False
 )
 
-app = get_app()
-user_id = get_user_id()
+app = cast(RAGCraftApp, header["app"])
+user_id = str(header["user_id"])
+project_id = str(header["project_id"]) if header["project_id"] else None
 
 if "projects_success_message" in st.session_state:
     st.success(st.session_state.pop("projects_success_message"))

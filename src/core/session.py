@@ -2,7 +2,7 @@ import uuid
 import streamlit as st
 
 
-def get_user_id():
+def get_user_id() -> str:
     """
     Return the authenticated user_id if present.
     Otherwise fall back to a temporary anonymous session id.

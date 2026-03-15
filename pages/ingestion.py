@@ -1,5 +1,7 @@
 import streamlit as st
 
+from typing import cast
+from src.app.ragcraft_app import RAGCraftApp
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.document_table import render_document_table
@@ -24,9 +26,9 @@ header = render_page_header(
     selector_label="Project for ingestion",
 )
 
-app = header["app"]
-user_id = header["user_id"]
-project_id = header["project_id"]
+app = cast(RAGCraftApp, header["app"])
+user_id = str(header["user_id"])
+project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()

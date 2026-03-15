@@ -1,24 +1,27 @@
 import streamlit as st
 
+from typing import cast
+from src.app.ragcraft_app import RAGCraftApp
 from src.ui.avatar import render_user_avatar
 from src.ui.layout import apply_layout
-from src.ui.page_header import render_hero
+from src.ui.page_header import render_page_header
 from src.ui.section_card import inject_section_card_styles, section_card
 from src.auth.guards import require_authentication
-from src.auth.auth_service import AuthService
 
-
-st.set_page_config(
-    page_title="Profile | RAGCraft",
-    page_icon="👤",
-    layout="wide",
-)
 
 require_authentication("pages/profile.py")
 apply_layout()
 
-auth_service = AuthService()
-user = auth_service.get_current_user_record()
+
+header = render_page_header(
+    badge="Profile",
+    title="Manage your account",
+    subtitle="Update your personal information, avatar and password.",
+    selector_label="Project for search",
+)
+
+app = cast(RAGCraftApp, header["app"])
+user = app.get_current_user_record()
 
 if user is None:
     st.error("Unable to load user profile.")
@@ -38,7 +41,7 @@ def confirm_profile_update_dialog(user_id: str, username: str, display_name: str
 
     with col2:
         if st.button("Confirm update", use_container_width=True, key="confirm_profile_update"):
-            success, message = auth_service.update_profile(
+            success, message = app.update_profile(
                 user_id=user_id,
                 new_username=username,
                 new_display_name=display_name,
@@ -66,7 +69,7 @@ def confirm_password_change_dialog(
 
     with col2:
         if st.button("Confirm change", use_container_width=True, key="confirm_password_change"):
-            success, message = auth_service.change_password(
+            success, message = app.change_password(
                 user_id=user_id,
                 current_password=current_password,
                 new_password=new_password,
@@ -90,7 +93,7 @@ def confirm_avatar_removal_dialog(user_id: str):
 
     with col2:
         if st.button("Remove avatar", use_container_width=True, key="confirm_avatar_removal"):
-            success, message = auth_service.remove_avatar(user_id)
+            success, message = app.remove_avatar(user_id)
             if success:
                 st.session_state["profile_success_message"] = message
             else:
@@ -109,7 +112,7 @@ def confirm_delete_account_dialog(user_id: str, current_password: str):
 
     with col2:
         if st.button("Delete account", use_container_width=True, key="confirm_delete_account"):
-            success, message = auth_service.delete_account(
+            success, message = app.delete_account(
                 user_id=user_id,
                 current_password=current_password,
             )
@@ -119,13 +122,6 @@ def confirm_delete_account_dialog(user_id: str, current_password: str):
             else:
                 st.session_state["profile_error_message"] = message
                 st.rerun()
-
-
-render_hero(
-    badge="Profile",
-    title="Manage your account",
-    subtitle="Update your personal information, avatar and password.",
-)
 
 if "profile_success_message" in st.session_state:
     st.success(st.session_state.pop("profile_success_message"))
@@ -214,7 +210,7 @@ with row_2_col_1:
         col_a, col_b = st.columns(2)
         with col_a:
             if st.button("Save avatar", use_container_width=True):
-                success, message = auth_service.save_avatar(user["user_id"], avatar_file)
+                success, message = app.save_avatar(user["user_id"], avatar_file)
                 if success:
                     st.session_state["profile_success_message"] = message
                 else:
@@ -257,4 +253,4 @@ with section_card(
     with m3:
         st.metric("User ID", user["user_id"])
     with m4:
-        st.metric("Created", auth_service.format_created_at(user["created_at"]))
+        st.metric("Created", app.format_created_at(user["created_at"]))

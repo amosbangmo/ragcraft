@@ -51,7 +51,7 @@ def render_page_header(
     )
 
     refresh_clicked = False
-    project_id = st.session_state.get("project_id")
+    project_id = str(st.session_state.get("project_id")) if st.session_state.get("project_id") else None
 
     if show_project_selector and show_refresh_button:
 

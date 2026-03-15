@@ -1,4 +1,5 @@
 from src.infrastructure.persistence.db import init_app_db
+from src.auth.auth_service import AuthService
 from src.services.project_service import ProjectService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
@@ -6,7 +7,6 @@ from src.services.evaluation_service import EvaluationService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
-from src.services.reranking_service import RerankingService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -20,13 +20,13 @@ class RAGCraftApp:
     def __init__(self):
         init_app_db()
 
+        self.auth_service = AuthService()
         self.project_service = ProjectService()
         self.ingestion_service = IngestionService()
         self.vectorstore_service = VectorStoreService()
         self.evaluation_service = EvaluationService()
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()
-        self.reranking_service = RerankingService()
 
         self._rag_service = None
 
@@ -37,10 +37,63 @@ class RAGCraftApp:
                 vectorstore_service=self.vectorstore_service,
                 evaluation_service=self.evaluation_service,
                 docstore_service=self.docstore_service,
-                reranking_service=self.reranking_service,
             )
 
         return self._rag_service
+
+    # ------------------------------------------------------------------
+    # Authentication / profile façade
+    # ------------------------------------------------------------------
+
+    def get_current_user_record(self):
+        return self.auth_service.get_current_user_record()
+
+    def format_created_at(self, created_at: str | None) -> str:
+        return self.auth_service.format_created_at(created_at)
+
+    def update_profile(
+        self,
+        *,
+        user_id: str,
+        new_username: str,
+        new_display_name: str,
+    ) -> tuple[bool, str]:
+        return self.auth_service.update_profile(
+            user_id=user_id,
+            new_username=new_username,
+            new_display_name=new_display_name,
+        )
+
+    def change_password(
+        self,
+        *,
+        user_id: str,
+        current_password: str,
+        new_password: str,
+        confirm_new_password: str,
+    ) -> tuple[bool, str]:
+        return self.auth_service.change_password(
+            user_id=user_id,
+            current_password=current_password,
+            new_password=new_password,
+            confirm_new_password=confirm_new_password,
+        )
+
+    def save_avatar(self, user_id: str, uploaded_file) -> tuple[bool, str]:
+        return self.auth_service.save_avatar(user_id, uploaded_file)
+
+    def remove_avatar(self, user_id: str) -> tuple[bool, str]:
+        return self.auth_service.remove_avatar(user_id)
+
+    def delete_account(self, *, user_id: str, current_password: str) -> tuple[bool, str]:
+        return self.auth_service.delete_account(
+            user_id=user_id,
+            current_password=current_password,
+        )
+
+    # ------------------------------------------------------------------
+    # Projects / documents / retrieval
+    # ------------------------------------------------------------------
 
     def get_project(self, user_id: str, project_id: str):
         return self.project_service.get_project(user_id, project_id)
@@ -81,34 +134,16 @@ class RAGCraftApp:
                 source_file=doc_name,
             )
 
-            asset_stats = self.docstore_service.get_asset_stats_for_source_file(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=doc_name,
-            )
-
             details.append(
                 {
                     "name": doc_name,
-                    "project_id": project_id,
                     "path": str(file_path),
                     "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
                     "asset_count": asset_count,
-                    "text_count": asset_stats["text_count"],
-                    "table_count": asset_stats["table_count"],
-                    "image_count": asset_stats["image_count"],
-                    "latest_ingested_at": asset_stats["latest_ingested_at"],
                 }
             )
 
         return details
-
-    def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]:
-        return self.docstore_service.list_assets_for_source_file(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
-        )
 
     def get_or_build_project_chain(self, user_id: str, project_id: str):
         """
@@ -165,42 +200,6 @@ class RAGCraftApp:
             "existing_doc_ids": existing_doc_ids,
             "deleted_vectors": deleted_vectors,
             "deleted_assets": deleted_assets,
-        }
-
-    def reindex_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
-        project = self.get_project(user_id, project_id)
-        file_path = project.path / source_file
-
-        if not file_path.exists() or not file_path.is_file():
-            raise FileNotFoundError(f"Document not found on disk: {source_file}")
-
-        replacement_info = self.replace_document_assets(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
-        )
-
-        summary_documents, raw_assets = self.ingestion_service.ingest_file_path(
-            project=project,
-            file_path=file_path,
-            source_file=source_file,
-        )
-
-        if not raw_assets:
-            raise ValueError(f"No raw assets generated for file: {source_file}")
-
-        for asset in raw_assets:
-            self.docstore_service.save_asset(**asset)
-
-        if summary_documents:
-            self.vectorstore_service.index_documents(project, summary_documents)
-
-        self.invalidate_project_chain(user_id, project_id)
-
-        return {
-            "source_file": source_file,
-            "raw_assets": raw_assets,
-            "replacement_info": replacement_info,
         }
 
     def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
@@ -269,10 +268,6 @@ class RAGCraftApp:
             "raw_assets": raw_assets,
             "replacement_info": replacement_info,
         }
-
-    def inspect_retrieval(self, user_id: str, project_id: str, question: str, chat_history=None):
-        project = self.get_project(user_id, project_id)
-        return self.rag_service.inspect_pipeline(project, question, chat_history)
 
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)
