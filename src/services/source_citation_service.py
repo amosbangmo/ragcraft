@@ -45,15 +45,15 @@ class SourceCitationService:
         page_start = metadata.get("page_start")
         page_end = metadata.get("page_end")
 
-        if page_number:
+        if page_number is not None:
             return f"page {page_number}"
 
-        if page_start and page_end:
+        if page_start is not None and page_end is not None:
             if page_start == page_end:
                 return f"page {page_start}"
             return f"pages {page_start}-{page_end}"
 
-        if page_start:
+        if page_start is not None:
             return f"page {page_start}"
 
         return None

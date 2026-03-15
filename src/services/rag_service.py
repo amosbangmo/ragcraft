@@ -1,13 +1,15 @@
+from langchain_core.documents import Document
+
 from src.core.config import LLM, RETRIEVAL_CONFIG
 from src.core.exceptions import LLMServiceError
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
+from src.domain.source_citation import SourceCitation
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.reranking_service import RerankingService
+from src.services.source_citation_service import SourceCitationService
 from src.services.vectorstore_service import VectorStoreService
-
-from langchain_core.documents import Document
 
 
 class RAGService:
@@ -30,6 +32,7 @@ class RAGService:
         self.evaluation_service = evaluation_service
         self.docstore_service = docstore_service
         self.reranking_service = reranking_service
+        self.source_citation_service = SourceCitationService()
         self.config = RETRIEVAL_CONFIG
 
     def build_chain(self, project: Project):
@@ -62,85 +65,34 @@ class RAGService:
 
         return [docs_by_id[doc_id] for doc_id in doc_ids if doc_id in docs_by_id]
 
-    def _build_source_reference(self, asset: dict, index: int) -> dict:
-        content_type = asset.get("content_type", "unknown")
-        source_file = asset.get("source_file", "unknown")
-        metadata = asset.get("metadata", {}) or {}
-        doc_id = asset.get("doc_id", "?")
-
-        page_number = metadata.get("page_number")
-        page_start = metadata.get("page_start")
-        page_end = metadata.get("page_end")
-        table_title = metadata.get("table_title")
-        image_title = metadata.get("image_title")
-        start_element_index = metadata.get("start_element_index")
-        end_element_index = metadata.get("end_element_index")
-        rerank_score = metadata.get("rerank_score")
-
-        page_label = None
-        if page_number:
-            page_label = f"page {page_number}"
-        elif page_start is not None and page_end is not None:
-            if page_start == page_end:
-                page_label = f"page {page_start}"
-            else:
-                page_label = f"pages {page_start}-{page_end}"
-        elif page_start is not None:
-            page_label = f"page {page_start}"
-
-        structured_labels = [f"[Source {index}]"]
-
-        locator_parts = []
-
-        if content_type == "text":
-            if start_element_index is not None and end_element_index is not None:
-                if start_element_index == end_element_index:
-                    locator_parts.append(f"Elements: {start_element_index}")
-                else:
-                    locator_parts.append(f"Elements: {start_element_index}-{end_element_index}")
-        elif content_type == "table":
-            if table_title:
-                structured_labels.append(f"[Tableau: {table_title}]")
-                locator_parts.append(f"Tableau: {table_title}")
-            else:
-                locator_parts.append("Tableau")
-        elif content_type == "image":
-            if image_title:
-                structured_labels.append(f"[Figure: {image_title}]")
-                locator_parts.append(f"Figure: {image_title}")
-            else:
-                locator_parts.append("Figure")
-
-        if page_label:
-            locator_parts.append(page_label)
-
-        display_parts = [f"Source {index}", source_file]
-        display_parts.extend(locator_parts)
+    def _citation_to_dict(self, citation: SourceCitation) -> dict:
+        rerank_score = citation.metadata.get("rerank_score") if citation.metadata else None
 
         return {
-            "source_number": index,
-            "doc_id": doc_id,
-            "source_file": source_file,
-            "content_type": content_type,
-            "page_label": page_label,
-            "display_label": " — ".join(display_parts),
-            "inline_label": "".join(structured_labels),
-            "metadata": metadata,
+            "source_number": citation.source_number,
+            "doc_id": citation.doc_id,
+            "source_file": citation.source_file,
+            "content_type": citation.content_type,
+            "page_label": citation.page_label,
+            "locator_label": citation.locator_label,
+            "display_label": citation.display_label,
+            "inline_label": citation.prompt_label,
+            "metadata": citation.metadata,
             "rerank_score": rerank_score,
         }
 
-    def _format_raw_asset_for_prompt(self, asset: dict, source_reference: dict) -> str:
+    def _format_raw_asset_for_prompt(self, asset: dict, citation: SourceCitation) -> str:
         content_type = asset.get("content_type", "unknown")
         source_file = asset.get("source_file", "unknown")
         raw_content = asset.get("raw_content", "") or ""
         metadata = asset.get("metadata", {}) or {}
         summary = asset.get("summary", "") or ""
         doc_id = asset.get("doc_id", "?")
-        citation_label = source_reference["inline_label"]
+        citation_label = citation.prompt_label
 
         if content_type == "text":
             trimmed = raw_content[: self.config.max_text_chars_per_asset]
-            return f"""Asset {source_reference["source_number"]}
+            return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: text
 Doc ID: {doc_id}
@@ -155,7 +107,7 @@ Raw text:
             table_title = metadata.get("table_title")
             table_text = metadata.get("table_text") or ""
 
-            return f"""Asset {source_reference["source_number"]}
+            return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: table
 Doc ID: {doc_id}
@@ -185,7 +137,7 @@ Raw table text:
                 "rerank_score": metadata.get("rerank_score"),
             }
 
-            return f"""Asset {source_reference["source_number"]}
+            return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: image
 Doc ID: {doc_id}
@@ -200,7 +152,7 @@ Raw image:
 """
 
         trimmed = raw_content[:2000]
-        return f"""Asset {source_reference["source_number"]}
+        return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: {content_type}
 Doc ID: {doc_id}
@@ -211,10 +163,10 @@ Raw content:
 {trimmed}
 """
 
-    def _build_raw_context(self, raw_assets: list[dict], source_references: list[dict]) -> str:
+    def _build_raw_context(self, raw_assets: list[dict], citations: list[SourceCitation]) -> str:
         blocks = [
-            self._format_raw_asset_for_prompt(asset, source_reference)
-            for asset, source_reference in zip(raw_assets, source_references)
+            self._format_raw_asset_for_prompt(asset, citation)
+            for asset, citation in zip(raw_assets, citations)
         ]
         return "\n\n".join(blocks)
 
@@ -294,12 +246,10 @@ Instructions:
             selected_doc_ids,
         )
 
-        source_references = [
-            self._build_source_reference(asset, index)
-            for index, asset in enumerate(reranked_raw_assets, start=1)
-        ]
+        citation_objects = self.source_citation_service.build_citations(reranked_raw_assets)
+        source_references = [self._citation_to_dict(citation) for citation in citation_objects]
 
-        raw_context = self._build_raw_context(reranked_raw_assets, source_references)
+        raw_context = self._build_raw_context(reranked_raw_assets, citation_objects)
         prompt = self._build_prompt(
             question=question,
             chat_history=chat_history,

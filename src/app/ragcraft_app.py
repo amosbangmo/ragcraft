@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from src.infrastructure.persistence.db import init_app_db
 from src.auth.auth_service import AuthService
 from src.services.project_service import ProjectService
