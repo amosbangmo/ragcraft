@@ -24,7 +24,7 @@ tags:
   - retrieval
   - semantic-search
 pinned: true
-short_description: Multi-user, multi-project RAG system turning documents into answers
+short_description: Multi-project RAG system turning documents into answers
 ---
 
 # 📚 RAGCraft
