@@ -1,66 +1,84 @@
+
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![Streamlit](https://img.shields.io/badge/streamlit-app-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 # 📚 RAGCraft
 
-> A portfolio-grade **Retrieval-Augmented Generation (RAG) system** demonstrating how modern document intelligence systems can be built with multimodal ingestion, inspectable retrieval pipelines, and asset-level document storage.
+> A portfolio-grade **Retrieval-Augmented Generation (RAG) platform** showcasing how modern document intelligence systems can be built with **multimodal ingestion, hybrid retrieval, query rewriting, reranking, inspectable pipelines, and comparative retrieval evaluation**.
 
-RAGCraft is a **multi-user, multi-project RAG platform** designed to showcase how reliable document intelligence systems can be implemented beyond simple chatbot demos.
+RAGCraft is a **multi-user, multi-project RAG system** designed to go beyond simple chatbot demos and demonstrate how a more production-oriented document intelligence workflow can be implemented.
 
-The system supports **document ingestion, multimodal asset extraction, vector retrieval, reranking, and full pipeline inspection**, allowing users to understand how answers are generated from source documents.
+The platform supports **document ingestion, multimodal asset extraction, hybrid retrieval, reranking, prompt construction, structured citations, pipeline inspection, document inspection, and retrieval-mode comparison**, making it possible not only to ask questions over documents, but also to understand **why** a given answer was produced.
 
 ---
 
 # 🚀 Live Demo
-
-You can try the application here:
 
 👉 **Hugging Face Space:**  
 https://huggingface.co/spaces/amosbangmo/ragcraft
 
 The demo allows you to:
 
-- create your account
-- upload documents
-- ask questions
-- inspect retrieved assets
-- analyze the RAG pipeline
+- create an account
+- manage multiple projects
+- upload and reindex documents
+- ask questions over project-specific knowledge bases
+- inspect indexed document assets
+- inspect the full RAG pipeline
+- compare **FAISS-only retrieval** vs **Hybrid retrieval**
 
 ---
 
 # ✨ Key Features
 
-### Multi-user Platform
+## Multi-user Platform
+
 - User authentication with **SQLite**
 - Secure password hashing with **bcrypt**
-- User-scoped projects
+- User-scoped projects and isolated workspaces
+- Profile management with avatar support
 
-### Document Intelligence
-- Document ingestion (**PDF, DOCX, PPTX**)
+## Document Intelligence
+
+- Document ingestion for **PDF, DOCX, PPTX**
 - Parsing with **Unstructured**
-- Table and image extraction
+- Text, table, and image extraction
 - Title-aware semantic chunking
+- Document reindexing from stored source files
 
-### Retrieval Pipeline
-- Vector search using **FAISS**
-- **Two-stage retrieval strategy**
-  - high-recall embedding search
-  - reranking of candidate assets
+## Retrieval Pipeline
+
+- Semantic retrieval with **FAISS**
+- Lexical retrieval with **BM25**
+- Optional **Hybrid retrieval (FAISS + BM25)**
+- Optional **query rewriting**
+- Asset-level reranking with **CrossEncoder**
 - Asset-level retrieval instead of fixed-size chunks
 
-### Multimodal Asset Storage
+## Prompting & Grounding
+
+- Prompt construction from **top reranked raw assets**
+- Structured source citations
+- Inline citation labels in final answers
+- Prompt transparency through Retrieval Inspector
+
+## Multimodal Asset Storage
+
 - Structured storage of extracted document elements
 - Asset types:
   - text
   - HTML tables
   - images (base64)
-- Stored in a **central SQLite database**
+- Centralized **SQLite asset store**
 
-### Inspection & Debugging Tools
+## Inspection & Debugging
+
 - Document inspection UI
-- Retrieval inspection page
-- Full RAG pipeline visibility
+- Retrieval inspector
+- Toggleable **query rewrite**
+- Toggleable **hybrid retrieval**
+- **FAISS vs Hybrid comparison page**
 
 ---
 
@@ -73,7 +91,11 @@ User (Browser)
 Streamlit UI
       │
       ▼
-Application Services
+Application Facade (RAGCraftApp)
+      │
+      ▼
+Service Layer
+(auth / ingestion / retrieval / reranking / prompt building)
       │
       ▼
 Document Processing
@@ -81,11 +103,11 @@ Document Processing
       │
       ▼
 Retrieval Pipeline
-(FAISS + reranking)
+(Query rewrite → FAISS / BM25 → merge → rerank)
       │
       ▼
-Application Database
-(SQLite: users + rag_assets)
+Storage Layer
+(SQLite rag_assets + project FAISS indexes)
       │
       ▼
 Prompt Construction
@@ -94,115 +116,71 @@ Prompt Construction
 LLM
 ```
 
-The system separates responsibilities between:
-
-- document ingestion
-- asset storage
-- retrieval
-- prompt generation
-- answer generation
-
-This architecture mirrors how production RAG systems are typically structured.
-
 ---
 
 # 🔎 RAG Pipeline
-
-This system follows a **two-stage retrieval pipeline**.
 
 ```text
 User query
       │
       ▼
-Embedding search (FAISS)
+Optional query rewriting
       │
       ▼
-Top-K candidate summaries
+Recall retrieval
+ ├── FAISS semantic search
+ └── BM25 lexical search
       │
       ▼
-Reranking
+Hybrid merge + deduplication
+      │
+      ▼
+Raw asset rehydration from SQLite
+      │
+      ▼
+Asset-level reranking
       │
       ▼
 Top-N assets selected
       │
       ▼
-Raw asset loading
-      │
-      ▼
 Prompt construction
       │
       ▼
-LLM answer
+LLM answer with citations
 ```
 
 Benefits:
 
-- improved recall
+- better recall on exact terms
+- robustness on conversational queries
 - higher answer precision
 - reduced hallucinations
-- transparent answer grounding
+- full pipeline transparency
 
 ---
 
 # 📦 Data Model
 
-RAGCraft uses **two complementary storage layers**.
-
 ## Vector Layer
-
-Used for fast semantic retrieval.
 
 ```text
 FAISS index
-└── embedding vectors
+└── embedding vectors for summary documents
 ```
 
-## Asset storage layer
-
-Document assets are stored in a **central SQLite database**.
+## Asset Storage Layer
 
 ```text
 SQLite database
 ├── users
 └── rag_assets
     ├── text chunks
-    ├── tables (HTML representation)
-    └── images (base64 payload)
+    ├── tables (HTML)
+    └── images (base64)
 ```
 
-The `rag_assets` table stores extracted elements from documents and is used to reconstruct prompts during retrieval.
-
----
-
-# 🧩 Data Isolation Model
-
-RAGCraft uses a **hybrid storage model**:
-
-```text
-data/
-├── ragcraft.db
-│   ├── users
-│   └── rag_assets
-│
-└── users/
-    └── <user_id>/
-        └── projects/
-            ├── project_1/
-            │   ├── documents/
-            │   └── faiss_index
-            │
-            └── project_2/
-                ├── documents/
-                └── faiss_index
-```
-
-The SQLite database stores:
-
-- user accounts
-- extracted document assets
-
-Vector indexes remain **project-specific** and are stored on disk.
-
+Assets are rehydrated from SQLite during retrieval to build the final prompt.
 
 ---
 
@@ -211,40 +189,46 @@ Vector indexes remain **project-specific** and are stored on disk.
 ```text
 ragcraft/
 │
-├── streamlit_app.py        # Entry point
-├── pages/                  # Streamlit pages
+├── streamlit_app.py
+├── pages/
+│   ├── chat.py
+│   ├── ingestion.py
+│   ├── retrieval_inspector.py
+│   ├── retrieval_comparison.py
+│   └── ...
 │
 ├── src/
-│   ├── domain/             # Core models
-│   ├── services/           # RAG pipeline logic
-│   ├── infrastructure/     # storage, extraction
-│   └── ui/                 # UI components
+│   ├── app/
+│   ├── auth/
+│   ├── core/
+│   ├── domain/
+│   ├── infrastructure/
+│   ├── services/
+│   └── ui/
 │
-├── data/                   # Runtime data
-│
+├── data/
 ├── requirements.txt
 └── README.md
 ```
-
 
 ---
 
 # ⚙️ Installation
 
-## 1️⃣ Clone the repository
+## Clone
 
 ```bash
 git clone https://github.com/amosbangmo/ragcraft.git
 cd ragcraft
 ```
 
-## 2️⃣ Install dependencies
+## Install
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Run the application
+## Run
 
 ```bash
 streamlit run streamlit_app.py
@@ -252,104 +236,100 @@ streamlit run streamlit_app.py
 
 ### Environment variables
 
-Create a `.env` file:
+Create `.env`:
 
+```
 OPENAI_API_KEY=your_api_key
-
-
----
-
-# Authentication
-
-Users are stored in a lightweight **SQLite database** and passwords are hashed using **bcrypt**.
-
-Each user has isolated workspaces and projects.
+```
 
 ---
 
 # 🧪 Technology Stack
 
-### Core stack
+## Core
 
 - Python
 - Streamlit
 - LangChain
 - FAISS
 - Unstructured
+- SQLite
 
-### Supporting libraries
+## Retrieval
 
 - Sentence Transformers
-- SQLite
+- CrossEncoder
+- BM25
+
+## Utilities
+
 - bcrypt
+- pillow
+- python-dotenv
 
 ---
 
-# Design Decisions
+# 🎯 What Makes This Project Different?
 
-**FAISS**
+Many RAG demos only show:
 
-Chosen for lightweight, fast semantic search suitable for single-node RAG systems.
+- embeddings
+- chunk retrieval
+- LLM answering
 
-**SQLite**
+RAGCraft demonstrates a **more realistic RAG system** including:
 
-Used as an embedded application database storing users and extracted document assets.
+- multimodal ingestion
+- asset-level retrieval
+- hybrid search
+- reranking
+- pipeline inspection
+- retrieval comparison tooling
 
-**Streamlit**
-
-Provides a simple interface for exploring the RAG pipeline and debugging retrieval results.
-
----
-
-# 🎯 What Makes This RAG System Different?
-
-Most RAG demos simply embed documents and retrieve text chunks.
-
-RAGCraft goes further by introducing:
-
-- asset-level document storage
-- multimodal document extraction
-- two-stage retrieval pipelines
-- retrieval inspection tooling
-- prompt transparency
-
-These features make it easier to debug and understand how RAG systems generate answers.
+This makes the system ideal for **portfolio demonstration and RAG system education**.
 
 ---
 
 # 🛣️ Roadmap
 
-Planned improvements include:
+## Evaluation
 
-### Retrieval
-- Hybrid search (BM25 + embeddings)
-- Retrieval score comparison tools
-- Query analytics
-
-### Evaluation
 - RAG evaluation datasets
-- Answer correctness scoring
-- Retrieval success metrics
-- RAG regression testing
+- answer correctness scoring
+- citation precision metrics
+- regression testing
 
-### LLM-as-a-Judge
+## LLM-as-a-Judge
+
 - groundedness scoring
-- citation verification
-- answer relevance evaluation
+- citation faithfulness checks
+- hallucination detection
 
-### Observability
-- retrieval analytics
-- pipeline metrics
-- prompt inspection improvements
+## Retrieval
 
-### Multimodal QA
+- weighted hybrid search
+- metadata filtering
+- query intent classification
+- contextual compression
+
+## Observability
+
+- pipeline latency metrics
+- retrieval analytics dashboard
+- query logs
+
+## Multimodal QA
+
 - image understanding
-- table-aware question answering
+- table-aware QA
+- layout-aware prompting
 
-### System Architecture
+## System Architecture
+
 - FastAPI backend
 - background ingestion workers
-- API access layer
+- API layer
+- Postgres support
 
 ---
 
@@ -362,4 +342,4 @@ This project is developed for educational and portfolio purposes only and is not
 # 👤 Author
 
 **Amos Bangmo**  
-*Software & AI Engineer*
+Software & AI Engineer
