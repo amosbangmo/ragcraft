@@ -1,38 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# ragcraft
-RAGCraft is a **multi-user, multi-project RAG platform** designed to showcase how modern document intelligence systems can be built with inspectable retrieval pipelines, multimodal document extraction, and structured asset storage.
-=======
----
-title: RAGCraft
-emoji: 🚀
-colorFrom: red
-colorTo: yellow
-sdk: docker
-python_version: 3.13.11
-app_file: streamlit_app.py
-app_port: 8501
-tags:
-  - rag
-  - llm
-  - document-ai
-  - multimodal
-  - vector-search
-  - faiss
-  - langchain
-  - streamlit
-  - unstructured
-  - retrieval
-  - semantic-search
-pinned: true
-short_description: Multi-project RAG system turning documents into answers
-
----
-=======
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 ![Streamlit](https://img.shields.io/badge/streamlit-app-red)
 ![License](https://img.shields.io/badge/license-MIT-green)
->>>>>>> f5fa65c (README file)
 
 # 📚 RAGCraft
 
@@ -393,19 +361,5 @@ This project is developed for educational and portfolio purposes only and is not
 
 # 👤 Author
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-Developed by *Amos Bangmo* (Software & AI Engineer)
->>>>>>> 6d1d13e (Fixing short_description config)
-=======
-Developed by **Amos Bangmo**  
-<<<<<<< HEAD
-*Software & AI Engineer*
->>>>>>> 739a7c5 (README enhancement)
-=======
-*Software & AI Engineer*
->>>>>>> 8ec2f60 (README update)
-=======
 **Amos Bangmo**  
 *Software & AI Engineer*
->>>>>>> f5fa65c (README file)
