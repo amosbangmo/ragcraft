@@ -6,7 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.auth.db import init_auth_db
+from src.infrastructure.persistence.db import init_app_db
 from src.auth.password_utils import hash_password, verify_password
 from src.auth.user_repository import UserRepository
 
@@ -24,7 +24,7 @@ class AuthService:
     SESSION_AVATAR_KEY = "avatar_path"
 
     def __init__(self):
-        init_auth_db()
+        init_app_db()
         self.user_repository = UserRepository()
 
     def _set_session(

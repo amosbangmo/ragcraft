@@ -1,4 +1,4 @@
-from src.auth.db import init_auth_db
+from src.infrastructure.persistence.db import init_app_db
 from src.services.project_service import ProjectService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
@@ -18,7 +18,7 @@ from src.core.chain_state import (
 
 class RAGCraftApp:
     def __init__(self):
-        init_auth_db()
+        init_app_db()
 
         self.project_service = ProjectService()
         self.ingestion_service = IngestionService()

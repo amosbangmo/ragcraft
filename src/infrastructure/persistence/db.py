@@ -18,7 +18,7 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def init_auth_db():
+def init_app_db():
     conn = get_connection()
 
     conn.execute(

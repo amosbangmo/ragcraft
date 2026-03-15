@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from src.auth.db import get_connection
+from src.infrastructure.persistence.db import get_connection
 
 
 class UserRepository:
