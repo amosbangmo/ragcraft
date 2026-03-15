@@ -33,6 +33,8 @@ def _render_summary_docs(docs: list):
         source_file = metadata.get("source_file", metadata.get("file_name", "unknown"))
         content_type = metadata.get("content_type", "unknown")
         doc_id = metadata.get("doc_id", "?")
+        retrieval_mode = metadata.get("retrieval_mode")
+        retrieval_score = metadata.get("retrieval_score")
 
         badges = []
         if metadata.get("page_number") is not None:
@@ -44,6 +46,12 @@ def _render_summary_docs(docs: list):
                 badges.append(f"page {start_page}")
             else:
                 badges.append(f"pages {start_page}-{end_page}")
+
+        if retrieval_mode:
+            badges.append(f"mode {retrieval_mode}")
+
+        if retrieval_score is not None:
+            badges.append(f"score {float(retrieval_score):.4f}")
 
         st.markdown(
             f"""
@@ -209,7 +217,7 @@ def _render_source_references(source_references: list[dict]):
 header = render_page_header(
     badge="Retrieval Inspector",
     title="Inspect the RAG pipeline end to end",
-    subtitle="Understand what is retrieved, reloaded, reranked and injected into the final prompt.",
+    subtitle="Understand what is retrieved, rewritten, merged, reranked and injected into the final prompt.",
     selector_label="Project for retrieval inspection",
 )
 
@@ -248,31 +256,48 @@ if run_clicked and question:
             st.warning("No retrieval result available for this query.")
             st.stop()
 
-        top_metrics = st.columns(5)
+        top_metrics = st.columns(7)
         with top_metrics[0]:
-            st.metric("Recall summaries", len(pipeline["recalled_summary_docs"]))
+            st.metric("Mode", pipeline["retrieval_mode"])
         with top_metrics[1]:
-            st.metric("Recall doc_ids", len(pipeline["recalled_doc_ids"]))
+            st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
         with top_metrics[2]:
-            st.metric("Raw assets reloaded", len(pipeline["recalled_raw_assets"]))
+            st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
         with top_metrics[3]:
-            st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+            st.metric("Merged summaries", len(pipeline["recalled_summary_docs"]))
         with top_metrics[4]:
+            st.metric("Recall doc_ids", len(pipeline["recalled_doc_ids"]))
+        with top_metrics[5]:
+            st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+        with top_metrics[6]:
             st.metric("Confidence", pipeline["confidence"])
 
-        with st.expander("1. User query", expanded=True):
+        with st.expander("1. Original query and rewritten retrieval query", expanded=True):
+            st.markdown("**Original user query**")
             st.write(pipeline["question"])
 
-        with st.expander("2. Summaries retrieved from FAISS", expanded=True):
+            st.markdown("**Rewritten retrieval query**")
+            st.write(pipeline["rewritten_question"])
+
+            if pipeline["rewritten_question"].strip() == pipeline["question"].strip():
+                st.caption("The rewrite stage kept the query unchanged or almost unchanged.")
+
+        with st.expander("2. FAISS summaries retrieved from vector search", expanded=True):
+            _render_summary_docs(pipeline["vector_summary_docs"])
+
+        with st.expander("3. BM25 summaries retrieved from lexical search", expanded=False):
+            _render_summary_docs(pipeline["bm25_summary_docs"])
+
+        with st.expander("4. Merged summaries retained after hybrid recall", expanded=True):
             _render_summary_docs(pipeline["recalled_summary_docs"])
 
-        with st.expander("3. Doc IDs retained after recall", expanded=False):
+        with st.expander("5. Doc IDs retained after merged recall", expanded=False):
             _render_doc_ids(
                 pipeline["recalled_doc_ids"],
                 empty_message="No doc_ids were retained from the recall stage.",
             )
 
-        with st.expander("4. Raw assets reloaded from SQLite", expanded=False):
+        with st.expander("6. Raw assets reloaded from SQLite", expanded=False):
             st.caption(
                 "For text assets chunked with by_title, each expander now shows both the final chunk "
                 "and the original extracted text elements that were grouped into it."
@@ -282,7 +307,7 @@ if run_clicked and question:
                 title_prefix="Raw asset",
             )
 
-        with st.expander("5. Final assets injected into the prompt", expanded=True):
+        with st.expander("7. Final assets injected into the prompt", expanded=True):
             _render_doc_ids(
                 pipeline["selected_doc_ids"],
                 empty_message="No doc_ids were retained after reranking.",
@@ -299,16 +324,18 @@ if run_clicked and question:
                 title_prefix="Prompt asset",
             )
 
-        with st.expander("6. Raw context injected into the prompt", expanded=False):
+        with st.expander("8. Raw context injected into the prompt", expanded=False):
             st.code(pipeline["raw_context"], language="text")
 
-        with st.expander("7. Final prompt generated", expanded=False):
+        with st.expander("9. Final prompt generated", expanded=False):
             st.code(pipeline["prompt"], language="text")
 
-        with st.expander("8. Structured pipeline payload", expanded=False):
+        with st.expander("10. Structured pipeline payload", expanded=False):
             debug_payload = {
                 "question": pipeline["question"],
+                "rewritten_question": pipeline["rewritten_question"],
                 "chat_history": pipeline["chat_history"],
+                "retrieval_mode": pipeline["retrieval_mode"],
                 "recalled_doc_ids": pipeline["recalled_doc_ids"],
                 "selected_doc_ids": pipeline["selected_doc_ids"],
                 "confidence": pipeline["confidence"],
@@ -324,4 +351,3 @@ if run_clicked and question:
         st.error(get_user_error_message(exc, "The language model failed while preparing the final prompt or answer."))
     except Exception as exc:
         st.error(get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}"))
-        

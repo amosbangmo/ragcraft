@@ -40,6 +40,14 @@ class RetrievalConfig:
     max_prompt_assets: int = field(default_factory=lambda: _get_int_env("RAG_MAX_PROMPT_ASSETS", 5))
     max_text_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000))
     max_table_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TABLE_CHARS_PER_ASSET", 4000))
+    enable_query_rewrite: bool = field(default_factory=lambda: _get_bool_env("RAG_ENABLE_QUERY_REWRITE", True))
+    query_rewrite_max_history_messages: int = field(
+        default_factory=lambda: _get_int_env("RAG_QUERY_REWRITE_MAX_HISTORY_MESSAGES", 6)
+    )
+    enable_hybrid_retrieval: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_ENABLE_HYBRID_RETRIEVAL", True)
+    )
+    hybrid_bm25_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_BM25_K", 10))
 
 
 @dataclass(frozen=True)

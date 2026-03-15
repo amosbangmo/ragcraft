@@ -129,6 +129,23 @@ class DocStoreService:
                 user_message="Unable to inspect assets from the SQLite document store.",
             ) from exc
 
+    def list_assets_for_project(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ) -> list[dict]:
+        try:
+            return self.docstore.list_assets_for_project(
+                user_id=user_id,
+                project_id=project_id,
+            )
+        except Exception as exc:
+            raise DocStoreError(
+                f"Failed to list assets for project '{project_id}' from SQLite docstore: {exc}",
+                user_message="Unable to inspect project assets from the SQLite document store.",
+            ) from exc
+
     def delete_assets_for_source_file(
         self,
         *,

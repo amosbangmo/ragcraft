@@ -7,7 +7,9 @@ from src.domain.rag_response import RAGResponse
 from src.domain.source_citation import SourceCitation
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
+from src.services.hybrid_retrieval_service import HybridRetrievalService
 from src.services.prompt_builder_service import PromptBuilderService
+from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
 from src.services.source_citation_service import SourceCitationService
 from src.services.vectorstore_service import VectorStoreService
@@ -16,10 +18,11 @@ from src.services.vectorstore_service import VectorStoreService
 class RAGService:
     """
     Multi-step RAG service:
-    1. large recall retrieval from FAISS over summary documents
-    2. raw asset rehydration from SQLite using doc_id
-    3. strict reranking over the rehydrated raw assets
-    4. final prompt built only from the top reranked assets
+    1. optional query rewriting
+    2. hybrid recall retrieval (FAISS + BM25 summaries)
+    3. raw asset rehydration from SQLite using doc_id
+    4. strict reranking over the rehydrated raw assets
+    5. final prompt built only from the top reranked assets
     """
 
     def __init__(
@@ -34,6 +37,10 @@ class RAGService:
         self.docstore_service = docstore_service
         self.reranking_service = reranking_service
         self.source_citation_service = SourceCitationService()
+        self.query_rewrite_service = QueryRewriteService(
+            max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
+        )
+        self.hybrid_retrieval_service = HybridRetrievalService()
         self.prompt_builder_service = PromptBuilderService(
             max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
@@ -86,15 +93,94 @@ class RAGService:
             "rerank_score": rerank_score,
         }
 
+    def _rewrite_question(self, question: str, chat_history: list[str]) -> str:
+        if not self.config.enable_query_rewrite:
+            return question
+
+        return self.query_rewrite_service.rewrite(
+            question=question,
+            chat_history=chat_history,
+        )
+
+    def _merge_summary_docs(
+        self,
+        *,
+        primary_docs: list[Document],
+        secondary_docs: list[Document],
+        max_docs: int | None = None,
+    ) -> list[Document]:
+        merged: list[Document] = []
+        seen_doc_ids: set[str] = set()
+
+        for doc in [*primary_docs, *secondary_docs]:
+            doc_id = doc.metadata.get("doc_id")
+            if not doc_id or doc_id in seen_doc_ids:
+                continue
+
+            seen_doc_ids.add(doc_id)
+            merged.append(doc)
+
+            if max_docs is not None and len(merged) >= max_docs:
+                break
+
+        return merged
+
+    def _retrieve_summary_docs(
+        self,
+        *,
+        project: Project,
+        retrieval_query: str,
+    ) -> dict:
+        vector_summary_docs = self.vectorstore_service.similarity_search(
+            project,
+            retrieval_query,
+            k=self.config.retrieval_k,
+        )
+
+        bm25_summary_docs: list[Document] = []
+
+        if self.config.enable_hybrid_retrieval:
+            project_assets = self.docstore_service.list_assets_for_project(
+                user_id=project.user_id,
+                project_id=project.project_id,
+            )
+
+            bm25_summary_docs = self.hybrid_retrieval_service.lexical_search(
+                query=retrieval_query,
+                assets=project_assets,
+                k=self.config.hybrid_bm25_k,
+            )
+
+        merged_limit = self.config.retrieval_k
+        if self.config.enable_hybrid_retrieval:
+            merged_limit += self.config.hybrid_bm25_k
+
+        recalled_summary_docs = self._merge_summary_docs(
+            primary_docs=vector_summary_docs,
+            secondary_docs=bm25_summary_docs,
+            max_docs=merged_limit,
+        )
+
+        return {
+            "vector_summary_docs": vector_summary_docs,
+            "bm25_summary_docs": bm25_summary_docs,
+            "recalled_summary_docs": recalled_summary_docs,
+        }
+
     def _run_pipeline(self, project: Project, question: str, chat_history=None) -> dict | None:
         if chat_history is None:
             chat_history = []
 
-        recalled_summary_docs = self.vectorstore_service.similarity_search(
-            project,
-            question,
-            k=self.config.retrieval_k,
+        rewritten_question = self._rewrite_question(question, chat_history)
+
+        retrieval_payload = self._retrieve_summary_docs(
+            project=project,
+            retrieval_query=rewritten_question,
         )
+
+        vector_summary_docs = retrieval_payload["vector_summary_docs"]
+        bm25_summary_docs = retrieval_payload["bm25_summary_docs"]
+        recalled_summary_docs = retrieval_payload["recalled_summary_docs"]
 
         if not recalled_summary_docs:
             return None
@@ -108,7 +194,7 @@ class RAGService:
             return None
 
         reranked_raw_assets = self.reranking_service.rerank(
-            query=question,
+            query=rewritten_question,
             raw_assets=recalled_raw_assets,
             top_k=self.config.max_prompt_assets,
         )
@@ -141,9 +227,15 @@ class RAGService:
             reranked_assets=reranked_raw_assets,
         )
 
+        retrieval_mode = "faiss+bm25" if self.config.enable_hybrid_retrieval else "faiss"
+
         return {
             "question": question,
+            "rewritten_question": rewritten_question,
             "chat_history": chat_history,
+            "retrieval_mode": retrieval_mode,
+            "vector_summary_docs": vector_summary_docs,
+            "bm25_summary_docs": bm25_summary_docs,
             "recalled_summary_docs": recalled_summary_docs,
             "recalled_doc_ids": recalled_doc_ids,
             "recalled_raw_assets": recalled_raw_assets,

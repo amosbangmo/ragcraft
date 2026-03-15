@@ -279,6 +279,49 @@ class SQLiteDocStore:
             for row in rows
         ]
 
+    def list_assets_for_project(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ) -> list[dict]:
+        conn = get_connection()
+        rows = conn.execute(
+            """
+            SELECT
+                doc_id,
+                user_id,
+                project_id,
+                source_file,
+                content_type,
+                raw_content,
+                summary,
+                metadata_json,
+                created_at
+            FROM rag_assets
+            WHERE user_id = ?
+              AND project_id = ?
+            ORDER BY id ASC
+            """,
+            (user_id, project_id),
+        ).fetchall()
+        conn.close()
+
+        return [
+            {
+                "doc_id": row["doc_id"],
+                "user_id": row["user_id"],
+                "project_id": row["project_id"],
+                "source_file": row["source_file"],
+                "content_type": row["content_type"],
+                "raw_content": row["raw_content"],
+                "summary": row["summary"],
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
+
     def delete_assets_for_source_file(
         self,
         *,
