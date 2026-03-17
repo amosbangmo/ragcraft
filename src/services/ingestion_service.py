@@ -55,11 +55,7 @@ class IngestionService:
         source_file: str,
     ) -> tuple[list[Document], list[dict]]:
         try:
-            raw_elements = extract_elements(
-                str(file_path),
-                source_file,
-                max_text_chars_per_asset=self.config.extraction_max_text_chars_per_asset,
-            )
+            raw_elements = extract_elements(str(file_path), source_file)
         except OCRDependencyError:
             raise
         except Exception as exc:
