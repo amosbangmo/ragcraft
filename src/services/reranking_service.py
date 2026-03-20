@@ -2,8 +2,6 @@ import re
 
 
 DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-MAX_TEXT_PREVIEW_CHARS = 1500
-MAX_TABLE_TEXT_PREVIEW_CHARS = 1200
 
 
 class RerankingService:
@@ -15,6 +13,7 @@ class RerankingService:
 
     Stage 2:
     - this service reranks the rehydrated raw assets using a stricter relevance model
+      over candidate text built from raw_content plus metadata table_title and image_title
 
     Primary strategy:
     - sentence-transformers CrossEncoder
@@ -93,55 +92,26 @@ class RerankingService:
             return None
 
     def _build_candidate_text(self, asset: dict) -> str:
-        content_type = asset.get("content_type", "unknown")
-        source_file = asset.get("source_file", "unknown")
-        summary = (asset.get("summary", "") or "").strip()
-        raw_content = (asset.get("raw_content", "") or "").strip()
         metadata = asset.get("metadata", {}) or {}
+        parts: list[str] = []
 
-        page_number = metadata.get("page_number")
-        page_start = metadata.get("page_start")
-        page_end = metadata.get("page_end")
+        raw_content = (asset.get("raw_content", "") or "").strip()
+        if raw_content:
+            parts.append(raw_content)
+
         table_title = metadata.get("table_title")
-        table_text = (metadata.get("table_text") or "").strip()
+        if table_title is not None:
+            s = str(table_title).strip()
+            if s:
+                parts.append(s)
+
         image_title = metadata.get("image_title")
-        start_element_index = metadata.get("start_element_index")
-        end_element_index = metadata.get("end_element_index")
+        if image_title is not None:
+            s = str(image_title).strip()
+            if s:
+                parts.append(s)
 
-        locator_parts = [f"content_type: {content_type}", f"source_file: {source_file}"]
-
-        if page_number is not None:
-            locator_parts.append(f"page: {page_number}")
-        elif page_start is not None and page_end is not None:
-            locator_parts.append(f"pages: {page_start}-{page_end}")
-        elif page_start is not None:
-            locator_parts.append(f"page: {page_start}")
-
-        if start_element_index is not None and end_element_index is not None:
-            locator_parts.append(f"elements: {start_element_index}-{end_element_index}")
-
-        if table_title:
-            locator_parts.append(f"table_title: {table_title}")
-
-        if image_title:
-            locator_parts.append(f"image_title: {image_title}")
-
-        blocks = [
-            " | ".join(locator_parts),
-            f"summary: {summary}",
-        ]
-
-        if content_type == "text":
-            blocks.append(f"raw_text_excerpt: {raw_content[:MAX_TEXT_PREVIEW_CHARS]}")
-        elif content_type == "table":
-            blocks.append(f"table_text_excerpt: {table_text[:MAX_TABLE_TEXT_PREVIEW_CHARS]}")
-            blocks.append(f"table_html_excerpt: {raw_content[:800]}")
-        elif content_type == "image":
-            blocks.append(f"image_summary: {summary}")
-        else:
-            blocks.append(f"raw_excerpt: {raw_content[:1000]}")
-
-        return "\n".join(block for block in blocks if block.strip())
+        return "\n".join(parts)
 
     def _fallback_score(self, query: str, candidate_text: str) -> float:
         query_tokens = self._tokenize(query)

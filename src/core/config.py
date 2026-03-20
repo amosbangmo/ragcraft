@@ -47,9 +47,9 @@ def _get_str_env(name: str, default: str) -> str:
 
 @dataclass(frozen=True)
 class RetrievalConfig:
-    similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 15))
-    bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 15))
-    hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 15))
+    similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 25))
+    bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 25))
+    hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 25))
     # rank_bm25.BM25Okapi hyperparameters (term-frequency saturation, length norm, IDF floor).
     bm25_k1: float = field(default_factory=lambda: _get_float_env("RAG_BM25_K1", 1.5))
     bm25_b: float = field(default_factory=lambda: _get_float_env("RAG_BM25_B", 0.75))
