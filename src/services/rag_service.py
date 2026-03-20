@@ -40,7 +40,11 @@ class RAGService:
         self.query_rewrite_service = QueryRewriteService(
             max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
         )
-        self.hybrid_retrieval_service = HybridRetrievalService()
+        self.hybrid_retrieval_service = HybridRetrievalService(
+            k1=RETRIEVAL_CONFIG.bm25_k1,
+            b=RETRIEVAL_CONFIG.bm25_b,
+            epsilon=RETRIEVAL_CONFIG.bm25_epsilon,
+        )
         self.prompt_builder_service = PromptBuilderService(
             max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,

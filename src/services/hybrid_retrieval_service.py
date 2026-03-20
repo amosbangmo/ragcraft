@@ -22,6 +22,17 @@ class HybridRetrievalService:
     - intended as a complementary recall channel to FAISS
     """
 
+    def __init__(
+        self,
+        *,
+        k1: float = 1.5,
+        b: float = 0.75,
+        epsilon: float = 0.25,
+    ) -> None:
+        self._bm25_k1 = k1
+        self._bm25_b = b
+        self._bm25_epsilon = epsilon
+
     def lexical_search(
         self,
         *,
@@ -58,7 +69,12 @@ class HybridRetrievalService:
         if not query_tokens:
             return []
 
-        bm25 = BM25Okapi(corpus_tokens)
+        bm25 = BM25Okapi(
+            corpus_tokens,
+            k1=self._bm25_k1,
+            b=self._bm25_b,
+            epsilon=self._bm25_epsilon,
+        )
         raw_scores = list(bm25.get_scores(query_tokens))
 
         if not raw_scores:

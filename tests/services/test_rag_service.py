@@ -38,6 +38,9 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         enable_hybrid_retrieval=True,
         similarity_search_k=15,
         bm25_search_k=10,
+        bm25_k1=1.5,
+        bm25_b=0.75,
+        bm25_epsilon=0.25,
         rrf_k=60,
         max_prompt_assets=5,
     )
@@ -47,6 +50,9 @@ if "src.services.hybrid_retrieval_service" not in sys.modules:
     hybrid_module = types.ModuleType("src.services.hybrid_retrieval_service")
 
     class HybridRetrievalService:
+        def __init__(self, *, k1=1.5, b=0.75, epsilon=0.25):
+            pass
+
         def lexical_search(self, *, query: str, assets: list[dict], k: int):
             return []
 
