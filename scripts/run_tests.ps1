@@ -1,0 +1,13 @@
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$venvActivate = Join-Path $repoRoot ".venv\Scripts\Activate.ps1"
+
+if (Test-Path $venvActivate) {
+    . $venvActivate
+} else {
+    Write-Warning "Virtual environment activation script not found at $venvActivate. Running with current Python."
+}
+
+Set-Location $repoRoot
+python -m unittest discover -s tests/services -p "test_*.py"
