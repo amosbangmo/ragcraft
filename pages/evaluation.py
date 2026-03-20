@@ -496,17 +496,32 @@ def _render_dataset_evaluation_result(payload: dict):
     with middle_metrics[3]:
         st.metric("Avg confidence", summary["avg_confidence"])
 
+    answer_metrics = st.columns(4)
+    with answer_metrics[0]:
+        st.metric("Entries with expected answers", summary["entries_with_expected_answers"])
+    with answer_metrics[1]:
+        st.metric("Answer exact match rate", summary["answer_exact_match_rate"])
+    with answer_metrics[2]:
+        st.metric("Avg answer precision", summary["avg_answer_precision"])
+    with answer_metrics[3]:
+        st.metric("Avg answer recall", summary["avg_answer_recall"])
+
     bottom_metrics = st.columns(5)
     with bottom_metrics[0]:
-        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
+        st.metric("Avg answer F1", summary["avg_answer_f1"])
     with bottom_metrics[1]:
-        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
+        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
     with bottom_metrics[2]:
-        st.metric("Source hit rate", summary["source_hit_rate"])
+        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
     with bottom_metrics[3]:
-        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
+        st.metric("Source hit rate", summary["source_hit_rate"])
     with bottom_metrics[4]:
-        st.metric("Entries with expected sources", summary["entries_with_expected_sources"])
+        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
+
+    st.caption(
+        "Answer correctness uses normalized lexical comparison against expected answers: "
+        "exact match plus token-level precision, recall, and F1."
+    )
 
     st.markdown("### Per-entry metrics")
     st.dataframe(rows, use_container_width=True)
