@@ -170,6 +170,7 @@ class RAGService:
 
             fused.append((doc_id, score, min_rank, first_seen_order[doc_id]))
 
+        # Sort by fused score desc, then by best (lowest) rank asc, then by first-seen order asc.
         fused.sort(key=lambda item: (-item[1], item[2], item[3]))
 
         limit = max_docs if max_docs is not None else len(fused)
@@ -322,17 +323,6 @@ class RAGService:
             "confidence": confidence,
         }
 
-    def _generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
-        try:
-            response = LLM.invoke(pipeline["prompt"])
-        except Exception as exc:
-            raise LLMServiceError(
-                f"Failed to generate answer for project '{project.project_id}': {exc}",
-                user_message="The language model failed while generating the answer.",
-            ) from exc
-
-        return getattr(response, "content", str(response)).strip()
-
     def inspect_pipeline(
         self,
         project: Project,
@@ -350,8 +340,22 @@ class RAGService:
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
 
-    def answer_from_pipeline(self, project: Project, pipeline: dict) -> str:
-        return self._generate_answer_from_pipeline(project=project, pipeline=pipeline)
+    def generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
+        """
+        Generate the final answer from an already-prepared pipeline payload.
+
+        This keeps dataset evaluation and interactive chat aligned on the exact
+        same answer generation logic without duplicating LLM invocation code.
+        """
+        try:
+            response = LLM.invoke(pipeline["prompt"])
+        except Exception as exc:
+            raise LLMServiceError(
+                f"Failed to generate answer for project '{project.project_id}': {exc}",
+                user_message="The language model failed while generating the answer.",
+            ) from exc
+
+        return getattr(response, "content", str(response)).strip()
 
     def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
         pipeline = self._run_pipeline(project, question, chat_history)
@@ -359,7 +363,7 @@ class RAGService:
         if pipeline is None:
             return None
 
-        answer = self._generate_answer_from_pipeline(project=project, pipeline=pipeline)
+        answer = self.generate_answer_from_pipeline(project=project, pipeline=pipeline)
 
         return RAGResponse(
             question=question,

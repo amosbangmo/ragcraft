@@ -510,7 +510,7 @@ class RAGCraftApp:
         project_id: str,
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
-    ) -> dict:
+    ):
         entries = self.list_qa_dataset_entries(
             user_id=user_id,
             project_id=project_id,
@@ -528,9 +528,12 @@ class RAGCraftApp:
                 enable_hybrid_retrieval_override=enable_hybrid_retrieval,
             )
 
-            answer = None
+            answer = ""
             if pipeline is not None:
-                answer = self.rag_service.answer_from_pipeline(project, pipeline)
+                answer = self.rag_service.generate_answer_from_pipeline(
+                    project=project,
+                    pipeline=pipeline,
+                )
 
             latency_ms = (perf_counter() - started) * 1000.0
             return {

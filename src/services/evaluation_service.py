@@ -2,8 +2,11 @@ import re
 
 import numpy as np
 
+from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+
 
 class EvaluationService:
+
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
             return 0.0
@@ -15,6 +18,7 @@ class EvaluationService:
             score = metadata.get("rerank_score")
             if score is None:
                 continue
+
             normalized_score = 1 / (1 + np.exp(-score))
             scores.append(float(normalized_score))
 
@@ -22,6 +26,7 @@ class EvaluationService:
             return 0.0
 
         confidence = float(np.mean(scores))
+
         return round(confidence, 2)
 
     def _confidence_metadata(self, item) -> dict:
@@ -35,9 +40,10 @@ class EvaluationService:
         *,
         entries,
         pipeline_runner,
-    ) -> dict:
-        rows: list[dict] = []
+    ) -> BenchmarkResult:
+        rows: list[BenchmarkRow] = []
 
+        # Retrieval metrics.
         doc_id_recall_values: list[float] = []
         source_recall_values: list[float] = []
         precision_at_k_values: list[float] = []
@@ -46,11 +52,13 @@ class EvaluationService:
         confidence_values: list[float] = []
         latency_values: list[float] = []
 
+        # Answer correctness metrics.
         answer_exact_match_values: list[float] = []
         answer_precision_values: list[float] = []
         answer_recall_values: list[float] = []
         answer_f1_values: list[float] = []
 
+        # Citation metrics.
         citation_doc_id_precision_values: list[float] = []
         citation_doc_id_recall_values: list[float] = []
         citation_doc_id_f1_values: list[float] = []
@@ -61,9 +69,9 @@ class EvaluationService:
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
         entries_with_expected_answers = 0
+
         doc_id_hits = 0
         source_hits = 0
-        answer_exact_match_hits = 0
         citation_doc_id_hits = 0
         citation_source_hits = 0
         successful_queries = 0
@@ -88,10 +96,7 @@ class EvaluationService:
                 entries_with_expected_answers += 1
 
             if pipeline is None:
-                row = {
-                    "entry_id": entry.id,
-                    "question": entry.question,
-                    "answer_preview": "",
+                row_payload = {
                     "expected_doc_ids_count": len(expected_doc_ids),
                     "retrieved_doc_ids_count": 0,
                     "doc_id_overlap_count": 0,
@@ -103,6 +108,7 @@ class EvaluationService:
                     "retrieved_sources_count": 0,
                     "source_overlap_count": 0,
                     "source_recall": 0.0,
+                    "answer_preview": "",
                     "answer_exact_match": 0.0,
                     "answer_precision": 0.0,
                     "answer_recall": 0.0,
@@ -123,7 +129,13 @@ class EvaluationService:
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
                 }
-                rows.append(row)
+                rows.append(
+                    BenchmarkRow(
+                        entry_id=entry.id,
+                        question=entry.question,
+                        data=row_payload,
+                    )
+                )
                 latency_values.append(latency_ms)
                 continue
 
@@ -143,6 +155,9 @@ class EvaluationService:
                 if ref.get("source_file")
             }
 
+            # Citation-level doc/source sets are intentionally derived from the
+            # explicit source reference objects. This distinguishes "selected"
+            # prompt assets from what the answer surfaces as citations.
             cited_doc_ids = {
                 ref.get("doc_id")
                 for ref in source_references
@@ -156,6 +171,7 @@ class EvaluationService:
 
             doc_id_overlap_count = len(selected_doc_ids.intersection(expected_doc_ids))
             source_overlap_count = len(selected_sources.intersection(expected_sources))
+
             citation_doc_id_overlap_count = len(cited_doc_ids.intersection(expected_doc_ids))
             citation_source_overlap_count = len(cited_sources.intersection(expected_sources))
 
@@ -165,10 +181,10 @@ class EvaluationService:
             reciprocal_rank = 0.0
             average_precision = 0.0
 
-            answer_metrics = self._compute_answer_correctness(
-                answer=answer,
-                expected_answer=expected_answer,
-            )
+            answer_exact_match = 0.0
+            answer_precision = 0.0
+            answer_recall = 0.0
+            answer_f1 = 0.0
 
             citation_doc_id_precision = 0.0
             citation_doc_id_recall = 0.0
@@ -197,70 +213,61 @@ class EvaluationService:
                 reciprocal_rank_values.append(reciprocal_rank)
                 average_precision_values.append(average_precision)
 
-                citation_doc_id_precision = self._compute_set_precision(
-                    predicted_values=cited_doc_ids,
-                    expected_values=expected_doc_ids,
-                )
-                citation_doc_id_recall = self._compute_set_recall(
-                    predicted_values=cited_doc_ids,
-                    expected_values=expected_doc_ids,
-                )
-                citation_doc_id_f1 = self._compute_f1(
-                    precision=citation_doc_id_precision,
-                    recall=citation_doc_id_recall,
-                )
+                if doc_id_overlap_count > 0:
+                    doc_id_hits += 1
 
+                citation_doc_id_precision, citation_doc_id_recall, citation_doc_id_f1 = (
+                    self._compute_set_precision_recall_f1(
+                        predicted_values=cited_doc_ids,
+                        expected_values=expected_doc_ids,
+                    )
+                )
                 citation_doc_id_precision_values.append(citation_doc_id_precision)
                 citation_doc_id_recall_values.append(citation_doc_id_recall)
                 citation_doc_id_f1_values.append(citation_doc_id_f1)
 
-                if doc_id_overlap_count > 0:
-                    doc_id_hits += 1
                 if citation_doc_id_overlap_count > 0:
                     citation_doc_id_hits += 1
 
             if expected_sources:
                 source_recall = source_overlap_count / len(expected_sources)
                 source_recall_values.append(source_recall)
+                if source_overlap_count > 0:
+                    source_hits += 1
 
-                citation_source_precision = self._compute_set_precision(
-                    predicted_values=cited_sources,
-                    expected_values=expected_sources,
+                citation_source_precision, citation_source_recall, citation_source_f1 = (
+                    self._compute_set_precision_recall_f1(
+                        predicted_values=cited_sources,
+                        expected_values=expected_sources,
+                    )
                 )
-                citation_source_recall = self._compute_set_recall(
-                    predicted_values=cited_sources,
-                    expected_values=expected_sources,
-                )
-                citation_source_f1 = self._compute_f1(
-                    precision=citation_source_precision,
-                    recall=citation_source_recall,
-                )
-
                 citation_source_precision_values.append(citation_source_precision)
                 citation_source_recall_values.append(citation_source_recall)
                 citation_source_f1_values.append(citation_source_f1)
 
-                if source_overlap_count > 0:
-                    source_hits += 1
                 if citation_source_overlap_count > 0:
                     citation_source_hits += 1
 
             if expected_answer:
-                answer_exact_match_values.append(answer_metrics["exact_match"])
-                answer_precision_values.append(answer_metrics["precision"])
-                answer_recall_values.append(answer_metrics["recall"])
-                answer_f1_values.append(answer_metrics["f1"])
-                if answer_metrics["exact_match"] > 0:
-                    answer_exact_match_hits += 1
+                answer_exact_match = self._compute_answer_exact_match(
+                    generated_answer=answer,
+                    expected_answer=expected_answer,
+                )
+                answer_precision, answer_recall, answer_f1 = self._compute_answer_precision_recall_f1(
+                    generated_answer=answer,
+                    expected_answer=expected_answer,
+                )
+
+                answer_exact_match_values.append(answer_exact_match)
+                answer_precision_values.append(answer_precision)
+                answer_recall_values.append(answer_recall)
+                answer_f1_values.append(answer_f1)
 
             confidence = float(pipeline.get("confidence", 0.0))
             confidence_values.append(confidence)
             latency_values.append(latency_ms)
 
-            row = {
-                "entry_id": entry.id,
-                "question": entry.question,
-                "answer_preview": self._build_answer_preview(answer),
+            row_payload = {
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
                 "doc_id_overlap_count": doc_id_overlap_count,
@@ -272,10 +279,11 @@ class EvaluationService:
                 "retrieved_sources_count": len(selected_sources),
                 "source_overlap_count": source_overlap_count,
                 "source_recall": round(source_recall, 2),
-                "answer_exact_match": round(answer_metrics["exact_match"], 2),
-                "answer_precision": round(answer_metrics["precision"], 2),
-                "answer_recall": round(answer_metrics["recall"], 2),
-                "answer_f1": round(answer_metrics["f1"], 2),
+                "answer_preview": answer[:240],
+                "answer_exact_match": round(answer_exact_match, 2),
+                "answer_precision": round(answer_precision, 2),
+                "answer_recall": round(answer_recall, 2),
+                "answer_f1": round(answer_f1, 2),
                 "cited_doc_ids_count": len(cited_doc_ids),
                 "citation_doc_id_overlap_count": citation_doc_id_overlap_count,
                 "citation_doc_id_precision": round(citation_doc_id_precision, 2),
@@ -292,9 +300,15 @@ class EvaluationService:
                 "query_rewrite_enabled": bool(pipeline.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),
             }
-            rows.append(row)
+            rows.append(
+                BenchmarkRow(
+                    entry_id=entry.id,
+                    question=entry.question,
+                    data=row_payload,
+                )
+            )
 
-        summary = {
+        summary_payload = {
             "total_entries": len(rows),
             "successful_queries": successful_queries,
             "entries_with_expected_doc_ids": entries_with_expected_doc_ids,
@@ -313,12 +327,18 @@ class EvaluationService:
             "source_hit_rate": round(source_hits / entries_with_expected_sources, 2)
             if entries_with_expected_sources
             else 0.0,
-            "answer_exact_match_rate": round(answer_exact_match_hits / entries_with_expected_answers, 2)
-            if entries_with_expected_answers
+            "answer_exact_match_rate": round(float(np.mean(answer_exact_match_values)), 2)
+            if answer_exact_match_values
             else 0.0,
-            "avg_answer_precision": round(float(np.mean(answer_precision_values)), 2) if answer_precision_values else 0.0,
-            "avg_answer_recall": round(float(np.mean(answer_recall_values)), 2) if answer_recall_values else 0.0,
-            "avg_answer_f1": round(float(np.mean(answer_f1_values)), 2) if answer_f1_values else 0.0,
+            "avg_answer_precision": round(float(np.mean(answer_precision_values)), 2)
+            if answer_precision_values
+            else 0.0,
+            "avg_answer_recall": round(float(np.mean(answer_recall_values)), 2)
+            if answer_recall_values
+            else 0.0,
+            "avg_answer_f1": round(float(np.mean(answer_f1_values)), 2)
+            if answer_f1_values
+            else 0.0,
             "avg_citation_doc_id_precision": round(float(np.mean(citation_doc_id_precision_values)), 2)
             if citation_doc_id_precision_values
             else 0.0,
@@ -345,87 +365,10 @@ class EvaluationService:
             else 0.0,
         }
 
-        return {
-            "summary": summary,
-            "rows": rows,
-        }
-
-    def _build_answer_preview(self, answer: str, max_chars: int = 160) -> str:
-        normalized = " ".join((answer or "").split())
-        if len(normalized) <= max_chars:
-            return normalized
-        return normalized[: max_chars - 3] + "..."
-
-    def _compute_answer_correctness(self, *, answer: str, expected_answer: str) -> dict[str, float]:
-        if not expected_answer:
-            return {
-                "exact_match": 0.0,
-                "precision": 0.0,
-                "recall": 0.0,
-                "f1": 0.0,
-            }
-
-        normalized_answer = self._normalize_text(answer)
-        normalized_expected = self._normalize_text(expected_answer)
-
-        exact_match = 1.0 if normalized_answer and normalized_answer == normalized_expected else 0.0
-
-        answer_tokens = self._tokenize(answer)
-        expected_tokens = self._tokenize(expected_answer)
-
-        precision = self._compute_token_precision(answer_tokens, expected_tokens)
-        recall = self._compute_token_recall(answer_tokens, expected_tokens)
-        f1 = self._compute_f1(precision=precision, recall=recall)
-
-        return {
-            "exact_match": exact_match,
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-        }
-
-    def _normalize_text(self, text: str) -> str:
-        normalized = (text or "").strip().lower()
-        normalized = re.sub(r"\s+", " ", normalized)
-        normalized = re.sub(r"[^\w\s\-/.]", "", normalized)
-        return normalized.strip()
-
-    def _tokenize(self, text: str) -> list[str]:
-        normalized = self._normalize_text(text)
-        if not normalized:
-            return []
-        return re.findall(r"[a-zA-Z0-9_/-]+", normalized)
-
-    def _compute_token_precision(self, predicted_tokens: list[str], expected_tokens: list[str]) -> float:
-        if not predicted_tokens:
-            return 0.0
-
-        expected_set = set(expected_tokens)
-        overlap = sum(1 for token in predicted_tokens if token in expected_set)
-        return overlap / len(predicted_tokens)
-
-    def _compute_token_recall(self, predicted_tokens: list[str], expected_tokens: list[str]) -> float:
-        if not expected_tokens:
-            return 0.0
-
-        predicted_set = set(predicted_tokens)
-        overlap = sum(1 for token in expected_tokens if token in predicted_set)
-        return overlap / len(expected_tokens)
-
-    def _compute_set_precision(self, *, predicted_values: set[str], expected_values: set[str]) -> float:
-        if not predicted_values:
-            return 0.0
-        return len(predicted_values.intersection(expected_values)) / len(predicted_values)
-
-    def _compute_set_recall(self, *, predicted_values: set[str], expected_values: set[str]) -> float:
-        if not expected_values:
-            return 0.0
-        return len(predicted_values.intersection(expected_values)) / len(expected_values)
-
-    def _compute_f1(self, *, precision: float, recall: float) -> float:
-        if precision <= 0 or recall <= 0:
-            return 0.0
-        return 2 * precision * recall / (precision + recall)
+        return BenchmarkResult(
+            summary=BenchmarkSummary(data=summary_payload),
+            rows=rows,
+        )
 
     def _compute_precision_at_k(
         self,
@@ -474,3 +417,79 @@ class EvaluationService:
             return 0.0
 
         return precision_sum / len(expected_doc_ids)
+
+    def _normalize_text(self, text: str) -> str:
+        normalized = re.sub(r"\s+", " ", (text or "").strip().lower())
+        normalized = re.sub(r"[^a-z0-9àâçéèêëîïôûùüÿñæœ\s_-]", "", normalized)
+        return normalized.strip()
+
+    def _tokenize_text(self, text: str) -> list[str]:
+        normalized = self._normalize_text(text)
+        if not normalized:
+            return []
+        return [token for token in normalized.split(" ") if token]
+
+    def _compute_answer_exact_match(self, *, generated_answer: str, expected_answer: str) -> float:
+        return float(self._normalize_text(generated_answer) == self._normalize_text(expected_answer))
+
+    def _compute_answer_precision_recall_f1(
+        self,
+        *,
+        generated_answer: str,
+        expected_answer: str,
+    ) -> tuple[float, float, float]:
+        generated_tokens = self._tokenize_text(generated_answer)
+        expected_tokens = self._tokenize_text(expected_answer)
+
+        if not generated_tokens or not expected_tokens:
+            return 0.0, 0.0, 0.0
+
+        generated_counts: dict[str, int] = {}
+        expected_counts: dict[str, int] = {}
+
+        for token in generated_tokens:
+            generated_counts[token] = generated_counts.get(token, 0) + 1
+
+        for token in expected_tokens:
+            expected_counts[token] = expected_counts.get(token, 0) + 1
+
+        overlap = 0
+        for token, count in generated_counts.items():
+            overlap += min(count, expected_counts.get(token, 0))
+
+        if overlap == 0:
+            return 0.0, 0.0, 0.0
+
+        precision = overlap / len(generated_tokens)
+        recall = overlap / len(expected_tokens)
+
+        if precision + recall == 0:
+            f1 = 0.0
+        else:
+            f1 = 2 * precision * recall / (precision + recall)
+
+        return precision, recall, f1
+
+    def _compute_set_precision_recall_f1(
+        self,
+        *,
+        predicted_values: set[str],
+        expected_values: set[str],
+    ) -> tuple[float, float, float]:
+        if not expected_values:
+            return 0.0, 0.0, 0.0
+
+        if not predicted_values:
+            return 0.0, 0.0, 0.0
+
+        overlap = len(predicted_values.intersection(expected_values))
+
+        precision = overlap / len(predicted_values) if predicted_values else 0.0
+        recall = overlap / len(expected_values) if expected_values else 0.0
+
+        if precision + recall == 0:
+            f1 = 0.0
+        else:
+            f1 = 2 * precision * recall / (precision + recall)
+
+        return precision, recall, f1

@@ -2,6 +2,7 @@ import streamlit as st
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
+from src.domain.benchmark_result import BenchmarkResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.raw_assets import render_raw_assets
@@ -432,7 +433,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Dataset retrieval metrics</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="card-subtitle">Run project-level retrieval and answer evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
+    '<div class="card-subtitle">Run project-level retrieval evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
     unsafe_allow_html=True,
 )
 
@@ -472,9 +473,9 @@ def _map_dataset_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
 
 
-def _render_dataset_evaluation_result(payload: dict):
-    summary = payload["summary"]
-    rows = payload["rows"]
+def _render_dataset_evaluation_result(result: BenchmarkResult):
+    summary = result.summary.to_dict()
+    rows = [row.to_dict() for row in result.rows]
 
     top_metrics = st.columns(4)
     with top_metrics[0]:
@@ -496,25 +497,27 @@ def _render_dataset_evaluation_result(payload: dict):
     with middle_metrics[3]:
         st.metric("Avg confidence", summary["avg_confidence"])
 
-    answer_metrics = st.columns(4)
-    with answer_metrics[0]:
-        st.metric("Entries with expected answers", summary["entries_with_expected_answers"])
-    with answer_metrics[1]:
-        st.metric("Answer exact match rate", summary["answer_exact_match_rate"])
-    with answer_metrics[2]:
+    correctness_metrics = st.columns(5)
+    with correctness_metrics[0]:
+        st.metric("Entries w/ expected answers", summary["entries_with_expected_answers"])
+    with correctness_metrics[1]:
+        st.metric("Exact match rate", summary["answer_exact_match_rate"])
+    with correctness_metrics[2]:
         st.metric("Avg answer precision", summary["avg_answer_precision"])
-    with answer_metrics[3]:
+    with correctness_metrics[3]:
         st.metric("Avg answer recall", summary["avg_answer_recall"])
+    with correctness_metrics[4]:
+        st.metric("Avg answer F1", summary["avg_answer_f1"])
 
     citation_doc_metrics = st.columns(4)
     with citation_doc_metrics[0]:
-        st.metric("Avg answer F1", summary["avg_answer_f1"])
-    with citation_doc_metrics[1]:
         st.metric("Citation doc_id precision", summary["avg_citation_doc_id_precision"])
-    with citation_doc_metrics[2]:
+    with citation_doc_metrics[1]:
         st.metric("Citation doc_id recall", summary["avg_citation_doc_id_recall"])
-    with citation_doc_metrics[3]:
+    with citation_doc_metrics[2]:
         st.metric("Citation doc_id F1", summary["avg_citation_doc_id_f1"])
+    with citation_doc_metrics[3]:
+        st.metric("Citation doc_id hit rate", summary["citation_doc_id_hit_rate"])
 
     citation_source_metrics = st.columns(4)
     with citation_source_metrics[0]:
@@ -524,17 +527,19 @@ def _render_dataset_evaluation_result(payload: dict):
     with citation_source_metrics[2]:
         st.metric("Citation source F1", summary["avg_citation_source_f1"])
     with citation_source_metrics[3]:
-        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
-
-    bottom_metrics = st.columns(4)
-    with bottom_metrics[0]:
-        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
-    with bottom_metrics[1]:
-        st.metric("Source hit rate", summary["source_hit_rate"])
-    with bottom_metrics[2]:
-        st.metric("Citation doc_id hit rate", summary["citation_doc_id_hit_rate"])
-    with bottom_metrics[3]:
         st.metric("Citation source hit rate", summary["citation_source_hit_rate"])
+
+    bottom_metrics = st.columns(5)
+    with bottom_metrics[0]:
+        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
+    with bottom_metrics[1]:
+        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
+    with bottom_metrics[2]:
+        st.metric("Source hit rate", summary["source_hit_rate"])
+    with bottom_metrics[3]:
+        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
+    with bottom_metrics[4]:
+        st.metric("Entries with expected sources", summary["entries_with_expected_sources"])
 
     st.markdown("### Per-entry metrics")
     st.dataframe(rows, use_container_width=True)
