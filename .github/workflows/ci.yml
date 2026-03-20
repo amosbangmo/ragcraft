@@ -37,6 +37,9 @@ jobs:
       - name: Run integration tests
         run: python -m unittest discover -s tests/integration -p "test_*.py"
 
+      - name: Run quality gates
+        run: python -m unittest discover -s tests/quality -p "test_*.py"
+
       - name: Basic app boot check
         run: |
           python -c "from src.app.ragcraft_app import RAGCraftApp; RAGCraftApp(); print('boot-ok')"
