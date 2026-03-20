@@ -25,6 +25,9 @@ class EvaluationService:
 
         doc_id_recall_values: list[float] = []
         source_recall_values: list[float] = []
+        precision_at_k_values: list[float] = []
+        reciprocal_rank_values: list[float] = []
+        average_precision_values: list[float] = []
         confidence_values: list[float] = []
         latency_values: list[float] = []
 
@@ -56,6 +59,9 @@ class EvaluationService:
                     "retrieved_doc_ids_count": 0,
                     "doc_id_overlap_count": 0,
                     "doc_id_recall": 0.0,
+                    "precision_at_k": 0.0,
+                    "reciprocal_rank": 0.0,
+                    "average_precision": 0.0,
                     "expected_sources_count": len(expected_sources),
                     "retrieved_sources_count": 0,
                     "source_overlap_count": 0,
@@ -72,7 +78,13 @@ class EvaluationService:
 
             successful_queries += 1
 
-            selected_doc_ids = set(pipeline.get("selected_doc_ids", []))
+            ranked_doc_ids = [
+                doc_id
+                for doc_id in pipeline.get("selected_doc_ids", [])
+                if doc_id
+            ]
+            selected_doc_ids = set(ranked_doc_ids)
+
             source_references = pipeline.get("source_references", []) or []
             selected_sources = {
                 ref.get("source_file")
@@ -85,10 +97,30 @@ class EvaluationService:
 
             doc_id_recall = 0.0
             source_recall = 0.0
+            precision_at_k = 0.0
+            reciprocal_rank = 0.0
+            average_precision = 0.0
 
             if expected_doc_ids:
                 doc_id_recall = doc_id_overlap_count / len(expected_doc_ids)
+                precision_at_k = self._compute_precision_at_k(
+                    ranked_doc_ids=ranked_doc_ids,
+                    expected_doc_ids=expected_doc_ids,
+                )
+                reciprocal_rank = self._compute_reciprocal_rank(
+                    ranked_doc_ids=ranked_doc_ids,
+                    expected_doc_ids=expected_doc_ids,
+                )
+                average_precision = self._compute_average_precision(
+                    ranked_doc_ids=ranked_doc_ids,
+                    expected_doc_ids=expected_doc_ids,
+                )
+
                 doc_id_recall_values.append(doc_id_recall)
+                precision_at_k_values.append(precision_at_k)
+                reciprocal_rank_values.append(reciprocal_rank)
+                average_precision_values.append(average_precision)
+
                 if doc_id_overlap_count > 0:
                     doc_id_hits += 1
 
@@ -109,6 +141,9 @@ class EvaluationService:
                 "retrieved_doc_ids_count": len(selected_doc_ids),
                 "doc_id_overlap_count": doc_id_overlap_count,
                 "doc_id_recall": round(doc_id_recall, 2),
+                "precision_at_k": round(precision_at_k, 2),
+                "reciprocal_rank": round(reciprocal_rank, 2),
+                "average_precision": round(average_precision, 2),
                 "expected_sources_count": len(expected_sources),
                 "retrieved_sources_count": len(selected_sources),
                 "source_overlap_count": source_overlap_count,
@@ -128,6 +163,9 @@ class EvaluationService:
             "entries_with_expected_sources": entries_with_expected_sources,
             "avg_doc_id_recall": round(float(np.mean(doc_id_recall_values)), 2) if doc_id_recall_values else 0.0,
             "avg_source_recall": round(float(np.mean(source_recall_values)), 2) if source_recall_values else 0.0,
+            "avg_precision_at_k": round(float(np.mean(precision_at_k_values)), 2) if precision_at_k_values else 0.0,
+            "mrr": round(float(np.mean(reciprocal_rank_values)), 2) if reciprocal_rank_values else 0.0,
+            "map": round(float(np.mean(average_precision_values)), 2) if average_precision_values else 0.0,
             "avg_confidence": round(float(np.mean(confidence_values)), 2) if confidence_values else 0.0,
             "avg_latency_ms": round(float(np.mean(latency_values)), 1) if latency_values else 0.0,
             "doc_id_hit_rate": round(doc_id_hits / entries_with_expected_doc_ids, 2)
@@ -142,3 +180,51 @@ class EvaluationService:
             "summary": summary,
             "rows": rows,
         }
+
+    def _compute_precision_at_k(
+        self,
+        *,
+        ranked_doc_ids: list[str],
+        expected_doc_ids: set[str],
+    ) -> float:
+        if not ranked_doc_ids:
+            return 0.0
+
+        relevant_retrieved = sum(1 for doc_id in ranked_doc_ids if doc_id in expected_doc_ids)
+        return relevant_retrieved / len(ranked_doc_ids)
+
+    def _compute_reciprocal_rank(
+        self,
+        *,
+        ranked_doc_ids: list[str],
+        expected_doc_ids: set[str],
+    ) -> float:
+        for index, doc_id in enumerate(ranked_doc_ids, start=1):
+            if doc_id in expected_doc_ids:
+                return 1.0 / index
+        return 0.0
+
+    def _compute_average_precision(
+        self,
+        *,
+        ranked_doc_ids: list[str],
+        expected_doc_ids: set[str],
+    ) -> float:
+        if not ranked_doc_ids or not expected_doc_ids:
+            return 0.0
+
+        precision_sum = 0.0
+        relevant_found = 0
+
+        for index, doc_id in enumerate(ranked_doc_ids, start=1):
+            if doc_id not in expected_doc_ids:
+                continue
+
+            relevant_found += 1
+            precision_at_index = relevant_found / index
+            precision_sum += precision_at_index
+
+        if relevant_found == 0:
+            return 0.0
+
+        return precision_sum / len(expected_doc_ids)

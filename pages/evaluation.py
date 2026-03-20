@@ -476,7 +476,7 @@ def _render_dataset_evaluation_result(payload: dict):
     summary = payload["summary"]
     rows = payload["rows"]
 
-    top_metrics = st.columns(5)
+    top_metrics = st.columns(4)
     with top_metrics[0]:
         st.metric("Entries", summary["total_entries"])
     with top_metrics[1]:
@@ -485,7 +485,15 @@ def _render_dataset_evaluation_result(payload: dict):
         st.metric("Avg doc_id recall", summary["avg_doc_id_recall"])
     with top_metrics[3]:
         st.metric("Avg source recall", summary["avg_source_recall"])
-    with top_metrics[4]:
+
+    middle_metrics = st.columns(4)
+    with middle_metrics[0]:
+        st.metric("Avg precision@k", summary["avg_precision_at_k"])
+    with middle_metrics[1]:
+        st.metric("MRR", summary["mrr"])
+    with middle_metrics[2]:
+        st.metric("MAP", summary["map"])
+    with middle_metrics[3]:
         st.metric("Avg confidence", summary["avg_confidence"])
 
     bottom_metrics = st.columns(5)
