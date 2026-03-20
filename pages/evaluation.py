@@ -31,6 +31,8 @@ apply_layout()
 
 EVALUATION_REQUEST_KEY = "evaluation_request_running"
 EVALUATION_RESULT_KEY = "evaluation_result_payload"
+DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
+DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
 
 
 def _parse_csv_list(raw_value: str) -> list[str]:
@@ -53,7 +55,7 @@ def _parse_csv_list(raw_value: str) -> list[str]:
 header = render_page_header(
     badge="Evaluation",
     title="Test answer quality",
-    subtitle="Run manual evaluation queries and manage a gold QA dataset for the current project.",
+    subtitle="Run manual evaluation queries, manage a gold QA dataset, and compute retrieval metrics for the current project.",
     selector_label="Project for evaluation",
 )
 
@@ -293,5 +295,106 @@ else:
                         f"Unable to delete QA dataset entry #{entry.id}: {exc}",
                     )
                 st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Dataset retrieval metrics</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card-subtitle">Run project-level retrieval evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
+    unsafe_allow_html=True,
+)
+
+dataset_eval_col1, dataset_eval_col2 = st.columns(2)
+
+with dataset_eval_col1:
+    dataset_enable_query_rewrite = st.toggle(
+        "Enable query rewrite for dataset evaluation",
+        value=True,
+        help="Apply the same retrieval rewrite stage to every dataset question.",
+    )
+
+with dataset_eval_col2:
+    dataset_enable_hybrid_retrieval = st.toggle(
+        "Enable hybrid retrieval for dataset evaluation",
+        value=True,
+        help="Combine FAISS and BM25 during dataset evaluation.",
+    )
+
+
+def _run_dataset_evaluation():
+    return app.evaluate_gold_qa_dataset(
+        user_id=user_id,
+        project_id=project_id,
+        enable_query_rewrite=dataset_enable_query_rewrite,
+        enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
+    )
+
+
+def _map_dataset_evaluation_error(exc: Exception) -> str:
+    if isinstance(exc, VectorStoreError):
+        return get_user_error_message(exc, "Unable to query the FAISS index for dataset evaluation.")
+    if isinstance(exc, DocStoreError):
+        return get_user_error_message(exc, "Unable to inspect supporting assets from SQLite during dataset evaluation.")
+    if isinstance(exc, LLMServiceError):
+        return get_user_error_message(exc, "The language model failed while preparing a retrieval pipeline during dataset evaluation.")
+    return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
+
+
+def _render_dataset_evaluation_result(payload: dict):
+    summary = payload["summary"]
+    rows = payload["rows"]
+
+    top_metrics = st.columns(5)
+    with top_metrics[0]:
+        st.metric("Entries", summary["total_entries"])
+    with top_metrics[1]:
+        st.metric("Successful queries", summary["successful_queries"])
+    with top_metrics[2]:
+        st.metric("Avg doc_id recall", summary["avg_doc_id_recall"])
+    with top_metrics[3]:
+        st.metric("Avg source recall", summary["avg_source_recall"])
+    with top_metrics[4]:
+        st.metric("Avg confidence", summary["avg_confidence"])
+
+    bottom_metrics = st.columns(5)
+    with bottom_metrics[0]:
+        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
+    with bottom_metrics[1]:
+        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
+    with bottom_metrics[2]:
+        st.metric("Source hit rate", summary["source_hit_rate"])
+    with bottom_metrics[3]:
+        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
+    with bottom_metrics[4]:
+        st.metric("Entries with expected sources", summary["entries_with_expected_sources"])
+
+    st.markdown("### Per-entry metrics")
+    st.dataframe(rows, use_container_width=True)
+
+
+dataset_run_clicked = st.button(
+    "Run dataset evaluation",
+    use_container_width=True,
+    disabled=is_request_running(DATASET_EVALUATION_REQUEST_KEY),
+)
+
+if dataset_run_clicked and not entries:
+    st.warning("Please add at least one gold QA dataset entry before running dataset evaluation.")
+else:
+    run_request_action(
+        request_key=DATASET_EVALUATION_REQUEST_KEY,
+        result_key=DATASET_EVALUATION_RESULT_KEY,
+        trigger=dataset_run_clicked,
+        can_run=bool(entries),
+        action=_run_dataset_evaluation,
+        spinner_text="Running dataset retrieval metrics...",
+        error_mapper=_map_dataset_evaluation_error,
+    )
+
+render_result_payload(
+    result_key=DATASET_EVALUATION_RESULT_KEY,
+    on_success=_render_dataset_evaluation_result,
+)
 
 st.markdown("</div>", unsafe_allow_html=True)

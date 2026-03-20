@@ -1,3 +1,5 @@
+from time import perf_counter
+
 from src.infrastructure.persistence.db import init_app_db
 from src.auth.auth_service import AuthService
 from src.services.project_service import ProjectService
@@ -180,10 +182,6 @@ class RAGCraftApp:
         )
 
     def get_or_build_project_chain(self, user_id: str, project_id: str):
-        """
-        Legacy-compatible cache API.
-        The cached object is now the project vector store rather than a LangChain QA chain.
-        """
         project = self.get_project(user_id, project_id)
         project_key = project.project_id
 
@@ -442,4 +440,38 @@ class RAGCraftApp:
             entry_id=entry_id,
             user_id=user_id,
             project_id=project_id,
+        )
+
+    def evaluate_gold_qa_dataset(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        enable_query_rewrite: bool,
+        enable_hybrid_retrieval: bool,
+    ) -> dict:
+        entries = self.list_qa_dataset_entries(
+            user_id=user_id,
+            project_id=project_id,
+        )
+
+        def pipeline_runner(entry):
+            started = perf_counter()
+            pipeline = self.inspect_retrieval(
+                user_id=user_id,
+                project_id=project_id,
+                question=entry.question,
+                chat_history=[],
+                enable_query_rewrite_override=enable_query_rewrite,
+                enable_hybrid_retrieval_override=enable_hybrid_retrieval,
+            )
+            latency_ms = (perf_counter() - started) * 1000.0
+            return {
+                "pipeline": pipeline,
+                "latency_ms": latency_ms,
+            }
+
+        return self.evaluation_service.evaluate_gold_qa_dataset(
+            entries=entries,
+            pipeline_runner=pipeline_runner,
         )
