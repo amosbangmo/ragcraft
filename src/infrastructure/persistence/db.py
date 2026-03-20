@@ -54,6 +54,22 @@ def init_app_db():
 
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS qa_dataset (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            question TEXT NOT NULL,
+            expected_answer TEXT,
+            expected_doc_ids_json TEXT,
+            expected_sources_json TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """
+    )
+
+    conn.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_rag_assets_project
         ON rag_assets(user_id, project_id)
         """
@@ -63,6 +79,13 @@ def init_app_db():
         """
         CREATE INDEX IF NOT EXISTS idx_rag_assets_doc_id
         ON rag_assets(doc_id)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_qa_dataset_project
+        ON qa_dataset(user_id, project_id)
         """
     )
 

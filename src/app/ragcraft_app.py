@@ -9,6 +9,7 @@ from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
+from src.services.qa_dataset_service import QADatasetService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -30,6 +31,7 @@ class RAGCraftApp:
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()
         self.reranking_service = RerankingService()
+        self.qa_dataset_service = QADatasetService()
 
         self._rag_service = None
         self._retrieval_comparison_service = None
@@ -372,4 +374,72 @@ class RAGCraftApp:
             project=project,
             questions=questions,
             enable_query_rewrite=enable_query_rewrite,
+        )
+
+    # ------------------------------------------------------------------
+    # Gold QA dataset façade
+    # ------------------------------------------------------------------
+
+    def create_qa_dataset_entry(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        question: str,
+        expected_answer: str | None = None,
+        expected_doc_ids: list[str] | None = None,
+        expected_sources: list[str] | None = None,
+    ):
+        return self.qa_dataset_service.create_entry(
+            user_id=user_id,
+            project_id=project_id,
+            question=question,
+            expected_answer=expected_answer,
+            expected_doc_ids=expected_doc_ids,
+            expected_sources=expected_sources,
+        )
+
+    def list_qa_dataset_entries(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ):
+        return self.qa_dataset_service.list_entries(
+            user_id=user_id,
+            project_id=project_id,
+        )
+
+    def update_qa_dataset_entry(
+        self,
+        *,
+        entry_id: int,
+        user_id: str,
+        project_id: str,
+        question: str,
+        expected_answer: str | None = None,
+        expected_doc_ids: list[str] | None = None,
+        expected_sources: list[str] | None = None,
+    ):
+        return self.qa_dataset_service.update_entry(
+            entry_id=entry_id,
+            user_id=user_id,
+            project_id=project_id,
+            question=question,
+            expected_answer=expected_answer,
+            expected_doc_ids=expected_doc_ids,
+            expected_sources=expected_sources,
+        )
+
+    def delete_qa_dataset_entry(
+        self,
+        *,
+        entry_id: int,
+        user_id: str,
+        project_id: str,
+    ) -> bool:
+        return self.qa_dataset_service.delete_entry(
+            entry_id=entry_id,
+            user_id=user_id,
+            project_id=project_id,
         )
