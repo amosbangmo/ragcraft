@@ -57,6 +57,9 @@ class RetrievalConfig:
     # Reciprocal Rank Fusion (RRF) constant.
     # Final fused score is: sum(1 / (rrf_k + rank_i)) across retrieval lists.
     rrf_k: int = field(default_factory=lambda: _get_int_env("RAG_RRF_K", 60))
+    # Hybrid RRF weights: semantic (FAISS) term is scaled by beta; BM25 by (1 - beta).
+    # beta=0.5 matches unweighted RRF when a doc appears in both lists.
+    hybrid_beta: float = field(default_factory=lambda: _get_float_env("RAG_HYBRID_BETA", 0.5))
     max_prompt_assets: int = field(default_factory=lambda: _get_int_env("RAG_MAX_PROMPT_ASSETS", 5))
     max_text_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000))
     max_table_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TABLE_CHARS_PER_ASSET", 4000))

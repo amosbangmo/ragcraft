@@ -42,6 +42,7 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         bm25_b=0.75,
         bm25_epsilon=0.25,
         rrf_k=60,
+        hybrid_beta=0.5,
         max_prompt_assets=5,
     )
 
@@ -80,6 +81,12 @@ from src.services.rag_service import RAGService
 
 
 class TestRAGService(unittest.TestCase):
+    def setUp(self):
+        # RETRIEVAL_CONFIG is a shared SimpleNamespace; tests that tweak hybrid_beta or rrf_k must not leak.
+        cfg = config_module.RETRIEVAL_CONFIG
+        cfg.hybrid_beta = 0.5
+        cfg.rrf_k = 60
+
     def _build_service(self):
         vectorstore_service = MagicMock()
         evaluation_service = MagicMock()
@@ -151,6 +158,44 @@ class TestRAGService(unittest.TestCase):
         )
         merged_ids = [doc.metadata["doc_id"] for doc in merged]
         self.assertEqual(merged_ids, ["d2", "d1"])
+
+    def test_rrf_merge_beta_one_prioritizes_semantic_only_docs(self):
+        service, *_ = self._build_service()
+        service.config.rrf_k = 60
+        service.config.hybrid_beta = 1.0
+
+        primary_docs = [
+            Document(page_content="p1", metadata={"doc_id": "d1"}),
+            Document(page_content="p2", metadata={"doc_id": "d2"}),
+        ]
+        secondary_docs = [
+            Document(page_content="s1", metadata={"doc_id": "d2"}),
+            Document(page_content="s2", metadata={"doc_id": "d3"}),
+        ]
+
+        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged_ids = [doc.metadata["doc_id"] for doc in merged]
+
+        self.assertEqual(merged_ids, ["d1", "d2", "d3"])
+
+    def test_rrf_merge_beta_zero_prioritizes_lexical_only_docs(self):
+        service, *_ = self._build_service()
+        service.config.rrf_k = 60
+        service.config.hybrid_beta = 0.0
+
+        primary_docs = [
+            Document(page_content="p1", metadata={"doc_id": "d1"}),
+            Document(page_content="p2", metadata={"doc_id": "d2"}),
+        ]
+        secondary_docs = [
+            Document(page_content="s1", metadata={"doc_id": "d2"}),
+            Document(page_content="s2", metadata={"doc_id": "d3"}),
+        ]
+
+        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged_ids = [doc.metadata["doc_id"] for doc in merged]
+
+        self.assertEqual(merged_ids, ["d2", "d3", "d1"])
 
     def test_run_pipeline_returns_none_when_nothing_recalled(self):
         service, *_ = self._build_service()

@@ -120,12 +120,14 @@ class RAGService:
         max_docs: int | None = None,
     ) -> list[Document]:
         """
-        Merge two ranked document lists using Reciprocal Rank Fusion (RRF).
+        Merge two ranked document lists using weighted Reciprocal Rank Fusion (RRF).
 
         Final score for each doc_id:
-          sum(1 / (rrf_k + rank_i)) over retrieval lists where the doc appears.
+          beta * (1 / (rrf_k + rank_semantic)) + (1 - beta) * (1 / (rrf_k + rank_lexical))
+        for each list where the doc appears (primary = semantic/FAISS, secondary = BM25).
         """
-        rrf_k = getattr(self.config, "rrf_k", 60)
+        rrf_k = self.config.rrf_k
+        hybrid_beta = self.config.hybrid_beta
 
         primary_ranks: dict[str, int] = {}
         secondary_ranks: dict[str, int] = {}
@@ -158,12 +160,12 @@ class RAGService:
 
             if doc_id in primary_ranks:
                 rank = primary_ranks[doc_id]
-                score += 1.0 / (rrf_k + rank)
+                score += hybrid_beta * (1.0 / (rrf_k + rank))
                 min_rank = min(min_rank, rank)
 
             if doc_id in secondary_ranks:
                 rank = secondary_ranks[doc_id]
-                score += 1.0 / (rrf_k + rank)
+                score += (1.0 - hybrid_beta) * (1.0 / (rrf_k + rank))
                 min_rank = min(min_rank, rank)
 
             fused.append((doc_id, score, min_rank, first_seen_order[doc_id]))
