@@ -432,7 +432,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Dataset retrieval metrics</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="card-subtitle">Run project-level retrieval evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
+    '<div class="card-subtitle">Run project-level retrieval and answer evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
     unsafe_allow_html=True,
 )
 
@@ -506,22 +506,35 @@ def _render_dataset_evaluation_result(payload: dict):
     with answer_metrics[3]:
         st.metric("Avg answer recall", summary["avg_answer_recall"])
 
-    bottom_metrics = st.columns(5)
-    with bottom_metrics[0]:
+    citation_doc_metrics = st.columns(4)
+    with citation_doc_metrics[0]:
         st.metric("Avg answer F1", summary["avg_answer_f1"])
-    with bottom_metrics[1]:
-        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
-    with bottom_metrics[2]:
-        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
-    with bottom_metrics[3]:
-        st.metric("Source hit rate", summary["source_hit_rate"])
-    with bottom_metrics[4]:
-        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
+    with citation_doc_metrics[1]:
+        st.metric("Citation doc_id precision", summary["avg_citation_doc_id_precision"])
+    with citation_doc_metrics[2]:
+        st.metric("Citation doc_id recall", summary["avg_citation_doc_id_recall"])
+    with citation_doc_metrics[3]:
+        st.metric("Citation doc_id F1", summary["avg_citation_doc_id_f1"])
 
-    st.caption(
-        "Answer correctness uses normalized lexical comparison against expected answers: "
-        "exact match plus token-level precision, recall, and F1."
-    )
+    citation_source_metrics = st.columns(4)
+    with citation_source_metrics[0]:
+        st.metric("Citation source precision", summary["avg_citation_source_precision"])
+    with citation_source_metrics[1]:
+        st.metric("Citation source recall", summary["avg_citation_source_recall"])
+    with citation_source_metrics[2]:
+        st.metric("Citation source F1", summary["avg_citation_source_f1"])
+    with citation_source_metrics[3]:
+        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
+
+    bottom_metrics = st.columns(4)
+    with bottom_metrics[0]:
+        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
+    with bottom_metrics[1]:
+        st.metric("Source hit rate", summary["source_hit_rate"])
+    with bottom_metrics[2]:
+        st.metric("Citation doc_id hit rate", summary["citation_doc_id_hit_rate"])
+    with bottom_metrics[3]:
+        st.metric("Citation source hit rate", summary["citation_source_hit_rate"])
 
     st.markdown("### Per-entry metrics")
     st.dataframe(rows, use_container_width=True)

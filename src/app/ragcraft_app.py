@@ -519,14 +519,19 @@ class RAGCraftApp:
 
         def pipeline_runner(entry):
             started = perf_counter()
-            pipeline = self.rag_service.inspect_pipeline(
-                project,
-                entry.question,
+            pipeline = self.inspect_retrieval(
+                user_id=user_id,
+                project_id=project_id,
+                question=entry.question,
                 chat_history=[],
                 enable_query_rewrite_override=enable_query_rewrite,
                 enable_hybrid_retrieval_override=enable_hybrid_retrieval,
             )
-            answer = self.rag_service.generate_answer_from_pipeline(project, pipeline)
+
+            answer = None
+            if pipeline is not None:
+                answer = self.rag_service.answer_from_pipeline(project, pipeline)
+
             latency_ms = (perf_counter() - started) * 1000.0
             return {
                 "pipeline": pipeline,

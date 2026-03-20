@@ -322,6 +322,17 @@ class RAGService:
             "confidence": confidence,
         }
 
+    def _generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
+        try:
+            response = LLM.invoke(pipeline["prompt"])
+        except Exception as exc:
+            raise LLMServiceError(
+                f"Failed to generate answer for project '{project.project_id}': {exc}",
+                user_message="The language model failed while generating the answer.",
+            ) from exc
+
+        return getattr(response, "content", str(response)).strip()
+
     def inspect_pipeline(
         self,
         project: Project,
@@ -339,19 +350,8 @@ class RAGService:
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
 
-    def generate_answer_from_pipeline(self, project: Project, pipeline: dict | None) -> str:
-        if pipeline is None:
-            return ""
-
-        try:
-            response = LLM.invoke(pipeline["prompt"])
-        except Exception as exc:
-            raise LLMServiceError(
-                f"Failed to generate answer for project '{project.project_id}': {exc}",
-                user_message="The language model failed while generating the answer.",
-            ) from exc
-
-        return getattr(response, "content", str(response)).strip()
+    def answer_from_pipeline(self, project: Project, pipeline: dict) -> str:
+        return self._generate_answer_from_pipeline(project=project, pipeline=pipeline)
 
     def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
         pipeline = self._run_pipeline(project, question, chat_history)
@@ -359,7 +359,7 @@ class RAGService:
         if pipeline is None:
             return None
 
-        answer = self.generate_answer_from_pipeline(project, pipeline)
+        answer = self._generate_answer_from_pipeline(project=project, pipeline=pipeline)
 
         return RAGResponse(
             question=question,
