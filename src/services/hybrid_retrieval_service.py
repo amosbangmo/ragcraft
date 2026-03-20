@@ -4,16 +4,15 @@ from langchain_core.documents import Document
 from rank_bm25 import BM25Okapi
 
 
-MAX_TEXT_PREVIEW_CHARS = 1200
-MAX_TABLE_TEXT_PREVIEW_CHARS = 1000
-
-
 class HybridRetrievalService:
     """
-    Lightweight lexical retrieval layer over stored asset summaries.
+    Lightweight lexical retrieval layer over stored assets.
+
+    BM25 is run only on: ``raw_content``, ``metadata.table_title``,
+    and ``metadata.image_title`` (no summary, filenames, or other metadata).
 
     Source of truth:
-    - SQLite raw assets / summaries already stored in the docstore
+    - SQLite raw assets already stored in the docstore
 
     Output:
     - LangChain Documents compatible with the existing RAG pipeline
@@ -38,7 +37,7 @@ class HybridRetrievalService:
         corpus_tokens: list[list[str]] = []
 
         for asset in assets:
-            candidate_text = self._build_candidate_text(asset)
+            candidate_text = self._build_lexical_candidate_text(asset)
             tokens = self._tokenize(candidate_text)
 
             if not tokens:
@@ -95,56 +94,26 @@ class HybridRetrievalService:
 
         return documents
 
-    def _build_candidate_text(self, asset: dict) -> str:
-        content_type = asset.get("content_type", "unknown")
-        source_file = asset.get("source_file", "unknown")
-        summary = (asset.get("summary", "") or "").strip()
-        raw_content = (asset.get("raw_content", "") or "").strip()
+    def _build_lexical_candidate_text(self, asset: dict) -> str:
+        """
+        Corpus text for BM25: only ``raw_content``, ``table_title``, ``image_title``.
+        """
         metadata = asset.get("metadata", {}) or {}
+        parts: list[str] = []
 
-        table_title = metadata.get("table_title")
-        table_text = (metadata.get("table_text") or "").strip()
-        image_title = metadata.get("image_title")
-        chunk_title = metadata.get("chunk_title")
-        page_number = metadata.get("page_number")
-        page_start = metadata.get("page_start")
-        page_end = metadata.get("page_end")
+        raw_content = (asset.get("raw_content", "") or "").strip()
+        if raw_content:
+            parts.append(raw_content)
 
-        header_parts = [
-            f"source_file: {source_file}",
-            f"content_type: {content_type}",
-        ]
+        for key in ("table_title", "image_title"):
+            value = metadata.get(key)
+            if value is None:
+                continue
+            s = str(value).strip()
+            if s:
+                parts.append(s)
 
-        if chunk_title:
-            header_parts.append(f"chunk_title: {chunk_title}")
-        if table_title:
-            header_parts.append(f"table_title: {table_title}")
-        if image_title:
-            header_parts.append(f"image_title: {image_title}")
-
-        if page_number is not None:
-            header_parts.append(f"page: {page_number}")
-        elif page_start is not None and page_end is not None:
-            header_parts.append(f"pages: {page_start}-{page_end}")
-        elif page_start is not None:
-            header_parts.append(f"page: {page_start}")
-
-        blocks = [
-            " | ".join(header_parts),
-            f"summary: {summary}",
-        ]
-
-        if content_type == "text":
-            blocks.append(f"raw_text_excerpt: {raw_content[:MAX_TEXT_PREVIEW_CHARS]}")
-        elif content_type == "table":
-            blocks.append(f"table_text_excerpt: {table_text[:MAX_TABLE_TEXT_PREVIEW_CHARS]}")
-            blocks.append(f"table_html_excerpt: {raw_content[:800]}")
-        elif content_type == "image":
-            blocks.append(f"image_summary: {summary}")
-        else:
-            blocks.append(f"raw_excerpt: {raw_content[:1000]}")
-
-        return "\n".join(block for block in blocks if block.strip())
+        return "\n".join(parts)
 
     def _tokenize(self, text: str) -> list[str]:
         return [
