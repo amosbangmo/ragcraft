@@ -36,7 +36,12 @@ def _get_str_env(name: str, default: str) -> str:
 
 @dataclass(frozen=True)
 class RetrievalConfig:
-    retrieval_k: int = field(default_factory=lambda: _get_int_env("RAG_RETRIEVAL_K", 15))
+    similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 15))
+    bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 15))
+    hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 15))
+    # Reciprocal Rank Fusion (RRF) constant.
+    # Final fused score is: sum(1 / (rrf_k + rank_i)) across retrieval lists.
+    rrf_k: int = field(default_factory=lambda: _get_int_env("RAG_RRF_K", 60))
     max_prompt_assets: int = field(default_factory=lambda: _get_int_env("RAG_MAX_PROMPT_ASSETS", 5))
     max_text_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000))
     max_table_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TABLE_CHARS_PER_ASSET", 4000))
@@ -47,7 +52,6 @@ class RetrievalConfig:
     enable_hybrid_retrieval: bool = field(
         default_factory=lambda: _get_bool_env("RAG_ENABLE_HYBRID_RETRIEVAL", True)
     )
-    hybrid_bm25_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_BM25_K", 10))
 
 
 @dataclass(frozen=True)

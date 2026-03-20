@@ -115,21 +115,61 @@ class RAGService:
         secondary_docs: list[Document],
         max_docs: int | None = None,
     ) -> list[Document]:
-        merged: list[Document] = []
-        seen_doc_ids: set[str] = set()
+        """
+        Merge two ranked document lists using Reciprocal Rank Fusion (RRF).
 
-        for doc in [*primary_docs, *secondary_docs]:
-            doc_id = doc.metadata.get("doc_id")
-            if not doc_id or doc_id in seen_doc_ids:
-                continue
+        Final score for each doc_id:
+          sum(1 / (rrf_k + rank_i)) over retrieval lists where the doc appears.
+        """
+        rrf_k = getattr(self.config, "rrf_k", 60)
 
-            seen_doc_ids.add(doc_id)
-            merged.append(doc)
+        primary_ranks: dict[str, int] = {}
+        secondary_ranks: dict[str, int] = {}
+        docs_by_id: dict[str, Document] = {}
+        first_seen_order: dict[str, int] = {}
 
-            if max_docs is not None and len(merged) >= max_docs:
-                break
+        def _ingest(docs: list[Document], *, target_ranks: dict[str, int]) -> None:
+            for rank, doc in enumerate(docs, start=1):
+                doc_id = doc.metadata.get("doc_id")
+                if not doc_id:
+                    continue
 
-        return merged
+                # Keep the earliest (best) rank only.
+                target_ranks.setdefault(doc_id, rank)
+
+                # Preserve a deterministic representative doc for the fused output.
+                if doc_id not in docs_by_id:
+                    docs_by_id[doc_id] = doc
+                    first_seen_order[doc_id] = len(first_seen_order)
+
+        _ingest(primary_docs, target_ranks=primary_ranks)
+        _ingest(secondary_docs, target_ranks=secondary_ranks)
+
+        fused: list[tuple[str, float, int, int]] = []
+        all_doc_ids = set(docs_by_id.keys())
+
+        for doc_id in all_doc_ids:
+            score = 0.0
+            min_rank = 10**18
+
+            if doc_id in primary_ranks:
+                rank = primary_ranks[doc_id]
+                score += 1.0 / (rrf_k + rank)
+                min_rank = min(min_rank, rank)
+
+            if doc_id in secondary_ranks:
+                rank = secondary_ranks[doc_id]
+                score += 1.0 / (rrf_k + rank)
+                min_rank = min(min_rank, rank)
+
+            fused.append((doc_id, score, min_rank, first_seen_order[doc_id]))
+
+        # Sort by fused score desc, then by best (lowest) rank asc, then by first-seen order asc.
+        fused.sort(key=lambda item: (-item[1], item[2], item[3]))
+
+        limit = max_docs if max_docs is not None else len(fused)
+        fused_doc_ids = [doc_id for doc_id, _, _, _ in fused[:limit]]
+        return [docs_by_id[doc_id] for doc_id in fused_doc_ids]
 
     def _retrieve_summary_docs(
         self,
@@ -141,7 +181,7 @@ class RAGService:
         vector_summary_docs = self.vectorstore_service.similarity_search(
             project,
             retrieval_query,
-            k=self.config.retrieval_k,
+            k=self.config.similarity_search_k,
         )
 
         bm25_summary_docs: list[Document] = []
@@ -155,12 +195,12 @@ class RAGService:
             bm25_summary_docs = self.hybrid_retrieval_service.lexical_search(
                 query=retrieval_query,
                 assets=project_assets,
-                k=self.config.hybrid_bm25_k,
+                k=self.config.bm25_search_k,
             )
 
-        merged_limit = self.config.retrieval_k
+        merged_limit = self.config.similarity_search_k
         if enable_hybrid_retrieval:
-            merged_limit += self.config.hybrid_bm25_k
+            merged_limit += self.config.hybrid_search_k
 
         recalled_summary_docs = self._merge_summary_docs(
             primary_docs=vector_summary_docs,

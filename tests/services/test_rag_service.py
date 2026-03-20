@@ -36,8 +36,9 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         max_table_chars_per_asset=4000,
         enable_query_rewrite=True,
         enable_hybrid_retrieval=True,
-        retrieval_k=15,
-        hybrid_bm25_k=10,
+        similarity_search_k=15,
+        bm25_search_k=10,
+        rrf_k=60,
         max_prompt_assets=5,
     )
 
@@ -103,6 +104,47 @@ class TestRAGService(unittest.TestCase):
         result = service._deduplicate_doc_ids(docs)
 
         self.assertEqual(result, ["d1", "d2"])
+
+    def test_rrf_merge_prioritizes_common_docs(self):
+        service, *_ = self._build_service()
+        service.config.rrf_k = 60
+
+        # ranks: d1(1), d2(2) in primary; d2(1), d3(2) in secondary
+        primary_docs = [
+            Document(page_content="p1", metadata={"doc_id": "d1"}),
+            Document(page_content="p2", metadata={"doc_id": "d2"}),
+        ]
+        secondary_docs = [
+            Document(page_content="s1", metadata={"doc_id": "d2"}),
+            Document(page_content="s2", metadata={"doc_id": "d3"}),
+        ]
+
+        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged_ids = [doc.metadata["doc_id"] for doc in merged]
+
+        # d2 appears in both lists at rank 1 in secondary and rank 2 in primary, so it should win.
+        self.assertEqual(merged_ids[:2], ["d2", "d1"])
+
+    def test_rrf_merge_respects_max_docs(self):
+        service, *_ = self._build_service()
+        service.config.rrf_k = 60
+
+        primary_docs = [
+            Document(page_content="p1", metadata={"doc_id": "d1"}),
+            Document(page_content="p2", metadata={"doc_id": "d2"}),
+        ]
+        secondary_docs = [
+            Document(page_content="s1", metadata={"doc_id": "d2"}),
+            Document(page_content="s2", metadata={"doc_id": "d3"}),
+        ]
+
+        merged = service._merge_summary_docs(
+            primary_docs=primary_docs,
+            secondary_docs=secondary_docs,
+            max_docs=2,
+        )
+        merged_ids = [doc.metadata["doc_id"] for doc in merged]
+        self.assertEqual(merged_ids, ["d2", "d1"])
 
     def test_run_pipeline_returns_none_when_nothing_recalled(self):
         service, *_ = self._build_service()
