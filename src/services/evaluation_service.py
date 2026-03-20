@@ -2,18 +2,32 @@ import numpy as np
 
 
 class EvaluationService:
-    def compute_confidence(self, docs, reranked_assets=None) -> float:
-        if not docs:
+
+    def compute_confidence(self, reranked_assets: list) -> float:
+        if not reranked_assets:
             return 0.0
 
-        scores = []
+        scores: list[float] = []
 
-        for doc in docs:
-            score = doc.metadata.get("score", 0.5)
-            scores.append(score)
+        for item in reranked_assets:
+            metadata = self._confidence_metadata(item)
+            score = metadata.get("rerank_score")
+            normalized_score = 1 / (1 + np.exp(-score))
+            if score is not None:
+                scores.append(float(normalized_score))
+
+        if not scores:
+            return 0.0
 
         confidence = float(np.mean(scores))
+
         return round(confidence, 2)
+
+    def _confidence_metadata(self, item) -> dict:
+        if isinstance(item, dict):
+            meta = item.get("metadata")
+            return meta if isinstance(meta, dict) else {}
+        return getattr(item, "metadata", None) or {}
 
     def evaluate_gold_qa_dataset(
         self,

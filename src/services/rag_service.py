@@ -298,11 +298,7 @@ class RAGService:
             raw_context=raw_context,
         )
 
-        confidence_docs = selected_summary_docs if selected_summary_docs else recalled_summary_docs
-        confidence = self.evaluation_service.compute_confidence(
-            docs=confidence_docs,
-            reranked_assets=reranked_raw_assets,
-        )
+        confidence = self.evaluation_service.compute_confidence(reranked_raw_assets)
 
         retrieval_mode = "faiss+bm25" if enable_hybrid_retrieval else "faiss"
 
