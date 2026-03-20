@@ -12,6 +12,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.qa_dataset_service import QADatasetService
+from src.services.qa_dataset_generation_service import QADatasetGenerationService
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -34,6 +35,10 @@ class RAGCraftApp:
         self.docstore_service = DocStoreService()
         self.reranking_service = RerankingService()
         self.qa_dataset_service = QADatasetService()
+        self.qa_dataset_generation_service = QADatasetGenerationService(
+            docstore_service=self.docstore_service,
+            project_service=self.project_service,
+        )
 
         self._rag_service = None
         self._retrieval_comparison_service = None
@@ -57,10 +62,6 @@ class RAGCraftApp:
                 rag_service=self.rag_service,
             )
         return self._retrieval_comparison_service
-
-    # ------------------------------------------------------------------
-    # Authentication / profile façade
-    # ------------------------------------------------------------------
 
     def get_current_user_record(self):
         return self.auth_service.get_current_user_record()
@@ -107,10 +108,6 @@ class RAGCraftApp:
             user_id=user_id,
             current_password=current_password,
         )
-
-    # ------------------------------------------------------------------
-    # Projects / documents / retrieval
-    # ------------------------------------------------------------------
 
     def get_project(self, user_id: str, project_id: str):
         return self.project_service.get_project(user_id, project_id)
@@ -374,10 +371,6 @@ class RAGCraftApp:
             enable_query_rewrite=enable_query_rewrite,
         )
 
-    # ------------------------------------------------------------------
-    # Gold QA dataset façade
-    # ------------------------------------------------------------------
-
     def create_qa_dataset_entry(
         self,
         *,
@@ -441,6 +434,37 @@ class RAGCraftApp:
             user_id=user_id,
             project_id=project_id,
         )
+
+    def generate_qa_dataset_entries(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        num_questions: int,
+        source_files: list[str] | None = None,
+    ) -> list:
+        generated_entries = self.qa_dataset_generation_service.generate_entries(
+            user_id=user_id,
+            project_id=project_id,
+            num_questions=num_questions,
+            source_files=source_files,
+        )
+
+        created_entries = []
+
+        for item in generated_entries:
+            created_entries.append(
+                self.create_qa_dataset_entry(
+                    user_id=user_id,
+                    project_id=project_id,
+                    question=item["question"],
+                    expected_answer=item.get("expected_answer"),
+                    expected_doc_ids=item.get("expected_doc_ids", []),
+                    expected_sources=item.get("expected_sources", []),
+                )
+            )
+
+        return created_entries
 
     def evaluate_gold_qa_dataset(
         self,

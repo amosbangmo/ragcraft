@@ -31,6 +31,8 @@ apply_layout()
 
 EVALUATION_REQUEST_KEY = "evaluation_request_running"
 EVALUATION_RESULT_KEY = "evaluation_result_payload"
+DATASET_GENERATION_REQUEST_KEY = "dataset_generation_request_running"
+DATASET_GENERATION_RESULT_KEY = "dataset_generation_result_payload"
 DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
 
@@ -65,6 +67,8 @@ project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()
+
+project_documents = app.list_project_documents(user_id, project_id)
 
 if "qa_dataset_success_message" in st.session_state:
     st.success(st.session_state.pop("qa_dataset_success_message"))
@@ -168,9 +172,99 @@ st.markdown("</div>", unsafe_allow_html=True)
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Gold QA dataset</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="card-subtitle">Add project-specific benchmark questions with optional expected answers and expected sources.</div>',
+    '<div class="card-subtitle">Add project-specific benchmark questions manually or generate them automatically from indexed assets.</div>',
     unsafe_allow_html=True,
 )
+
+st.markdown("### Generate entries automatically")
+
+generation_col1, generation_col2 = st.columns(2)
+
+with generation_col1:
+    generation_num_questions = st.number_input(
+        "Number of questions to generate",
+        min_value=1,
+        max_value=20,
+        value=5,
+        step=1,
+    )
+
+with generation_col2:
+    generation_selected_files = st.multiselect(
+        "Restrict generation to selected source files (optional)",
+        options=project_documents,
+        default=[],
+        help="Leave empty to use all project documents.",
+    )
+
+
+def _run_dataset_generation():
+    return app.generate_qa_dataset_entries(
+        user_id=user_id,
+        project_id=project_id,
+        num_questions=int(generation_num_questions),
+        source_files=generation_selected_files or None,
+    )
+
+
+def _map_dataset_generation_error(exc: Exception) -> str:
+    if isinstance(exc, DocStoreError):
+        return get_user_error_message(exc, "Unable to inspect indexed assets while generating QA entries.")
+    if isinstance(exc, LLMServiceError):
+        return get_user_error_message(exc, "The language model failed while generating QA dataset entries.")
+    return get_user_error_message(exc, f"Unexpected error while generating QA dataset entries: {exc}")
+
+
+def _render_dataset_generation_result(entries):
+    if not entries:
+        st.info("No QA dataset entries were generated.")
+        return
+
+    entry_count = len(entries)
+    st.success(f"{entry_count} QA dataset entr{'y' if entry_count == 1 else 'ies'} generated successfully.")
+
+    st.markdown("#### Generated entries")
+    for entry in entries:
+        with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
+            if entry.expected_answer:
+                st.markdown("**Expected answer**")
+                st.write(entry.expected_answer)
+
+            if entry.expected_doc_ids:
+                st.markdown("**Expected doc_ids**")
+                st.code("\n".join(entry.expected_doc_ids), language="text")
+
+            if entry.expected_sources:
+                st.markdown("**Expected source files**")
+                st.code("\n".join(entry.expected_sources), language="text")
+
+
+generate_clicked = st.button(
+    "Generate QA dataset entries",
+    use_container_width=True,
+    disabled=is_request_running(DATASET_GENERATION_REQUEST_KEY),
+)
+
+if generate_clicked and not project_documents:
+    st.warning("Please ingest documents before generating QA dataset entries.")
+else:
+    run_request_action(
+        request_key=DATASET_GENERATION_REQUEST_KEY,
+        result_key=DATASET_GENERATION_RESULT_KEY,
+        trigger=generate_clicked,
+        can_run=bool(project_documents),
+        action=_run_dataset_generation,
+        spinner_text="Generating QA dataset entries from project assets...",
+        error_mapper=_map_dataset_generation_error,
+    )
+
+render_result_payload(
+    result_key=DATASET_GENERATION_RESULT_KEY,
+    on_success=_render_dataset_generation_result,
+)
+
+st.markdown("---")
+st.markdown("### Add an entry manually")
 
 with st.form("qa_dataset_create_form", clear_on_submit=True):
     dataset_question = st.text_area(
