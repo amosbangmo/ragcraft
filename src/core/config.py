@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 
 load_dotenv()
@@ -50,15 +50,10 @@ class RetrievalConfig:
     similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 25))
     bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 25))
     hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 25))
-    # rank_bm25.BM25Okapi hyperparameters (term-frequency saturation, length norm, IDF floor).
     bm25_k1: float = field(default_factory=lambda: _get_float_env("RAG_BM25_K1", 1.5))
     bm25_b: float = field(default_factory=lambda: _get_float_env("RAG_BM25_B", 0.75))
     bm25_epsilon: float = field(default_factory=lambda: _get_float_env("RAG_BM25_EPSILON", 0.25))
-    # Reciprocal Rank Fusion (RRF) constant.
-    # Final fused score is: sum(1 / (rrf_k + rank_i)) across retrieval lists.
     rrf_k: int = field(default_factory=lambda: _get_int_env("RAG_RRF_K", 60))
-    # Hybrid RRF weights: semantic (FAISS) term is scaled by beta; BM25 by (1 - beta).
-    # beta=0.5 matches unweighted RRF when a doc appears in both lists.
     hybrid_beta: float = field(default_factory=lambda: _get_float_env("RAG_HYBRID_BETA", 0.5))
     max_prompt_assets: int = field(default_factory=lambda: _get_int_env("RAG_MAX_PROMPT_ASSETS", 5))
     max_text_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000))

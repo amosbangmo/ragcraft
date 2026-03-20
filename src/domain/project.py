@@ -1,12 +1,14 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+from src.core.paths import get_data_root
 
 
 @dataclass(frozen=True)
 class Project:
     user_id: str
     project_id: str
-    data_root: Path = Path("data")
+    data_root: Path = field(default_factory=get_data_root)
 
     @property
     def user_path(self) -> Path:

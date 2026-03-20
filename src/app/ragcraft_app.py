@@ -1,25 +1,24 @@
 from time import perf_counter
 
-from src.infrastructure.persistence.db import init_app_db
 from src.auth.auth_service import AuthService
-from src.services.project_service import ProjectService
-from src.services.ingestion_service import IngestionService
-from src.services.vectorstore_service import VectorStoreService
-from src.services.evaluation_service import EvaluationService
-from src.services.chat_service import ChatService
-from src.services.rag_service import RAGService
-from src.services.docstore_service import DocStoreService
-from src.services.reranking_service import RerankingService
-from src.services.retrieval_comparison_service import RetrievalComparisonService
-from src.services.qa_dataset_service import QADatasetService
-from src.services.qa_dataset_generation_service import QADatasetGenerationService
-
 from src.core.chain_state import (
     get_cached_chain,
-    set_cached_chain,
-    invalidate_project_chain,
     invalidate_all_project_chains,
+    invalidate_project_chain,
+    set_cached_chain,
 )
+from src.infrastructure.persistence.db import init_app_db
+from src.services.chat_service import ChatService
+from src.services.docstore_service import DocStoreService
+from src.services.evaluation_service import EvaluationService
+from src.services.ingestion_service import IngestionService
+from src.services.project_service import ProjectService
+from src.services.qa_dataset_generation_service import QADatasetGenerationService
+from src.services.qa_dataset_service import QADatasetService
+from src.services.rag_service import RAGService
+from src.services.reranking_service import RerankingService
+from src.services.retrieval_comparison_service import RetrievalComparisonService
+from src.services.vectorstore_service import VectorStoreService
 
 
 class RAGCraftApp:
@@ -119,20 +118,7 @@ class RAGCraftApp:
         return self.project_service.list_projects(user_id)
 
     def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
-        project = self.get_project(user_id, project_id)
-
-        if not project.path.exists():
-            return []
-
-        ignored_names = {"faiss_index", "logs.json"}
-
-        documents = [
-            item.name
-            for item in project.path.iterdir()
-            if item.is_file() and item.name not in ignored_names
-        ]
-
-        return sorted(documents)
+        return self.project_service.list_project_documents(user_id, project_id)
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
         project = self.get_project(user_id, project_id)

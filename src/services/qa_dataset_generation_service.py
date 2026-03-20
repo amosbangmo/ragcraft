@@ -74,11 +74,10 @@ class QADatasetGenerationService:
         project_id: str,
         source_files: list[str] | None,
     ) -> list[str]:
-        available_files = self.project_service.list_projects(user_id)  # not used but keeps service aligned
-
-        _ = available_files
-
-        project_documents = self._list_project_documents(user_id=user_id, project_id=project_id)
+        project_documents = self.project_service.list_project_documents(
+            user_id=user_id,
+            project_id=project_id,
+        )
 
         if not project_documents:
             return []
@@ -95,22 +94,6 @@ class QADatasetGenerationService:
                 normalized_selection.append(cleaned)
 
         return normalized_selection
-
-    def _list_project_documents(self, *, user_id: str, project_id: str) -> list[str]:
-        project = self.project_service.get_project(user_id, project_id)
-
-        if not project.path.exists():
-            return []
-
-        ignored_names = {"faiss_index", "logs.json"}
-
-        documents = [
-            item.name
-            for item in project.path.iterdir()
-            if item.is_file() and item.name not in ignored_names
-        ]
-
-        return sorted(documents)
 
     def _collect_assets(
         self,

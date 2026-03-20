@@ -1,4 +1,3 @@
-import os
 import re
 import shutil
 from datetime import datetime
@@ -6,12 +5,13 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.infrastructure.persistence.db import init_app_db
 from src.auth.password_utils import hash_password, verify_password
 from src.auth.user_repository import UserRepository
+from src.core.paths import get_data_root
+from src.infrastructure.persistence.db import init_app_db
 
 
-DATA_ROOT = Path(os.getenv("RAGCRAFT_DATA_PATH", "data"))
+DATA_ROOT = get_data_root()
 MAX_AVATAR_SIZE_MB = 2
 ALLOWED_AVATAR_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
@@ -305,4 +305,3 @@ class AuthService:
         self.logout()
 
         return True, "Your account has been deleted."
-    
