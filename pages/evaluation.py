@@ -179,7 +179,6 @@ st.markdown(
 st.markdown("### Generate entries automatically")
 
 generation_col1, generation_col2 = st.columns(2)
-
 with generation_col1:
     generation_num_questions = st.number_input(
         "Number of questions to generate",
@@ -197,6 +196,22 @@ with generation_col2:
         help="Leave empty to use all project documents.",
     )
 
+generation_mode = st.radio(
+    "Generation mode",
+    options=["append", "replace", "append_dedup"],
+    format_func=lambda mode: {
+        "append": "Append",
+        "replace": "Replace dataset",
+        "append_dedup": "Append with dedup",
+    }[mode],
+    horizontal=True,
+    help=(
+        "Append: keep existing entries and add new ones. "
+        "Replace dataset: delete all existing entries before inserting new ones. "
+        "Append with dedup: keep existing entries and skip generated questions already present."
+    ),
+)
+
 
 def _run_dataset_generation():
     return app.generate_qa_dataset_entries(
@@ -204,6 +219,7 @@ def _run_dataset_generation():
         project_id=project_id,
         num_questions=int(generation_num_questions),
         source_files=generation_selected_files or None,
+        generation_mode=generation_mode,
     )
 
 
@@ -215,28 +231,49 @@ def _map_dataset_generation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while generating QA dataset entries: {exc}")
 
 
-def _render_dataset_generation_result(entries):
-    if not entries:
-        st.info("No QA dataset entries were generated.")
-        return
+def _render_dataset_generation_result(payload: dict):
+    created_entries = payload["created_entries"]
+    skipped_duplicates = payload["skipped_duplicates"]
+    deleted_existing_entries = payload["deleted_existing_entries"]
+    mode = payload["generation_mode"]
 
-    entry_count = len(entries)
-    st.success(f"{entry_count} QA dataset entr{'y' if entry_count == 1 else 'ies'} generated successfully.")
+    if mode == "replace":
+        st.success(
+            f"Dataset replaced successfully: {deleted_existing_entries} existing entr"
+            f"{'y' if deleted_existing_entries == 1 else 'ies'} removed and "
+            f"{len(created_entries)} new entr{'y' if len(created_entries) == 1 else 'ies'} created."
+        )
+    elif mode == "append_dedup":
+        st.success(
+            f"{len(created_entries)} entr{'y' if len(created_entries) == 1 else 'ies'} created. "
+            f"{len(skipped_duplicates)} duplicate question"
+            f"{'' if len(skipped_duplicates) == 1 else 's'} skipped."
+        )
+    else:
+        st.success(
+            f"{len(created_entries)} QA dataset entr{'y' if len(created_entries) == 1 else 'ies'} created."
+        )
 
-    st.markdown("#### Generated entries")
-    for entry in entries:
-        with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
-            if entry.expected_answer:
-                st.markdown("**Expected answer**")
-                st.write(entry.expected_answer)
+    if skipped_duplicates:
+        st.markdown("#### Skipped duplicate questions")
+        for question in skipped_duplicates:
+            st.markdown(f"- {question}")
 
-            if entry.expected_doc_ids:
-                st.markdown("**Expected doc_ids**")
-                st.code("\n".join(entry.expected_doc_ids), language="text")
+    if created_entries:
+        st.markdown("#### Created entries")
+        for entry in created_entries:
+            with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
+                if entry.expected_answer:
+                    st.markdown("**Expected answer**")
+                    st.write(entry.expected_answer)
 
-            if entry.expected_sources:
-                st.markdown("**Expected source files**")
-                st.code("\n".join(entry.expected_sources), language="text")
+                if entry.expected_doc_ids:
+                    st.markdown("**Expected doc_ids**")
+                    st.code("\n".join(entry.expected_doc_ids), language="text")
+
+                if entry.expected_sources:
+                    st.markdown("**Expected source files**")
+                    st.code("\n".join(entry.expected_sources), language="text")
 
 
 generate_clicked = st.button(

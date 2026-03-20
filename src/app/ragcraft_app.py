@@ -442,7 +442,27 @@ class RAGCraftApp:
         project_id: str,
         num_questions: int,
         source_files: list[str] | None = None,
-    ) -> list:
+        generation_mode: str = "append",
+    ) -> dict:
+        normalized_mode = (generation_mode or "append").strip().lower()
+        if normalized_mode not in {"append", "replace", "append_dedup"}:
+            raise ValueError("generation_mode must be one of: append, replace, append_dedup.")
+
+        deleted_existing_entries = 0
+
+        if normalized_mode == "replace":
+            deleted_existing_entries = self.qa_dataset_service.delete_all_entries(
+                user_id=user_id,
+                project_id=project_id,
+            )
+
+        existing_question_keys = set()
+        if normalized_mode == "append_dedup":
+            existing_question_keys = self.qa_dataset_service.existing_question_keys(
+                user_id=user_id,
+                project_id=project_id,
+            )
+
         generated_entries = self.qa_dataset_generation_service.generate_entries(
             user_id=user_id,
             project_id=project_id,
@@ -451,20 +471,37 @@ class RAGCraftApp:
         )
 
         created_entries = []
+        skipped_duplicates = []
 
         for item in generated_entries:
-            created_entries.append(
-                self.create_qa_dataset_entry(
-                    user_id=user_id,
-                    project_id=project_id,
-                    question=item["question"],
-                    expected_answer=item.get("expected_answer"),
-                    expected_doc_ids=item.get("expected_doc_ids", []),
-                    expected_sources=item.get("expected_sources", []),
-                )
-            )
+            question = item["question"]
+            question_key = self.qa_dataset_service.normalized_question_key(question)
 
-        return created_entries
+            if normalized_mode == "append_dedup" and question_key in existing_question_keys:
+                skipped_duplicates.append(question)
+                continue
+
+            created_entry = self.create_qa_dataset_entry(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=item.get("expected_answer"),
+                expected_doc_ids=item.get("expected_doc_ids", []),
+                expected_sources=item.get("expected_sources", []),
+            )
+            created_entries.append(created_entry)
+
+            if normalized_mode == "append_dedup":
+                existing_question_keys.add(question_key)
+
+        return {
+            "generation_mode": normalized_mode,
+            "deleted_existing_entries": deleted_existing_entries,
+            "created_entries": created_entries,
+            "skipped_duplicates": skipped_duplicates,
+            "requested_questions": int(num_questions),
+            "raw_generated_count": len(generated_entries),
+        }
 
     def evaluate_gold_qa_dataset(
         self,

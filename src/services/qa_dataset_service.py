@@ -117,6 +117,37 @@ class QADatasetService:
 
         return True
 
+    def delete_all_entries(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ) -> int:
+        return self.repository.delete_all_entries(
+            user_id=user_id,
+            project_id=project_id,
+        )
+
+    def normalized_question_key(self, question: str) -> str:
+        normalized = " ".join((question or "").strip().lower().split())
+        return normalized.rstrip("?.!;:,")
+
+    def existing_question_keys(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ) -> set[str]:
+        entries = self.list_entries(
+            user_id=user_id,
+            project_id=project_id,
+        )
+        return {
+            self.normalized_question_key(entry.question)
+            for entry in entries
+            if entry.question.strip()
+        }
+
     def _normalize_string_list(self, values: list[str] | None) -> list[str]:
         if not values:
             return []

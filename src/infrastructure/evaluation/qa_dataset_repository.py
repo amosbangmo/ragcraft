@@ -195,3 +195,23 @@ class QADatasetRepository:
         deleted = cursor.rowcount > 0
         conn.close()
         return deleted
+
+    def delete_all_entries(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+    ) -> int:
+        conn = get_connection()
+        cursor = conn.execute(
+            """
+            DELETE FROM qa_dataset
+            WHERE user_id = ?
+              AND project_id = ?
+            """,
+            (user_id, project_id),
+        )
+        conn.commit()
+        deleted_count = int(cursor.rowcount or 0)
+        conn.close()
+        return deleted_count
