@@ -33,10 +33,27 @@ EVALUATION_REQUEST_KEY = "evaluation_request_running"
 EVALUATION_RESULT_KEY = "evaluation_result_payload"
 
 
+def _parse_csv_list(raw_value: str) -> list[str]:
+    if not raw_value.strip():
+        return []
+
+    values: list[str] = []
+    seen: set[str] = set()
+
+    for part in raw_value.split(","):
+        cleaned = part.strip()
+        if not cleaned or cleaned in seen:
+            continue
+        seen.add(cleaned)
+        values.append(cleaned)
+
+    return values
+
+
 header = render_page_header(
     badge="Evaluation",
     title="Test answer quality",
-    subtitle="Run evaluation queries and inspect the raw evidence used to generate the answer.",
+    subtitle="Run manual evaluation queries and manage a gold QA dataset for the current project.",
     selector_label="Project for evaluation",
 )
 
@@ -46,6 +63,19 @@ project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()
+
+if "qa_dataset_success_message" in st.session_state:
+    st.success(st.session_state.pop("qa_dataset_success_message"))
+
+if "qa_dataset_error_message" in st.session_state:
+    st.error(st.session_state.pop("qa_dataset_error_message"))
+
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Manual evaluation</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card-subtitle">Run a single question and inspect the answer, citations, and raw evidence.</div>',
+    unsafe_allow_html=True,
+)
 
 question = st.text_input("Evaluation question", placeholder="Enter a test question...")
 
@@ -130,3 +160,138 @@ render_result_payload(
     result_key=EVALUATION_RESULT_KEY,
     on_success=_render_evaluation_result,
 )
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown('<div class="card-title">Gold QA dataset</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="card-subtitle">Add project-specific benchmark questions with optional expected answers and expected sources.</div>',
+    unsafe_allow_html=True,
+)
+
+with st.form("qa_dataset_create_form", clear_on_submit=True):
+    dataset_question = st.text_area(
+        "Dataset question",
+        placeholder="e.g. What is the main objective of the report?",
+        height=110,
+    )
+
+    dataset_expected_answer = st.text_area(
+        "Expected answer (optional)",
+        placeholder="Reference answer used later for evaluation and LLM-as-a-judge scoring.",
+        height=120,
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        dataset_expected_doc_ids = st.text_input(
+            "Expected doc_ids (optional, comma-separated)",
+            placeholder="doc_1, doc_2",
+        )
+
+    with col2:
+        dataset_expected_sources = st.text_input(
+            "Expected source files (optional, comma-separated)",
+            placeholder="report.pdf, appendix.pdf",
+        )
+
+    add_entry_clicked = st.form_submit_button(
+        "Add QA entry",
+        use_container_width=True,
+    )
+
+if add_entry_clicked:
+    try:
+        entry = app.create_qa_dataset_entry(
+            user_id=user_id,
+            project_id=project_id,
+            question=dataset_question,
+            expected_answer=dataset_expected_answer or None,
+            expected_doc_ids=_parse_csv_list(dataset_expected_doc_ids),
+            expected_sources=_parse_csv_list(dataset_expected_sources),
+        )
+        st.session_state["qa_dataset_success_message"] = (
+            f"QA entry #{entry.id} added to project dataset."
+        )
+        st.rerun()
+    except Exception as exc:
+        st.session_state["qa_dataset_error_message"] = get_user_error_message(
+            exc,
+            f"Unable to add QA dataset entry: {exc}",
+        )
+        st.rerun()
+
+entries = app.list_qa_dataset_entries(
+    user_id=user_id,
+    project_id=project_id,
+)
+
+m1, m2 = st.columns(2)
+with m1:
+    st.metric("Dataset entries", len(entries))
+with m2:
+    st.metric("Current project", project_id)
+
+if not entries:
+    st.info("No gold QA entries yet for this project.")
+else:
+    st.markdown("### Existing dataset entries")
+
+    for entry in entries:
+        with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
+            st.markdown("**Question**")
+            st.write(entry.question)
+
+            if entry.expected_answer:
+                st.markdown("**Expected answer**")
+                st.write(entry.expected_answer)
+            else:
+                st.caption("No expected answer provided.")
+
+            doc_ids = entry.expected_doc_ids or []
+            sources = entry.expected_sources or []
+
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**Expected doc_ids**")
+                if doc_ids:
+                    st.code("\n".join(doc_ids), language="text")
+                else:
+                    st.caption("No expected doc_ids.")
+
+            with c2:
+                st.markdown("**Expected source files**")
+                if sources:
+                    st.code("\n".join(sources), language="text")
+                else:
+                    st.caption("No expected source files.")
+
+            if entry.created_at:
+                st.caption(f"Created: {entry.created_at}")
+            if entry.updated_at:
+                st.caption(f"Updated: {entry.updated_at}")
+
+            if st.button(
+                "Delete entry",
+                key=f"delete_qa_entry_{entry.id}",
+                use_container_width=True,
+            ):
+                try:
+                    app.delete_qa_dataset_entry(
+                        entry_id=entry.id,
+                        user_id=user_id,
+                        project_id=project_id,
+                    )
+                    st.session_state["qa_dataset_success_message"] = (
+                        f"QA entry #{entry.id} deleted."
+                    )
+                except Exception as exc:
+                    st.session_state["qa_dataset_error_message"] = get_user_error_message(
+                        exc,
+                        f"Unable to delete QA dataset entry #{entry.id}: {exc}",
+                    )
+                st.rerun()
+
+st.markdown("</div>", unsafe_allow_html=True)
