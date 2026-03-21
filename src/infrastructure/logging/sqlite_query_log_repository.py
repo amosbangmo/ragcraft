@@ -44,6 +44,24 @@ def _maybe_float(value: object | None) -> float | None:
         return None
 
 
+def _retrieval_strategy_columns(entry: dict) -> tuple[int | None, int | None, int | None]:
+    rs = entry.get("retrieval_strategy")
+    if not isinstance(rs, dict):
+        return None, None, None
+    k_sql: int | None = None
+    try:
+        k_raw = rs.get("k")
+        if k_raw is not None:
+            k_sql = int(k_raw)
+    except (TypeError, ValueError):
+        k_sql = None
+    uh = rs.get("use_hybrid")
+    uh_sql = None if uh is None else (1 if bool(uh) else 0)
+    af = rs.get("apply_filters")
+    af_sql = None if af is None else (1 if bool(af) else 0)
+    return k_sql, uh_sql, af_sql
+
+
 class SQLiteQueryLogRepository:
     """
     Persist query observability rows in SQLite (separate from docstore tables).
@@ -64,6 +82,8 @@ class SQLiteQueryLogRepository:
             qi = entry.get("query_intent")
             qi_sql = qi.strip() if isinstance(qi, str) and qi.strip() else None
 
+            rsk, rs_hybrid, rs_filters = _retrieval_strategy_columns(entry)
+
             params = (
                 entry.get("user_id"),
                 entry.get("project_id"),
@@ -83,6 +103,9 @@ class SQLiteQueryLogRepository:
                 _maybe_float(entry.get("answer_generation_ms")),
                 _maybe_float(entry.get("total_latency_ms")),
                 qi_sql,
+                rsk,
+                rs_hybrid,
+                rs_filters,
                 created_at.strip(),
             )
 
@@ -95,8 +118,10 @@ class SQLiteQueryLogRepository:
                         hybrid_retrieval_enabled, selected_doc_ids_json, recalled_doc_ids_json,
                         confidence, answer_preview, latency_ms,
                         query_rewrite_ms, retrieval_ms, reranking_ms, prompt_build_ms,
-                        answer_generation_ms, total_latency_ms, query_intent, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        answer_generation_ms, total_latency_ms, query_intent,
+                        retrieval_strategy_k, retrieval_strategy_use_hybrid,
+                        retrieval_strategy_apply_filters, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     params,
                 )
@@ -175,6 +200,23 @@ class SQLiteQueryLogRepository:
         intent = r.get("query_intent")
         if isinstance(intent, str) and intent.strip():
             out["query_intent"] = intent.strip()
+
+        rsk = r.get("retrieval_strategy_k")
+        rsh = r.get("retrieval_strategy_use_hybrid")
+        rsa = r.get("retrieval_strategy_apply_filters")
+        if rsk is not None or rsh is not None or rsa is not None:
+            strat: dict[str, object] = {}
+            if rsk is not None:
+                try:
+                    strat["k"] = int(rsk)
+                except (TypeError, ValueError):
+                    strat["k"] = rsk
+            if rsh is not None:
+                strat["use_hybrid"] = bool(rsh)
+            if rsa is not None:
+                strat["apply_filters"] = bool(rsa)
+            if strat:
+                out["retrieval_strategy"] = strat
 
         for key in (
             "latency_ms",

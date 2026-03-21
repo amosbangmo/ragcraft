@@ -109,6 +109,9 @@ def init_app_db():
             answer_generation_ms REAL,
             total_latency_ms REAL,
             query_intent TEXT,
+            retrieval_strategy_k INTEGER,
+            retrieval_strategy_use_hybrid INTEGER,
+            retrieval_strategy_apply_filters INTEGER,
             created_at TEXT NOT NULL
         )
         """
@@ -128,11 +131,17 @@ def init_app_db():
         """
     )
 
-    try:
-        conn.execute("ALTER TABLE query_logs ADD COLUMN query_intent TEXT")
-    except sqlite3.OperationalError as exc:
-        if "duplicate column" not in str(exc).lower():
-            raise
+    for ddl in (
+        "ALTER TABLE query_logs ADD COLUMN query_intent TEXT",
+        "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_k INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_use_hybrid INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_apply_filters INTEGER",
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.OperationalError as exc:
+            if "duplicate column" not in str(exc).lower():
+                raise
 
     conn.commit()
     conn.close()

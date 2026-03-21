@@ -255,11 +255,21 @@ with opt_col_1:
     )
 
 with opt_col_2:
-    enable_hybrid_retrieval = st.toggle(
+    use_adaptive_retrieval = st.toggle(
+        "Adaptive retrieval (intent-based k and hybrid)",
+        value=True,
+        help="When on, similarity k and hybrid follow query intent; turn off to force hybrid manually.",
+    )
+
+enable_hybrid_retrieval_override: bool | None = None
+if not use_adaptive_retrieval:
+    enable_hybrid_retrieval_override = st.toggle(
         "Enable hybrid retrieval (FAISS + BM25)",
         value=True,
         help="Combine semantic retrieval from FAISS with lexical retrieval from BM25.",
     )
+else:
+    st.caption("Hybrid and top‑k are chosen per query intent unless adaptive is off.")
 
 chat_history_mode = st.toggle("Include current chat history context", value=False)
 
@@ -332,7 +342,7 @@ def _run_inspection():
         question=question,
         chat_history=chat_history,
         enable_query_rewrite_override=enable_query_rewrite,
-        enable_hybrid_retrieval_override=enable_hybrid_retrieval,
+        enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         filters=_optional_retrieval_filters(),
     )
 
@@ -380,7 +390,13 @@ def _render_inspection_result(pipeline):
         st.warning("No retrieval result available for this query.")
         return
 
-    top_metrics = st.columns(8)
+    rs = pipeline.get("retrieval_strategy") or {}
+    strat_k = rs.get("k")
+    strat_hybrid = rs.get("use_hybrid")
+    strat_filters = rs.get("apply_filters")
+    filters_active = pipeline.get("retrieval_filters") is not None
+
+    top_metrics = st.columns(4)
     with top_metrics[0]:
         st.metric("Mode", pipeline["retrieval_mode"])
     with top_metrics[1]:
@@ -389,13 +405,36 @@ def _render_inspection_result(pipeline):
         st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
     with top_metrics[3]:
         st.metric("Intent", str(pipeline.get("query_intent", "unknown")))
-    with top_metrics[4]:
+
+    strat_cols = st.columns(5)
+    with strat_cols[0]:
+        st.metric("Strategy k", strat_k if strat_k is not None else "—")
+    with strat_cols[1]:
+        st.metric(
+            "Strategy hybrid",
+            "On" if strat_hybrid is True else ("Off" if strat_hybrid is False else "—"),
+        )
+    with strat_cols[2]:
+        st.metric(
+            "Strategy filters",
+            "On" if strat_filters is True else ("Off" if strat_filters is False else "—"),
+        )
+    with strat_cols[3]:
+        st.metric("Filters active", "Yes" if filters_active else "No")
+    with strat_cols[4]:
+        st.metric(
+            "Adaptive",
+            "On" if pipeline.get("adaptive_retrieval_enabled") else "Off",
+        )
+
+    recall_cols = st.columns(4)
+    with recall_cols[0]:
         st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
-    with top_metrics[5]:
+    with recall_cols[1]:
         st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
-    with top_metrics[6]:
+    with recall_cols[2]:
         st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
-    with top_metrics[7]:
+    with recall_cols[3]:
         st.metric(
             "Confidence",
             format_confidence_with_band(float(pipeline["confidence"])),
@@ -472,6 +511,8 @@ def _render_inspection_result(pipeline):
             "retrieval_mode": pipeline["retrieval_mode"],
             "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
             "hybrid_retrieval_enabled": pipeline["hybrid_retrieval_enabled"],
+            "adaptive_retrieval_enabled": pipeline.get("adaptive_retrieval_enabled"),
+            "retrieval_strategy": pipeline.get("retrieval_strategy"),
             "retrieval_filters": pipeline.get("retrieval_filters"),
             "recalled_doc_ids": pipeline["recalled_doc_ids"],
             "selected_doc_ids": pipeline["selected_doc_ids"],

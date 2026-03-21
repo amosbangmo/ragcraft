@@ -48,6 +48,30 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         self.assertEqual(rows[0]["timestamp"], "2025-01-01T12:00:00+00:00")
         self.assertEqual(rows[0].get("query_intent"), "factual")
 
+    def test_insert_retrieval_strategy_roundtrip(self) -> None:
+        repo = SQLiteQueryLogRepository()
+        repo.log(
+            {
+                "question": "q2",
+                "timestamp": "2025-01-02T12:00:00+00:00",
+                "project_id": "p2",
+                "user_id": "u2",
+                "retrieval_strategy": {
+                    "k": 8,
+                    "use_hybrid": True,
+                    "apply_filters": False,
+                },
+            }
+        )
+        rows = repo.list_logs(project_id="p2")
+        self.assertEqual(len(rows), 1)
+        rs = rows[0].get("retrieval_strategy")
+        self.assertIsInstance(rs, dict)
+        assert isinstance(rs, dict)
+        self.assertEqual(rs.get("k"), 8)
+        self.assertTrue(rs.get("use_hybrid"))
+        self.assertFalse(rs.get("apply_filters"))
+
     def test_list_logs_user_and_limit(self) -> None:
         repo = SQLiteQueryLogRepository()
         for i, uid in enumerate(["u1", "u1", "u2"]):
@@ -271,6 +295,29 @@ class TestQueryLogService(unittest.TestCase):
             )
             rows = repo.list_logs()
             self.assertNotIn("query_intent", rows[0])
+
+    def test_build_entry_stores_retrieval_strategy(self) -> None:
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            service.log_query(
+                payload={
+                    "question": "q",
+                    "project_id": "p1",
+                    "user_id": "u1",
+                    "retrieval_strategy": {
+                        "k": 5,
+                        "use_hybrid": False,
+                        "apply_filters": True,
+                    },
+                }
+            )
+            rows = repo.list_logs()
+            self.assertEqual(
+                rows[0].get("retrieval_strategy"),
+                {"k": 5, "use_hybrid": False, "apply_filters": True},
+            )
 
 
 if __name__ == "__main__":

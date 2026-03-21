@@ -145,6 +145,21 @@ class QueryLogService:
             if s in _VALID_QUERY_INTENTS:
                 entry["query_intent"] = s
 
+        rs = payload.get("retrieval_strategy")
+        if isinstance(rs, dict):
+            strat: dict[str, object] = {}
+            if "k" in rs:
+                try:
+                    strat["k"] = int(rs["k"])
+                except (TypeError, ValueError):
+                    pass
+            if "use_hybrid" in rs:
+                strat["use_hybrid"] = bool(rs["use_hybrid"])
+            if "apply_filters" in rs:
+                strat["apply_filters"] = bool(rs["apply_filters"])
+            if strat:
+                entry["retrieval_strategy"] = strat
+
         return entry
 
     def load_logs(

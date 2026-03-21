@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+from typing import Any
+
+from src.domain.query_intent import QueryIntent
+from src.domain.retrieval_strategy import RetrievalStrategy
+
+
+class AdaptiveRetrievalService:
+    """
+    Maps query intent (and light query-shape heuristics) to retrieval parameters.
+    Baseline values come from retrieval config; UNKNOWN intent preserves that baseline.
+    """
+
+    def __init__(self, config: Any) -> None:
+        self._config = config
+
+    def choose_strategy(
+        self,
+        *,
+        intent: QueryIntent,
+        rewritten_query: str,
+    ) -> RetrievalStrategy:
+        baseline_k = max(1, int(self._config.similarity_search_k))
+        baseline_hybrid = bool(self._config.enable_hybrid_retrieval)
+
+        words = (rewritten_query or "").split()
+        n_words = len(words)
+        long_query = n_words > 28
+        short_query = n_words < 6
+
+        if intent is QueryIntent.UNKNOWN:
+            return RetrievalStrategy(
+                k=baseline_k,
+                use_hybrid=baseline_hybrid,
+                apply_filters=True,
+            )
+
+        if intent is QueryIntent.FACTUAL:
+            k = 5 if long_query else 4
+            if short_query:
+                k = max(3, k - 1)
+            return RetrievalStrategy(
+                k=max(1, min(k, baseline_k)),
+                use_hybrid=False,
+                apply_filters=False,
+            )
+
+        if intent is QueryIntent.EXPLORATORY:
+            k = 12 if long_query else (8 if short_query else 10)
+            return RetrievalStrategy(
+                k=max(1, min(k, baseline_k * 2)),
+                use_hybrid=True,
+                apply_filters=True,
+            )
+
+        if intent in (QueryIntent.TABLE, QueryIntent.IMAGE):
+            k = 10 if long_query else 8
+            return RetrievalStrategy(
+                k=max(1, min(k, baseline_k * 2)),
+                use_hybrid=True,
+                apply_filters=True,
+            )
+
+        if intent is QueryIntent.COMPARISON:
+            k = 8 if long_query else 7
+            return RetrievalStrategy(
+                k=max(1, min(k, baseline_k * 2)),
+                use_hybrid=True,
+                apply_filters=True,
+            )
+
+        return RetrievalStrategy(
+            k=baseline_k,
+            use_hybrid=baseline_hybrid,
+            apply_filters=True,
+        )

@@ -12,7 +12,9 @@ from src.domain.retrieval_filters import (
     filter_summary_documents_by_filters,
     vector_search_fetch_k,
 )
+from src.domain.retrieval_strategy import RetrievalStrategy
 from src.domain.source_citation import SourceCitation
+from src.services.adaptive_retrieval_service import AdaptiveRetrievalService
 from src.services.confidence_service import ConfidenceService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
@@ -64,6 +66,7 @@ class RAGService:
         )
         self.query_intent_service = QueryIntentService()
         self.config = RETRIEVAL_CONFIG
+        self.adaptive_retrieval_service = AdaptiveRetrievalService(self.config)
         self.query_log_service = query_log_service
 
     @staticmethod
@@ -219,8 +222,14 @@ class RAGService:
         retrieval_query: str,
         enable_hybrid_retrieval: bool,
         filters: RetrievalFilters | None = None,
+        similarity_search_k: int | None = None,
     ) -> dict:
-        k_vec = self.config.similarity_search_k
+        k_vec = (
+            int(similarity_search_k)
+            if similarity_search_k is not None
+            else int(self.config.similarity_search_k)
+        )
+        k_vec = max(1, k_vec)
         fetch_k = vector_search_fetch_k(base_k=k_vec, filters=filters)
         vector_summary_docs = self.vectorstore_service.similarity_search(
             project,
@@ -248,9 +257,9 @@ class RAGService:
                 filters=filters,
             )
 
-        merged_limit = self.config.similarity_search_k
+        merged_limit = k_vec
         if enable_hybrid_retrieval:
-            merged_limit += self.config.hybrid_search_k
+            merged_limit += int(self.config.hybrid_search_k)
 
         recalled_summary_docs = self._merge_summary_docs(
             primary_docs=vector_summary_docs,
@@ -300,12 +309,33 @@ class RAGService:
 
         query_intent = self.query_intent_service.classify(rewritten_question)
 
+        use_adaptive_retrieval = enable_hybrid_retrieval_override is None
+        if use_adaptive_retrieval:
+            strategy = self.adaptive_retrieval_service.choose_strategy(
+                intent=query_intent,
+                rewritten_query=rewritten_question,
+            )
+            enable_hybrid_retrieval = strategy.use_hybrid
+            similarity_search_k = strategy.k
+        else:
+            strategy = RetrievalStrategy(
+                k=max(1, int(self.config.similarity_search_k)),
+                use_hybrid=bool(enable_hybrid_retrieval),
+                apply_filters=True,
+            )
+            similarity_search_k = strategy.k
+
+        filters_for_retrieval = (
+            filters if filters is not None and not filters.is_empty() else None
+        )
+
         t0 = perf_counter()
         retrieval_payload = self._retrieve_summary_docs(
             project=project,
             retrieval_query=rewritten_question,
             enable_hybrid_retrieval=enable_hybrid_retrieval,
-            filters=filters,
+            filters=filters_for_retrieval,
+            similarity_search_k=similarity_search_k,
         )
         retrieval_ms = (perf_counter() - t0) * 1000.0
 
@@ -381,9 +411,11 @@ class RAGService:
             "retrieval_mode": retrieval_mode,
             "query_rewrite_enabled": enable_query_rewrite,
             "hybrid_retrieval_enabled": enable_hybrid_retrieval,
+            "adaptive_retrieval_enabled": use_adaptive_retrieval,
+            "retrieval_strategy": strategy.to_dict(),
             "retrieval_filters": (
-                filters.to_dict()
-                if filters is not None and not filters.is_empty()
+                filters_for_retrieval.to_dict()
+                if filters_for_retrieval is not None
                 else None
             ),
             "vector_summary_docs": vector_summary_docs,
@@ -416,6 +448,7 @@ class RAGService:
                     "hybrid_retrieval_enabled": enable_hybrid_retrieval,
                     "retrieval_mode": retrieval_mode,
                     "query_intent": query_intent.value,
+                    "retrieval_strategy": strategy.to_dict(),
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -508,6 +541,7 @@ class RAGService:
                     "hybrid_retrieval_enabled": pipeline.get("hybrid_retrieval_enabled"),
                     "retrieval_mode": pipeline.get("retrieval_mode"),
                     "query_intent": pipeline.get("query_intent"),
+                    "retrieval_strategy": pipeline.get("retrieval_strategy"),
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )
