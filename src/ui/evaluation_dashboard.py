@@ -710,40 +710,45 @@ def _render_health_overview(
     n = int(summary.get("total_entries") or len(rows) or 0)
     if n <= 0:
         return
-    st.markdown("##### System health overview")
-    fail_payload = failures if isinstance(failures, dict) and failures else None
-    if fail_payload is None and rows:
-        from src.services.failure_analysis_service import FailureAnalysisService
+    
+    with section_card(
+        title="System health overview",
+        subtitle="Run-wide hallucination flag rate and heuristic retrieval / relevance failure shares.",
+        min_height=0,
+    ):
+        fail_payload = failures if isinstance(failures, dict) and failures else None
+        if fail_payload is None and rows:
+            from src.services.failure_analysis_service import FailureAnalysisService
 
-        full = FailureAnalysisService().analyze(list(rows))
-        fail_payload = {k: v for k, v in full.items() if k != "row_failures"}
-    counts = fail_payload.get("counts") if isinstance(fail_payload, dict) else None
-    if not isinstance(counts, dict):
-        counts = {}
+            full = FailureAnalysisService().analyze(list(rows))
+            fail_payload = {k: v for k, v in full.items() if k != "row_failures"}
+        counts = fail_payload.get("counts") if isinstance(fail_payload, dict) else None
+        if not isinstance(counts, dict):
+            counts = {}
 
-    def _pct(count: int) -> str:
-        return f"{100.0 * float(count) / float(n):.1f}%"
+        def _pct(count: int) -> str:
+            return f"{100.0 * float(count) / float(n):.1f}%"
 
-    h1, h2, h3 = st.columns(3)
-    hr = _coerce_float(summary.get("hallucination_rate"))
-    with h1:
-        st.metric(
-            "Hallucination flag rate",
-            f"{hr * 100:.1f}%" if hr is not None else "—",
-            help="Share of judge-valid rows where has_hallucination is true (excludes judge-failed rows; same as summary).",
-        )
-    with h2:
-        st.metric(
-            "Retrieval failure (heuristic)",
-            _pct(int(counts.get("retrieval_failure", 0) or 0)),
-            help="Rows tagged retrieval_failure by failure analysis rules.",
-        )
-    with h3:
-        st.metric(
-            "Low relevance (heuristic)",
-            _pct(int(counts.get("low_relevance", 0) or 0)),
-            help="Rows tagged low_relevance by failure analysis rules.",
-        )
+        h1, h2, h3 = st.columns(3)
+        hr = _coerce_float(summary.get("hallucination_rate"))
+        with h1:
+            st.metric(
+                "Hallucination flag rate",
+                f"{hr * 100:.1f}%" if hr is not None else "—",
+                help="Share of judge-valid rows where has_hallucination is true (excludes judge-failed rows; same as summary).",
+            )
+        with h2:
+            st.metric(
+                "Retrieval failure (heuristic)",
+                _pct(int(counts.get("retrieval_failure", 0) or 0)),
+                help="Rows tagged retrieval_failure by failure analysis rules.",
+            )
+        with h3:
+            st.metric(
+                "Low relevance (heuristic)",
+                _pct(int(counts.get("low_relevance", 0) or 0)),
+                help="Rows tagged low_relevance by failure analysis rules.",
+            )
 
 
 def _comparison_sample_captions(df: pd.DataFrame, heading: str, *, suffix: str = "") -> None:
