@@ -108,6 +108,7 @@ def init_app_db():
             prompt_build_ms REAL,
             answer_generation_ms REAL,
             total_latency_ms REAL,
+            query_intent TEXT,
             created_at TEXT NOT NULL
         )
         """
@@ -126,6 +127,12 @@ def init_app_db():
         ON query_logs(user_id, project_id)
         """
     )
+
+    try:
+        conn.execute("ALTER TABLE query_logs ADD COLUMN query_intent TEXT")
+    except sqlite3.OperationalError as exc:
+        if "duplicate column" not in str(exc).lower():
+            raise
 
     conn.commit()
     conn.close()

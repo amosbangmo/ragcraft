@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.domain.query_intent import QueryIntent
 from src.infrastructure.logging.query_log_repository import QueryLogRepository, QueryLogStore
 from src.infrastructure.logging.sqlite_query_log_repository import SQLiteQueryLogRepository
 
@@ -24,6 +25,7 @@ def parse_query_log_timestamp(entry: dict) -> datetime | None:
 
 _MAX_TEXT_FIELD_LEN = 2000
 _MAX_LIST_IDS = 200
+_VALID_QUERY_INTENTS = frozenset(i.value for i in QueryIntent)
 
 
 def _truncate_str(value: str | None, max_len: int) -> str | None:
@@ -136,6 +138,12 @@ class QueryLogService:
         rm = payload.get("retrieval_mode")
         if isinstance(rm, str) and rm.strip():
             entry["retrieval_mode"] = rm.strip()
+
+        qi = payload.get("query_intent")
+        if isinstance(qi, str):
+            s = qi.strip()
+            if s in _VALID_QUERY_INTENTS:
+                entry["query_intent"] = s
 
         return entry
 

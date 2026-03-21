@@ -298,6 +298,7 @@ class TestRAGService(unittest.TestCase):
             self.assertGreaterEqual(lat[key], 0.0)
         self.assertEqual(lat["answer_generation_ms"], 0.0)
         self.assertEqual(payload["latency_ms"], lat["total_ms"])
+        self.assertEqual(payload["query_intent"], "factual")
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
@@ -362,6 +363,7 @@ class TestRAGService(unittest.TestCase):
             "recalled_doc_ids": ["d1", "d2"],
             "hybrid_retrieval_enabled": False,
             "retrieval_mode": "faiss",
+            "query_intent": "table",
         }
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
@@ -386,6 +388,7 @@ class TestRAGService(unittest.TestCase):
         self.assertIn("total_latency_ms", payload)
         self.assertFalse(payload["hybrid_retrieval_enabled"])
         self.assertEqual(payload["retrieval_mode"], "faiss")
+        self.assertEqual(payload["query_intent"], "table")
 
 
 if __name__ == "__main__":

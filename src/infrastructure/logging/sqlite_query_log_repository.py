@@ -61,6 +61,9 @@ class SQLiteQueryLogRepository:
             hybrid = entry.get("hybrid_retrieval_enabled")
             hybrid_sql = None if hybrid is None else (1 if bool(hybrid) else 0)
 
+            qi = entry.get("query_intent")
+            qi_sql = qi.strip() if isinstance(qi, str) and qi.strip() else None
+
             params = (
                 entry.get("user_id"),
                 entry.get("project_id"),
@@ -79,6 +82,7 @@ class SQLiteQueryLogRepository:
                 _maybe_float(entry.get("prompt_build_ms")),
                 _maybe_float(entry.get("answer_generation_ms")),
                 _maybe_float(entry.get("total_latency_ms")),
+                qi_sql,
                 created_at.strip(),
             )
 
@@ -91,8 +95,8 @@ class SQLiteQueryLogRepository:
                         hybrid_retrieval_enabled, selected_doc_ids_json, recalled_doc_ids_json,
                         confidence, answer_preview, latency_ms,
                         query_rewrite_ms, retrieval_ms, reranking_ms, prompt_build_ms,
-                        answer_generation_ms, total_latency_ms, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        answer_generation_ms, total_latency_ms, query_intent, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     params,
                 )
@@ -167,6 +171,10 @@ class SQLiteQueryLogRepository:
         h = r.get("hybrid_retrieval_enabled")
         if h is not None:
             out["hybrid_retrieval_enabled"] = bool(h)
+
+        intent = r.get("query_intent")
+        if isinstance(intent, str) and intent.strip():
+            out["query_intent"] = intent.strip()
 
         for key in (
             "latency_ms",

@@ -38,6 +38,7 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
                 "user_id": "u1",
                 "selected_doc_ids": ["d1", "d2"],
                 "retrieved_doc_ids": ["r1"],
+                "query_intent": "factual",
             }
         )
         rows = repo.list_logs(project_id="p1")
@@ -45,6 +46,7 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         self.assertEqual(rows[0]["selected_doc_ids"], ["d1", "d2"])
         self.assertEqual(rows[0]["retrieved_doc_ids"], ["r1"])
         self.assertEqual(rows[0]["timestamp"], "2025-01-01T12:00:00+00:00")
+        self.assertEqual(rows[0].get("query_intent"), "factual")
 
     def test_list_logs_user_and_limit(self) -> None:
         repo = SQLiteQueryLogRepository()
@@ -237,6 +239,38 @@ class TestQueryLogService(unittest.TestCase):
             rows = repo.list_logs()
             self.assertTrue(rows[0]["hybrid_retrieval_enabled"])
             self.assertEqual(rows[0]["retrieval_mode"], "faiss+bm25")
+
+    def test_build_entry_stores_query_intent_when_valid(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            service.log_query(
+                payload={
+                    "question": "q",
+                    "project_id": "p1",
+                    "user_id": "u1",
+                    "query_intent": "comparison",
+                }
+            )
+            rows = repo.list_logs()
+            self.assertEqual(rows[0]["query_intent"], "comparison")
+
+    def test_build_entry_omits_invalid_query_intent(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            service.log_query(
+                payload={
+                    "question": "q",
+                    "project_id": "p1",
+                    "user_id": "u1",
+                    "query_intent": "not-a-real-intent",
+                }
+            )
+            rows = repo.list_logs()
+            self.assertNotIn("query_intent", rows[0])
 
 
 if __name__ == "__main__":

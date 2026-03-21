@@ -18,6 +18,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
 from src.services.prompt_builder_service import PromptBuilderService
+from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
 from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
@@ -61,6 +62,7 @@ class RAGService:
             max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
         )
+        self.query_intent_service = QueryIntentService()
         self.config = RETRIEVAL_CONFIG
         self.query_log_service = query_log_service
 
@@ -296,6 +298,8 @@ class RAGService:
         )
         query_rewrite_ms = (perf_counter() - t0) * 1000.0
 
+        query_intent = self.query_intent_service.classify(rewritten_question)
+
         t0 = perf_counter()
         retrieval_payload = self._retrieve_summary_docs(
             project=project,
@@ -372,6 +376,7 @@ class RAGService:
         payload = {
             "question": question,
             "rewritten_question": rewritten_question,
+            "query_intent": query_intent.value,
             "chat_history": chat_history,
             "retrieval_mode": retrieval_mode,
             "query_rewrite_enabled": enable_query_rewrite,
@@ -410,6 +415,7 @@ class RAGService:
                     "confidence": confidence,
                     "hybrid_retrieval_enabled": enable_hybrid_retrieval,
                     "retrieval_mode": retrieval_mode,
+                    "query_intent": query_intent.value,
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -501,6 +507,7 @@ class RAGService:
                     "answer": answer,
                     "hybrid_retrieval_enabled": pipeline.get("hybrid_retrieval_enabled"),
                     "retrieval_mode": pipeline.get("retrieval_mode"),
+                    "query_intent": pipeline.get("query_intent"),
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )

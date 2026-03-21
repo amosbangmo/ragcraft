@@ -380,7 +380,7 @@ def _render_inspection_result(pipeline):
         st.warning("No retrieval result available for this query.")
         return
 
-    top_metrics = st.columns(7)
+    top_metrics = st.columns(8)
     with top_metrics[0]:
         st.metric("Mode", pipeline["retrieval_mode"])
     with top_metrics[1]:
@@ -388,12 +388,14 @@ def _render_inspection_result(pipeline):
     with top_metrics[2]:
         st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
     with top_metrics[3]:
-        st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
+        st.metric("Intent", str(pipeline.get("query_intent", "unknown")))
     with top_metrics[4]:
-        st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
+        st.metric("FAISS recall", len(pipeline["vector_summary_docs"]))
     with top_metrics[5]:
-        st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+        st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
     with top_metrics[6]:
+        st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+    with top_metrics[7]:
         st.metric(
             "Confidence",
             format_confidence_with_band(float(pipeline["confidence"])),
@@ -465,6 +467,7 @@ def _render_inspection_result(pipeline):
         debug_payload = {
             "question": pipeline["question"],
             "rewritten_question": pipeline["rewritten_question"],
+            "query_intent": pipeline.get("query_intent"),
             "chat_history": pipeline["chat_history"],
             "retrieval_mode": pipeline["retrieval_mode"],
             "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
