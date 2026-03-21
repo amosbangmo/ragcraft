@@ -2,6 +2,12 @@ from datetime import datetime
 from time import perf_counter
 
 from src.infrastructure.persistence.db import init_app_db
+from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
+from src.application.evaluation.use_cases.dtos import GenerateQaDatasetCommand
+from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
+from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
 from src.application.ingestion.use_cases.dtos import DeleteDocumentCommand, ReindexDocumentCommand
 from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
@@ -385,7 +391,7 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ):
-        return self.qa_dataset_service.create_entry(
+        return CreateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
             user_id=user_id,
             project_id=project_id,
             question=question,
@@ -400,7 +406,7 @@ class RAGCraftApp:
         user_id: str,
         project_id: str,
     ):
-        return self.qa_dataset_service.list_entries(
+        return ListQaDatasetEntriesUseCase(qa_dataset_service=self.qa_dataset_service).execute(
             user_id=user_id,
             project_id=project_id,
         )
@@ -416,7 +422,7 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ):
-        return self.qa_dataset_service.update_entry(
+        return UpdateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
             entry_id=entry_id,
             user_id=user_id,
             project_id=project_id,
@@ -433,7 +439,7 @@ class RAGCraftApp:
         user_id: str,
         project_id: str,
     ) -> bool:
-        return self.qa_dataset_service.delete_entry(
+        return DeleteQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
             entry_id=entry_id,
             user_id=user_id,
             project_id=project_id,
@@ -448,64 +454,18 @@ class RAGCraftApp:
         source_files: list[str] | None = None,
         generation_mode: str = "append",
     ) -> dict:
-        normalized_mode = (generation_mode or "append").strip().lower()
-        if normalized_mode not in {"append", "replace", "append_dedup"}:
-            raise ValueError("generation_mode must be one of: append, replace, append_dedup.")
-
-        deleted_existing_entries = 0
-
-        if normalized_mode == "replace":
-            deleted_existing_entries = self.qa_dataset_service.delete_all_entries(
+        return GenerateQaDatasetUseCase(
+            qa_dataset_service=self.qa_dataset_service,
+            qa_dataset_generation_service=self.qa_dataset_generation_service,
+        ).execute(
+            GenerateQaDatasetCommand(
                 user_id=user_id,
                 project_id=project_id,
+                num_questions=num_questions,
+                source_files=source_files,
+                generation_mode=generation_mode,
             )
-
-        existing_question_keys = set()
-        if normalized_mode == "append_dedup":
-            existing_question_keys = self.qa_dataset_service.existing_question_keys(
-                user_id=user_id,
-                project_id=project_id,
-            )
-
-        generated_entries = self.qa_dataset_generation_service.generate_entries(
-            user_id=user_id,
-            project_id=project_id,
-            num_questions=num_questions,
-            source_files=source_files,
         )
-
-        created_entries = []
-        skipped_duplicates = []
-
-        for item in generated_entries:
-            question = item["question"]
-            question_key = self.qa_dataset_service.normalized_question_key(question)
-
-            if normalized_mode == "append_dedup" and question_key in existing_question_keys:
-                skipped_duplicates.append(question)
-                continue
-
-            created_entry = self.create_qa_dataset_entry(
-                user_id=user_id,
-                project_id=project_id,
-                question=question,
-                expected_answer=item.get("expected_answer"),
-                expected_doc_ids=item.get("expected_doc_ids", []),
-                expected_sources=item.get("expected_sources", []),
-            )
-            created_entries.append(created_entry)
-
-            if normalized_mode == "append_dedup":
-                existing_question_keys.add(question_key)
-
-        return {
-            "generation_mode": normalized_mode,
-            "deleted_existing_entries": deleted_existing_entries,
-            "created_entries": created_entries,
-            "skipped_duplicates": skipped_duplicates,
-            "requested_questions": int(num_questions),
-            "raw_generated_count": len(generated_entries),
-        }
 
     def evaluate_gold_qa_dataset(
         self,

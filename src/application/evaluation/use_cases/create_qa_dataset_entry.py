@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+from src.domain.qa_dataset_entry import QADatasetEntry
+from src.services.qa_dataset_service import QADatasetService
+
+
+class CreateQaDatasetEntryUseCase:
+    """Create a gold QA row with normalized fields and required-question validation."""
+
+    def __init__(self, *, qa_dataset_service: QADatasetService) -> None:
+        self._qa = qa_dataset_service
+
+    def execute(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        question: str,
+        expected_answer: str | None = None,
+        expected_doc_ids: list[str] | None = None,
+        expected_sources: list[str] | None = None,
+    ) -> QADatasetEntry:
+        return self._qa.create_entry(
+            user_id=user_id,
+            project_id=project_id,
+            question=question,
+            expected_answer=expected_answer,
+            expected_doc_ids=expected_doc_ids,
+            expected_sources=expected_sources,
+        )

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from src.infrastructure.llm.qa_dataset_llm_gateway import extract_json_array
 from src.services.qa_dataset_generation_service import (
     MAX_CONTEXT_CHARS,
     QADatasetGenerationService,
@@ -55,7 +56,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
                 user_id="u", project_id="p", num_questions=1, source_files=None
             )
 
-    @patch("src.services.qa_dataset_generation_service.LLM")
+    @patch("src.infrastructure.llm.qa_dataset_llm_gateway.LLM")
     def test_generate_entries_success_and_clamp(self, mock_llm) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content='[{"question":"Q1","expected_answer":"A1","expected_doc_ids":["d1"],"expected_sources":["f.pdf"]}]'
@@ -81,7 +82,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["question"], "Q1")
 
-    @patch("src.services.qa_dataset_generation_service.LLM")
+    @patch("src.infrastructure.llm.qa_dataset_llm_gateway.LLM")
     def test_parse_json_with_fence_and_skips_bad_items(self, mock_llm) -> None:
         payload = """```json
 [{"question":"ok","expected_answer":"","expected_doc_ids":[],"expected_sources":[]},{"not":"dict"},""]
@@ -112,7 +113,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["question"], "ok")
 
-    @patch("src.services.qa_dataset_generation_service.LLM")
+    @patch("src.infrastructure.llm.qa_dataset_llm_gateway.LLM")
     def test_invalid_json_and_empty_entries_raise(self, mock_llm) -> None:
         docstore = MagicMock()
         docstore.list_assets_for_source_file.return_value = [
@@ -201,11 +202,8 @@ class TestQADatasetGenerationService(unittest.TestCase):
         self.assertIn("y" * 800, block)
 
     def test_extract_json_array_missing_brackets(self) -> None:
-        docstore = MagicMock()
-        project = MagicMock()
-        svc = self._svc(docstore, project)
         with self.assertRaisesRegex(ValueError, "JSON array"):
-            svc._extract_json_array("no brackets here")
+            extract_json_array("no brackets here")
 
 
 if __name__ == "__main__":

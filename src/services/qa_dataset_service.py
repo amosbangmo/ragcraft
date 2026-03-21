@@ -1,10 +1,14 @@
+from src.domain.evaluation.qa_dataset_repository_port import QADatasetRepositoryPort
+from src.domain.evaluation.qa_question_key import normalized_qa_question_key
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.infrastructure.persistence.sqlite.qa_dataset_repository import QADatasetRepository
 
 
 class QADatasetService:
-    def __init__(self):
-        self.repository = QADatasetRepository()
+    def __init__(self, repository: QADatasetRepositoryPort | None = None):
+        self.repository: QADatasetRepositoryPort = (
+            repository if repository is not None else QADatasetRepository()
+        )
 
     def create_entry(
         self,
@@ -129,8 +133,7 @@ class QADatasetService:
         )
 
     def normalized_question_key(self, question: str) -> str:
-        normalized = " ".join((question or "").strip().lower().split())
-        return normalized.rstrip("?.!;:,")
+        return normalized_qa_question_key(question)
 
     def existing_question_keys(
         self,
