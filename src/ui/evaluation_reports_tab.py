@@ -20,8 +20,8 @@ def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
     export = reports_payload.get("export")
     if not isinstance(export, BenchmarkExportArtifacts):
         st.info(
-            "No benchmark export yet. Run **dataset evaluation** above when your gold QA dataset has entries, "
-            "then return here to download reports."
+            "No benchmark export yet. Run **dataset evaluation** above when your gold QA dataset has entries; "
+            "download links will appear in this section."
         )
         return
 

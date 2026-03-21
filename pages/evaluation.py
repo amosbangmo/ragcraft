@@ -4,7 +4,6 @@ from typing import Any, cast
 
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
-from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.evaluation_tabs import render_evaluation_tabs
@@ -55,7 +54,7 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
         st.session_state.pop("qa_dataset_error_message", None)
         for k in list(st.session_state.keys()):
             if k.startswith(
-                ("dataset_eval_metrics_", "analysis_eval_dashboard_", "delete_qa_entry_dataset_")
+                ("dataset_eval_metrics_", "delete_qa_entry_dataset_")
             ):
                 st.session_state.pop(k, None)
     st.session_state[_EVAL_PAGE_LAST_PROJECT_KEY] = project_id
@@ -102,28 +101,15 @@ entries = app.list_qa_dataset_entries(
     project_id=project_id,
 )
 
-manual_for_tabs: ManualEvaluationResult | None = None
-manual_payload_raw = st.session_state.get(EVALUATION_RESULT_KEY)
-if is_manual_evaluation_result_like(manual_payload_raw):
-    manual_for_tabs = cast(ManualEvaluationResult, manual_payload_raw)
-
 bundle = _session_benchmark_bundle()
 summary: dict[str, Any] = {}
 rows: list[dict[str, Any]] = []
 bench_for_tabs: BenchmarkResult | None = None
-reports_export = None
 
 if bundle is not None:
-    payload_dict, bench_for_tabs = bundle
+    _, bench_for_tabs = bundle
     summary = bench_for_tabs.summary.to_dict()
     rows = [row.to_dict() for row in bench_for_tabs.rows]
-    reports_export = app.build_benchmark_export_artifacts(
-        project_id=project_id,
-        result=bench_for_tabs,
-        enable_query_rewrite=bool(payload_dict.get("enable_query_rewrite")),
-        enable_hybrid_retrieval=bool(payload_dict.get("enable_hybrid_retrieval")),
-        generated_at=payload_dict.get("generated_at"),
-    )
 
 render_evaluation_tabs(
     manual_payload={
@@ -154,12 +140,5 @@ render_evaluation_tabs(
         "dataset_generation_request_key": DATASET_GENERATION_REQUEST_KEY,
         "dataset_generation_result_key": DATASET_GENERATION_RESULT_KEY,
         "entry_count": len(entries),
-    },
-    analysis_payload={
-        "reports_export": reports_export,
-        "manual_result": manual_for_tabs,
-        "summary": summary,
-        "rows": rows,
-        "widget_key_suffix": eval_widget_suffix,
     },
 )

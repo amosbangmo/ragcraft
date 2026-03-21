@@ -13,6 +13,7 @@ from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.manual_evaluation import render_manual_evaluation_result
+from src.ui.raw_assets import render_raw_assets
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
 
@@ -157,3 +158,14 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         result_key=evaluation_result_key,
         on_success=_on_success,
     )
+
+    manual_raw = st.session_state.get(evaluation_result_key)
+    if is_manual_evaluation_result_like(manual_raw):
+        manual = cast(ManualEvaluationResult, manual_raw)
+        st.markdown("---")
+        st.markdown("##### Manual evaluation (technical)")
+        st.caption("Structured JSON and raw evidence for the latest manual run in this session.")
+        with st.expander("Manual evaluation JSON", expanded=False):
+            st.json(manual.to_dict())
+        with st.expander("Raw evidence (full)", expanded=False):
+            render_raw_assets(manual.raw_assets, mode="evaluation")

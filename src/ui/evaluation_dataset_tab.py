@@ -12,9 +12,11 @@ import streamlit as st
 from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
+from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
@@ -63,7 +65,7 @@ def _render_dataset_overview(
         render_metric_with_help(
             label="Current project",
             value=project_id,
-            metric_key="evaluation_project_context",
+            metric_key="evaluation_project_context"
         )
 
     if not summary and not rows:
@@ -192,6 +194,64 @@ def _render_dataset_evaluation_run_and_results(
         )
 
 
+def _resolve_benchmark_export_artifacts(
+    *,
+    app: RAGCraftApp,
+    project_id: str,
+    dataset_evaluation_result_key: str,
+    summary: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> Any:
+    """
+    Build download artifacts from the same session payload as the benchmark run.
+
+    Resolving here (not only on the page module) keeps exports aligned with
+    ``st.session_state`` after a run and avoids stale or missing precomputed exports.
+    """
+    raw = st.session_state.get(dataset_evaluation_result_key)
+    if raw is None or not isinstance(raw, dict) or "error" in raw:
+        return None
+
+    result = coerce_benchmark_result(raw.get("result"))
+    if result is None:
+        if not summary and not rows:
+            return None
+        try:
+            result = BenchmarkResult.from_plain_dict({"summary": summary, "rows": rows})
+        except (TypeError, ValueError, KeyError):
+            return None
+
+    return app.build_benchmark_export_artifacts(
+        project_id=project_id,
+        result=result,
+        enable_query_rewrite=bool(raw.get("enable_query_rewrite")),
+        enable_hybrid_retrieval=bool(raw.get("enable_hybrid_retrieval")),
+        generated_at=raw.get("generated_at"),
+    )
+
+
+def _render_reports_exports_and_benchmark_json(
+    *,
+    app: RAGCraftApp,
+    project_id: str,
+    dataset_evaluation_result_key: str,
+    summary: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("---")
+    export = _resolve_benchmark_export_artifacts(
+        app=app,
+        project_id=project_id,
+        dataset_evaluation_result_key=dataset_evaluation_result_key,
+        summary=summary,
+        rows=rows,
+    )
+    render_evaluation_reports_tab({"export": export})
+    if summary or rows:
+        with st.expander("Benchmark summary JSON", expanded=False):
+            st.json(summary)
+
+
 def _rows_by_entry_id(rows: list[dict[str, Any]]) -> dict[Any, dict[str, Any]]:
     out: dict[Any, dict[str, Any]] = {}
     for row in rows:
@@ -233,6 +293,13 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             wk=wk,
             entries=entries,
             dataset_evaluation_request_key=dataset_evaluation_request_key,
+            dataset_evaluation_result_key=dataset_evaluation_result_key,
+            summary=summary,
+            rows=rows,
+        )
+        _render_reports_exports_and_benchmark_json(
+            app=app,
+            project_id=project_id,
             dataset_evaluation_result_key=dataset_evaluation_result_key,
             summary=summary,
             rows=rows,
