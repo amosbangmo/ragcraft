@@ -73,8 +73,8 @@ def _render_correlation_analysis(
 ) -> None:
     with st.expander("Correlation analysis", expanded=False):
         st.caption(
-            "Pearson correlation (r) across rows. Answer correctness uses token **F1** vs the gold answer. "
-            "Prompt overlap uses **doc ID** sets from prompt sources; answer citation overlap uses **[Source N]** "
+            "Pearson correlation (r) across rows. **answer_f1** is token F1 vs the gold answer. "
+            "Prompt metrics use doc IDs from prompt sources; citation metrics use **[Source N]** "
             "labels parsed from the reply. |r| ≥ 0.6 is treated as a strong linear association."
         )
         if not correlations:
@@ -297,15 +297,15 @@ def _render_failure_analysis(
                             st.caption("Recall@K / answer F1")
                             st.write(f"{ex.get('recall_at_k', '—')} / {ex.get('answer_f1', '—')}")
                         with c2:
-                            st.caption("grounded / hallucination")
+                            st.caption("Groundedness / hallucination score")
                             st.write(
-                                f"{ex.get('groundedness_score', ex.get('groundedness', '—'))} / "
+                                f"{ex.get('groundedness_score', '—')} / "
                                 f"{ex.get('hallucination_score', '—')}"
                             )
                         with c3:
-                            st.caption("relevance / confidence")
+                            st.caption("Relevance / confidence")
                             st.write(
-                                f"{ex.get('answer_relevance_score', ex.get('answer_relevance', '—'))} / "
+                                f"{ex.get('answer_relevance_score', '—')} / "
                                 f"{ex.get('confidence', '—')}"
                             )
 
@@ -361,7 +361,7 @@ def render_overview_insight_charts(rows: list[dict]) -> None:
     with c1:
         _histogram_bar_chart(
             "Groundedness",
-            _numeric_series(df, "groundedness_score", "groundedness"),
+            _numeric_series(df, "groundedness_score"),
         )
     with c2:
         _histogram_bar_chart(
@@ -452,13 +452,13 @@ def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
                     continue
                 rc = block.get("row_count")
                 f1 = block.get("avg_answer_f1")
-                g = block.get("avg_groundedness")
+                g = block.get("avg_groundedness_score")
                 records.append(
                     {
                         "context": title,
                         "rows": int(rc) if rc is not None else 0,
                         "avg_answer_f1": float(f1) if f1 is not None else None,
-                        "avg_groundedness": float(g) if g is not None else None,
+                        "avg_groundedness_score": float(g) if g is not None else None,
                     }
                 )
             if records:
@@ -535,7 +535,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             key=f"{widget_key_prefix}_min_groundedness",
         )
 
-        g_series = _numeric_series(df, "groundedness_score", "groundedness")
+        g_series = _numeric_series(df, "groundedness_score")
         if g_series is not None:
             keep = g_series.isna() | (g_series >= min_groundedness)
             df = df.loc[keep].reset_index(drop=True)
@@ -552,7 +552,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             key=f"{widget_key_prefix}_sort_analytics",
         )
         preview = df.copy()
-        gs = _numeric_series(preview, "groundedness_score", "groundedness")
+        gs = _numeric_series(preview, "groundedness_score")
         conf = _numeric_series(preview, "confidence")
         hal = _numeric_series(preview, "hallucination_score")
         if sort_choice == "groundedness ↓" and gs is not None:
@@ -577,7 +577,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         with h1:
             _histogram_bar_chart(
                 "Groundedness",
-                _numeric_series(df, "groundedness_score", "groundedness"),
+                _numeric_series(df, "groundedness_score"),
             )
         with h2:
             _histogram_bar_chart(
@@ -587,7 +587,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         with h3:
             _histogram_bar_chart(
                 "Answer relevance",
-                _numeric_series(df, "answer_relevance_score", "answer_relevance"),
+                _numeric_series(df, "answer_relevance_score"),
             )
         h4, h5, _ = st.columns(3)
         with h4:
@@ -653,7 +653,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("No has_hallucination column in results.")
 
         st.markdown("##### Comparative views")
-        g2 = _numeric_series(df, "groundedness_score", "groundedness")
+        g2 = _numeric_series(df, "groundedness_score")
         c2 = _numeric_series(df, "confidence")
         if g2 is not None and c2 is not None:
             scatter = pd.DataFrame({"confidence": c2, "groundedness_score": g2}).dropna()
@@ -673,8 +673,8 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         else:
             st.caption("Confidence vs groundedness: missing columns.")
 
-        rel = _numeric_series(df, "answer_relevance_score", "answer_relevance")
-        g3 = _numeric_series(df, "groundedness_score", "groundedness")
+        rel = _numeric_series(df, "answer_relevance_score")
+        g3 = _numeric_series(df, "groundedness_score")
         if rel is not None and g3 is not None:
             scatter2 = pd.DataFrame({"groundedness_score": g3, "answer_relevance_score": rel}).dropna()
             if len(scatter2) >= 1:
@@ -710,21 +710,33 @@ def render_evaluation_dashboard(
         return
 
     with section_card(
-        title="Retrieval & ranking",
-        subtitle="Aggregated deterministic metrics over the gold QA dataset.",
+        title="Retrieval — ranked doc IDs",
+        subtitle="Overlap and ranking quality vs gold expected_doc_ids (same K as your retrieval settings).",
         min_height=0,
     ):
-        r1, r2, r3, r4, r5 = st.columns(5)
+        r1, r2, r3 = st.columns(3)
         with r1:
-            _summary_metric(summary, "avg_recall_at_k", "Avg Recall@K")
+            _summary_metric(summary, "avg_recall_at_k", "Avg recall@K")
         with r2:
-            _summary_metric(summary, "avg_precision_at_k", "Avg precision@k")
+            _summary_metric(summary, "avg_precision_at_k", "Avg precision@K")
         with r3:
-            _summary_metric(summary, "mrr", "MRR")
+            _summary_metric(summary, "hit_at_k", "Hit@K rate", as_percent=True)
+        r4, r5 = st.columns(2)
         with r4:
-            _summary_metric(summary, "map", "MAP")
+            _summary_metric(summary, "avg_reciprocal_rank", "Avg reciprocal rank")
         with r5:
-            _summary_metric(summary, "hit_at_k", "Hit@K")
+            _summary_metric(summary, "avg_average_precision", "Avg average precision")
+
+    with section_card(
+        title="Retrieval — sources",
+        subtitle="Expected source paths vs sources present in retrieval or prompt context.",
+        min_height=0,
+    ):
+        s1, s2 = st.columns(2)
+        with s1:
+            _summary_metric(summary, "avg_source_recall", "Avg source recall")
+        with s2:
+            _summary_metric(summary, "source_hit_rate", "Source hit rate", as_percent=True)
 
     with section_card(
         title="Answer pipeline performance",
@@ -777,21 +789,21 @@ def render_evaluation_dashboard(
             _summary_metric(summary, "citation_doc_id_hit_rate", "Citation doc ID hit rate", as_percent=True)
 
     with section_card(
-        title="LLM-as-a-judge",
-        subtitle="Semantic scores: grounding, citation faithfulness, relevance, hallucination.",
+        title="LLM judge",
+        subtitle="Model-assessed grounding, citation use, relevance, and hallucination signals (0–1 scores where configured).",
         min_height=0,
     ):
         j1, j2, j3, j4, j5 = st.columns(5)
         with j1:
-            _summary_metric(summary, "avg_groundedness", "Groundedness")
+            _summary_metric(summary, "avg_groundedness_score", "Avg groundedness")
         with j2:
-            _summary_metric(summary, "avg_citation_faithfulness", "Citation faithfulness")
+            _summary_metric(summary, "avg_citation_faithfulness_score", "Avg citation faithfulness")
         with j3:
-            _summary_metric(summary, "avg_answer_relevance", "Relevance")
+            _summary_metric(summary, "avg_answer_relevance_score", "Avg answer relevance")
         with j4:
-            _summary_metric(summary, "avg_hallucination_score", "Hallucination")
+            _summary_metric(summary, "avg_hallucination_score", "Avg hallucination score")
         with j5:
-            _summary_metric(summary, "hallucination_rate", "Hallucination rate", as_percent=True)
+            _summary_metric(summary, "hallucination_rate", "Hallucination flag rate", as_percent=True)
 
     if multimodal_metrics:
         _render_multimodal_performance(multimodal_metrics)

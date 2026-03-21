@@ -145,7 +145,7 @@ class FailureAnalysisService:
             has_gold = False
         answer_f1 = _coerce_float(row.get("answer_f1"))
 
-        groundedness = _coerce_float(row.get("groundedness_score", row.get("groundedness")))
+        groundedness = _coerce_float(row.get("groundedness_score"))
         prompt_doc_id_prec = _coerce_float(row.get("prompt_doc_id_precision"))
         citation_doc_id_rec = _coerce_float(row.get("citation_doc_id_recall"))
         if groundedness is not None and groundedness < self._q:
@@ -229,11 +229,9 @@ class FailureAnalysisService:
             "answer_preview": row.get("answer_preview") if isinstance(row.get("answer_preview"), str) else "",
             "recall_at_k": _coerce_float(row.get("recall_at_k")),
             "answer_f1": _coerce_float(row.get("answer_f1")),
-            "groundedness_score": _coerce_float(row.get("groundedness_score", row.get("groundedness"))),
+            "groundedness_score": _coerce_float(row.get("groundedness_score")),
             "hallucination_score": _coerce_float(row.get("hallucination_score")),
-            "answer_relevance_score": _coerce_float(
-                row.get("answer_relevance_score", row.get("answer_relevance"))
-            ),
+            "answer_relevance_score": _coerce_float(row.get("answer_relevance_score")),
             "confidence": _coerce_float(row.get("confidence")),
             "prompt_doc_id_precision": _coerce_float(row.get("prompt_doc_id_precision")),
             "citation_doc_id_recall": _coerce_float(row.get("citation_doc_id_recall")),

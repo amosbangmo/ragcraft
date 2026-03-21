@@ -137,10 +137,7 @@ def aggregate_multimodal_metrics(rows: list[dict[str, Any]]) -> dict[str, Any] |
             return None
 
     def _groundedness(row: dict[str, Any]) -> float | None:
-        v = _f(row, "groundedness_score")
-        if v is not None:
-            return v
-        return _f(row, "groundedness")
+        return _f(row, "groundedness_score")
 
     table_f1: list[float] = []
     for r in eligible:
@@ -194,17 +191,17 @@ def aggregate_multimodal_metrics(rows: list[dict[str, Any]]) -> dict[str, Any] |
         "text_only": {
             "row_count": sum(1 for r in eligible if not r.get("context_uses_table") and not r.get("context_uses_image")),
             "avg_answer_f1": _mean_float(text_only_f1),
-            "avg_groundedness": _mean_float(text_only_g),
+            "avg_groundedness_score": _mean_float(text_only_g),
         },
         "with_table": {
             "row_count": table_n,
             "avg_answer_f1": _mean_float(with_table_f1),
-            "avg_groundedness": _mean_float(with_table_g),
+            "avg_groundedness_score": _mean_float(with_table_g),
         },
         "with_image": {
             "row_count": image_n,
             "avg_answer_f1": _mean_float(with_image_f1),
-            "avg_groundedness": _mean_float(with_image_g),
+            "avg_groundedness_score": _mean_float(with_image_g),
         },
     }
 

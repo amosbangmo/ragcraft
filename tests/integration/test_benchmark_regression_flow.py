@@ -96,8 +96,8 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_recall_at_k=0.99,
             min_avg_answer_f1=0.99,
             min_avg_prompt_doc_id_f1=0.99,
-            min_avg_groundedness=0.99,
-            min_avg_answer_relevance=0.99,
+            min_avg_groundedness_score=0.99,
+            min_avg_answer_relevance_score=0.99,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
         mm = result.multimodal_metrics
@@ -153,8 +153,8 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_recall_at_k=0.5,
             min_avg_answer_f1=0.5,
             min_avg_prompt_doc_id_f1=0.5,
-            min_avg_groundedness=0.5,
-            min_avg_answer_relevance=0.5,
+            min_avg_groundedness_score=0.5,
+            min_avg_answer_relevance_score=0.5,
         )
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertTrue(violations)

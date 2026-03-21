@@ -51,20 +51,19 @@ METRIC_HELP: dict[str, str] = {
         "Mean precision@k over the run. Higher means denser relevant results at the top."
     ),
     "reciprocal_rank": (
-        "Inverse rank of the first relevant document (1 / rank), 0 if none in the list. "
+        "For this question: inverse rank of the first expected doc in the ranked list (1/rank), or 0 if none. "
         "Higher is better."
     ),
-    "mrr": (
-        "Mean reciprocal rank: average of 1 / (rank of first hit). "
-        "Higher is better for ranked retrieval."
+    "avg_reciprocal_rank": (
+        "Mean reciprocal rank over entries with expected doc IDs: average of per-row reciprocal_rank. "
+        "Higher is better."
     ),
     "average_precision": (
-        "Average precision across ranks for relevant docs in this ranked list. "
-        "Higher is better when multiple relevant items exist."
+        "For this question: average precision of expected doc IDs over the ranked list. "
+        "Higher is better when several expected docs matter."
     ),
-    "map": (
-        "Mean average precision over questions: ranking quality when several relevant docs matter. "
-        "Higher is better."
+    "avg_average_precision": (
+        "Mean of per-row average_precision over entries with expected doc IDs. Higher is better."
     ),
     "answer_f1": (
         "Harmonic mean of answer precision and recall vs gold. "
@@ -77,21 +76,21 @@ METRIC_HELP: dict[str, str] = {
         "Judge score: how well the answer stays supported by retrieved evidence. "
         "Closer to 1 is better."
     ),
-    "avg_groundedness": (
-        "Mean groundedness over the run. Closer to 1 is better."
+    "avg_groundedness_score": (
+        "Mean groundedness_score over the run. Closer to 1 is better."
     ),
     "citation_faithfulness_score": (
         "Judge score: whether [Source N] citations align with the claims they support. "
         "Closer to 1 is better."
     ),
-    "avg_citation_faithfulness": (
-        "Mean citation faithfulness over the run. Closer to 1 is better."
+    "avg_citation_faithfulness_score": (
+        "Mean citation_faithfulness_score over the run. Closer to 1 is better."
     ),
     "answer_relevance_score": (
         "Judge score: how well the answer addresses the question. Closer to 1 is better."
     ),
-    "avg_answer_relevance": (
-        "Mean answer relevance over the run. Closer to 1 is better."
+    "avg_answer_relevance_score": (
+        "Mean answer_relevance_score over the run. Closer to 1 is better."
     ),
     "hallucination_score": (
         "Judge signal for unsupported or contradictory content. "
@@ -152,7 +151,8 @@ METRIC_HELP: dict[str, str] = {
         "Distinct doc IDs cited in the answer (parsed from [Source N] labels mapped to prompt sources)."
     ),
     "citation_doc_id_hit_rate": (
-        "Share of entries with at least one expected doc ID cited in the answer. Higher is better."
+        "Per row: 1 if any expected doc ID is cited in the answer ([Source N] mapped to doc IDs), else 0. "
+        "Run summary: fraction of rows with expected doc IDs that have such a citation hit. Higher is better."
     ),
     "prompt_doc_id_overlap_count": (
         "Count of expected doc IDs that also appear in prompt sources for this row."
@@ -164,15 +164,17 @@ METRIC_HELP: dict[str, str] = {
         "How many distinct sources were selected for the prompt for this run."
     ),
     "hit_at_k": (
-        "Whether at least one relevant document appears in the top-K results. "
-        "Averaged over queries. Closer to 1 is better."
+        "Per row: 1 if at least one expected doc ID appears in the ranked top-K list, else 0 "
+        "(0 also when no expected doc IDs). Run summary: fraction of such rows with a hit. "
+        "Higher is better."
     ),
     "source_hit_rate": (
         "Share of entries where at least one expected source was hit. "
         "Higher is better."
     ),
     "prompt_doc_id_hit_rate": (
-        "Share of entries where prompt sources overlap expected doc IDs. Higher is better."
+        "Per row: 1 if any expected doc ID appears in prompt sources, else 0. "
+        "Run summary: fraction of rows with expected doc IDs that have such overlap. Higher is better."
     ),
     "retrieval_mode": (
         "Which retrieval path ran for this query (for example vector-only vs hybrid)."

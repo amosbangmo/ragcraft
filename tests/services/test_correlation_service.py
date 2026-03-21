@@ -38,7 +38,7 @@ class TestCorrelationService(unittest.TestCase):
         ]
         out = CorrelationService().compute(rows)
         self.assertTrue(out["available"])
-        r = out["pairwise"].get("confidence_vs_answer_correctness")
+        r = out["pairwise"].get("confidence_vs_answer_f1")
         self.assertIsNotNone(r)
         self.assertAlmostEqual(float(r), 1.0, places=5)
 
@@ -63,7 +63,7 @@ class TestCorrelationService(unittest.TestCase):
         ]
         out = CorrelationService().compute(rows)
         self.assertTrue(out["available"])
-        self.assertIsNone(out["pairwise"].get("confidence_vs_answer_correctness"))
+        self.assertIsNone(out["pairwise"].get("confidence_vs_answer_f1"))
 
     def test_insufficient_metrics_when_only_one_series(self) -> None:
         rows = [{"confidence": 0.1}, {"confidence": 0.2}]

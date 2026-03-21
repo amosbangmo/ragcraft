@@ -139,6 +139,9 @@ class EvaluationService:
                     "precision_at_k": 0.0,
                     "reciprocal_rank": 0.0,
                     "average_precision": 0.0,
+                    "hit_at_k": 0.0,
+                    "prompt_doc_id_hit_rate": 0.0,
+                    "citation_doc_id_hit_rate": 0.0,
                     "expected_sources_count": len(expected_sources),
                     "retrieved_sources_count": 0,
                     "source_overlap_count": 0,
@@ -234,6 +237,10 @@ class EvaluationService:
             citation_doc_id_recall = 0.0
             citation_doc_id_f1 = 0.0
 
+            hit_at_k_row = 0.0
+            prompt_doc_id_hit_rate_row = 0.0
+            citation_doc_id_hit_rate_row = 0.0
+
             if expected_doc_ids:
                 recall_at_k = doc_id_overlap_count / len(expected_doc_ids)
                 precision_at_k = self._compute_precision_at_k(
@@ -282,6 +289,10 @@ class EvaluationService:
 
                 if citation_doc_id_overlap_count > 0:
                     citation_doc_id_hits += 1
+
+                hit_at_k_row = 1.0 if doc_id_overlap_count > 0 else 0.0
+                prompt_doc_id_hit_rate_row = 1.0 if prompt_doc_id_overlap_count > 0 else 0.0
+                citation_doc_id_hit_rate_row = 1.0 if citation_doc_id_overlap_count > 0 else 0.0
 
             if expected_sources:
                 source_recall = source_overlap_count / len(expected_sources)
@@ -332,6 +343,9 @@ class EvaluationService:
                 "precision_at_k": round(precision_at_k, 2),
                 "reciprocal_rank": round(reciprocal_rank, 2),
                 "average_precision": round(average_precision, 2),
+                "hit_at_k": round(hit_at_k_row, 2),
+                "prompt_doc_id_hit_rate": round(prompt_doc_id_hit_rate_row, 2),
+                "citation_doc_id_hit_rate": round(citation_doc_id_hit_rate_row, 2),
                 "expected_sources_count": len(expected_sources),
                 "retrieved_sources_count": len(selected_sources),
                 "source_overlap_count": source_overlap_count,
@@ -377,8 +391,12 @@ class EvaluationService:
             "avg_recall_at_k": round(float(np.mean(recall_at_k_values)), 2) if recall_at_k_values else 0.0,
             "avg_source_recall": round(float(np.mean(source_recall_values)), 2) if source_recall_values else 0.0,
             "avg_precision_at_k": round(float(np.mean(precision_at_k_values)), 2) if precision_at_k_values else 0.0,
-            "mrr": round(float(np.mean(reciprocal_rank_values)), 2) if reciprocal_rank_values else 0.0,
-            "map": round(float(np.mean(average_precision_values)), 2) if average_precision_values else 0.0,
+            "avg_reciprocal_rank": round(float(np.mean(reciprocal_rank_values)), 2)
+            if reciprocal_rank_values
+            else 0.0,
+            "avg_average_precision": round(float(np.mean(average_precision_values)), 2)
+            if average_precision_values
+            else 0.0,
             "avg_confidence": round(float(np.mean(confidence_values)), 2) if confidence_values else 0.0,
             "avg_latency_ms": round(float(np.mean(latency_values)), 1) if latency_values else 0.0,
             "hit_at_k": round(doc_id_hits / entries_with_expected_doc_ids, 2)
@@ -414,13 +432,13 @@ class EvaluationService:
             "citation_doc_id_hit_rate": round(citation_doc_id_hits / entries_with_expected_doc_ids, 2)
             if entries_with_expected_doc_ids
             else 0.0,
-            "avg_groundedness": round(float(np.mean(groundedness_values)), 2)
+            "avg_groundedness_score": round(float(np.mean(groundedness_values)), 2)
             if groundedness_values
             else 0.0,
-            "avg_citation_faithfulness": round(float(np.mean(citation_faithfulness_values)), 2)
+            "avg_citation_faithfulness_score": round(float(np.mean(citation_faithfulness_values)), 2)
             if citation_faithfulness_values
             else 0.0,
-            "avg_answer_relevance": round(float(np.mean(answer_relevance_values)), 2)
+            "avg_answer_relevance_score": round(float(np.mean(answer_relevance_values)), 2)
             if answer_relevance_values
             else 0.0,
             "avg_hallucination_score": round(float(np.mean(hallucination_score_values)), 2)

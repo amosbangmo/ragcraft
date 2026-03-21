@@ -58,6 +58,7 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
         self.assertEqual(row.get("citation_doc_ids_count"), 1)
         self.assertEqual(row.get("citation_doc_id_overlap_count"), 1)
         self.assertEqual(row.get("citation_doc_id_recall"), 1.0)
+        self.assertEqual(row.get("citation_doc_id_hit_rate"), 1.0)
         self.assertEqual(row.get("citation_faithfulness_score"), 1.0)
         self.assertIn("avg_citation_doc_id_recall", result.summary.data)
 
@@ -104,7 +105,10 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
         row = result.rows[0].data
         self.assertEqual(row.get("citation_doc_ids_count"), 0)
         self.assertEqual(row.get("citation_doc_id_recall"), 0.0)
+        self.assertEqual(row.get("citation_doc_id_hit_rate"), 0.0)
         self.assertEqual(row.get("prompt_doc_id_recall"), 1.0)
+        self.assertEqual(row.get("hit_at_k"), 1.0)
+        self.assertEqual(row.get("prompt_doc_id_hit_rate"), 1.0)
 
 
 if __name__ == "__main__":

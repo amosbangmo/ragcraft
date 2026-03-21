@@ -76,7 +76,7 @@ def _render_dataset_overview(
         st.markdown("##### Latest benchmark (summary)")
         m1, m2, m3 = st.columns(3)
         with m1:
-            _summary_metric_cell(summary, "avg_groundedness", "Avg groundedness")
+            _summary_metric_cell(summary, "avg_groundedness_score", "Avg groundedness")
         with m2:
             _summary_metric_cell(summary, "avg_recall_at_k", "Avg Recall@K")
         with m3:
@@ -86,7 +86,7 @@ def _render_dataset_overview(
 
         m4, m5, m6 = st.columns(3)
         with m4:
-            _summary_metric_cell(summary, "avg_answer_relevance", "Avg answer relevance")
+            _summary_metric_cell(summary, "avg_answer_relevance_score", "Avg answer relevance")
         with m5:
             _summary_metric_cell(summary, "avg_citation_doc_id_f1", "Avg citation doc ID F1")
         with m6:

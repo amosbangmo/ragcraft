@@ -55,13 +55,13 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 1,
-                "avg_groundedness": 0.2,
+                "avg_groundedness_score": 0.2,
             }
         )
-        thresholds = BenchmarkRegressionThresholds(min_avg_groundedness=0.5)
+        thresholds = BenchmarkRegressionThresholds(min_avg_groundedness_score=0.5)
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertEqual(len(violations), 1)
-        self.assertIn("avg_groundedness", violations[0])
+        self.assertIn("avg_groundedness_score", violations[0])
 
     def test_prompt_doc_id_f1_threshold_enforced_when_set(self):
         result = make_benchmark_result(
@@ -79,13 +79,13 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 1,
-                "avg_answer_relevance": 0.2,
+                "avg_answer_relevance_score": 0.2,
             }
         )
-        thresholds = BenchmarkRegressionThresholds(min_avg_answer_relevance=0.5)
+        thresholds = BenchmarkRegressionThresholds(min_avg_answer_relevance_score=0.5)
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertEqual(len(violations), 1)
-        self.assertIn("avg_answer_relevance", violations[0])
+        self.assertIn("avg_answer_relevance_score", violations[0])
 
     def test_unset_thresholds_are_not_enforced(self):
         result = make_benchmark_result(

@@ -248,8 +248,8 @@ class ManualEvaluationService:
             )
 
         confidence = float(row.get("confidence", 0.0))
-        groundedness = float(row.get("groundedness_score", row.get("groundedness", 0.0)))
-        answer_relevance = float(row.get("answer_relevance_score", row.get("answer_relevance", 0.0)))
+        groundedness = float(row.get("groundedness_score", 0.0))
+        answer_relevance = float(row.get("answer_relevance_score", 0.0))
         hallucination_score = float(row.get("hallucination_score", 0.0))
         has_hallucination = bool(row.get("has_hallucination", False))
 

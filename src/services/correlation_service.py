@@ -4,12 +4,16 @@ from typing import Any
 
 import numpy as np
 
-# Logical metric name -> row payload key (evaluation row ``data``).
+# Display name -> row payload key (``BenchmarkRow.data`` / ``to_dict``).
 CORRELATION_METRIC_KEYS: tuple[tuple[str, str], ...] = (
     ("confidence", "confidence"),
-    ("answer_correctness", "answer_f1"),
+    ("answer_f1", "answer_f1"),
+    ("recall_at_k", "recall_at_k"),
+    ("reciprocal_rank", "reciprocal_rank"),
+    ("average_precision", "average_precision"),
     ("groundedness_score", "groundedness_score"),
     ("citation_faithfulness_score", "citation_faithfulness_score"),
+    ("answer_relevance_score", "answer_relevance_score"),
     ("prompt_doc_id_precision", "prompt_doc_id_precision"),
     ("prompt_doc_id_recall", "prompt_doc_id_recall"),
     ("citation_doc_id_f1", "citation_doc_id_f1"),

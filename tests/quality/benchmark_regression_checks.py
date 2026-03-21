@@ -53,8 +53,8 @@ class BenchmarkRegressionThresholds:
     min_avg_recall_at_k: float | None = None
     min_avg_answer_f1: float | None = None
     min_avg_prompt_doc_id_f1: float | None = None
-    min_avg_groundedness: float | None = None
-    min_avg_answer_relevance: float | None = None
+    min_avg_groundedness_score: float | None = None
+    min_avg_answer_relevance_score: float | None = None
     min_successful_queries: int | None = None
 
 
@@ -97,20 +97,20 @@ def collect_benchmark_regression_violations(
                 f"{actual} < minimum {thresholds.min_avg_prompt_doc_id_f1}"
             )
 
-    if thresholds.min_avg_groundedness is not None:
-        actual = _summary_float(summary, "avg_groundedness")
-        if actual < thresholds.min_avg_groundedness:
+    if thresholds.min_avg_groundedness_score is not None:
+        actual = _summary_float(summary, "avg_groundedness_score")
+        if actual < thresholds.min_avg_groundedness_score:
             violations.append(
-                "avg_groundedness "
-                f"{actual} < minimum {thresholds.min_avg_groundedness}"
+                "avg_groundedness_score "
+                f"{actual} < minimum {thresholds.min_avg_groundedness_score}"
             )
 
-    if thresholds.min_avg_answer_relevance is not None:
-        actual = _summary_float(summary, "avg_answer_relevance")
-        if actual < thresholds.min_avg_answer_relevance:
+    if thresholds.min_avg_answer_relevance_score is not None:
+        actual = _summary_float(summary, "avg_answer_relevance_score")
+        if actual < thresholds.min_avg_answer_relevance_score:
             violations.append(
-                "avg_answer_relevance "
-                f"{actual} < minimum {thresholds.min_avg_answer_relevance}"
+                "avg_answer_relevance_score "
+                f"{actual} < minimum {thresholds.min_avg_answer_relevance_score}"
             )
 
     return violations

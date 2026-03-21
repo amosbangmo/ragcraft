@@ -113,14 +113,20 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 value=_f(row.get("citation_doc_id_f1")),
                 metric_key="citation_doc_id_f1",
             )
-        c4, c5 = st.columns(2)
+        c4, c5, c6 = st.columns(3)
         with c4:
+            render_metric_with_help(
+                label="Citation doc ID hit rate",
+                value=_f(row.get("citation_doc_id_hit_rate")),
+                metric_key="citation_doc_id_hit_rate",
+            )
+        with c5:
             render_metric_with_help(
                 label="Cited doc IDs (answer)",
                 value=_f(row.get("citation_doc_ids_count")),
                 metric_key="citation_doc_ids_count",
             )
-        with c5:
+        with c6:
             render_metric_with_help(
                 label="Citation overlap count",
                 value=_f(row.get("citation_doc_id_overlap_count")),
@@ -151,14 +157,20 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 value=_f(row.get("prompt_doc_id_f1")),
                 metric_key="prompt_doc_id_f1",
             )
-        c4, c5 = st.columns(2)
+        c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
-                label="Prompt doc ID overlap",
+                label="Prompt doc ID hit rate",
+                value=_f(row.get("prompt_doc_id_hit_rate")),
+                metric_key="prompt_doc_id_hit_rate",
+            )
+        with c5:
+            render_metric_with_help(
+                label="Prompt overlap count",
                 value=_f(row.get("prompt_doc_id_overlap_count")),
                 metric_key="prompt_doc_id_overlap_count",
             )
-        with c5:
+        with c6:
             st.caption("Prompt metrics use every asset in context, not only labels in the answer.")
 
     with section_card(
@@ -175,7 +187,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
         with c2:
             render_metric_with_help(
-                label="Precision@k",
+                label="Precision@K",
                 value=_f(row.get("precision_at_k")),
                 metric_key="precision_at_k",
             )
@@ -185,18 +197,24 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 value=_f(row.get("source_recall")),
                 metric_key="source_recall",
             )
-        c4, c5 = st.columns(2)
+        c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
-                label="MRR (row)",
+                label="Reciprocal rank",
                 value=_f(row.get("reciprocal_rank")),
                 metric_key="reciprocal_rank",
             )
         with c5:
             render_metric_with_help(
-                label="MAP (row)",
+                label="Average precision",
                 value=_f(row.get("average_precision")),
                 metric_key="average_precision",
+            )
+        with c6:
+            render_metric_with_help(
+                label="Hit@K",
+                value=_f(row.get("hit_at_k")),
+                metric_key="hit_at_k",
             )
 
     with section_card(

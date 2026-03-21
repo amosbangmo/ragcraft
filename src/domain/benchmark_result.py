@@ -64,9 +64,11 @@ class BenchmarkSummary:
     the project move from dict-based evaluation to typed results without forcing
     every future metric to become a top-level dataclass field immediately.
 
-    Aggregate judge metrics include ``avg_groundedness``, ``avg_citation_faithfulness``,
-    ``avg_answer_relevance``, ``avg_hallucination_score``, and ``hallucination_rate``
-    (fraction of rows with ``has_hallucination`` true).
+    Aggregate judge metrics use the same stem as per-row scores: ``avg_groundedness_score``,
+    ``avg_citation_faithfulness_score``, ``avg_answer_relevance_score``,
+    ``avg_hallucination_score``, and ``hallucination_rate`` (fraction of rows with
+    ``has_hallucination`` true). Retrieval summaries use ``avg_reciprocal_rank`` and
+    ``avg_average_precision`` (means of per-row ``reciprocal_rank`` and ``average_precision``).
     """
 
     data: dict[str, Any] = field(default_factory=dict)
