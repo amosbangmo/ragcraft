@@ -37,6 +37,7 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         max_table_chars_per_asset=4000,
         enable_query_rewrite=True,
         enable_hybrid_retrieval=True,
+        enable_contextual_compression=True,
         similarity_search_k=15,
         bm25_search_k=10,
         bm25_k1=1.5,
@@ -299,6 +300,9 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(lat["answer_generation_ms"], 0.0)
         self.assertEqual(payload["latency_ms"], lat["total_ms"])
         self.assertEqual(payload["query_intent"], "factual")
+        self.assertIn("context_compression", payload)
+        self.assertIn("prompt_context_assets", payload)
+        self.assertEqual(len(payload["prompt_context_assets"]), 1)
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
@@ -310,6 +314,13 @@ class TestRAGService(unittest.TestCase):
             "reranked_raw_assets": [{"doc_id": "d1"}],
             "source_references": [{"doc_id": "d1"}],
             "confidence": 0.8,
+            "context_compression": {
+                "enabled": True,
+                "applied": True,
+                "chars_before": 100,
+                "chars_after": 50,
+                "ratio": 0.5,
+            },
             "latency": {
                 "query_rewrite_ms": 0.1,
                 "retrieval_ms": 0.2,

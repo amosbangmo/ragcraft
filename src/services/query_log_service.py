@@ -160,6 +160,22 @@ class QueryLogService:
             if strat:
                 entry["retrieval_strategy"] = strat
 
+        for ck in ("context_compression_chars_before", "context_compression_chars_after"):
+            raw_cc = payload.get(ck)
+            if raw_cc is None:
+                continue
+            try:
+                entry[ck] = int(round(float(raw_cc)))
+            except (TypeError, ValueError):
+                pass
+
+        cc_ratio = payload.get("context_compression_ratio")
+        if cc_ratio is not None:
+            try:
+                entry["context_compression_ratio"] = float(cc_ratio)
+            except (TypeError, ValueError):
+                pass
+
         return entry
 
     def load_logs(

@@ -65,6 +65,9 @@ class RetrievalConfig:
     enable_hybrid_retrieval: bool = field(
         default_factory=lambda: _get_bool_env("RAG_ENABLE_HYBRID_RETRIEVAL", True)
     )
+    enable_contextual_compression: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_ENABLE_CONTEXTUAL_COMPRESSION", True)
+    )
 
 
 @dataclass(frozen=True)

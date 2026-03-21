@@ -17,6 +17,7 @@ class PromptBuilderService:
         raw_assets: list[dict],
         citations: list[SourceCitation],
     ) -> str:
+        """``raw_assets`` may be context-compressed upstream before this call."""
         blocks = [
             self._format_raw_asset_for_prompt(asset=asset, citation=citation)
             for asset, citation in zip(raw_assets, citations)

@@ -112,6 +112,9 @@ def init_app_db():
             retrieval_strategy_k INTEGER,
             retrieval_strategy_use_hybrid INTEGER,
             retrieval_strategy_apply_filters INTEGER,
+            context_compression_chars_before INTEGER,
+            context_compression_chars_after INTEGER,
+            context_compression_ratio REAL,
             created_at TEXT NOT NULL
         )
         """
@@ -136,6 +139,9 @@ def init_app_db():
         "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_k INTEGER",
         "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_use_hybrid INTEGER",
         "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_apply_filters INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN context_compression_chars_before INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN context_compression_chars_after INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN context_compression_ratio REAL",
     ):
         try:
             conn.execute(ddl)

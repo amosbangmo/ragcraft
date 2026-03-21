@@ -84,6 +84,10 @@ class SQLiteQueryLogRepository:
 
             rsk, rs_hybrid, rs_filters = _retrieval_strategy_columns(entry)
 
+            cc_before = _maybe_int_ms(entry.get("context_compression_chars_before"))
+            cc_after = _maybe_int_ms(entry.get("context_compression_chars_after"))
+            cc_ratio = _maybe_float(entry.get("context_compression_ratio"))
+
             params = (
                 entry.get("user_id"),
                 entry.get("project_id"),
@@ -106,6 +110,9 @@ class SQLiteQueryLogRepository:
                 rsk,
                 rs_hybrid,
                 rs_filters,
+                cc_before,
+                cc_after,
+                cc_ratio,
                 created_at.strip(),
             )
 
@@ -120,8 +127,10 @@ class SQLiteQueryLogRepository:
                         query_rewrite_ms, retrieval_ms, reranking_ms, prompt_build_ms,
                         answer_generation_ms, total_latency_ms, query_intent,
                         retrieval_strategy_k, retrieval_strategy_use_hybrid,
-                        retrieval_strategy_apply_filters, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        retrieval_strategy_apply_filters,
+                        context_compression_chars_before, context_compression_chars_after,
+                        context_compression_ratio, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     params,
                 )
@@ -231,5 +240,17 @@ class SQLiteQueryLogRepository:
             mi = _maybe_int_ms(v)
             if mi is not None:
                 out[key] = mi
+
+        for cc_key in ("context_compression_chars_before", "context_compression_chars_after"):
+            v = r.get(cc_key)
+            mi = _maybe_int_ms(v)
+            if mi is not None:
+                out[cc_key] = mi
+
+        cc_r = r.get("context_compression_ratio")
+        if cc_r is not None:
+            mf = _maybe_float(cc_r)
+            if mf is not None:
+                out["context_compression_ratio"] = mf
 
         return out

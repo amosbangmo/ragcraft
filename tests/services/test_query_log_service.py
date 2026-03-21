@@ -72,6 +72,25 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         self.assertTrue(rs.get("use_hybrid"))
         self.assertFalse(rs.get("apply_filters"))
 
+    def test_insert_context_compression_roundtrip(self) -> None:
+        repo = SQLiteQueryLogRepository()
+        repo.log(
+            {
+                "question": "q_cc",
+                "timestamp": "2025-03-01T12:00:00+00:00",
+                "project_id": "p_cc",
+                "user_id": "u_cc",
+                "context_compression_chars_before": 1200,
+                "context_compression_chars_after": 400,
+                "context_compression_ratio": 0.3333,
+            }
+        )
+        rows = repo.list_logs(project_id="p_cc")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].get("context_compression_chars_before"), 1200)
+        self.assertEqual(rows[0].get("context_compression_chars_after"), 400)
+        self.assertAlmostEqual(float(rows[0].get("context_compression_ratio", 0)), 0.3333, places=3)
+
     def test_list_logs_user_and_limit(self) -> None:
         repo = SQLiteQueryLogRepository()
         for i, uid in enumerate(["u1", "u1", "u2"]):

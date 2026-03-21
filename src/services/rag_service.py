@@ -16,6 +16,7 @@ from src.domain.retrieval_strategy import RetrievalStrategy
 from src.domain.source_citation import SourceCitation
 from src.services.adaptive_retrieval_service import AdaptiveRetrievalService
 from src.services.confidence_service import ConfidenceService
+from src.services.contextual_compression_service import ContextualCompressionService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
@@ -35,7 +36,8 @@ class RAGService:
     2. hybrid recall retrieval (FAISS + BM25 summaries)
     3. raw asset rehydration from SQLite using doc_id
     4. strict reranking over the rehydrated raw assets
-    5. final prompt built only from the top reranked assets
+    5. optional contextual compression of reranked assets for the prompt
+    6. final prompt built from the compressed (or original) top assets
     """
 
     def __init__(
@@ -67,6 +69,7 @@ class RAGService:
         self.query_intent_service = QueryIntentService()
         self.config = RETRIEVAL_CONFIG
         self.adaptive_retrieval_service = AdaptiveRetrievalService(self.config)
+        self.contextual_compression_service = ContextualCompressionService()
         self.query_log_service = query_log_service
 
     @staticmethod
@@ -371,12 +374,36 @@ class RAGService:
             selected_doc_ids,
         )
 
+        comp = self.contextual_compression_service
+        chars_before = comp.prompt_char_estimate(reranked_raw_assets)
+        prompt_context_assets = reranked_raw_assets
+        compression_applied = False
+        if self.config.enable_contextual_compression:
+            try:
+                prompt_context_assets = comp.compress(
+                    query=rewritten_question,
+                    assets=reranked_raw_assets,
+                )
+                compression_applied = True
+            except Exception:
+                prompt_context_assets = reranked_raw_assets
+
+        chars_after = comp.prompt_char_estimate(prompt_context_assets)
+        ratio = (chars_after / chars_before) if chars_before > 0 else 1.0
+        context_compression = {
+            "enabled": bool(self.config.enable_contextual_compression),
+            "applied": compression_applied and bool(self.config.enable_contextual_compression),
+            "chars_before": chars_before,
+            "chars_after": chars_after,
+            "ratio": round(ratio, 4),
+        }
+
         t0 = perf_counter()
-        citation_objects = self.source_citation_service.build_citations(reranked_raw_assets)
+        citation_objects = self.source_citation_service.build_citations(prompt_context_assets)
         source_references = [self._citation_to_dict(citation) for citation in citation_objects]
 
         raw_context = self.prompt_builder_service.build_raw_context(
-            raw_assets=reranked_raw_assets,
+            raw_assets=prompt_context_assets,
             citations=citation_objects,
         )
         prompt = self.prompt_builder_service.build_prompt(
@@ -426,6 +453,8 @@ class RAGService:
             "selected_summary_docs": selected_summary_docs,
             "selected_doc_ids": selected_doc_ids,
             "reranked_raw_assets": reranked_raw_assets,
+            "prompt_context_assets": prompt_context_assets,
+            "context_compression": context_compression,
             "source_references": source_references,
             "raw_context": raw_context,
             "prompt": prompt,
@@ -449,6 +478,9 @@ class RAGService:
                     "retrieval_mode": retrieval_mode,
                     "query_intent": query_intent.value,
                     "retrieval_strategy": strategy.to_dict(),
+                    "context_compression_chars_before": context_compression["chars_before"],
+                    "context_compression_chars_after": context_compression["chars_after"],
+                    "context_compression_ratio": context_compression["ratio"],
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -542,6 +574,13 @@ class RAGService:
                     "retrieval_mode": pipeline.get("retrieval_mode"),
                     "query_intent": pipeline.get("query_intent"),
                     "retrieval_strategy": pipeline.get("retrieval_strategy"),
+                    "context_compression_chars_before": (
+                        (pipeline.get("context_compression") or {}).get("chars_before")
+                    ),
+                    "context_compression_chars_after": (
+                        (pipeline.get("context_compression") or {}).get("chars_after")
+                    ),
+                    "context_compression_ratio": (pipeline.get("context_compression") or {}).get("ratio"),
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )

@@ -433,7 +433,8 @@ def _render_inspection_result(pipeline):
     with recall_cols[1]:
         st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
     with recall_cols[2]:
-        st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
+        prompt_assets = pipeline.get("prompt_context_assets") or pipeline.get("reranked_raw_assets") or []
+        st.metric("Prompt assets", len(prompt_assets))
     with recall_cols[3]:
         st.metric(
             "Confidence",
@@ -441,6 +442,23 @@ def _render_inspection_result(pipeline):
         )
 
     _render_pipeline_latency(pipeline.get("latency"))
+
+    cc = pipeline.get("context_compression") or {}
+    if cc.get("enabled") is not None:
+        st.markdown("### Context compression (prompt-facing chars)")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.metric("Before", cc.get("chars_before", "—"))
+        with c2:
+            st.metric("After", cc.get("chars_after", "—"))
+        with c3:
+            r = cc.get("ratio")
+            st.metric("Ratio (after/before)", f"{float(r):.3f}" if r is not None else "—")
+        with c4:
+            st.metric(
+                "Applied",
+                "Yes" if cc.get("applied") else "No",
+            )
 
     with st.expander("1. Original query and rewritten retrieval query", expanded=True):
         st.markdown("**Original user query**")
@@ -486,13 +504,13 @@ def _render_inspection_result(pipeline):
         st.markdown("### Source references")
         _render_source_references(pipeline["source_references"])
 
-        st.markdown("### Final prompt assets")
+        st.markdown("### Final prompt assets (after contextual compression)")
         st.caption(
-            "Inspect the lineage section to compare the original extracted elements "
-            "with the final stored chunk."
+            "Reranked assets are compressed for the LLM when enabled; full reranked payloads "
+            "remain available under structured payload / recalled assets above."
         )
         _render_raw_assets(
-            pipeline["reranked_raw_assets"],
+            pipeline.get("prompt_context_assets") or pipeline.get("reranked_raw_assets") or [],
             title_prefix="Prompt asset",
         )
 
@@ -520,6 +538,12 @@ def _render_inspection_result(pipeline):
             "source_references": pipeline["source_references"],
             "latency_ms": pipeline.get("latency_ms"),
             "latency": pipeline.get("latency"),
+            "context_compression": pipeline.get("context_compression"),
+            "prompt_context_assets_doc_ids": [
+                a.get("doc_id")
+                for a in (pipeline.get("prompt_context_assets") or [])
+                if isinstance(a, dict)
+            ],
         }
 
         st.code(json.dumps(debug_payload, indent=2, ensure_ascii=False), language="json")
