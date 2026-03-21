@@ -26,6 +26,9 @@ faiss-cpu
 matplotlib
 
 # Utils
+altair
+numpy
+pandas
 python-dotenv
 tiktoken
 tqdm
