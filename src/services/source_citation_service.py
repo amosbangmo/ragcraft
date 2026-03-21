@@ -50,15 +50,15 @@ class SourceCitationService:
         page_end = metadata.get("page_end")
 
         if page_number is not None:
-            return f"page {page_number}"
+            return f"Page {page_number}"
 
         if page_start is not None and page_end is not None:
             if page_start == page_end:
-                return f"page {page_start}"
-            return f"pages {page_start}-{page_end}"
+                return f"Page {page_start}"
+            return f"Pages {page_start}-{page_end}"
 
         if page_start is not None:
-            return f"page {page_start}"
+            return f"Page {page_start}"
 
         return None
 
@@ -79,16 +79,16 @@ class SourceCitationService:
 
             if start_idx is not None and end_idx is not None:
                 if start_idx == end_idx:
-                    return f"Élément {start_idx}"
-                return f"Éléments {start_idx}-{end_idx}"
+                    return f"Element {start_idx}"
+                return f"Elements {start_idx}-{end_idx}"
 
             return None
 
         if content_type == "table":
             table_title = metadata.get("table_title")
             if table_title:
-                return f"Tableau: {table_title}"
-            return "Tableau"
+                return f"Table: {table_title}"
+            return "Table"
 
         if content_type == "image":
             image_title = metadata.get("image_title")
@@ -110,7 +110,7 @@ class SourceCitationService:
         parts = [f"Source {source_number}", source_file]
 
         if section_label:
-            parts.append(section_label)
+            parts.append(f"Section: {section_label}")
 
         if locator_label:
             parts.append(locator_label)

@@ -49,7 +49,7 @@ class PromptBuilderService:
         if content_type == "table":
             return "Table"
         if content_type == "image":
-            return "Image"
+            return "Figure"
         return content_type[:1].upper() + content_type[1:] if content_type else "Asset"
 
     def build_raw_context(
@@ -162,11 +162,11 @@ Instructions:
 - Use the exact citation labels provided in each asset block.
 - Citations must be inline, for example:
   - [Source 1]
-  - [Source 2][Tableau: Table 2]
+  - [Source 2][Table: Table 2]
   - [Source 3][Figure: Attention map]
-- When useful, mention whether the evidence came from text, table, or image assets.
-- For image assets, rely only on metadata, contextual text blocks, and the image retrieval summary; you cannot see pixels—do not invent visual details.
-- When citing image evidence, say so explicitly (e.g. "per image metadata / surrounding text / retrieval summary for [Source N]").
+- When useful, mention whether the evidence came from text, table, or figure assets.
+- For figure assets, rely only on metadata, contextual text blocks, and the image retrieval summary; you cannot see pixels—do not invent visual details.
+- When citing figure evidence, say so explicitly (e.g. "per figure metadata / surrounding text / retrieval summary for [Source N]").
 - For table assets, when a structured table excerpt is provided, read values from it first for comparisons, rankings, and numeric facts; cross-check the raw table if needed.
 - Never invent document content that is not explicitly present in the raw context.{layout_block}
 """.strip()

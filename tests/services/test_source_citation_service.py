@@ -23,9 +23,10 @@ class TestSourceCitationService(unittest.TestCase):
         ]
         cites = self.svc.build_citations(assets)
         self.assertEqual(len(cites), 1)
-        self.assertIn("Introduction", cites[0].display_label)
+        self.assertIn("Section: Introduction", cites[0].display_label)
         self.assertIn("[Section: Introduction]", cites[0].prompt_label)
-        self.assertIn("[page 2]", cites[0].prompt_label)
+        self.assertIn("[Page 2]", cites[0].prompt_label)
+        self.assertIn("[Element 1]", cites[0].prompt_label)
 
     def test_no_section_unchanged_shape(self) -> None:
         assets = [
