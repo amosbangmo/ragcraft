@@ -19,6 +19,11 @@ class StubLLMJudgeService:
         return self._result
 
 
+class StubSemanticSimilarityService:
+    def compute_similarity(self, answer: str, expected_answer: str) -> float:
+        return 1.0 if (answer or "").strip() and (expected_answer or "").strip() else 0.0
+
+
 def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     doc_ids = list(entry.expected_doc_ids or [])
     sources = list(entry.expected_sources or [])
@@ -82,10 +87,12 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             answer_relevance_score=1.0,
             hallucination_score=1.0,
             has_hallucination=False,
+            answer_correctness_score=1.0,
             reason=None,
         )
         result = EvaluationService(
             llm_judge_service=StubLLMJudgeService(judge),
+            semantic_similarity_service=StubSemanticSimilarityService(),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
@@ -139,10 +146,12 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=True,
+            answer_correctness_score=0.0,
             reason=None,
         )
         result = EvaluationService(
             llm_judge_service=StubLLMJudgeService(judge),
+            semantic_similarity_service=StubSemanticSimilarityService(),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,

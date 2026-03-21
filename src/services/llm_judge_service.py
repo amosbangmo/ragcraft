@@ -28,6 +28,7 @@ class LLMJudgeService:
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=False,
+            answer_correctness_score=0.0,
             reason=None,
         )
 
@@ -40,6 +41,7 @@ class LLMJudgeService:
             answer_relevance_score=0.0,
             hallucination_score=1.0,
             has_hallucination=False,
+            answer_correctness_score=0.0,
             reason=None,
         )
 
@@ -50,6 +52,7 @@ class LLMJudgeService:
         answer: str,
         raw_context: str,
         prompt_sources: list[dict],
+        expected_answer: str | None = None,
     ) -> LLMJudgeResult:
         a = (answer or "").strip()
         if not a:
@@ -61,6 +64,14 @@ class LLMJudgeService:
             ctx = ctx[: self._MAX_CONTEXT_CHARS]
 
         refs_json = self._format_prompt_sources(prompt_sources)
+        gold = (expected_answer or "").strip()
+        gold_block = ""
+        if gold:
+            gold_block = f"""
+EXPECTED ANSWER (gold reference, optional alignment target):
+{gold}
+""".rstrip()
+
         prompt = f"""You are an expert evaluator for retrieval-augmented question answering.
 Evaluate the ASSISTANT ANSWER in one pass and output ONE JSON object only (no markdown, no code fences, no text outside JSON).
 
@@ -71,13 +82,15 @@ Metrics:
 - citation_faithfulness_score: Do inline source citations ([Source N]) align with the claims they support—only citing when the context backs the statement? 1.0 = citations used faithfully; 0.0 = mismatched or misleading citations.
 - answer_relevance_score: Does the answer address the USER QUESTION (coverage, focus, usefulness)? Do not score factual correctness against the real world.
 - hallucination_score: Higher = less hallucination / better supported by context. 1.0 = no unsupported substantive claims; 0.0 = fully unsupported vs context.
+- answer_correctness_score: Holistic factual correctness and completeness of the answer for the USER QUESTION, using RETRIEVED CONTEXT as primary evidence. If EXPECTED ANSWER is provided, also reward alignment with it (paraphrases and equivalent meaning OK). 1.0 = fully correct and complete; 0.0 = incorrect or missing key facts.
 - has_hallucination: true if ANY substantive claim is not supported by the provided context.
 - reason: short string explaining the scores (optional but preferred).
 
-Required keys: groundedness_score, citation_faithfulness_score, answer_relevance_score, hallucination_score, has_hallucination, reason.
+Required keys: groundedness_score, citation_faithfulness_score, answer_relevance_score, hallucination_score, answer_correctness_score, has_hallucination, reason.
 
 USER QUESTION:
 {q}
+{gold_block}
 
 PROMPT SOURCES (JSON):
 {refs_json}
@@ -99,13 +112,14 @@ ASSISTANT ANSWER:
         if parsed is None:
             return self._failure_result()
 
-        g, cf, r, h, flag, reason = parsed
+        g, cf, r, h, ac, flag, reason = parsed
         return LLMJudgeResult(
             groundedness_score=round(g, 2),
             citation_faithfulness_score=round(cf, 2),
             answer_relevance_score=round(r, 2),
             hallucination_score=round(h, 2),
             has_hallucination=flag,
+            answer_correctness_score=round(ac, 2),
             reason=reason,
         )
 
@@ -119,7 +133,7 @@ ASSISTANT ANSWER:
             return text[: self._MAX_REF_JSON_CHARS] + "\n... (truncated)"
         return text
 
-    def _parse_response(self, text: str) -> tuple[float, float, float, float, bool, str | None] | None:
+    def _parse_response(self, text: str) -> tuple[float, float, float, float, float, bool, str | None] | None:
         cleaned = text.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
@@ -136,31 +150,35 @@ ASSISTANT ANSWER:
             cf = self._read_score(data, "citation_faithfulness_score", text)
             r = self._read_score(data, "answer_relevance_score", text)
             h = self._read_score(data, "hallucination_score", text)
-            if g is None and cf is None and r is None and h is None:
+            ac = self._read_score(data, "answer_correctness_score", text)
+            if g is None and cf is None and r is None and h is None and ac is None:
                 return None
             g = 0.0 if g is None else self._clamp01(g)
             cf = g if cf is None else self._clamp01(cf)
             r = 0.0 if r is None else self._clamp01(r)
             h = 0.0 if h is None else self._clamp01(h)
+            ac = 0.0 if ac is None else self._clamp01(ac)
             flag = self._read_bool(data, text, h)
             reason = self._read_reason(data)
-            return g, cf, r, h, flag, reason
+            return g, cf, r, h, ac, flag, reason
 
         g = self._regex_float(text, r'"groundedness_score"\s*:\s*' + self._FLOAT_RE)
         cf = self._regex_float(text, r'"citation_faithfulness_score"\s*:\s*' + self._FLOAT_RE)
         r = self._regex_float(text, r'"answer_relevance_score"\s*:\s*' + self._FLOAT_RE)
         h = self._regex_float(text, r'"hallucination_score"\s*:\s*' + self._FLOAT_RE)
-        if g is None and cf is None and r is None and h is None:
+        ac = self._regex_float(text, r'"answer_correctness_score"\s*:\s*' + self._FLOAT_RE)
+        if g is None and cf is None and r is None and h is None and ac is None:
             return None
         g = 0.0 if g is None else self._clamp01(g)
         cf = g if cf is None else self._clamp01(cf)
         r = 0.0 if r is None else self._clamp01(r)
         h = 0.0 if h is None else self._clamp01(h)
+        ac = 0.0 if ac is None else self._clamp01(ac)
         flag = self._regex_bool(text, r'"has_hallucination"\s*:\s*(true|false)')
         if flag is None:
             flag = h < 1.0
         reason = self._regex_reason(text)
-        return g, cf, r, h, flag, reason
+        return g, cf, r, h, ac, flag, reason
 
     def _read_score(self, data: dict[str, Any], key: str, fallback_text: str) -> float | None:
         raw = data.get(key)

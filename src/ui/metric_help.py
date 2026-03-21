@@ -72,6 +72,24 @@ METRIC_HELP: dict[str, str] = {
     "avg_answer_f1": (
         "Mean answer F1 across rows with gold answers. Closer to 1 is better."
     ),
+    "semantic_similarity": (
+        "Embedding similarity between generated and expected answers."
+    ),
+    "avg_semantic_similarity": (
+        "Mean semantic_similarity across rows with gold answers. Closer to 1 is better."
+    ),
+    "answer_correctness_score": (
+        "LLM-evaluated overall correctness of the answer."
+    ),
+    "avg_answer_correctness": (
+        "Mean answer_correctness_score across evaluated rows. Closer to 1 is better."
+    ),
+    "ndcg_at_k": (
+        "Ranking quality metric emphasizing correct ordering of relevant documents."
+    ),
+    "avg_ndcg_at_k": (
+        "Mean ndcg_at_k across rows with expected doc IDs. Closer to 1 is better."
+    ),
     "groundedness_score": (
         "Judge score: how well the answer stays supported by retrieved evidence. "
         "Closer to 1 is better."

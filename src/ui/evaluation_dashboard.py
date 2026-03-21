@@ -589,11 +589,24 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
                 "Answer relevance",
                 _numeric_series(df, "answer_relevance_score"),
             )
-        h4, h5, _ = st.columns(3)
+        h4, h5, h6 = st.columns(3)
         with h4:
             _histogram_bar_chart("Hallucination score", _numeric_series(df, "hallucination_score"))
         with h5:
             _histogram_bar_chart("Confidence", _numeric_series(df, "confidence"))
+        with h6:
+            _histogram_bar_chart(
+                "Semantic similarity (gold)",
+                _numeric_series(df, "semantic_similarity"),
+            )
+        h7, h8, _ = st.columns(3)
+        with h7:
+            _histogram_bar_chart("NDCG@K", _numeric_series(df, "ndcg_at_k"))
+        with h8:
+            _histogram_bar_chart(
+                "Answer correctness",
+                _numeric_series(df, "answer_correctness_score"),
+            )
 
         st.markdown("##### Trends by query index")
         trend_parts: dict[str, pd.Series] = {}
@@ -721,11 +734,13 @@ def render_evaluation_dashboard(
             _summary_metric(summary, "avg_precision_at_k", "Avg precision@K")
         with r3:
             _summary_metric(summary, "hit_at_k", "Hit@K rate", as_percent=True)
-        r4, r5 = st.columns(2)
+        r4, r5, r6 = st.columns(3)
         with r4:
             _summary_metric(summary, "avg_reciprocal_rank", "Avg reciprocal rank")
         with r5:
             _summary_metric(summary, "avg_average_precision", "Avg average precision")
+        with r6:
+            _summary_metric(summary, "avg_ndcg_at_k", "Avg NDCG (ranked docs)")
 
     with section_card(
         title="Retrieval — sources",
@@ -754,9 +769,11 @@ def render_evaluation_dashboard(
         subtitle="Token F1 between generated answers and expected answers (where gold text exists).",
         min_height=0,
     ):
-        g1, _ = st.columns(2)
+        g1, g2 = st.columns(2)
         with g1:
             _summary_metric(summary, "avg_answer_f1", "Avg answer F1")
+        with g2:
+            _summary_metric(summary, "avg_semantic_similarity", "Avg semantic similarity")
 
     with section_card(
         title="Prompt selection (doc IDs in context)",
@@ -790,19 +807,22 @@ def render_evaluation_dashboard(
 
     with section_card(
         title="LLM judge",
-        subtitle="Model-assessed grounding, citation use, relevance, and hallucination signals (0–1 scores where configured).",
+        subtitle="Model-assessed grounding, citation use, relevance, correctness, and hallucination signals (0–1 scores where configured).",
         min_height=0,
     ):
-        j1, j2, j3, j4, j5 = st.columns(5)
+        j1, j2, j3 = st.columns(3)
         with j1:
             _summary_metric(summary, "avg_groundedness_score", "Avg groundedness")
         with j2:
             _summary_metric(summary, "avg_citation_faithfulness_score", "Avg citation faithfulness")
         with j3:
             _summary_metric(summary, "avg_answer_relevance_score", "Avg answer relevance")
+        j4, j5, j6 = st.columns(3)
         with j4:
-            _summary_metric(summary, "avg_hallucination_score", "Avg hallucination score")
+            _summary_metric(summary, "avg_answer_correctness", "Avg answer correctness")
         with j5:
+            _summary_metric(summary, "avg_hallucination_score", "Avg hallucination score")
+        with j6:
             _summary_metric(summary, "hallucination_rate", "Hallucination flag rate", as_percent=True)
 
     if multimodal_metrics:

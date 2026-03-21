@@ -109,16 +109,22 @@ def render_manual_evaluation_result(
                     "answer_relevance_score",
                 ),
                 (
+                    "Answer correctness",
+                    _fmt_float(aq.answer_correctness_score),
+                    "answer_correctness_score",
+                ),
+                (
                     "Hallucination score (↑ better)",
                     _fmt_float(aq.hallucination_score),
                     "hallucination_score",
                 ),
-                ("Has hallucination", _fmt_bool(aq.has_hallucination), "has_hallucination"),
             ]
         )
         _metric_row(
             [
+                ("Has hallucination", _fmt_bool(aq.has_hallucination), "has_hallucination"),
                 ("Answer F1 (gold)", _fmt_float(aq.answer_f1), "answer_f1"),
+                ("Semantic similarity", _fmt_float(aq.semantic_similarity), "semantic_similarity"),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -226,15 +232,16 @@ def render_manual_evaluation_result(
                     _fmt_float(rq.average_precision),
                     "average_precision",
                 ),
+                ("NDCG@K", _fmt_float(rq.ndcg_at_k), "ndcg_at_k"),
+            ]
+        )
+        _metric_row(
+            [
                 (
                     "Retrieved doc_ids",
                     str(rq.retrieved_doc_ids_count),
                     "retrieved_doc_ids_count",
                 ),
-            ]
-        )
-        _metric_row(
-            [
                 (
                     "Distinct cited sources",
                     str(rq.selected_source_count),

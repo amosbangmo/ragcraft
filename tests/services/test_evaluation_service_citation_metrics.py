@@ -13,6 +13,11 @@ class _StubJudge:
         return self._result
 
 
+class _StubSemanticSimilarity:
+    def compute_similarity(self, answer: str, expected_answer: str) -> float:
+        return 1.0 if (answer or "").strip() and (expected_answer or "").strip() else 0.0
+
+
 class TestEvaluationServiceCitationMetrics(unittest.TestCase):
     def test_citation_overlap_when_answer_cites_expected_source(self) -> None:
         entry = QADatasetEntry(
@@ -98,7 +103,10 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
             has_hallucination=False,
             reason=None,
         )
-        result = EvaluationService(llm_judge_service=_StubJudge(judge)).evaluate_gold_qa_dataset(
+        result = EvaluationService(
+            llm_judge_service=_StubJudge(judge),
+            semantic_similarity_service=_StubSemanticSimilarity(),
+        ).evaluate_gold_qa_dataset(
             entries=[entry],
             pipeline_runner=runner,
         )

@@ -270,6 +270,11 @@ class ManualEvaluationService:
         citation_ids_n = int(row.get("citation_doc_ids_count", 0))
 
         answer_f1 = float(row.get("answer_f1", 0.0)) if exp_ans else None
+        answer_correctness = (
+            float(row.get("answer_correctness_score", 0.0)) if has_pipeline else None
+        )
+        semantic_sim = float(row.get("semantic_similarity", 0.0)) if exp_ans else None
+        ndcg_v = float(row.get("ndcg_at_k", 0.0)) if exp_docs else None
 
         answer_stripped = (answer or "").strip()
         has_pipeline = pipeline is not None
@@ -284,6 +289,8 @@ class ManualEvaluationService:
             hallucination_score=hallucination_score if has_pipeline else None,
             has_hallucination=has_hallucination if has_pipeline else None,
             answer_f1=answer_f1,
+            answer_correctness_score=answer_correctness,
+            semantic_similarity=semantic_sim,
         )
 
         answer_citation_quality = (
@@ -312,6 +319,7 @@ class ManualEvaluationService:
             average_precision=average_precision_v,
             retrieved_doc_ids_count=int(row.get("retrieved_doc_ids_count", 0)),
             selected_source_count=int(row.get("retrieved_sources_count", 0)),
+            ndcg_at_k=ndcg_v,
         )
 
         pipeline_signals = ManualEvaluationPipelineSignals(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 
 import numpy as np
@@ -15,6 +16,7 @@ from src.services.answer_citation_metrics_service import answer_cited_doc_ids
 from src.services.correlation_service import CorrelationService
 from src.services.failure_analysis_service import FailureAnalysisService
 from src.services.llm_judge_service import LLMJudgeService
+from src.services.semantic_similarity_service import SemanticSimilarityService
 
 
 def _latency_stage_row_fields(latency: dict | None) -> dict[str, float]:
@@ -41,6 +43,7 @@ class EvaluationService:
         llm_judge_service: object | None = None,
         correlation_service: CorrelationService | None = None,
         failure_analysis_service: FailureAnalysisService | None = None,
+        semantic_similarity_service: object | None = None,
     ):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
         self._llm_judge_service = (
@@ -53,6 +56,11 @@ class EvaluationService:
             failure_analysis_service
             if failure_analysis_service is not None
             else FailureAnalysisService()
+        )
+        self._semantic_similarity_service = (
+            semantic_similarity_service
+            if semantic_similarity_service is not None
+            else SemanticSimilarityService()
         )
 
     def evaluate_gold_qa_dataset(
@@ -89,6 +97,9 @@ class EvaluationService:
         answer_relevance_values: list[float] = []
         hallucination_score_values: list[float] = []
         hallucination_flags: list[bool] = []
+        answer_correctness_values: list[float] = []
+        semantic_similarity_values: list[float] = []
+        ndcg_at_k_values: list[float] = []
 
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
@@ -168,6 +179,9 @@ class EvaluationService:
                     "groundedness_score": 0.0,
                     "citation_faithfulness_score": 0.0,
                     "answer_relevance_score": 0.0,
+                    "answer_correctness_score": 0.0,
+                    "semantic_similarity": 0.0,
+                    "ndcg_at_k": 0.0,
                     **empty_modality_row_fields(),
                 }
                 rows.append(
@@ -182,6 +196,7 @@ class EvaluationService:
                 answer_relevance_values.append(0.0)
                 hallucination_score_values.append(0.0)
                 hallucination_flags.append(True)
+                answer_correctness_values.append(0.0)
                 latency_values.append(latency_ms)
                 continue
 
@@ -241,6 +256,9 @@ class EvaluationService:
             prompt_doc_id_hit_rate_row = 0.0
             citation_doc_id_hit_rate_row = 0.0
 
+            ndcg_at_k_row = 0.0
+            semantic_similarity_row = 0.0
+
             if expected_doc_ids:
                 recall_at_k = doc_id_overlap_count / len(expected_doc_ids)
                 precision_at_k = self._compute_precision_at_k(
@@ -255,6 +273,11 @@ class EvaluationService:
                     ranked_doc_ids=ranked_doc_ids,
                     expected_doc_ids=expected_doc_ids,
                 )
+                ndcg_at_k_row = self._compute_ndcg_at_k(
+                    ranked_doc_ids=ranked_doc_ids,
+                    expected_doc_ids=expected_doc_ids,
+                )
+                ndcg_at_k_values.append(ndcg_at_k_row)
 
                 recall_at_k_values.append(recall_at_k)
                 precision_at_k_values.append(precision_at_k)
@@ -307,6 +330,11 @@ class EvaluationService:
                 )
 
                 answer_f1_values.append(answer_f1)
+                semantic_similarity_row = self._semantic_similarity_service.compute_similarity(
+                    answer,
+                    expected_answer,
+                )
+                semantic_similarity_values.append(semantic_similarity_row)
 
             confidence = float(pl.get("confidence", 0.0))
             confidence_values.append(confidence)
@@ -321,6 +349,7 @@ class EvaluationService:
                 answer=result.get("answer", ""),
                 raw_context=pl.get("raw_context", ""),
                 prompt_sources=refs_for_judge,
+                expected_answer=expected_answer if has_expected_answer else None,
             )
             groundedness = judge_result.groundedness_score
             citation_faithfulness = judge_result.citation_faithfulness_score
@@ -333,6 +362,9 @@ class EvaluationService:
             answer_relevance_values.append(answer_relevance)
             hallucination_score_values.append(hallucination_score)
             hallucination_flags.append(has_hallucination)
+            answer_correctness_values.append(
+                float(getattr(judge_result, "answer_correctness_score", 0.0))
+            )
 
             row_payload = {
                 "has_expected_answer": has_expected_answer,
@@ -343,6 +375,7 @@ class EvaluationService:
                 "precision_at_k": round(precision_at_k, 2),
                 "reciprocal_rank": round(reciprocal_rank, 2),
                 "average_precision": round(average_precision, 2),
+                "ndcg_at_k": round(ndcg_at_k_row, 2),
                 "hit_at_k": round(hit_at_k_row, 2),
                 "prompt_doc_id_hit_rate": round(prompt_doc_id_hit_rate_row, 2),
                 "citation_doc_id_hit_rate": round(citation_doc_id_hit_rate_row, 2),
@@ -352,6 +385,7 @@ class EvaluationService:
                 "source_recall": round(source_recall, 2),
                 "answer_preview": answer[:240],
                 "answer_f1": round(answer_f1, 2),
+                "semantic_similarity": round(semantic_similarity_row, 2),
                 "citation_doc_id_precision": round(citation_doc_id_precision, 2),
                 "citation_doc_id_recall": round(citation_doc_id_recall, 2),
                 "citation_doc_id_f1": round(citation_doc_id_f1, 2),
@@ -372,6 +406,10 @@ class EvaluationService:
                 "groundedness_score": round(judge_result.groundedness_score, 2),
                 "citation_faithfulness_score": round(judge_result.citation_faithfulness_score, 2),
                 "answer_relevance_score": round(judge_result.answer_relevance_score, 2),
+                "answer_correctness_score": round(
+                    float(getattr(judge_result, "answer_correctness_score", 0.0)),
+                    2,
+                ),
                 **modality_row_fields_from_pipeline(pl),
             }
             rows.append(
@@ -397,6 +435,9 @@ class EvaluationService:
             "avg_average_precision": round(float(np.mean(average_precision_values)), 2)
             if average_precision_values
             else 0.0,
+            "avg_ndcg_at_k": round(float(np.mean(ndcg_at_k_values)), 2)
+            if ndcg_at_k_values
+            else 0.0,
             "avg_confidence": round(float(np.mean(confidence_values)), 2) if confidence_values else 0.0,
             "avg_latency_ms": round(float(np.mean(latency_values)), 1) if latency_values else 0.0,
             "hit_at_k": round(doc_id_hits / entries_with_expected_doc_ids, 2)
@@ -407,6 +448,9 @@ class EvaluationService:
             else 0.0,
             "avg_answer_f1": round(float(np.mean(answer_f1_values)), 2)
             if answer_f1_values
+            else 0.0,
+            "avg_semantic_similarity": round(float(np.mean(semantic_similarity_values)), 2)
+            if semantic_similarity_values
             else 0.0,
             "avg_prompt_doc_id_precision": round(float(np.mean(prompt_doc_id_precision_values)), 2)
             if prompt_doc_id_precision_values
@@ -440,6 +484,9 @@ class EvaluationService:
             else 0.0,
             "avg_answer_relevance_score": round(float(np.mean(answer_relevance_values)), 2)
             if answer_relevance_values
+            else 0.0,
+            "avg_answer_correctness": round(float(np.mean(answer_correctness_values)), 2)
+            if answer_correctness_values
             else 0.0,
             "avg_hallucination_score": round(float(np.mean(hallucination_score_values)), 2)
             if hallucination_score_values
@@ -487,6 +534,35 @@ class EvaluationService:
             failures=failures_report,
             multimodal_metrics=multimodal_metrics,
         )
+
+    def _compute_ndcg_at_k(
+        self,
+        *,
+        ranked_doc_ids: list[str],
+        expected_doc_ids: set[str],
+    ) -> float:
+        """
+        NDCG over the full ranked list (K = len(ranked_doc_ids)).
+        Binary relevance: 1 if doc_id is in expected_doc_ids, else 0.
+        DCG uses sum(rel / log2(rank + 1)) for 1-based rank.
+        """
+        if not ranked_doc_ids or not expected_doc_ids:
+            return 0.0
+
+        def _dcg(relevances: list[float]) -> float:
+            total = 0.0
+            for i, rel in enumerate(relevances):
+                rank = i + 1
+                total += rel / math.log2(rank + 1)
+            return total
+
+        rel = [1.0 if doc_id in expected_doc_ids else 0.0 for doc_id in ranked_doc_ids]
+        dcg_score = _dcg(rel)
+        ideal = sorted(rel, reverse=True)
+        idcg = _dcg(ideal)
+        if idcg <= 0.0:
+            return 0.0
+        return dcg_score / idcg
 
     def _compute_precision_at_k(
         self,

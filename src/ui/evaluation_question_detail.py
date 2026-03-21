@@ -72,21 +72,34 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
+                label="Answer correctness",
+                value=_f(row.get("answer_correctness_score")),
+                metric_key="answer_correctness_score",
+            )
+        with c5:
+            render_metric_with_help(
                 label="Hallucination score",
                 value=_f(row.get("hallucination_score")),
                 metric_key="hallucination_score",
             )
-        with c5:
+        with c6:
             render_metric_with_help(
                 label="Has hallucination",
                 value=_f(row.get("has_hallucination")),
                 metric_key="has_hallucination",
             )
-        with c6:
+        c7, c8, _ = st.columns(3)
+        with c7:
             render_metric_with_help(
                 label="Answer F1 (gold)",
                 value=_f(row.get("answer_f1")),
                 metric_key="answer_f1",
+            )
+        with c8:
+            render_metric_with_help(
+                label="Semantic similarity",
+                value=_f(row.get("semantic_similarity")),
+                metric_key="semantic_similarity",
             )
 
     with section_card(
@@ -215,6 +228,13 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 label="Hit@K",
                 value=_f(row.get("hit_at_k")),
                 metric_key="hit_at_k",
+            )
+        c7, _, _ = st.columns(3)
+        with c7:
+            render_metric_with_help(
+                label="NDCG@K",
+                value=_f(row.get("ndcg_at_k")),
+                metric_key="ndcg_at_k",
             )
 
     with section_card(

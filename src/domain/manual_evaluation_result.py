@@ -12,7 +12,9 @@ class ManualEvaluationAnswerQuality:
     answer_relevance_score: float | None
     hallucination_score: float | None
     has_hallucination: bool | None
-    answer_f1: float | None
+    answer_f1: float | None = None
+    answer_correctness_score: float | None = None
+    semantic_similarity: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -49,6 +51,7 @@ class ManualEvaluationRetrievalQuality:
     average_precision: float | None
     retrieved_doc_ids_count: int
     selected_source_count: int
+    ndcg_at_k: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

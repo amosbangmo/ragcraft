@@ -23,6 +23,7 @@ class TestLLMJudgeService(unittest.TestCase):
                 answer_relevance_score=0.0,
                 hallucination_score=1.0,
                 has_hallucination=False,
+                answer_correctness_score=0.0,
                 reason=None,
             ),
         )
@@ -33,6 +34,7 @@ class TestLLMJudgeService(unittest.TestCase):
             content=(
                 '{"groundedness_score": 0.9, "citation_faithfulness_score": 0.85, '
                 '"answer_relevance_score": 0.88, "hallucination_score": 0.92, '
+                '"answer_correctness_score": 0.91, '
                 '"has_hallucination": false, "reason": "ok"}'
             )
         )
@@ -46,6 +48,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertEqual(r.citation_faithfulness_score, 0.85)
         self.assertEqual(r.answer_relevance_score, 0.88)
         self.assertEqual(r.hallucination_score, 0.92)
+        self.assertEqual(r.answer_correctness_score, 0.91)
         self.assertFalse(r.has_hallucination)
         self.assertEqual(r.reason, "ok")
 
@@ -66,6 +69,7 @@ class TestLLMJudgeService(unittest.TestCase):
         )
         self.assertEqual(r.groundedness_score, 0.8)
         self.assertEqual(r.answer_relevance_score, 0.7)
+        self.assertEqual(r.answer_correctness_score, 0.0)
 
     @patch("src.services.llm_judge_service.LLM")
     def test_strips_markdown_fence(self, mock_llm: MagicMock) -> None:
@@ -125,6 +129,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertEqual(r.citation_faithfulness_score, 0.7)
         self.assertEqual(r.answer_relevance_score, 0.72)
         self.assertEqual(r.hallucination_score, 0.73)
+        self.assertEqual(r.answer_correctness_score, 0.0)
         self.assertTrue(r.has_hallucination)
 
 
