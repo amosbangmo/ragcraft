@@ -139,7 +139,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
         with c6:
             render_metric_with_help(
-                label="Cited doc IDs",
+                label="Prompt source doc IDs",
                 value=_f(row.get("cited_doc_ids_count")),
                 metric_key="cited_doc_ids_count",
             )

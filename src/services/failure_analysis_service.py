@@ -146,10 +146,17 @@ class FailureAnalysisService:
         answer_f1 = _coerce_float(row.get("answer_f1"))
 
         groundedness = _coerce_float(row.get("groundedness"))
-        cit_prec = _coerce_float(row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision")))
+        prompt_doc_id_prec = _coerce_float(
+            row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))
+        )
         if groundedness is not None and groundedness < self._q:
             labels.append("grounding_failure")
-        elif exp_docs is not None and exp_docs > 0 and cit_prec is not None and cit_prec < self._q:
+        elif (
+            exp_docs is not None
+            and exp_docs > 0
+            and prompt_doc_id_prec is not None
+            and prompt_doc_id_prec < self._q
+        ):
             labels.append("grounding_failure")
 
         # Judge convention: higher hallucination_score = *less* hallucination (better grounded in context).

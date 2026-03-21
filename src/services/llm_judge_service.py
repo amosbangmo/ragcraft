@@ -7,6 +7,9 @@ from typing import Any
 from src.core.config import LLM
 from src.domain.llm_judge_result import LLMJudgeResult
 
+# Older judge prompts emitted this key for the same metric as prompt_source_alignment_score.
+_LEGACY_PROMPT_SOURCE_ALIGNMENT_JSON_KEY = "citation_faithfulness_score"
+
 
 class LLMJudgeService:
     """
@@ -135,7 +138,7 @@ ASSISTANT ANSWER:
             g = self._read_score(data, "groundedness_score", text)
             c = self._read_score(data, "prompt_source_alignment_score", text)
             if c is None:
-                c = self._read_score(data, "citation_faithfulness_score", text)
+                c = self._read_score(data, _LEGACY_PROMPT_SOURCE_ALIGNMENT_JSON_KEY, text)
             r = self._read_score(data, "answer_relevance_score", text)
             h = self._read_score(data, "hallucination_score", text)
             if g is None and c is None and r is None and h is None:
@@ -151,7 +154,10 @@ ASSISTANT ANSWER:
         g = self._regex_float(text, r'"groundedness_score"\s*:\s*' + self._FLOAT_RE)
         c = self._regex_float(text, r'"prompt_source_alignment_score"\s*:\s*' + self._FLOAT_RE)
         if c is None:
-            c = self._regex_float(text, r'"citation_faithfulness_score"\s*:\s*' + self._FLOAT_RE)
+            c = self._regex_float(
+                text,
+                rf'"{_LEGACY_PROMPT_SOURCE_ALIGNMENT_JSON_KEY}"\s*:\s*' + self._FLOAT_RE,
+            )
         r = self._regex_float(text, r'"answer_relevance_score"\s*:\s*' + self._FLOAT_RE)
         h = self._regex_float(text, r'"hallucination_score"\s*:\s*' + self._FLOAT_RE)
         if g is None and c is None and r is None and h is None:

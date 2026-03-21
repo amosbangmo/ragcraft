@@ -50,7 +50,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertEqual(r.reason, "ok")
 
     @patch("src.services.llm_judge_service.LLM")
-    def test_legacy_citation_faithfulness_key_still_parsed(self, mock_llm: MagicMock) -> None:
+    def test_legacy_prompt_source_alignment_json_key_still_parsed(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
                 '{"groundedness_score": 0.8, "citation_faithfulness_score": 0.77, '

@@ -669,16 +669,16 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("Confidence vs groundedness: missing columns.")
 
         rel = _numeric_series(df, "answer_relevance_score", "answer_relevance")
-        faith = _numeric_series(
+        prompt_align = _numeric_series(
             df,
             "prompt_source_alignment_score",
             "prompt_source_alignment",
             "citation_faithfulness_score",
             "citation_faithfulness",
         )
-        if rel is not None and faith is not None:
+        if rel is not None and prompt_align is not None:
             scatter2 = pd.DataFrame(
-                {"prompt_source_alignment_score": faith, "answer_relevance_score": rel}
+                {"prompt_source_alignment_score": prompt_align, "answer_relevance_score": rel}
             ).dropna()
             if len(scatter2) >= 1:
                 st.caption("Answer relevance vs prompt source alignment (judge; uses prompt sources + context)")
@@ -698,9 +698,9 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
                 )
                 st.altair_chart(sc2_chart, use_container_width=True)
             else:
-                st.caption("Not enough paired relevance / faithfulness points.")
+                st.caption("Not enough paired relevance / prompt source alignment points.")
         else:
-            st.caption("Relevance vs faithfulness: missing columns.")
+            st.caption("Relevance vs prompt source alignment: missing columns.")
 
 
 def render_evaluation_dashboard(
@@ -746,7 +746,7 @@ def render_evaluation_dashboard(
 
     with section_card(
         title="LLM-as-a-judge",
-        subtitle="Groundedness, faithfulness, relevance, hallucination score, and flagged-row rate.",
+        subtitle="Groundedness, prompt source alignment, relevance, hallucination score, and flagged-row rate.",
         min_height=0,
     ):
         j1, j2, j3, j4, j5 = st.columns(5)

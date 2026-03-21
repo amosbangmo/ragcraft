@@ -208,9 +208,9 @@ class EvaluationService:
                 if ref.get("source_file")
             }
 
-            # Doc/source sets for citation metrics are intentionally derived from the
-            # explicit prompt source objects. This distinguishes "selected"
-            # prompt assets from what the answer surfaces as citations.
+            # Doc/source sets for prompt-source overlap metrics are intentionally derived
+            # from the explicit prompt source objects. This distinguishes selected prompt
+            # assets from any future answer-surface citation parsing.
             cited_doc_ids = {
                 ref.get("doc_id")
                 for ref in prompt_sources
