@@ -1,5 +1,3 @@
-import logging
-from dataclasses import replace
 from time import perf_counter
 from typing import Any
 
@@ -12,38 +10,26 @@ from src.domain.pipeline_payloads import (
     ContextCompressionStats,
     PipelineBuildResult,
     SectionExpansionStats,
-    SummaryRecallResult,
 )
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
-from src.domain.retrieval_filters import (
-    RetrievalFilters,
-    filter_summary_documents_by_filters,
-    vector_search_fetch_k,
-)
-from src.domain.retrieval_settings import RetrievalSettings
-from src.domain.retrieval_strategy import RetrievalStrategy
+from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.source_citation import SourceCitation
-from src.services.adaptive_retrieval_service import AdaptiveRetrievalService
 from src.services.confidence_service import ConfidenceService
 from src.services.contextual_compression_service import ContextualCompressionService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
-from src.services.hybrid_retrieval_service import HybridRetrievalService
 from src.services.layout_context_service import LayoutContextService
 from src.services.multimodal_orchestration_service import MultimodalOrchestrationService
 from src.services.prompt_builder_service import PromptBuilderService
-from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
-from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
 from src.services.retrieval_settings_service import RetrievalSettingsService
 from src.services.section_retrieval_service import SectionRetrievalService
 from src.services.source_citation_service import SourceCitationService
+from src.services.summary_recall_service import SummaryRecallService
 from src.services.table_qa_service import TableQAService
 from src.services.vectorstore_service import VectorStoreService
-
-logger = logging.getLogger(__name__)
 
 
 class RAGService:
@@ -76,29 +62,25 @@ class RAGService:
         self.reranking_service = reranking_service
         self.confidence_service = ConfidenceService()
         self.source_citation_service = SourceCitationService()
-        self.query_rewrite_service = QueryRewriteService(
-            max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
-        )
-        self.hybrid_retrieval_service = HybridRetrievalService(
-            k1=RETRIEVAL_CONFIG.bm25_k1,
-            b=RETRIEVAL_CONFIG.bm25_b,
-            epsilon=RETRIEVAL_CONFIG.bm25_epsilon,
-        )
         self.prompt_builder_service = PromptBuilderService(
             max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
         )
-        self.query_intent_service = QueryIntentService()
+        self.retrieval_settings_service = (
+            retrieval_settings_service or RetrievalSettingsService()
+        )
         self.table_qa_service = TableQAService()
-        self.adaptive_retrieval_service = AdaptiveRetrievalService()
+        self.summary_recall_service = SummaryRecallService(
+            vectorstore_service=vectorstore_service,
+            docstore_service=docstore_service,
+            retrieval_settings_service=self.retrieval_settings_service,
+            table_qa_service=self.table_qa_service,
+        )
         self.contextual_compression_service = ContextualCompressionService()
         self.query_log_service = query_log_service
         self.section_retrieval_service = SectionRetrievalService()
         self.layout_context_service = LayoutContextService()
         self.multimodal_orchestration_service = MultimodalOrchestrationService()
-        self.retrieval_settings_service = (
-            retrieval_settings_service or RetrievalSettingsService()
-        )
 
     @property
     def config(self) -> Any:
@@ -211,246 +193,6 @@ class RAGService:
             "rerank_score": rerank_score,
         }
 
-    def _rewrite_question(
-        self,
-        question: str,
-        chat_history: list[str],
-        *,
-        enable_query_rewrite: bool,
-        settings: RetrievalSettings,
-    ) -> str:
-        if not enable_query_rewrite:
-            return question
-
-        return self.query_rewrite_service.rewrite(
-            question=question,
-            chat_history=chat_history,
-            max_history_messages=settings.query_rewrite_max_history_messages,
-        )
-
-    def _merge_summary_docs(
-        self,
-        *,
-        settings: RetrievalSettings,
-        primary_docs: list[Document],
-        secondary_docs: list[Document],
-        max_docs: int | None = None,
-    ) -> list[Document]:
-        """
-        Merge two ranked document lists using weighted Reciprocal Rank Fusion (RRF).
-
-        Final score for each doc_id:
-          beta * (1 / (rrf_k + rank_semantic)) + (1 - beta) * (1 / (rrf_k + rank_lexical))
-        for each list where the doc appears (primary = semantic/FAISS, secondary = BM25).
-        """
-        rrf_k = settings.rrf_k
-        hybrid_beta = settings.hybrid_beta
-
-        primary_ranks: dict[str, int] = {}
-        secondary_ranks: dict[str, int] = {}
-        docs_by_id: dict[str, Document] = {}
-        first_seen_order: dict[str, int] = {}
-
-        def _ingest(docs: list[Document], *, target_ranks: dict[str, int]) -> None:
-            for rank, doc in enumerate(docs, start=1):
-                doc_id = doc.metadata.get("doc_id")
-                if not doc_id:
-                    continue
-
-                # Keep the earliest (best) rank only.
-                target_ranks.setdefault(doc_id, rank)
-
-                # Preserve a deterministic representative doc for the fused output.
-                if doc_id not in docs_by_id:
-                    docs_by_id[doc_id] = doc
-                    first_seen_order[doc_id] = len(first_seen_order)
-
-        _ingest(primary_docs, target_ranks=primary_ranks)
-        _ingest(secondary_docs, target_ranks=secondary_ranks)
-
-        fused: list[tuple[str, float, int, int]] = []
-        all_doc_ids = set(docs_by_id.keys())
-
-        for doc_id in all_doc_ids:
-            score = 0.0
-            min_rank = 10**18
-
-            if doc_id in primary_ranks:
-                rank = primary_ranks[doc_id]
-                score += hybrid_beta * (1.0 / (rrf_k + rank))
-                min_rank = min(min_rank, rank)
-
-            if doc_id in secondary_ranks:
-                rank = secondary_ranks[doc_id]
-                score += (1.0 - hybrid_beta) * (1.0 / (rrf_k + rank))
-                min_rank = min(min_rank, rank)
-
-            fused.append((doc_id, score, min_rank, first_seen_order[doc_id]))
-
-        # Sort by fused score desc, then by best (lowest) rank asc, then by first-seen order asc.
-        fused.sort(key=lambda item: (-item[1], item[2], item[3]))
-
-        limit = max_docs if max_docs is not None else len(fused)
-        fused_doc_ids = [doc_id for doc_id, _, _, _ in fused[:limit]]
-        return [docs_by_id[doc_id] for doc_id in fused_doc_ids]
-
-    def _retrieve_summary_docs(
-        self,
-        *,
-        settings: RetrievalSettings,
-        project: Project,
-        retrieval_query: str,
-        enable_hybrid_retrieval: bool,
-        filters: RetrievalFilters | None = None,
-        similarity_search_k: int | None = None,
-    ) -> dict:
-        k_vec = (
-            int(similarity_search_k)
-            if similarity_search_k is not None
-            else int(settings.similarity_search_k)
-        )
-        k_vec = max(1, k_vec)
-        fetch_k = vector_search_fetch_k(base_k=k_vec, filters=filters)
-        vector_summary_docs = self.vectorstore_service.similarity_search(
-            project,
-            retrieval_query,
-            k=fetch_k,
-        )
-        if filters is not None and not filters.is_empty():
-            vector_summary_docs = filter_summary_documents_by_filters(
-                vector_summary_docs,
-                filters,
-            )[:k_vec]
-
-        bm25_summary_docs: list[Document] = []
-
-        if enable_hybrid_retrieval:
-            project_assets = self.docstore_service.list_assets_for_project(
-                user_id=project.user_id,
-                project_id=project.project_id,
-            )
-
-            bm25_summary_docs = self.hybrid_retrieval_service.lexical_search(
-                query=retrieval_query,
-                assets=project_assets,
-                k=settings.bm25_search_k,
-                filters=filters,
-                k1=settings.bm25_k1,
-                b=settings.bm25_b,
-                epsilon=settings.bm25_epsilon,
-            )
-
-        merged_limit = k_vec
-        if enable_hybrid_retrieval:
-            merged_limit += int(settings.hybrid_search_k)
-
-        recalled_summary_docs = self._merge_summary_docs(
-            settings=settings,
-            primary_docs=vector_summary_docs,
-            secondary_docs=bm25_summary_docs,
-            max_docs=merged_limit,
-        )
-
-        return {
-            "vector_summary_docs": vector_summary_docs,
-            "bm25_summary_docs": bm25_summary_docs,
-            "recalled_summary_docs": recalled_summary_docs,
-        }
-
-    def _summary_recall_stage(
-        self,
-        project: Project,
-        question: str,
-        chat_history: list[str],
-        *,
-        enable_query_rewrite_override: bool | None = None,
-        enable_hybrid_retrieval_override: bool | None = None,
-        filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
-    ) -> SummaryRecallResult:
-        rss = self.retrieval_settings_service
-        settings = rss.merge(
-            rss.from_project(project.user_id, project.project_id),
-            retrieval_settings,
-        )
-        if enable_query_rewrite_override is not None:
-            settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
-        if enable_hybrid_retrieval_override is not None:
-            settings = replace(settings, enable_hybrid_retrieval=enable_hybrid_retrieval_override)
-
-        logger.debug(
-            "Retrieval settings (project_id=%s): %s",
-            project.project_id,
-            settings.to_log_dict(),
-        )
-
-        enable_query_rewrite = settings.enable_query_rewrite
-        enable_hybrid_retrieval = settings.enable_hybrid_retrieval
-
-        t0 = perf_counter()
-        rewritten_question = self._rewrite_question(
-            question,
-            chat_history,
-            enable_query_rewrite=enable_query_rewrite,
-            settings=settings,
-        )
-        query_rewrite_ms = (perf_counter() - t0) * 1000.0
-
-        query_intent = self.query_intent_service.classify(rewritten_question)
-        table_aware_qa_enabled = self.table_qa_service.is_table_query(
-            query_intent=query_intent,
-            question=rewritten_question,
-        )
-
-        use_adaptive_retrieval = enable_hybrid_retrieval_override is None
-        if use_adaptive_retrieval:
-            strategy = self.adaptive_retrieval_service.choose_strategy(
-                settings=settings,
-                intent=query_intent,
-                rewritten_query=rewritten_question,
-            )
-            enable_hybrid_retrieval = strategy.use_hybrid
-            similarity_search_k = strategy.k
-        else:
-            strategy = RetrievalStrategy(
-                k=max(1, int(settings.similarity_search_k)),
-                use_hybrid=bool(enable_hybrid_retrieval),
-                apply_filters=True,
-            )
-            similarity_search_k = strategy.k
-
-        filters_for_retrieval = (
-            filters if filters is not None and not filters.is_empty() else None
-        )
-
-        t0 = perf_counter()
-        retrieval_payload = self._retrieve_summary_docs(
-            settings=settings,
-            project=project,
-            retrieval_query=rewritten_question,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
-            filters=filters_for_retrieval,
-            similarity_search_k=similarity_search_k,
-        )
-        retrieval_ms = (perf_counter() - t0) * 1000.0
-
-        return SummaryRecallResult(
-            settings=settings,
-            rewritten_question=rewritten_question,
-            query_rewrite_ms=query_rewrite_ms,
-            query_intent=query_intent,
-            table_aware_qa_enabled=table_aware_qa_enabled,
-            use_adaptive_retrieval=use_adaptive_retrieval,
-            strategy=strategy,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
-            enable_query_rewrite=enable_query_rewrite,
-            filters_for_retrieval=filters_for_retrieval,
-            vector_summary_docs=retrieval_payload["vector_summary_docs"],
-            bm25_summary_docs=retrieval_payload["bm25_summary_docs"],
-            recalled_summary_docs=retrieval_payload["recalled_summary_docs"],
-            retrieval_ms=retrieval_ms,
-        )
-
     def preview_summary_recall(
         self,
         project: Project,
@@ -468,7 +210,7 @@ class RAGService:
         if chat_history is None:
             chat_history = []
 
-        bundle = self._summary_recall_stage(
+        bundle = self.summary_recall_service.summary_recall_stage(
             project,
             question,
             chat_history,
@@ -507,7 +249,7 @@ class RAGService:
         if chat_history is None:
             chat_history = []
 
-        bundle = self._summary_recall_stage(
+        bundle = self.summary_recall_service.summary_recall_stage(
             project,
             question,
             chat_history,

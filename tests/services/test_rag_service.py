@@ -168,7 +168,7 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(
+        merged = service.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -192,7 +192,7 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(
+        merged = service.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -216,7 +216,7 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(
+        merged = service.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -240,7 +240,7 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(
+        merged = service.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -254,8 +254,8 @@ class TestRAGService(unittest.TestCase):
         project = Project(user_id="u1", project_id="p1")
 
         with patch.object(
-            service,
-            "_retrieve_summary_docs",
+            service.summary_recall_service,
+            "retrieve_summary_docs",
             return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
         ):
             result = service._run_pipeline(project=project, question="q")
@@ -298,10 +298,10 @@ class TestRAGService(unittest.TestCase):
         ]
 
         with (
-            patch.object(service, "_rewrite_question", return_value="rewritten"),
+            patch.object(service.summary_recall_service, "rewrite_question", return_value="rewritten"),
             patch.object(
-                service,
-                "_retrieve_summary_docs",
+                service.summary_recall_service,
+                "retrieve_summary_docs",
                 return_value={
                     "vector_summary_docs": recalled_summary_docs,
                     "bm25_summary_docs": [],
