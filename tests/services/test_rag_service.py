@@ -258,7 +258,7 @@ class TestRAGService(unittest.TestCase):
             "retrieve_summary_docs",
             return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
         ):
-            result = service._run_pipeline(project=project, question="q")
+            result = service.build_pipeline(project=project, question="q")
 
         self.assertIsNone(result)
 
@@ -328,7 +328,9 @@ class TestRAGService(unittest.TestCase):
             docstore_service.list_assets_for_source_file.return_value = raw_assets
             reranking_service.rerank.return_value = reranked_assets
 
-            payload = service._run_pipeline(project=project, question="question", chat_history=["h1"])
+            payload = service.build_pipeline(
+                project=project, question="question", chat_history=["h1"]
+            )
 
         self.assertIsNotNone(payload)
         self.assertEqual(payload.rewritten_question, "rewritten")
@@ -370,7 +372,7 @@ class TestRAGService(unittest.TestCase):
         self.assertIsInstance(payload.context_compression, ContextCompressionStats)
         self.assertGreaterEqual(len(payload.pre_rerank_raw_assets), 1)
 
-    @patch("src.services.rag_service.LLM")
+    @patch("src.services.answer_generation_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
@@ -398,7 +400,7 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
-        with patch.object(service, "_run_pipeline", return_value=pipeline):
+        with patch.object(service, "build_pipeline", return_value=pipeline):
             response = service.ask(project=project, question="Q", chat_history=[])
 
         self.assertEqual(response.answer, "final answer")
@@ -407,7 +409,7 @@ class TestRAGService(unittest.TestCase):
         self.assertGreaterEqual(response.latency["answer_generation_ms"], 0.0)
         self.assertGreater(response.latency["total_ms"], 0.0)
 
-    @patch("src.services.rag_service.LLM")
+    @patch("src.services.answer_generation_service.LLM")
     def test_ask_wraps_llm_errors(self, mock_llm):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
@@ -420,11 +422,11 @@ class TestRAGService(unittest.TestCase):
             confidence=0.0,
         )
 
-        with patch.object(service, "_run_pipeline", return_value=pipeline):
+        with patch.object(service, "build_pipeline", return_value=pipeline):
             with self.assertRaises(LLMServiceError):
                 service.ask(project=project, question="Q", chat_history=[])
 
-    @patch("src.services.rag_service.LLM")
+    @patch("src.services.answer_generation_service.LLM")
     def test_ask_emits_query_log_when_configured(self, mock_llm):
         log_service = MagicMock()
         service, *_ = self._build_service(query_log_service=log_service)
@@ -444,12 +446,12 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
-        with patch.object(service, "_run_pipeline", return_value=pipeline) as run_pipeline:
+        with patch.object(service, "build_pipeline", return_value=pipeline) as build_pipeline:
             service.ask(project=project, question="Q", chat_history=[])
 
-        run_pipeline.assert_called_once()
-        _, kwargs = run_pipeline.call_args
-        self.assertTrue(kwargs.get("defer_query_log"))
+        build_pipeline.assert_called_once()
+        _, kwargs = build_pipeline.call_args
+        self.assertFalse(kwargs.get("emit_query_log"))
         log_service.log_query.assert_called_once()
         payload = log_service.log_query.call_args.kwargs["payload"]
         self.assertEqual(payload["question"], "Q")
