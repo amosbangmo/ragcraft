@@ -8,6 +8,9 @@ from typing import Any
 
 import streamlit as st
 
+from src.domain.evaluation_display_text import format_bool_toggle_on_off
+
+
 def _is_benchmark_export_artifact(obj: Any) -> bool:
     """
     Structural check so export UI survives Streamlit hot-reload (multiple class objects
@@ -71,28 +74,21 @@ def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
     with st.expander("Raw export metadata (JSON)", expanded=False):
         st.json(meta.to_dict())
 
-    dl1, dl2, dl3 = st.columns(3)
-    with dl1:
-        st.download_button(
-            label="JSON report",
-            data=export.json_bytes,
-            file_name=export.json_filename,
-            mime="application/json",
-            use_container_width=True,
-        )
-    with dl2:
-        st.download_button(
-            label="CSV report",
-            data=export.csv_bytes,
-            file_name=export.csv_filename,
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with dl3:
-        st.download_button(
-            label="Markdown report",
-            data=export.markdown_bytes,
-            file_name=export.markdown_filename,
-            mime="text/markdown",
-            use_container_width=True,
-        )
+    dl_cols = st.columns(3)
+    for col, spec in zip(
+        dl_cols,
+        (
+            ("JSON report", "json_bytes", "json_filename", "application/json"),
+            ("CSV report", "csv_bytes", "csv_filename", "text/csv"),
+            ("Markdown report", "markdown_bytes", "markdown_filename", "text/markdown"),
+        ),
+    ):
+        label, bytes_attr, name_attr, mime = spec
+        with col:
+            st.download_button(
+                label=label,
+                data=getattr(export, bytes_attr),
+                file_name=getattr(export, name_attr),
+                mime=mime,
+                use_container_width=True,
+            )

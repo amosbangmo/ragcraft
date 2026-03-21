@@ -22,6 +22,7 @@ from src.ui.evaluation_history_labels import (
     build_benchmark_history_entry_label,
     format_benchmark_run_selector_label,
 )
+from src.ui.evaluation_summary_metrics import render_summary_metric_from_mapping
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
@@ -86,31 +87,6 @@ def _run_label(entry: dict[str, Any], index: int) -> str:
     return format_benchmark_run_selector_label(entry, index)
 
 
-def _coerce_float(value: object) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _summary_metric_cell(summary: dict, key: str, label: str, *, as_percent: bool = False) -> None:
-    raw = summary.get(key)
-    num = _coerce_float(raw)
-    if num is None:
-        render_metric_with_help(label=label, value="—", metric_key=key)
-        return
-    if as_percent:
-        render_metric_with_help(
-            label=label, value=f"{num * 100:.1f}%", metric_key=key
-        )
-    else:
-        render_metric_with_help(label=label, value=num, metric_key=key)
-
-
 def _render_dataset_overview(
     *,
     project_id: str,
@@ -145,21 +121,27 @@ def _render_dataset_overview(
         )
         m1, m2, m3 = st.columns(3)
         with m1:
-            _summary_metric_cell(summary, "avg_groundedness_score", "Avg groundedness")
+            render_summary_metric_from_mapping(
+                summary, "avg_groundedness_score", "Avg groundedness"
+            )
         with m2:
-            _summary_metric_cell(summary, "avg_recall_at_k", "Avg Recall@K")
+            render_summary_metric_from_mapping(summary, "avg_recall_at_k", "Avg Recall@K")
         with m3:
-            _summary_metric_cell(
+            render_summary_metric_from_mapping(
                 summary, "hallucination_rate", "Hallucination rate", as_percent=True
             )
 
         m4, m5, m6 = st.columns(3)
         with m4:
-            _summary_metric_cell(summary, "avg_answer_relevance_score", "Avg answer relevance")
+            render_summary_metric_from_mapping(
+                summary, "avg_answer_relevance_score", "Avg answer relevance"
+            )
         with m5:
-            _summary_metric_cell(summary, "avg_citation_doc_id_f1", "Avg citation doc ID F1")
+            render_summary_metric_from_mapping(
+                summary, "avg_citation_doc_id_f1", "Avg citation doc ID F1"
+            )
         with m6:
-            _summary_metric_cell(summary, "avg_confidence", "Avg confidence")
+            render_summary_metric_from_mapping(summary, "avg_confidence", "Avg confidence")
 
 
 def _render_dataset_evaluation_run_and_results(

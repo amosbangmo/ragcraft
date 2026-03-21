@@ -16,33 +16,12 @@ import pandas as pd
 import streamlit as st
 
 from src.services.benchmark_comparison_service import LOWER_IS_BETTER_METRICS
+from src.ui.evaluation_summary_metrics import (
+    coerce_float_for_summary_metric as _coerce_float,
+    render_summary_metric_from_mapping as _summary_metric,
+)
 from src.ui.metric_help import render_metric_with_help
 from src.ui.section_card import inject_section_card_styles, section_card
-
-
-def _coerce_float(value: object) -> float | None:
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _summary_metric(summary: dict, key: str, label: str, *, as_percent: bool = False) -> None:
-    raw = summary.get(key)
-    num = _coerce_float(raw)
-    if num is None:
-        render_metric_with_help(label=label, value="—", metric_key=key)
-        return
-    if as_percent:
-        render_metric_with_help(
-            label=label, value=f"{num * 100:.1f}%", metric_key=key
-        )
-    else:
-        render_metric_with_help(label=label, value=num, metric_key=key)
 
 
 def _coerce_hallucination_flag(value: object) -> bool:
@@ -429,33 +408,17 @@ def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
 
         q1, q2 = st.columns(2)
         with q1:
-            tc = multimodal_metrics.get("table_correctness")
-            if tc is None:
-                render_metric_with_help(
-                    label="Table rows — avg answer F1",
-                    value="—",
-                    metric_key="table_correctness",
-                )
-            else:
-                render_metric_with_help(
-                    label="Table rows — avg answer F1",
-                    value=float(tc),
-                    metric_key="table_correctness",
-                )
+            _summary_metric(
+                multimodal_metrics,
+                "table_correctness",
+                "Table rows — avg answer F1",
+            )
         with q2:
-            ig = multimodal_metrics.get("image_groundedness")
-            if ig is None:
-                render_metric_with_help(
-                    label="Image rows — avg groundedness",
-                    value="—",
-                    metric_key="image_groundedness",
-                )
-            else:
-                render_metric_with_help(
-                    label="Image rows — avg groundedness",
-                    value=float(ig),
-                    metric_key="image_groundedness",
-                )
+            _summary_metric(
+                multimodal_metrics,
+                "image_groundedness",
+                "Image rows — avg groundedness",
+            )
 
         eligible = multimodal_metrics.get("eligible_rows")
         if eligible is not None:
@@ -783,6 +746,14 @@ def _render_health_overview(
         )
 
 
+def _comparison_sample_captions(df: pd.DataFrame, heading: str, *, suffix: str = "") -> None:
+    if df.empty:
+        return
+    st.markdown(heading)
+    for _, row in df.head(5).iterrows():
+        st.caption(f"{row['metric']}: Δ = {row['delta']}{suffix}")
+
+
 def _render_benchmark_comparison(
     comparison: list[dict[str, Any]] | None,
     failure_comparison: list[dict[str, Any]] | None,
@@ -818,22 +789,22 @@ def _render_benchmark_comparison(
                 hi_improved = improved[~improved["metric"].isin(LOWER_IS_BETTER_METRICS)]
                 lo_regressed = regressed[regressed["metric"].isin(LOWER_IS_BETTER_METRICS)]
                 hi_regressed = regressed[~regressed["metric"].isin(LOWER_IS_BETTER_METRICS)]
-                if not hi_improved.empty:
-                    st.markdown("**Improvements — higher is better (sample)**")
-                    for _, row in hi_improved.head(5).iterrows():
-                        st.caption(f"{row['metric']}: Δ = {row['delta']}")
-                if not lo_improved.empty:
-                    st.markdown("**Improvements — lower is better (sample)**")
-                    for _, row in lo_improved.head(5).iterrows():
-                        st.caption(f"{row['metric']}: Δ = {row['delta']} (negative means B is lower than A)")
-                if not hi_regressed.empty:
-                    st.markdown("**Regressions — higher is better (sample)**")
-                    for _, row in hi_regressed.head(5).iterrows():
-                        st.caption(f"{row['metric']}: Δ = {row['delta']}")
-                if not lo_regressed.empty:
-                    st.markdown("**Regressions — lower is better (sample)**")
-                    for _, row in lo_regressed.head(5).iterrows():
-                        st.caption(f"{row['metric']}: Δ = {row['delta']} (positive means more failures/slower/more flags in B)")
+                _comparison_sample_captions(
+                    hi_improved, "**Improvements — higher is better (sample)**"
+                )
+                _comparison_sample_captions(
+                    lo_improved,
+                    "**Improvements — lower is better (sample)**",
+                    suffix=" (negative means B is lower than A)",
+                )
+                _comparison_sample_captions(
+                    hi_regressed, "**Regressions — higher is better (sample)**"
+                )
+                _comparison_sample_captions(
+                    lo_regressed,
+                    "**Regressions — lower is better (sample)**",
+                    suffix=" (positive means more failures/slower/more flags in B)",
+                )
         if failure_comparison is not None:
             fdf = pd.DataFrame(failure_comparison)
             if not fdf.empty:

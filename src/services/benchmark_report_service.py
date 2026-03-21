@@ -10,6 +10,12 @@ from typing import Any
 
 from src.domain.benchmark_metric_taxonomy import markdown_family_guide_lines
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRunMetadata
+from src.domain.evaluation_display_text import (
+    BENCHMARK_MARKDOWN_NOTE_JUDGE_AGGREGATES,
+    BENCHMARK_MARKDOWN_NOTE_JUDGE_ROW_FIELDS,
+    BENCHMARK_MARKDOWN_NOTE_PIPELINE_VS_JUDGE,
+    format_bool_toggle_on_off,
+)
 
 
 def _utc_timestamp_for_filename(when: datetime) -> str:
@@ -198,11 +204,9 @@ class BenchmarkReportService:
                 "",
                 "## Notes",
                 "",
-                "- Summary **LLM judge** averages (`avg_*` judge fields, `hallucination_rate`) exclude rows where "
-                "`judge_failed` is true.",
-                "- **`pipeline_failure_rate`** counts only rows where the answer pipeline did not complete "
-                "(distinct from judge failures).",
-                "- Per-row judge fields may be blank / `None` when the judge failed for that entry — that is not a score of zero.",
+                BENCHMARK_MARKDOWN_NOTE_JUDGE_AGGREGATES,
+                BENCHMARK_MARKDOWN_NOTE_PIPELINE_VS_JUDGE,
+                BENCHMARK_MARKDOWN_NOTE_JUDGE_ROW_FIELDS,
                 "",
                 *markdown_family_guide_lines(),
                 "",

@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from src.domain.evaluation_display_text import format_bool_toggle_on_off
+
 
 def build_benchmark_history_entry_label(
     *,
@@ -27,9 +29,9 @@ def build_benchmark_history_entry_label(
     hy_on = enable_hybrid_retrieval is True
     settings_bits: list[str] = []
     if enable_query_rewrite is not None:
-        settings_bits.append("query rewrite on" if qr_on else "query rewrite off")
+        settings_bits.append(f"query rewrite {format_bool_toggle_on_off(qr_on)}")
     if enable_hybrid_retrieval is not None:
-        settings_bits.append("hybrid on" if hy_on else "hybrid off")
+        settings_bits.append(f"hybrid {format_bool_toggle_on_off(hy_on)}")
     settings = " · ".join(settings_bits)
     if rid and settings:
         return f"{tlabel} · {rid} · {settings}"
@@ -50,5 +52,7 @@ def format_benchmark_run_selector_label(entry: dict[str, Any], index: int) -> st
     qr = entry.get("enable_query_rewrite")
     hy = entry.get("enable_hybrid_retrieval")
     if isinstance(qr, bool) and isinstance(hy, bool):
-        parts.append(f"QR {'on' if qr else 'off'} · Hyb {'on' if hy else 'off'}")
+        parts.append(
+            f"QR {format_bool_toggle_on_off(qr)} · Hyb {format_bool_toggle_on_off(hy)}"
+        )
     return " — ".join(parts)

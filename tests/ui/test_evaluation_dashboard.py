@@ -10,12 +10,10 @@ from src.ui import evaluation_dashboard as ed
 
 
 class TestEvaluationDashboardCoercions(unittest.TestCase):
-    def test_coerce_float(self) -> None:
-        self.assertIsNone(ed._coerce_float(None))
-        self.assertIsNone(ed._coerce_float("x"))
-        self.assertIsNone(ed._coerce_float(True))
-        self.assertEqual(ed._coerce_float(3), 3.0)
-        self.assertEqual(ed._coerce_float("2.5"), 2.5)
+    def test_coerce_float_alias_matches_shared_helper(self) -> None:
+        from src.ui.evaluation_summary_metrics import coerce_float_for_summary_metric
+
+        self.assertIs(ed._coerce_float, coerce_float_for_summary_metric)
 
     def test_coerce_hallucination_flag(self) -> None:
         self.assertTrue(ed._coerce_hallucination_flag(True))
