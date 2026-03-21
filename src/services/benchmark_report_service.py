@@ -129,6 +129,10 @@ class BenchmarkReportService:
             payload["correlations"] = dict(result.correlations)
         if result.failures is not None:
             payload["failures"] = dict(result.failures)
+        if result.multimodal_metrics is not None:
+            payload["multimodal_metrics"] = dict(result.multimodal_metrics)
+        if result.auto_debug is not None:
+            payload["auto_debug"] = [dict(item) for item in result.auto_debug]
         text = json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default)
         return text.encode("utf-8")
 

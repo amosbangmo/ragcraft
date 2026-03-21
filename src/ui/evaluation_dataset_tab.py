@@ -107,6 +107,7 @@ def _render_dataset_evaluation_run_and_results(
     correlations: dict[str, Any] | None = None,
     failures: dict[str, Any] | None = None,
     multimodal_metrics: dict[str, Any] | None = None,
+    auto_debug: list[dict[str, str]] | None = None,
 ) -> None:
     st.markdown("---")
     st.markdown("##### Run dataset evaluation")
@@ -282,6 +283,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
     correlations = cast(dict[str, Any] | None, payload.get("correlations"))
     failures = cast(dict[str, Any] | None, payload.get("failures"))
     multimodal_metrics = cast(dict[str, Any] | None, payload.get("multimodal_metrics"))
+    auto_debug = cast(list[dict[str, str]] | None, payload.get("auto_debug"))
 
     st.caption(
         "Benchmark the gold QA dataset for this project: run evaluation and review aggregates on **Overview**, "
@@ -310,6 +312,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             correlations=correlations,
             failures=failures,
             multimodal_metrics=multimodal_metrics,
+            auto_debug=auto_debug,
         )
         _render_reports_exports_and_benchmark_json(
             app=app,

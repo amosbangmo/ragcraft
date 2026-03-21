@@ -96,6 +96,7 @@ class BenchmarkResult:
     Optional ``failures`` holds rule-based diagnostics from
     :class:`~src.services.failure_analysis_service.FailureAnalysisService` (counts, examples, etc.).
     Optional ``multimodal_metrics`` holds aggregates from modality-aware evaluation (usage rates, conditional scores).
+    Optional ``auto_debug`` holds system-level suggestion cards from :class:`~src.services.auto_debug_service.AutoDebugService`.
     """
 
     summary: BenchmarkSummary
@@ -103,6 +104,7 @@ class BenchmarkResult:
     correlations: dict[str, Any] | None = None
     failures: dict[str, Any] | None = None
     multimodal_metrics: dict[str, Any] | None = None
+    auto_debug: list[dict[str, str]] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -115,6 +117,8 @@ class BenchmarkResult:
             out["failures"] = dict(self.failures)
         if self.multimodal_metrics is not None:
             out["multimodal_metrics"] = dict(self.multimodal_metrics)
+        if self.auto_debug is not None:
+            out["auto_debug"] = [dict(item) for item in self.auto_debug]
         return out
 
     @classmethod
@@ -151,12 +155,25 @@ class BenchmarkResult:
         multimodal_metrics: dict[str, Any] | None = None
         if isinstance(mm_raw, dict):
             multimodal_metrics = dict(mm_raw)
+        ad_raw = payload.get("auto_debug")
+        auto_debug: list[dict[str, str]] | None = None
+        if isinstance(ad_raw, list):
+            parsed: list[dict[str, str]] = []
+            for item in ad_raw:
+                if not isinstance(item, dict):
+                    continue
+                t = item.get("title")
+                d = item.get("description")
+                if isinstance(t, str) and isinstance(d, str):
+                    parsed.append({"title": t, "description": d})
+            auto_debug = parsed
         return cls(
             summary=summary,
             rows=rows,
             correlations=correlations,
             failures=failures,
             multimodal_metrics=multimodal_metrics,
+            auto_debug=auto_debug,
         )
 
 

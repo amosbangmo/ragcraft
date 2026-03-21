@@ -16,6 +16,7 @@ from src.domain.multimodal_metrics import (
     modality_row_fields_from_pipeline,
 )
 from src.services.answer_citation_metrics_service import answer_cited_doc_ids
+from src.services.auto_debug_service import AutoDebugService
 from src.services.correlation_service import CorrelationService
 from src.services.explainability_service import ExplainabilityService
 from src.services.failure_analysis_service import FailureAnalysisService
@@ -67,6 +68,7 @@ class EvaluationService:
         failure_analysis_service: FailureAnalysisService | None = None,
         semantic_similarity_service: object | None = None,
         explainability_service: ExplainabilityService | None = None,
+        auto_debug_service: AutoDebugService | None = None,
     ):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
         self._llm_judge_service = (
@@ -89,6 +91,9 @@ class EvaluationService:
             explainability_service
             if explainability_service is not None
             else ExplainabilityService()
+        )
+        self._auto_debug_service = (
+            auto_debug_service if auto_debug_service is not None else AutoDebugService()
         )
 
     def evaluate_gold_qa_dataset(
@@ -568,12 +573,18 @@ class EvaluationService:
         if mm_raw and mm_raw.get("has_multimodal_assets"):
             multimodal_metrics = dict(mm_raw)
 
+        auto_debug = self._auto_debug_service.build_suggestions(
+            summary_payload,
+            failures_report,
+        )
+
         return BenchmarkResult(
             summary=BenchmarkSummary(data=summary_payload),
             rows=rebuilt,
             correlations=correlations,
             failures=failures_report,
             multimodal_metrics=multimodal_metrics,
+            auto_debug=auto_debug,
         )
 
     def _compute_ndcg_at_k(

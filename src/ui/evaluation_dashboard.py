@@ -753,6 +753,24 @@ def _render_health_overview(
         )
 
 
+def _render_auto_debug(auto_debug: list[dict[str, str]] | None) -> None:
+    if not auto_debug:
+        return
+    with section_card(
+        title="Auto-debug suggestions",
+        subtitle="System-level recommendations based on this evaluation run (rule-based).",
+        min_height=0,
+    ):
+        st.caption("🛠️ Use these as a starting point when tuning retrieval, prompting, or generation.")
+        for item in auto_debug:
+            title = item.get("title")
+            desc = item.get("description")
+            if title:
+                st.markdown(f"**{title}**")
+            if desc:
+                st.caption(desc)
+
+
 def render_evaluation_dashboard(
     summary: dict,
     rows: list[dict],
@@ -761,6 +779,7 @@ def render_evaluation_dashboard(
     correlations: dict[str, Any] | None = None,
     failures: dict[str, Any] | None = None,
     multimodal_metrics: dict[str, Any] | None = None,
+    auto_debug: list[dict[str, str]] | None = None,
 ) -> None:
     inject_section_card_styles()
 
@@ -768,6 +787,7 @@ def render_evaluation_dashboard(
         st.info("Run evaluation to see results.")
         return
 
+    _render_auto_debug(auto_debug)
     _render_health_overview(summary, rows, failures)
 
     has_exp_docs = int(summary.get("entries_with_expected_doc_ids") or 0) > 0

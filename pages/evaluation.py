@@ -107,6 +107,7 @@ rows: list[dict[str, Any]] = []
 correlations: dict[str, Any] | None = None
 failures: dict[str, Any] | None = None
 multimodal_metrics: dict[str, Any] | None = None
+auto_debug: list[dict[str, str]] | None = None
 bench_for_tabs: BenchmarkResult | None = None
 
 if bundle is not None:
@@ -116,6 +117,7 @@ if bundle is not None:
     correlations = bench_for_tabs.correlations
     failures = bench_for_tabs.failures
     multimodal_metrics = bench_for_tabs.multimodal_metrics
+    auto_debug = bench_for_tabs.auto_debug
 
 render_evaluation_tabs(
     manual_payload={
@@ -139,6 +141,7 @@ render_evaluation_tabs(
         "correlations": correlations,
         "failures": failures,
         "multimodal_metrics": multimodal_metrics,
+        "auto_debug": auto_debug,
     },
     gold_qa_payload={
         "app": app,
