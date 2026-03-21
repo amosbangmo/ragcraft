@@ -1,5 +1,6 @@
 import streamlit as st
 
+from datetime import datetime, timezone
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult
@@ -455,12 +456,17 @@ with dataset_eval_col2:
 
 
 def _run_dataset_evaluation():
-    return app.evaluate_gold_qa_dataset(
-        user_id=user_id,
-        project_id=project_id,
-        enable_query_rewrite=dataset_enable_query_rewrite,
-        enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
-    )
+    return {
+        "result": app.evaluate_gold_qa_dataset(
+            user_id=user_id,
+            project_id=project_id,
+            enable_query_rewrite=dataset_enable_query_rewrite,
+            enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
+        ),
+        "enable_query_rewrite": dataset_enable_query_rewrite,
+        "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
+        "generated_at": datetime.now(timezone.utc),
+    }
 
 
 def _map_dataset_evaluation_error(exc: Exception) -> str:
@@ -473,7 +479,11 @@ def _map_dataset_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
 
 
-def _render_dataset_evaluation_result(result: BenchmarkResult):
+def _render_dataset_evaluation_result(payload: dict):
+    result = cast(BenchmarkResult, payload["result"])
+    enable_query_rewrite = bool(payload["enable_query_rewrite"])
+    enable_hybrid_retrieval = bool(payload["enable_hybrid_retrieval"])
+
     summary = result.summary.to_dict()
     rows = [row.to_dict() for row in result.rows]
 
@@ -543,6 +553,40 @@ def _render_dataset_evaluation_result(result: BenchmarkResult):
 
     st.markdown("### Per-entry metrics")
     st.dataframe(rows, use_container_width=True)
+
+    st.markdown("### Download benchmark reports")
+    export = app.build_benchmark_export_artifacts(
+        project_id=project_id,
+        result=result,
+        enable_query_rewrite=enable_query_rewrite,
+        enable_hybrid_retrieval=enable_hybrid_retrieval,
+        generated_at=payload.get("generated_at"),
+    )
+    dl1, dl2, dl3 = st.columns(3)
+    with dl1:
+        st.download_button(
+            label="JSON report",
+            data=export.json_bytes,
+            file_name=export.json_filename,
+            mime="application/json",
+            use_container_width=True,
+        )
+    with dl2:
+        st.download_button(
+            label="CSV report",
+            data=export.csv_bytes,
+            file_name=export.csv_filename,
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with dl3:
+        st.download_button(
+            label="Markdown report",
+            data=export.markdown_bytes,
+            file_name=export.markdown_filename,
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
 
 dataset_run_clicked = st.button(

@@ -3,6 +3,28 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class BenchmarkRunMetadata:
+    """
+    Run-level context attached to exported benchmark reports (JSON / CSV / Markdown).
+
+    Distinct from per-row payloads: this captures when and how the evaluation was run.
+    """
+
+    project_id: str
+    generated_at_utc: str
+    enable_query_rewrite: bool
+    enable_hybrid_retrieval: bool
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "project_id": self.project_id,
+            "generated_at_utc": self.generated_at_utc,
+            "enable_query_rewrite": self.enable_query_rewrite,
+            "enable_hybrid_retrieval": self.enable_hybrid_retrieval,
+        }
+
+
+@dataclass(frozen=True)
 class BenchmarkRow:
     """
     Structured per-entry benchmark result.

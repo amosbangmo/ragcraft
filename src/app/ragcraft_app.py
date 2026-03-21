@@ -1,3 +1,4 @@
+from datetime import datetime
 from time import perf_counter
 
 from src.infrastructure.persistence.db import init_app_db
@@ -13,6 +14,8 @@ from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
+from src.services.benchmark_report_service import BenchmarkExportArtifacts, BenchmarkReportService
+from src.domain.benchmark_result import BenchmarkResult
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -39,6 +42,7 @@ class RAGCraftApp:
             docstore_service=self.docstore_service,
             project_service=self.project_service,
         )
+        self.benchmark_report_service = BenchmarkReportService()
 
         self._rag_service = None
         self._retrieval_comparison_service = None
@@ -545,4 +549,21 @@ class RAGCraftApp:
         return self.evaluation_service.evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=pipeline_runner,
+        )
+
+    def build_benchmark_export_artifacts(
+        self,
+        *,
+        project_id: str,
+        result: BenchmarkResult,
+        enable_query_rewrite: bool,
+        enable_hybrid_retrieval: bool,
+        generated_at: datetime | None = None,
+    ) -> BenchmarkExportArtifacts:
+        return self.benchmark_report_service.build_export_artifacts(
+            project_id=project_id,
+            result=result,
+            enable_query_rewrite=enable_query_rewrite,
+            enable_hybrid_retrieval=enable_hybrid_retrieval,
+            generated_at=generated_at,
         )
