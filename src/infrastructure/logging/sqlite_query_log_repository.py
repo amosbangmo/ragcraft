@@ -87,6 +87,8 @@ class SQLiteQueryLogRepository:
             cc_before = _maybe_int_ms(entry.get("context_compression_chars_before"))
             cc_after = _maybe_int_ms(entry.get("context_compression_chars_after"))
             cc_ratio = _maybe_float(entry.get("context_compression_ratio"))
+            sec_exp = _maybe_int_ms(entry.get("section_expansion_count"))
+            exp_assets = _maybe_int_ms(entry.get("expanded_assets_count"))
 
             params = (
                 entry.get("user_id"),
@@ -113,6 +115,8 @@ class SQLiteQueryLogRepository:
                 cc_before,
                 cc_after,
                 cc_ratio,
+                sec_exp,
+                exp_assets,
                 created_at.strip(),
             )
 
@@ -129,8 +133,9 @@ class SQLiteQueryLogRepository:
                         retrieval_strategy_k, retrieval_strategy_use_hybrid,
                         retrieval_strategy_apply_filters,
                         context_compression_chars_before, context_compression_chars_after,
-                        context_compression_ratio, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        context_compression_ratio, section_expansion_count, expanded_assets_count,
+                        created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     params,
                 )
@@ -252,5 +257,11 @@ class SQLiteQueryLogRepository:
             mf = _maybe_float(cc_r)
             if mf is not None:
                 out["context_compression_ratio"] = mf
+
+        for sec_key in ("section_expansion_count", "expanded_assets_count"):
+            v = r.get(sec_key)
+            mi = _maybe_int_ms(v)
+            if mi is not None:
+                out[sec_key] = mi
 
         return out

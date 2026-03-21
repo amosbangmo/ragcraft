@@ -25,6 +25,7 @@ from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
 from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
+from src.services.section_retrieval_service import SectionRetrievalService
 from src.services.source_citation_service import SourceCitationService
 from src.services.vectorstore_service import VectorStoreService
 
@@ -35,9 +36,10 @@ class RAGService:
     1. optional query rewriting
     2. hybrid recall retrieval (FAISS + BM25 summaries)
     3. raw asset rehydration from SQLite using doc_id
-    4. strict reranking over the rehydrated raw assets
-    5. optional contextual compression of reranked assets for the prompt
-    6. final prompt built from the compressed (or original) top assets
+    4. optional section-aware expansion of the rerank pool (same file / section / neighbors)
+    5. strict reranking over the expanded raw assets
+    6. optional contextual compression of reranked assets for the prompt
+    7. final prompt built from the compressed (or original) top assets
     """
 
     def __init__(
@@ -71,6 +73,7 @@ class RAGService:
         self.adaptive_retrieval_service = AdaptiveRetrievalService(self.config)
         self.contextual_compression_service = ContextualCompressionService()
         self.query_log_service = query_log_service
+        self.section_retrieval_service = SectionRetrievalService()
 
     @staticmethod
     def _latency_fields_for_query_log(latency: PipelineLatency) -> dict:
@@ -121,6 +124,42 @@ class RAGService:
                 docs_by_id[doc_id] = doc
 
         return [docs_by_id[doc_id] for doc_id in doc_ids if doc_id in docs_by_id]
+
+    def _section_expansion_corpus(
+        self,
+        *,
+        project: Project,
+        recalled_raw_assets: list[dict],
+    ) -> list[dict]:
+        seen_files: set[str] = set()
+        source_files: list[str] = []
+        for asset in recalled_raw_assets:
+            sf = asset.get("source_file")
+            if not sf:
+                continue
+            s = str(sf).strip()
+            if not s or s in seen_files:
+                continue
+            seen_files.add(s)
+            source_files.append(s)
+
+        if not source_files:
+            return self.docstore_service.list_assets_for_project(
+                user_id=project.user_id,
+                project_id=project.project_id,
+            )
+
+        by_doc: dict[str, dict] = {}
+        for s in source_files:
+            for row in self.docstore_service.list_assets_for_source_file(
+                user_id=project.user_id,
+                project_id=project.project_id,
+                source_file=s,
+            ):
+                did = row.get("doc_id")
+                if did:
+                    by_doc[str(did)] = row
+        return list(by_doc.values())
 
     def _citation_to_dict(self, citation: SourceCitation) -> dict:
         rerank_score = citation.metadata.get("rerank_score") if citation.metadata else None
@@ -357,10 +396,28 @@ class RAGService:
         if not recalled_raw_assets:
             return None
 
+        corpus = self._section_expansion_corpus(
+            project=project,
+            recalled_raw_assets=recalled_raw_assets,
+        )
+        expansion = self.section_retrieval_service.expand(
+            config=self.config,
+            retrieved_assets=recalled_raw_assets,
+            all_assets=corpus,
+        )
+        pre_rerank_raw_assets = expansion.assets
+        section_expansion = {
+            "enabled": bool(self.config.enable_section_expansion),
+            "applied": expansion.applied,
+            "section_expansion_count": expansion.section_expansion_count,
+            "expanded_assets_count": expansion.expanded_assets_count,
+            "recall_pool_size": len(recalled_raw_assets),
+        }
+
         t0 = perf_counter()
         reranked_raw_assets = self.reranking_service.rerank(
             query=rewritten_question,
-            raw_assets=recalled_raw_assets,
+            raw_assets=pre_rerank_raw_assets,
             top_k=self.config.max_prompt_assets,
         )
         reranking_ms = (perf_counter() - t0) * 1000.0
@@ -450,6 +507,8 @@ class RAGService:
             "recalled_summary_docs": recalled_summary_docs,
             "recalled_doc_ids": recalled_doc_ids,
             "recalled_raw_assets": recalled_raw_assets,
+            "pre_rerank_raw_assets": pre_rerank_raw_assets,
+            "section_expansion": section_expansion,
             "selected_summary_docs": selected_summary_docs,
             "selected_doc_ids": selected_doc_ids,
             "reranked_raw_assets": reranked_raw_assets,
@@ -481,6 +540,8 @@ class RAGService:
                     "context_compression_chars_before": context_compression["chars_before"],
                     "context_compression_chars_after": context_compression["chars_after"],
                     "context_compression_ratio": context_compression["ratio"],
+                    "section_expansion_count": section_expansion["section_expansion_count"],
+                    "expanded_assets_count": section_expansion["expanded_assets_count"],
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -581,6 +642,12 @@ class RAGService:
                         (pipeline.get("context_compression") or {}).get("chars_after")
                     ),
                     "context_compression_ratio": (pipeline.get("context_compression") or {}).get("ratio"),
+                    "section_expansion_count": (pipeline.get("section_expansion") or {}).get(
+                        "section_expansion_count"
+                    ),
+                    "expanded_assets_count": (pipeline.get("section_expansion") or {}).get(
+                        "expanded_assets_count"
+                    ),
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )

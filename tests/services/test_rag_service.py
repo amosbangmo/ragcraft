@@ -46,6 +46,10 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         rrf_k=60,
         hybrid_beta=0.5,
         max_prompt_assets=5,
+        enable_section_expansion=True,
+        section_expansion_neighbor_window=2,
+        section_expansion_max_per_section=12,
+        section_expansion_global_max=64,
     )
 
 if "src.services.hybrid_retrieval_service" not in sys.modules:
@@ -271,6 +275,7 @@ class TestRAGService(unittest.TestCase):
             patch.object(service.prompt_builder_service, "build_prompt", return_value="prompt"),
         ):
             docstore_service.get_assets_by_doc_ids.return_value = raw_assets
+            docstore_service.list_assets_for_source_file.return_value = raw_assets
             reranking_service.rerank.return_value = reranked_assets
 
             payload = service._run_pipeline(project=project, question="question", chat_history=["h1"])
@@ -303,6 +308,9 @@ class TestRAGService(unittest.TestCase):
         self.assertIn("context_compression", payload)
         self.assertIn("prompt_context_assets", payload)
         self.assertEqual(len(payload["prompt_context_assets"]), 1)
+        self.assertIn("section_expansion", payload)
+        self.assertIn("pre_rerank_raw_assets", payload)
+        self.assertEqual(payload["section_expansion"]["recall_pool_size"], 1)
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):

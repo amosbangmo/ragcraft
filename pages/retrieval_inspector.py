@@ -441,6 +441,21 @@ def _render_inspection_result(pipeline):
             format_confidence_with_band(float(pipeline["confidence"])),
         )
 
+    se = pipeline.get("section_expansion") or {}
+    if se:
+        st.markdown("### Section-aware expansion")
+        sec_cols = st.columns(5)
+        with sec_cols[0]:
+            st.metric("Expansion enabled", "Yes" if se.get("enabled") else "No")
+        with sec_cols[1]:
+            st.metric("Expansion applied", "Yes" if se.get("applied") else "No")
+        with sec_cols[2]:
+            st.metric("Recall pool (SQLite)", se.get("recall_pool_size", "—"))
+        with sec_cols[3]:
+            st.metric("Neighbors added", se.get("section_expansion_count", "—"))
+        with sec_cols[4]:
+            st.metric("Rerank pool size", se.get("expanded_assets_count", "—"))
+
     _render_pipeline_latency(pipeline.get("latency"))
 
     cc = pipeline.get("context_compression") or {}
@@ -488,12 +503,19 @@ def _render_inspection_result(pipeline):
     with st.expander("6. Raw assets reloaded from SQLite", expanded=False):
         st.caption(
             "For text assets chunked with by_title, each expander shows both the final chunk "
-            "and the original extracted text elements grouped into it."
+            "and the original extracted text elements grouped into it. "
+            "Reranking runs on the section-expanded pool when expansion is enabled (see metrics above)."
         )
         _render_raw_assets(
             pipeline["recalled_raw_assets"],
             title_prefix="Raw asset",
         )
+        pre_pool = pipeline.get("pre_rerank_raw_assets")
+        if isinstance(pre_pool, list) and pre_pool and (
+            len(pre_pool) != len(pipeline.get("recalled_raw_assets") or [])
+        ):
+            st.markdown("#### Pre-rerank pool (after section expansion)")
+            _render_raw_assets(pre_pool, title_prefix="Pool asset")
 
     with st.expander("7. Final assets injected into the prompt", expanded=True):
         _render_doc_ids(
@@ -539,6 +561,12 @@ def _render_inspection_result(pipeline):
             "latency_ms": pipeline.get("latency_ms"),
             "latency": pipeline.get("latency"),
             "context_compression": pipeline.get("context_compression"),
+            "section_expansion": pipeline.get("section_expansion"),
+            "pre_rerank_raw_assets_doc_ids": [
+                a.get("doc_id")
+                for a in (pipeline.get("pre_rerank_raw_assets") or [])
+                if isinstance(a, dict)
+            ],
             "prompt_context_assets_doc_ids": [
                 a.get("doc_id")
                 for a in (pipeline.get("prompt_context_assets") or [])

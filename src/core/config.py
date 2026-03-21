@@ -68,6 +68,18 @@ class RetrievalConfig:
     enable_contextual_compression: bool = field(
         default_factory=lambda: _get_bool_env("RAG_ENABLE_CONTEXTUAL_COMPRESSION", True)
     )
+    enable_section_expansion: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_ENABLE_SECTION_EXPANSION", True)
+    )
+    section_expansion_neighbor_window: int = field(
+        default_factory=lambda: _get_int_env("RAG_SECTION_EXPANSION_NEIGHBOR_WINDOW", 2)
+    )
+    section_expansion_max_per_section: int = field(
+        default_factory=lambda: _get_int_env("RAG_SECTION_EXPANSION_MAX_PER_SECTION", 12)
+    )
+    section_expansion_global_max: int = field(
+        default_factory=lambda: _get_int_env("RAG_SECTION_EXPANSION_GLOBAL_MAX", 64)
+    )
 
 
 @dataclass(frozen=True)

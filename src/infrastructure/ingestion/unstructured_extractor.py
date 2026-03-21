@@ -254,6 +254,15 @@ def _partition_pdf_with_fallback(file_path: str):
 # Asset builders
 # ---------------------------------------------------------------------
 
+def _infer_chunk_title_from_orig_elements(orig_elements) -> str | None:
+    for el in orig_elements or []:
+        if _category_of(el) == "Title":
+            t = _text_of(el)
+            if t:
+                return t[:500]
+    return None
+
+
 def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
     """
     Convert a chunk produced by `chunk_by_title` into a RAG text asset.
@@ -283,20 +292,26 @@ def _build_text_asset_from_chunk(chunk, source_file: str) -> dict | None:
         if cat:
             categories.append(cat)
 
+    chunk_title = _infer_chunk_title_from_orig_elements(orig_elements)
+    meta: dict = {
+        "source_file": source_file,
+        "chunking_strategy": "by_title",
+        "start_element_index": min(element_indices) if element_indices else None,
+        "end_element_index": max(element_indices) if element_indices else None,
+        "page_start": min(page_numbers) if page_numbers else None,
+        "page_end": max(page_numbers) if page_numbers else None,
+        "orig_element_count": len(orig_elements),
+        "orig_element_categories": sorted(set(categories)),
+    }
+    if chunk_title:
+        meta["chunk_title"] = chunk_title
+        meta["section_id"] = chunk_title
+
     return {
         "doc_id": str(uuid.uuid4()),
         "content_type": "text",
         "raw_content": raw_text,
-        "metadata": {
-            "source_file": source_file,
-            "chunking_strategy": "by_title",
-            "start_element_index": min(element_indices) if element_indices else None,
-            "end_element_index": max(element_indices) if element_indices else None,
-            "page_start": min(page_numbers) if page_numbers else None,
-            "page_end": max(page_numbers) if page_numbers else None,
-            "orig_element_count": len(orig_elements),
-            "orig_element_categories": sorted(set(categories)),
-        },
+        "metadata": meta,
     }
 
 

@@ -176,6 +176,15 @@ class QueryLogService:
             except (TypeError, ValueError):
                 pass
 
+        for sec_key in ("section_expansion_count", "expanded_assets_count"):
+            raw_sec = payload.get(sec_key)
+            if raw_sec is None:
+                continue
+            try:
+                entry[sec_key] = int(round(float(raw_sec)))
+            except (TypeError, ValueError):
+                pass
+
         return entry
 
     def load_logs(

@@ -115,6 +115,8 @@ def init_app_db():
             context_compression_chars_before INTEGER,
             context_compression_chars_after INTEGER,
             context_compression_ratio REAL,
+            section_expansion_count INTEGER,
+            expanded_assets_count INTEGER,
             created_at TEXT NOT NULL
         )
         """
@@ -142,6 +144,8 @@ def init_app_db():
         "ALTER TABLE query_logs ADD COLUMN context_compression_chars_before INTEGER",
         "ALTER TABLE query_logs ADD COLUMN context_compression_chars_after INTEGER",
         "ALTER TABLE query_logs ADD COLUMN context_compression_ratio REAL",
+        "ALTER TABLE query_logs ADD COLUMN section_expansion_count INTEGER",
+        "ALTER TABLE query_logs ADD COLUMN expanded_assets_count INTEGER",
     ):
         try:
             conn.execute(ddl)
