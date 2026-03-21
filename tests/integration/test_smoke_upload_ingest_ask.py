@@ -16,7 +16,8 @@ def _install_module(module_name: str, **attributes):
 
 
 class _DummyService:
-    pass
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 # Lightweight module stubs so importing RAGCraftApp does not require
@@ -26,6 +27,7 @@ _install_module("src.auth.auth_service", AuthService=_DummyService)
 _install_module("src.services.ingestion_service", IngestionService=_DummyService)
 _install_module("src.services.vectorstore_service", VectorStoreService=_DummyService)
 _install_module("src.services.evaluation_service", EvaluationService=_DummyService)
+_install_module("src.services.groundedness_service", GroundednessService=_DummyService)
 _install_module("src.services.chat_service", ChatService=_DummyService)
 _install_module("src.services.rag_service", RAGService=_DummyService)
 _install_module("src.services.docstore_service", DocStoreService=_DummyService)

@@ -53,6 +53,7 @@ class BenchmarkRegressionThresholds:
     min_avg_doc_id_recall: float | None = None
     min_avg_answer_f1: float | None = None
     min_avg_citation_source_f1: float | None = None
+    min_avg_groundedness: float | None = None
     min_successful_queries: int | None = None
 
 
@@ -93,6 +94,14 @@ def collect_benchmark_regression_violations(
             violations.append(
                 "avg_citation_source_f1 "
                 f"{actual} < minimum {thresholds.min_avg_citation_source_f1}"
+            )
+
+    if thresholds.min_avg_groundedness is not None:
+        actual = _summary_float(summary, "avg_groundedness")
+        if actual < thresholds.min_avg_groundedness:
+            violations.append(
+                "avg_groundedness "
+                f"{actual} < minimum {thresholds.min_avg_groundedness}"
             )
 
     return violations

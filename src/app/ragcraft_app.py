@@ -7,6 +7,7 @@ from src.services.project_service import ProjectService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
+from src.services.groundedness_service import GroundednessService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
@@ -33,7 +34,7 @@ class RAGCraftApp:
         self.project_service = ProjectService()
         self.ingestion_service = IngestionService()
         self.vectorstore_service = VectorStoreService()
-        self.evaluation_service = EvaluationService()
+        self.evaluation_service = EvaluationService(groundedness_service=GroundednessService())
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()
         self.reranking_service = RerankingService()

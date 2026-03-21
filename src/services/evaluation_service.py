@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import numpy as np
@@ -6,6 +8,10 @@ from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, Benchmark
 
 
 class EvaluationService:
+    def __init__(self, groundedness_service: object | None = None):
+        # Optional LLM-judge implementation (e.g. ``GroundednessService``); kept untyped
+        # here so importing ``EvaluationService`` does not pull LLM / OpenAI dependencies.
+        self._groundedness_service = groundedness_service
 
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
@@ -65,6 +71,8 @@ class EvaluationService:
         citation_source_precision_values: list[float] = []
         citation_source_recall_values: list[float] = []
         citation_source_f1_values: list[float] = []
+
+        groundedness_values: list[float] = []
 
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
@@ -128,6 +136,7 @@ class EvaluationService:
                     "retrieval_mode": "none",
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
+                    "groundedness": 0.0,
                 }
                 rows.append(
                     BenchmarkRow(
@@ -136,6 +145,7 @@ class EvaluationService:
                         data=row_payload,
                     )
                 )
+                groundedness_values.append(0.0)
                 latency_values.append(latency_ms)
                 continue
 
@@ -267,6 +277,17 @@ class EvaluationService:
             confidence_values.append(confidence)
             latency_values.append(latency_ms)
 
+            raw_context = (pipeline.get("raw_context") or "").strip()
+            if self._groundedness_service is not None and answer:
+                groundedness = self._groundedness_service.compute_groundedness(
+                    question=entry.question,
+                    answer=answer,
+                    raw_context=raw_context,
+                )
+            else:
+                groundedness = 0.0
+            groundedness_values.append(groundedness)
+
             row_payload = {
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
@@ -299,6 +320,7 @@ class EvaluationService:
                 "retrieval_mode": pipeline.get("retrieval_mode", "unknown"),
                 "query_rewrite_enabled": bool(pipeline.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),
+                "groundedness": round(groundedness, 2),
             }
             rows.append(
                 BenchmarkRow(
@@ -362,6 +384,9 @@ class EvaluationService:
             else 0.0,
             "citation_source_hit_rate": round(citation_source_hits / entries_with_expected_sources, 2)
             if entries_with_expected_sources
+            else 0.0,
+            "avg_groundedness": round(float(np.mean(groundedness_values)), 2)
+            if groundedness_values
             else 0.0,
         }
 

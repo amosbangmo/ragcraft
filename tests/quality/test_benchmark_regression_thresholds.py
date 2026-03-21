@@ -51,6 +51,18 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         self.assertIn("successful_queries", message)
         self.assertIn("avg_doc_id_recall", message)
 
+    def test_groundedness_threshold_enforced_when_set(self):
+        result = make_benchmark_result(
+            summary_overrides={
+                "successful_queries": 1,
+                "avg_groundedness": 0.2,
+            }
+        )
+        thresholds = BenchmarkRegressionThresholds(min_avg_groundedness=0.5)
+        violations = collect_benchmark_regression_violations(result, thresholds)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("avg_groundedness", violations[0])
+
     def test_unset_thresholds_are_not_enforced(self):
         result = make_benchmark_result(
             summary_overrides={

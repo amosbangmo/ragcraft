@@ -10,6 +10,14 @@ from tests.quality.benchmark_regression_checks import (
 )
 
 
+class StubGroundednessService:
+    def __init__(self, score: float) -> None:
+        self._score = score
+
+    def compute_groundedness(self, *, question: str, answer: str, raw_context: str) -> float:
+        return self._score
+
+
 def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     doc_ids = list(entry.expected_doc_ids or [])
     sources = list(entry.expected_sources or [])
@@ -26,6 +34,7 @@ def _good_pipeline_for(entry: QADatasetEntry) -> dict:
         "retrieval_mode": "hybrid",
         "query_rewrite_enabled": False,
         "hybrid_retrieval_enabled": True,
+        "raw_context": "Synthetic context for groundedness stub tests.",
     }
 
 
@@ -59,7 +68,9 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
                 "latency_ms": 10.0,
             }
 
-        result = EvaluationService().evaluate_gold_qa_dataset(
+        result = EvaluationService(
+            groundedness_service=StubGroundednessService(1.0),
+        ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
         )
@@ -69,6 +80,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_doc_id_recall=0.99,
             min_avg_answer_f1=0.99,
             min_avg_citation_source_f1=0.99,
+            min_avg_groundedness=0.99,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
 
@@ -94,12 +106,15 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
                     "retrieval_mode": "faiss",
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
+                    "raw_context": "Unrelated context.",
                 },
                 "answer": "unrelated answer tokens",
                 "latency_ms": 5.0,
             }
 
-        result = EvaluationService().evaluate_gold_qa_dataset(
+        result = EvaluationService(
+            groundedness_service=StubGroundednessService(0.0),
+        ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,
         )
@@ -109,6 +124,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_doc_id_recall=0.5,
             min_avg_answer_f1=0.5,
             min_avg_citation_source_f1=0.5,
+            min_avg_groundedness=0.5,
         )
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertTrue(violations)

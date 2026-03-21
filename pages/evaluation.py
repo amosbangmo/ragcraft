@@ -507,7 +507,7 @@ def _render_dataset_evaluation_result(payload: dict):
     with middle_metrics[3]:
         st.metric("Avg confidence", summary["avg_confidence"])
 
-    correctness_metrics = st.columns(5)
+    correctness_metrics = st.columns(6)
     with correctness_metrics[0]:
         st.metric("Entries w/ expected answers", summary["entries_with_expected_answers"])
     with correctness_metrics[1]:
@@ -518,6 +518,8 @@ def _render_dataset_evaluation_result(payload: dict):
         st.metric("Avg answer recall", summary["avg_answer_recall"])
     with correctness_metrics[4]:
         st.metric("Avg answer F1", summary["avg_answer_f1"])
+    with correctness_metrics[5]:
+        st.metric("Avg groundedness", summary["avg_groundedness"])
 
     citation_doc_metrics = st.columns(4)
     with citation_doc_metrics[0]:
