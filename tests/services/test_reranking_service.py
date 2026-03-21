@@ -63,6 +63,40 @@ class TestRerankingService(unittest.TestCase):
         self.assertIn("Q1", text)
         self.assertIn("Bar chart", text)
 
+    def test_rerank_empty_inputs(self) -> None:
+        svc = RerankingService()
+        self.assertEqual(svc.rerank("", [{"doc_id": "d"}], 3), [])
+        self.assertEqual(svc.rerank("q", [], 3), [])
+        self.assertEqual(svc.rerank("q", [{"doc_id": "d"}], 0), [])
+
+    def test_fallback_score_and_tokenize(self) -> None:
+        svc = RerankingService()
+        self.assertEqual(svc._fallback_score("", "hello world"), 0.0)
+        score = svc._fallback_score("alpha beta", "alpha beta gamma")
+        self.assertGreater(score, 0.4)
+
+    @patch.object(RerankingService, "_get_model")
+    def test_score_candidates_uses_cross_encoder(self, mock_get_model) -> None:
+        mock_model = mock_get_model.return_value
+        mock_model.predict.return_value = [0.1, 0.9]
+        svc = RerankingService()
+        candidates = [
+            {"candidate_text": "a"},
+            {"candidate_text": "b"},
+        ]
+        scores = svc._score_candidates("q", candidates)
+        self.assertEqual(scores, [0.1, 0.9])
+
+    @patch.object(RerankingService, "_get_model")
+    def test_score_candidates_falls_back_on_predict_error(self, mock_get_model) -> None:
+        mock_model = mock_get_model.return_value
+        mock_model.predict.side_effect = RuntimeError("fail")
+        svc = RerankingService()
+        candidates = [{"candidate_text": "hello world"}]
+        scores = svc._score_candidates("hello", candidates)
+        self.assertEqual(len(scores), 1)
+        self.assertGreaterEqual(scores[0], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

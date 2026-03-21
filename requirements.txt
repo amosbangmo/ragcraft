@@ -36,3 +36,7 @@ rank-bm25
 bcrypt
 sentence-transformers
 pillow
+
+# Testing
+pytest
+pytest-cov
