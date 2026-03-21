@@ -1,10 +1,12 @@
 from time import perf_counter
 from typing import Any
 
+from src.application.chat.use_cases.ask_question import AskQuestionUseCase
 from src.application.common.pipeline_query_context import RAGPipelineQueryContext
-from src.application.common.query_log_payload import QueryLogIngressPayload
+from src.application.common.pipeline_query_log import build_query_log_ingress_payload
+from src.application.common.safe_query_log import log_query_safely
 from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
-from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult, SummaryRecallResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -33,58 +35,6 @@ def _preview_from_summary_recall(bundle: SummaryRecallResult) -> SummaryRecallPr
         query_rewrite_enabled=bundle.enable_query_rewrite,
         hybrid_retrieval_enabled=bundle.enable_hybrid_retrieval,
         use_adaptive_retrieval=bundle.use_adaptive_retrieval,
-    )
-
-
-def _latency_fields_for_query_log(latency: PipelineLatency) -> dict[str, float]:
-    d = latency.to_dict()
-    return {
-        "query_rewrite_ms": d["query_rewrite_ms"],
-        "retrieval_ms": d["retrieval_ms"],
-        "reranking_ms": d["reranking_ms"],
-        "prompt_build_ms": d["prompt_build_ms"],
-        "answer_generation_ms": d["answer_generation_ms"],
-        "total_latency_ms": d["total_ms"],
-    }
-
-
-def _query_log_payload(
-    *,
-    project: Project,
-    question: str,
-    pipeline: PipelineBuildResult,
-    latency: PipelineLatency,
-    answer: str | None = None,
-) -> QueryLogIngressPayload:
-    section_expansion = pipeline.section_expansion
-    context_compression = pipeline.context_compression
-    stage = _latency_fields_for_query_log(latency)
-    return QueryLogIngressPayload(
-        question=question,
-        rewritten_query=pipeline.rewritten_question,
-        project_id=project.project_id,
-        user_id=project.user_id,
-        selected_doc_ids=tuple(pipeline.selected_doc_ids),
-        retrieved_doc_ids=tuple(pipeline.recalled_doc_ids),
-        latency_ms=latency.total_ms,
-        confidence=pipeline.confidence,
-        hybrid_retrieval_enabled=pipeline.hybrid_retrieval_enabled,
-        retrieval_mode=pipeline.retrieval_mode,
-        query_intent=pipeline.query_intent.value,
-        table_aware_qa_enabled=pipeline.table_aware_qa_enabled,
-        retrieval_strategy=pipeline.retrieval_strategy.to_dict(),
-        context_compression_chars_before=context_compression.chars_before,
-        context_compression_chars_after=context_compression.chars_after,
-        context_compression_ratio=context_compression.ratio,
-        section_expansion_count=section_expansion.section_expansion_count,
-        expanded_assets_count=section_expansion.expanded_assets_count,
-        query_rewrite_ms=stage["query_rewrite_ms"],
-        retrieval_ms=stage["retrieval_ms"],
-        reranking_ms=stage["reranking_ms"],
-        prompt_build_ms=stage["prompt_build_ms"],
-        answer_generation_ms=stage["answer_generation_ms"],
-        total_latency_ms=stage["total_latency_ms"],
-        answer=answer,
     )
 
 
@@ -124,6 +74,11 @@ class RAGService:
         self.answer_generation_service = (
             answer_generation_service or AnswerGenerationService()
         )
+        self._ask_question = AskQuestionUseCase(
+            build_pipeline=lambda *args, **kwargs: self.build_pipeline(*args, **kwargs),
+            answer_generation_service=self.answer_generation_service,
+            query_log_service=self.query_log_service,
+        )
 
     @property
     def config(self) -> Any:
@@ -133,14 +88,8 @@ class RAGService:
     def config(self, value: Any) -> None:
         self.retrieval_settings_service.set_config_source(value)
 
-    def _safe_log_query(self, payload: QueryLogIngressPayload | dict[str, Any]) -> None:
-        if self.query_log_service is None:
-            return
-        try:
-            raw = payload.to_log_dict() if isinstance(payload, QueryLogIngressPayload) else payload
-            self.query_log_service.log_query(payload=raw)
-        except Exception:
-            pass
+    def _safe_log_query(self, payload: Any) -> None:
+        log_query_safely(self.query_log_service, payload)
 
     def build_chain(self, project: Project):
         """Returns the project vector store (chain cache compatibility)."""
@@ -266,53 +215,12 @@ class RAGService:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> RAGResponse | None:
-        ask_started = perf_counter()
-        defer_log = self.query_log_service is not None
-        pipeline = self.build_pipeline(
+        return self._ask_question.execute(
             project,
             question,
             chat_history,
-            emit_query_log=not defer_log,
             filters=filters,
             retrieval_settings=retrieval_settings,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
-        )
-        if pipeline is None:
-            return None
-
-        gen_started = perf_counter()
-        answer = self.answer_generation_service.generate_answer(
-            project=project, pipeline=pipeline
-        )
-        answer_generation_ms = (perf_counter() - gen_started) * 1000.0
-        total_ms = (perf_counter() - ask_started) * 1000.0
-        full_latency = merge_with_answer_stage(
-            pipeline.latency,
-            answer_generation_ms=answer_generation_ms,
-            total_ms=total_ms,
-        )
-        full_latency_dict = full_latency.to_dict()
-        pipeline.latency = full_latency_dict
-        pipeline.latency_ms = total_ms
-
-        if defer_log:
-            self._safe_log_query(
-                _query_log_payload(
-                    project=project,
-                    question=question,
-                    pipeline=pipeline,
-                    latency=full_latency,
-                    answer=answer,
-                )
-            )
-
-        return RAGResponse(
-            question=question,
-            answer=answer,
-            source_documents=pipeline.selected_summary_docs,
-            raw_assets=pipeline.reranked_raw_assets,
-            prompt_sources=pipeline.prompt_sources,
-            confidence=pipeline.confidence,
-            latency=full_latency_dict,
         )
