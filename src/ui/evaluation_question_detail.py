@@ -129,7 +129,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
-                label="Citation doc ID hit rate",
+                label="Citation doc ID hit",
                 value=_f(row.get("citation_doc_id_hit_rate")),
                 metric_key="citation_doc_id_hit_rate",
             )
@@ -173,7 +173,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
-                label="Prompt doc ID hit rate",
+                label="Prompt doc ID hit",
                 value=_f(row.get("prompt_doc_id_hit_rate")),
                 metric_key="prompt_doc_id_hit_rate",
             )
