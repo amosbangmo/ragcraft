@@ -4,6 +4,8 @@ Unified benchmark dashboard: retrieval metrics, LLM-judge scores, per-row table,
 
 from __future__ import annotations
 
+from typing import Any
+
 import altair as alt
 import numpy as np
 import pandas as pd
@@ -63,6 +65,99 @@ def _row_answer_text(row: dict) -> str | None:
 # Cap fractional tick labels at 2 decimal places on float axes (d3-format).
 _FLOAT_AXIS_2DP = alt.Axis(format=".2f")
 _INT_AXIS = alt.Axis(format="d")
+
+
+def _render_correlation_analysis(
+    correlations: dict[str, Any] | None,
+    rows: list[dict],
+) -> None:
+    with st.expander("Correlation analysis", expanded=False):
+        st.caption(
+            "Pearson correlation (r) across rows. Answer correctness uses token **F1** vs the gold answer. "
+            "Citations use **source-level** precision/recall. |r| ≥ 0.6 is treated as a strong linear association."
+        )
+        if not correlations:
+            st.caption("Correlations are attached after each dataset evaluation run.")
+            return
+        if not correlations.get("available"):
+            reason = correlations.get("reason")
+            extra = f" ({reason})" if reason else ""
+            st.caption(f"Not enough overlapping numeric metrics or rows.{extra}")
+            return
+
+        thr = float(correlations.get("strong_threshold") or 0.6)
+        metrics = list(correlations.get("metrics_used") or [])
+        matrix = correlations.get("matrix") or {}
+        records: list[dict] = []
+        for i, a in enumerate(metrics):
+            for b in metrics[i + 1 :]:
+                row_m = matrix.get(a) if isinstance(matrix.get(a), dict) else None
+                r = row_m.get(b) if row_m else None
+                if r is None:
+                    continue
+                records.append(
+                    {
+                        "metric_a": a,
+                        "metric_b": b,
+                        "r": round(float(r), 4),
+                        "strong": abs(float(r)) >= thr,
+                    }
+                )
+        records.sort(key=lambda x: abs(x["r"]), reverse=True)
+
+        sp = correlations.get("highlights", {}).get("strong_positive") or []
+        sn = correlations.get("highlights", {}).get("strong_negative") or []
+        if sp:
+            st.markdown("**Strong positive (r ≥ {:.1f})**".format(thr))
+            for item in sp[:6]:
+                st.caption(
+                    f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**"
+                )
+        if sn:
+            st.markdown("**Strong negative (r ≤ -{:.1f})**".format(thr))
+            for item in sn[:6]:
+                st.caption(
+                    f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**"
+                )
+        if not sp and not sn:
+            st.caption("No pairs reached the strong |r| threshold for this run.")
+
+        if records:
+            st.markdown("**All pairwise correlations** (|r| descending)")
+            st.dataframe(
+                pd.DataFrame(records),
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.caption("No finite pairwise correlations (e.g. constant columns or too few points).")
+
+        n = int(correlations.get("sample_size") or 0)
+        st.caption(f"Based on **{n}** evaluated row(s).")
+
+        with st.expander("Optional: scatter — confidence vs answer F1", expanded=False):
+            if not rows:
+                st.caption("No rows to plot.")
+            else:
+                df = pd.DataFrame(rows)
+                c = _numeric_series(df, "confidence")
+                f1 = _numeric_series(df, "answer_f1")
+                if c is not None and f1 is not None:
+                    sc = pd.DataFrame({"confidence": c, "answer_f1": f1}).dropna()
+                    if len(sc) >= 2:
+                        chart = (
+                            alt.Chart(sc)
+                            .mark_circle()
+                            .encode(
+                                x=alt.X("confidence:Q", axis=_FLOAT_AXIS_2DP),
+                                y=alt.Y("answer_f1:Q", title="answer F1", axis=_FLOAT_AXIS_2DP),
+                            )
+                        )
+                        st.altair_chart(chart, use_container_width=True)
+                    else:
+                        st.caption("Need at least two rows with both confidence and answer F1.")
+                else:
+                    st.caption("Missing confidence or answer_f1 on rows.")
 
 
 def _numeric_series(df: pd.DataFrame, *candidates: str) -> pd.Series | None:
@@ -322,6 +417,7 @@ def render_evaluation_dashboard(
     rows: list[dict],
     *,
     widget_key_prefix: str = "benchmark_dashboard",
+    correlations: dict[str, Any] | None = None,
 ) -> None:
     inject_section_card_styles()
 
@@ -381,6 +477,8 @@ def render_evaluation_dashboard(
             st.caption("No per-entry rows returned for this run.")
         else:
             st.dataframe(rows, use_container_width=True)
+
+    _render_correlation_analysis(correlations, rows)
 
     _render_advanced_analytics(rows, widget_key_prefix=widget_key_prefix)
 

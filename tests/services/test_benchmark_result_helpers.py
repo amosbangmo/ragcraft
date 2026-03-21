@@ -51,9 +51,11 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
 class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
     def test_from_plain_dict_round_trips_to_dict(self):
         row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "doc_id_recall": 0.8})
+        correlations = {"available": True, "pairwise": {"confidence_vs_latency_ms": 0.25}}
         original = BenchmarkResult(
             summary=BenchmarkSummary(data={"avg_doc_id_recall": 0.9}),
             rows=[row],
+            correlations=correlations,
         )
         restored = BenchmarkResult.from_plain_dict(original.to_dict())
         self.assertEqual(restored.summary.data, original.summary.data)
@@ -62,6 +64,7 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
         self.assertEqual(restored.rows[0].question, "What?")
         self.assertEqual(restored.rows[0].data["confidence"], 0.5)
         self.assertEqual(restored.rows[0].data["doc_id_recall"], 0.8)
+        self.assertEqual(restored.correlations, correlations)
 
     def test_coerce_benchmark_result_accepts_instance_and_dict(self):
         result = make_benchmark_result()

@@ -5,6 +5,7 @@ import re
 import numpy as np
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.services.correlation_service import CorrelationService
 from src.services.llm_judge_service import LLMJudgeService
 
 
@@ -27,10 +28,17 @@ def _latency_stage_row_fields(latency: dict | None) -> dict[str, float]:
 
 
 class EvaluationService:
-    def __init__(self, llm_judge_service: object | None = None):
+    def __init__(
+        self,
+        llm_judge_service: object | None = None,
+        correlation_service: CorrelationService | None = None,
+    ):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
         self._llm_judge_service = (
             llm_judge_service if llm_judge_service is not None else LLMJudgeService()
+        )
+        self._correlation_service = (
+            correlation_service if correlation_service is not None else CorrelationService()
         )
 
     def evaluate_gold_qa_dataset(
@@ -437,9 +445,13 @@ class EvaluationService:
             else 0.0,
         }
 
+        correlation_rows = [dict(r.data) for r in rows]
+        correlations = self._correlation_service.compute(correlation_rows)
+
         return BenchmarkResult(
             summary=BenchmarkSummary(data=summary_payload),
             rows=rows,
+            correlations=correlations,
         )
 
     def _compute_precision_at_k(

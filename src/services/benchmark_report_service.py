@@ -125,6 +125,8 @@ class BenchmarkReportService:
             "summary": result.summary.to_dict(),
             "rows": [row.to_dict() for row in result.rows],
         }
+        if result.correlations is not None:
+            payload["correlations"] = dict(result.correlations)
         text = json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default)
         return text.encode("utf-8")
 

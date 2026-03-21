@@ -83,16 +83,22 @@ class BenchmarkResult:
     - app facade
     - Streamlit UI
     - future export/report layers
+
+    Optional ``correlations`` holds Pearson summaries from :class:`~src.services.correlation_service.CorrelationService`.
     """
 
     summary: BenchmarkSummary
     rows: list[BenchmarkRow] = field(default_factory=list)
+    correlations: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out: dict[str, Any] = {
             "summary": self.summary.to_dict(),
             "rows": [row.to_dict() for row in self.rows],
         }
+        if self.correlations is not None:
+            out["correlations"] = dict(self.correlations)
+        return out
 
     @classmethod
     def from_plain_dict(cls, payload: dict[str, Any]) -> BenchmarkResult:
@@ -116,7 +122,11 @@ class BenchmarkResult:
             question = q if isinstance(q, str) else str(q)
             data = {k: v for k, v in item.items() if k not in reserved}
             rows.append(BenchmarkRow(entry_id=entry_id, question=question, data=data))
-        return cls(summary=summary, rows=rows)
+        corr_raw = payload.get("correlations")
+        correlations: dict[str, Any] | None = None
+        if isinstance(corr_raw, dict):
+            correlations = dict(corr_raw)
+        return cls(summary=summary, rows=rows, correlations=correlations)
 
 
 def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:

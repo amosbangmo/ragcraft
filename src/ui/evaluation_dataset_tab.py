@@ -102,6 +102,7 @@ def _render_dataset_evaluation_run_and_results(
     dataset_evaluation_result_key: str,
     summary: dict[str, Any],
     rows: list[dict[str, Any]],
+    correlations: dict[str, Any] | None = None,
 ) -> None:
     st.markdown("---")
     st.markdown("##### Run dataset evaluation")
@@ -191,6 +192,7 @@ def _render_dataset_evaluation_run_and_results(
             summary,
             rows,
             widget_key_prefix=f"dataset_eval_metrics_{wk}",
+            correlations=correlations,
         )
 
 
@@ -271,6 +273,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
     dataset_evaluation_result_key = str(payload["dataset_evaluation_result_key"])
     summary = cast(dict[str, Any], payload.get("summary") or {})
     rows = cast(list[dict[str, Any]], payload.get("rows") or [])
+    correlations = cast(dict[str, Any] | None, payload.get("correlations"))
 
     st.caption(
         "Benchmark the gold QA dataset for this project: run evaluation and review aggregates on **Overview**, "
@@ -296,6 +299,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             dataset_evaluation_result_key=dataset_evaluation_result_key,
             summary=summary,
             rows=rows,
+            correlations=correlations,
         )
         _render_reports_exports_and_benchmark_json(
             app=app,

@@ -104,12 +104,14 @@ entries = app.list_qa_dataset_entries(
 bundle = _session_benchmark_bundle()
 summary: dict[str, Any] = {}
 rows: list[dict[str, Any]] = []
+correlations: dict[str, Any] | None = None
 bench_for_tabs: BenchmarkResult | None = None
 
 if bundle is not None:
     _, bench_for_tabs = bundle
     summary = bench_for_tabs.summary.to_dict()
     rows = [row.to_dict() for row in bench_for_tabs.rows]
+    correlations = bench_for_tabs.correlations
 
 render_evaluation_tabs(
     manual_payload={
@@ -130,6 +132,7 @@ render_evaluation_tabs(
         "dataset_evaluation_result_key": DATASET_EVALUATION_RESULT_KEY,
         "summary": summary,
         "rows": rows,
+        "correlations": correlations,
     },
     gold_qa_payload={
         "app": app,
