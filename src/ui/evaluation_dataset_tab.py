@@ -35,7 +35,14 @@ def _benchmark_history_for_project(project_id: str) -> list[dict[str, Any]]:
     return hist if isinstance(hist, list) else []
 
 
-def _append_benchmark_to_history(*, project_id: str, result: BenchmarkResult, generated_at: object) -> None:
+def _append_benchmark_to_history(
+    *,
+    project_id: str,
+    result: BenchmarkResult,
+    generated_at: object,
+    enable_query_rewrite: bool | None = None,
+    enable_hybrid_retrieval: bool | None = None,
+) -> None:
     root = st.session_state.setdefault(BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY, {})
     if not isinstance(root, dict):
         root = {}
@@ -49,15 +56,33 @@ def _append_benchmark_to_history(*, project_id: str, result: BenchmarkResult, ge
         tlabel = generated_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     else:
         tlabel = str(generated_at)[:32] if generated_at else ""
-    label = f"{tlabel} · {rid}" if rid else (tlabel or f"run {len(hist) + 1}")
-    hist.append(
-        {
-            "run_id": result.run_id or "",
-            "label": label,
-            "summary": dict(result.summary.data),
-            "failures": dict(result.failures) if result.failures else None,
-        }
-    )
+    qr_on = enable_query_rewrite is True
+    hy_on = enable_hybrid_retrieval is True
+    settings_bits: list[str] = []
+    if enable_query_rewrite is not None:
+        settings_bits.append("query rewrite on" if qr_on else "query rewrite off")
+    if enable_hybrid_retrieval is not None:
+        settings_bits.append("hybrid on" if hy_on else "hybrid off")
+    settings = " · ".join(settings_bits)
+    if rid and settings:
+        label = f"{tlabel} · {rid} · {settings}"
+    elif rid:
+        label = f"{tlabel} · {rid}"
+    elif settings:
+        label = f"{tlabel} · {settings}" if tlabel else settings
+    else:
+        label = tlabel or f"run {len(hist) + 1}"
+    entry: dict[str, Any] = {
+        "run_id": result.run_id or "",
+        "label": label,
+        "summary": dict(result.summary.data),
+        "failures": dict(result.failures) if result.failures else None,
+    }
+    if enable_query_rewrite is not None:
+        entry["enable_query_rewrite"] = bool(enable_query_rewrite)
+    if enable_hybrid_retrieval is not None:
+        entry["enable_hybrid_retrieval"] = bool(enable_hybrid_retrieval)
+    hist.append(entry)
     while len(hist) > _BENCHMARK_HISTORY_CAP:
         hist.pop(0)
 
@@ -67,7 +92,12 @@ def _run_label(entry: dict[str, Any], index: int) -> str:
     rid = entry.get("run_id") or ""
     short = f"{rid[:8]}…" if len(rid) > 8 else rid
     base = lab if isinstance(lab, str) else f"Run {index + 1}"
-    return f"{base} ({short})" if short else base
+    parts = [f"{base} ({short})" if short else base]
+    qr = entry.get("enable_query_rewrite")
+    hy = entry.get("enable_hybrid_retrieval")
+    if isinstance(qr, bool) and isinstance(hy, bool):
+        parts.append(f"QR {'on' if qr else 'off'} · Hyb {'on' if hy else 'off'}")
+    return " — ".join(parts)
 
 
 def _coerce_float(value: object) -> float | None:
@@ -246,6 +276,8 @@ def _render_dataset_evaluation_run_and_results(
                     project_id=project_id,
                     result=done,
                     generated_at=payload.get("generated_at"),
+                    enable_query_rewrite=payload.get("enable_query_rewrite"),
+                    enable_hybrid_retrieval=payload.get("enable_hybrid_retrieval"),
                 )
 
     render_result_payload(
@@ -262,6 +294,10 @@ def _render_dataset_evaluation_run_and_results(
     if len(hist) >= 2:
         rev = list(reversed(hist))
         cmp_svc = BenchmarkComparisonService()
+        st.caption(
+            "**A** is the baseline run; **B** is the candidate. Numeric deltas in the dashboard are **B − A** "
+            "(positive usually means B is higher; latency and failure-type rates invert — see the comparison card)."
+        )
         c1, c2 = st.columns(2)
         with c1:
             ia = st.selectbox(
@@ -291,9 +327,15 @@ def _render_dataset_evaluation_run_and_results(
                 fb if isinstance(fb, dict) else None,
             )
         else:
-            st.caption("Choose two different runs to compare A vs B.")
+            st.caption(
+                "You picked the **same** run for A and B, so there is nothing to compare. "
+                "Choose two different entries from history."
+            )
     elif len(hist) == 1:
-        st.caption("Run dataset evaluation again to build history for A/B comparison.")
+        st.caption(
+            "History has one run so far. Evaluate again to keep a second snapshot — then you can pick **A** (baseline) "
+            "and **B** (candidate) side by side."
+        )
 
     if (
         not summary

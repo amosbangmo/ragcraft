@@ -2,8 +2,20 @@ from __future__ import annotations
 
 from typing import Any
 
-_CRITICAL_REGRESSION_METRICS = frozenset({"avg_answer_f1", "avg_groundedness_score"})
+# Higher-is-better metrics where a large drop vs baseline is flagged as critical.
+_CRITICAL_REGRESSION_METRICS = frozenset(
+    {"avg_answer_f1", "avg_groundedness_score", "avg_answer_correctness"}
+)
 _CRITICAL_DELTA = -0.05
+
+# Deltas are always B − A; for these keys, a *lower* value in B is an improvement.
+LOWER_IS_BETTER_METRICS = frozenset(
+    {
+        "avg_latency_ms",
+        "pipeline_failure_rate",
+        "hallucination_rate",
+    }
+)
 
 
 def _numeric_scalar(value: object) -> float | None:
@@ -35,8 +47,16 @@ class BenchmarkComparisonService:
                 continue
 
             delta = b - a
+            lower_better = key in LOWER_IS_BETTER_METRICS
 
-            if delta > 0:
+            if lower_better:
+                if delta < 0:
+                    direction = "improved"
+                elif delta > 0:
+                    direction = "regressed"
+                else:
+                    direction = "neutral"
+            elif delta > 0:
                 direction = "improved"
             elif delta < 0:
                 direction = "regressed"
@@ -86,4 +106,5 @@ class BenchmarkComparisonService:
                     "delta": vb - va,
                 }
             )
+        out.sort(key=lambda r: (-abs(int(r["delta"])), str(r["failure_type"]).lower()))
         return out

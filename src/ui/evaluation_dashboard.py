@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from src.services.benchmark_comparison_service import LOWER_IS_BETTER_METRICS
 from src.ui.metric_help import render_metric_with_help
 from src.ui.section_card import inject_section_card_styles, section_card
 
@@ -290,6 +291,13 @@ def _render_failure_analysis(
                     with st.expander(title, expanded=False):
                         if crit:
                             st.caption("High confidence + low gold F1.")
+                        flabels = ex.get("failure_labels")
+                        if isinstance(flabels, list) and "judge_failure" in flabels:
+                            st.caption(
+                                "**Judge failure:** the LLM judge did not return usable scores for this row. "
+                                "Empty judge metrics below are not zeros or hallucinations — treat this as an operational "
+                                "scoring issue, not answer quality."
+                            )
                         q = ex.get("question") or "—"
                         st.markdown("**Question**")
                         st.write(q)
@@ -644,7 +652,10 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("No trend columns available.")
 
         st.markdown("##### Hallucination signal")
-        st.caption("Counts below use judge-valid rows only (judge-failed rows are excluded).")
+        st.caption(
+            "Counts below use judge-valid rows only (judge-failed rows are excluded). "
+            "That exclusion is intentional so operational judge outages are never mixed into hallucination tallies."
+        )
         if "has_hallucination" in df.columns:
             hall_df = (
                 df
@@ -777,7 +788,9 @@ def _render_benchmark_comparison(
         min_height=0,
     ):
         st.caption(
-            "Positive deltas usually mean higher scores in B (better), except latency where higher may mean slower."
+            "All numeric deltas are **B − A**. For most metrics, a **positive** delta means B is higher "
+            "(usually better). For **latency**, **pipeline failure rate**, and **hallucination rate**, "
+            "**lower** values are better — a **negative** delta there means B improved."
         )
         if comparison is not None:
             df = pd.DataFrame(comparison)
@@ -789,23 +802,44 @@ def _render_benchmark_comparison(
                 if not critical.empty:
                     for _, row in critical.iterrows():
                         st.error(
-                            f"Critical regression: **{row['metric']}** dropped by {abs(float(row['delta'])):.4f}."
+                            f"Critical regression: **{row['metric']}** fell by {abs(float(row['delta'])):.4f} "
+                            f"(large drop vs baseline A on a core quality metric; delta = B − A)."
                         )
                 improved = df[df["direction"] == "improved"]
                 regressed = df[df["direction"] == "regressed"]
-                if not improved.empty:
-                    st.markdown("**Improvements (sample)**")
-                    for _, row in improved.head(5).iterrows():
-                        st.caption(f"{row['metric']}: +{row['delta']}")
-                if not regressed.empty:
-                    st.markdown("**Regressions (sample)**")
-                    for _, row in regressed.head(5).iterrows():
-                        st.caption(f"{row['metric']}: {row['delta']}")
+                lo_improved = improved[improved["metric"].isin(LOWER_IS_BETTER_METRICS)]
+                hi_improved = improved[~improved["metric"].isin(LOWER_IS_BETTER_METRICS)]
+                lo_regressed = regressed[regressed["metric"].isin(LOWER_IS_BETTER_METRICS)]
+                hi_regressed = regressed[~regressed["metric"].isin(LOWER_IS_BETTER_METRICS)]
+                if not hi_improved.empty:
+                    st.markdown("**Improvements — higher is better (sample)**")
+                    for _, row in hi_improved.head(5).iterrows():
+                        st.caption(f"{row['metric']}: Δ = {row['delta']}")
+                if not lo_improved.empty:
+                    st.markdown("**Improvements — lower is better (sample)**")
+                    for _, row in lo_improved.head(5).iterrows():
+                        st.caption(f"{row['metric']}: Δ = {row['delta']} (negative means B is lower than A)")
+                if not hi_regressed.empty:
+                    st.markdown("**Regressions — higher is better (sample)**")
+                    for _, row in hi_regressed.head(5).iterrows():
+                        st.caption(f"{row['metric']}: Δ = {row['delta']}")
+                if not lo_regressed.empty:
+                    st.markdown("**Regressions — lower is better (sample)**")
+                    for _, row in lo_regressed.head(5).iterrows():
+                        st.caption(f"{row['metric']}: Δ = {row['delta']} (positive means more failures/slower/more flags in B)")
         if failure_comparison is not None:
             fdf = pd.DataFrame(failure_comparison)
             if not fdf.empty:
-                st.markdown("**Failure label counts (B − A)**")
-                st.dataframe(fdf, use_container_width=True, hide_index=True)
+                st.markdown("**Failure tag counts**")
+                deltas = pd.to_numeric(fdf["delta"], errors="coerce").fillna(0)
+                if deltas.eq(0).all():
+                    st.success("Failure-tag counts match between A and B — no shift in heuristic failure labels.")
+                else:
+                    st.caption(
+                        "Δ = (rows tagged in **B**) − (rows tagged in **A**). **Positive Δ** means that label "
+                        "appeared on more rows in B."
+                    )
+                    st.dataframe(fdf, use_container_width=True, hide_index=True)
 
 
 def _render_auto_debug(auto_debug: list[dict[str, str]] | None) -> None:
@@ -816,7 +850,10 @@ def _render_auto_debug(auto_debug: list[dict[str, str]] | None) -> None:
         subtitle="System-level recommendations based on this evaluation run (rule-based).",
         min_height=0,
     ):
-        st.caption("🛠️ Use these as a starting point when tuning retrieval, prompting, or generation.")
+        st.caption(
+            "Rule-based hints from this run’s metrics and failure tags — use as a starting point when tuning "
+            "retrieval, prompting, or generation."
+        )
         for item in auto_debug:
             title = item.get("title")
             desc = item.get("description")
@@ -984,7 +1021,8 @@ def render_evaluation_dashboard(
         min_height=0,
     ):
         st.caption(
-            "Judge metric cells are empty (not zero) when the judge failed for that entry; use the Entries detail view for banners and context."
+            "Blank judge columns mean **not scored** (the judge failed for that row), **not** a score of zero. "
+            "Retrieval and deterministic overlap columns may still be populated. Open **Entries** for banners and context."
         )
         if not rows:
             st.caption("Run evaluation to see per-entry rows.")
@@ -1005,7 +1043,9 @@ def render_evaluation_dashboard(
         danger=bool(hallucination_rows),
     ):
         st.caption(
-            "Only rows with successful judge scoring appear here; judge-failed rows are never listed as hallucinations."
+            "Only rows with successful judge scoring appear here; judge-failed rows are never listed as hallucinations. "
+            "We exclude judge-failed rows on purpose so an outage of the judge model cannot inflate or distort "
+            "hallucination views."
         )
         if not rows:
             st.caption("No rows to inspect.")

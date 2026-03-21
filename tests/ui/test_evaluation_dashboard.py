@@ -24,6 +24,9 @@ class TestEvaluationDashboardCoercions(unittest.TestCase):
     def test_row_hallucination_flag(self) -> None:
         self.assertTrue(ed._row_hallucination_flag({"has_hallucination": True}))
         self.assertFalse(ed._row_hallucination_flag({"has_hallucination": False}))
+        self.assertFalse(
+            ed._row_hallucination_flag({"judge_failed": True, "has_hallucination": True})
+        )
 
     def test_row_answer_text_priority(self) -> None:
         self.assertEqual(

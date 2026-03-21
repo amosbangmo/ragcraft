@@ -50,12 +50,17 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         )
     elif row.get("judge_failed"):
         st.info(
-            "LLM judge failed for this row; judge-based scores are unavailable. "
-            "Retrieval, citation overlap, and gold F1 / semantic similarity may still apply."
+            "**LLM judge did not score this row** — the answer pipeline finished, but the judge call failed or "
+            "returned no usable scores."
+        )
+        st.markdown(
+            "- **Still valid here:** retrieval metrics, prompt/citation doc-ID overlap, gold answer F1, semantic "
+            "similarity, latency, and pipeline signals.\n"
+            "- **Not available:** judge-only scores below (shown as —); they are **missing**, not weak scores."
         )
         jr = row.get("judge_failure_reason")
         if isinstance(jr, str) and jr.strip():
-            st.caption(f"Judge failure detail: `{jr.strip()}`")
+            st.caption(f"**Judge failure reason:** `{jr.strip()}`")
 
     with section_card(
         title="Answer",
@@ -72,7 +77,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     ):
         if row.get("judge_failed"):
             st.caption(
-                "Judge metrics below show — because the judge call did not return usable scores for this row."
+                "Judge-only metrics are **—** because the judge did not return usable values — not because they scored zero."
             )
         c1, c2, c3 = st.columns(3)
         with c1:

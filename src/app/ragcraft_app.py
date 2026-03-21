@@ -714,6 +714,7 @@ class RAGCraftApp:
         enable_hybrid_retrieval: bool,
         generated_at: datetime | None = None,
     ) -> BenchmarkExportArtifacts:
+        """Build JSON/CSV/Markdown downloads; ``BenchmarkExportArtifacts.run_id`` mirrors ``result.run_id`` when set."""
         return self.benchmark_report_service.build_export_artifacts(
             project_id=project_id,
             result=result,

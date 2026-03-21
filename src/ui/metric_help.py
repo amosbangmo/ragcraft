@@ -44,10 +44,22 @@ METRIC_HELP: dict[str, str] = {
         "Lower is better for the same quality bar."
     ),
     "pipeline_failure_rate": (
-        "Measures the share of dataset rows where the answer pipeline did not complete. "
+        "Measures the share of dataset rows where the **answer pipeline** did not complete (`pipeline_failed`). "
         "Range: 0–1 (often shown as a percentage). "
-        "Numerator is failed queries; denominator is total evaluated rows. "
-        "Lower is better."
+        "Distinct from judge failures: rows can finish the pipeline yet fail judging. "
+        "Denominator is all evaluated rows. Lower is better."
+    ),
+    "judge_failed": (
+        "True when the answer pipeline finished but the **LLM judge** did not return usable scores. "
+        "Range: boolean. "
+        "Judge fields are absent (None), not zero; retrieval and deterministic overlap may still be present. "
+        "Operational judge issue — not a quality score."
+    ),
+    "judge_failure_reason": (
+        "Short machine-readable reason when `judge_failed` is true (e.g. timeout or a judge service sentinel). "
+        "Range: string or empty. "
+        "Use for debugging; do not map directly to answer quality. "
+        "Neutral (diagnostic)."
     ),
     "recall_at_k": (
         "Measures the fraction of expected document IDs that appear in the top-K ranked list. "
@@ -136,16 +148,16 @@ METRIC_HELP: dict[str, str] = {
     "answer_correctness_score": (
         "Measures LLM-evaluated correctness and completeness of the answer relative to the question "
         "and retrieved context. "
-        "Range: 0–1. "
+        "Range: 0–1 when the judge succeeded. "
+        "If `judge_failed` is true, this is None (missing), not a low score. "
         "Depends on judge model and rubric; not a substitute for human review. "
         "Higher is better."
     ),
     "avg_answer_correctness": (
-        "Measures mean answer_correctness_score over evaluated rows. "
+        "Mean of per-row `answer_correctness_score` over **judge-valid** rows only. "
         "Range: 0–1. "
-        "Run-level judge view of correctness vs question and context. "
-        "Higher is better. "
-        "Excludes rows where the LLM judge failed (judge_failed)."
+        "Rows with `judge_failed` are excluded from the average. "
+        "Higher is better."
     ),
     "ndcg_at_k": (
         "Measures ranking quality: how well relevant documents are ordered in the retrieved list. "
@@ -161,7 +173,8 @@ METRIC_HELP: dict[str, str] = {
     ),
     "groundedness_score": (
         "Measures LLM judge score for how well the answer stays supported by retrieved evidence. "
-        "Range: 0–1. "
+        "Range: 0–1 when the judge succeeded. "
+        "If `judge_failed` is true, None (missing), not zero. "
         "Higher means stronger evidence alignment in the judge’s view. "
         "Higher is better."
     ),
@@ -174,7 +187,7 @@ METRIC_HELP: dict[str, str] = {
     ),
     "citation_faithfulness_score": (
         "Measures LLM judge score for whether [Source N] citations align with the claims they support. "
-        "Range: 0–1. "
+        "Range: 0–1 when the judge succeeded; None if `judge_failed`. "
         "Focuses on citation–claim consistency, not retrieval recall. "
         "Higher is better."
     ),
@@ -187,7 +200,7 @@ METRIC_HELP: dict[str, str] = {
     ),
     "answer_relevance_score": (
         "Measures LLM judge score for how well the answer addresses the question. "
-        "Range: 0–1. "
+        "Range: 0–1 when the judge succeeded; None if `judge_failed`. "
         "Distinct from groundedness (on-topic vs supported-by-context). "
         "Higher is better."
     ),
@@ -200,7 +213,7 @@ METRIC_HELP: dict[str, str] = {
     ),
     "hallucination_score": (
         "Measures LLM judge signal for factual support from context. "
-        "Range: 0–1. "
+        "Range: 0–1 when the judge succeeded; None if `judge_failed`. "
         "Higher means fewer hallucinations (stronger support from the provided context). "
         "Higher is better."
     ),
@@ -212,14 +225,14 @@ METRIC_HELP: dict[str, str] = {
         "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "hallucination_rate": (
-        "Measures the fraction of judge-valid rows flagged as likely hallucinating (has_hallucination). "
-        "Range: 0–1 (often shown as a percentage in the UI). "
-        "Excludes rows where the LLM judge failed (judge_failed). "
+        "Fraction of **judge-valid** rows with `has_hallucination` true. "
+        "Range: 0–1 (often shown as a percentage). "
+        "Rows with `judge_failed` are excluded from numerator and denominator. "
         "Lower is better."
     ),
     "has_hallucination": (
-        "Measures whether the judge flagged likely hallucination for this row. "
-        "Range: boolean (shown as true/false or 0/1 in tables). "
+        "Whether the judge flagged likely hallucination for this row. "
+        "Range: boolean when judged; treat as unset (None) if `judge_failed`. "
         "Use together with hallucination_score for context. "
         "False is better."
     ),

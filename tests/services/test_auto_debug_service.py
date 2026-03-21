@@ -37,6 +37,10 @@ class TestAutoDebugService(unittest.TestCase):
         )
         self.assertTrue(any("judge" in s["title"].lower() for s in out))
 
+    def test_high_pipeline_failure_rate_triggers(self) -> None:
+        out = AutoDebugService().build_suggestions({"pipeline_failure_rate": 0.15}, None)
+        self.assertTrue(any("pipeline" in s["title"].lower() for s in out))
+
 
 if __name__ == "__main__":
     unittest.main()

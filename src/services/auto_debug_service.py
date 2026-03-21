@@ -19,9 +19,18 @@ class AutoDebugService:
         failures: dict[str, Any] | None,
     ) -> list[dict[str, str]]:
         suggestions: list[dict[str, str]] = []
+        seen_desc_norm: set[str] = set()
 
         def add(title: str, description: str) -> None:
-            suggestions.append({"title": title, "description": description})
+            t = title.strip()
+            d = description.strip()
+            if not t and not d:
+                return
+            norm = " ".join(d.lower().split()) if d else t.lower()
+            if norm in seen_desc_norm:
+                return
+            seen_desc_norm.add(norm)
+            suggestions.append({"title": t, "description": d})
 
         recall = summary.get("avg_recall_at_k")
         if _is_score(recall) and float(recall) < 0.5:
@@ -62,6 +71,14 @@ class AutoDebugService:
             add(
                 "Fix overconfidence",
                 "Model confidence is high despite low correctness. Recalibrate confidence scoring or thresholds.",
+            )
+
+        pfr = summary.get("pipeline_failure_rate")
+        if _is_score(pfr) and float(pfr) >= 0.1:
+            add(
+                "Reduce pipeline failures",
+                "A noticeable share of rows did not complete the answer pipeline. Check timeouts, model errors, "
+                "and retrieval stability — this is separate from LLM judge scoring issues.",
             )
 
         if isinstance(failures, dict):

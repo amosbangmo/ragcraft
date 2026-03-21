@@ -12,26 +12,10 @@ from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
+from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.raw_assets import render_raw_assets
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
-
-
-def parse_evaluation_csv_list(raw_value: str) -> list[str]:
-    if not raw_value.strip():
-        return []
-
-    values: list[str] = []
-    seen: set[str] = set()
-
-    for part in raw_value.split(","):
-        cleaned = part.strip()
-        if not cleaned or cleaned in seen:
-            continue
-        seen.add(cleaned)
-        values.append(cleaned)
-
-    return values
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:

@@ -25,8 +25,35 @@ def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
         )
         return
 
-    st.markdown("#### Run metadata")
-    st.json(export.metadata.to_dict())
+    run_id = getattr(export, "run_id", None)
+    meta = export.metadata
+
+    st.markdown("#### Export summary")
+    bullets = [
+        f"- **Project:** `{meta.project_id}`",
+        f"- **Generated (UTC):** {meta.generated_at_utc}",
+        f"- **Query rewrite:** {'on' if meta.enable_query_rewrite else 'off'}",
+        f"- **Hybrid retrieval:** {'on' if meta.enable_hybrid_retrieval else 'off'}",
+    ]
+    if run_id:
+        bullets.append(
+            f"- **Run ID:** `{run_id}` — embedded in the JSON export and Markdown run context."
+        )
+    else:
+        bullets.append(
+            "- **Run ID:** not present on this payload (exports still include all row and summary data)."
+        )
+    bullets.extend(
+        [
+            "- **JSON:** richest artifact (summary, rows, optional correlations, failures, auto_debug, run_id).",
+            "- **CSV:** one row per question; nested lists/dicts are JSON strings in cells.",
+            "- **Markdown:** tables plus a **Notes** section (judge vs pipeline semantics) and optional auto-debug / failure blocks.",
+        ]
+    )
+    st.markdown("\n".join(bullets))
+
+    with st.expander("Raw export metadata (JSON)", expanded=False):
+        st.json(meta.to_dict())
 
     dl1, dl2, dl3 = st.columns(3)
     with dl1:
