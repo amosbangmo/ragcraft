@@ -17,6 +17,7 @@ from src.domain.multimodal_metrics import (
 )
 from src.services.answer_citation_metrics_service import answer_cited_doc_ids
 from src.services.correlation_service import CorrelationService
+from src.services.explainability_service import ExplainabilityService
 from src.services.failure_analysis_service import FailureAnalysisService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.semantic_similarity_service import SemanticSimilarityService
@@ -65,6 +66,7 @@ class EvaluationService:
         correlation_service: CorrelationService | None = None,
         failure_analysis_service: FailureAnalysisService | None = None,
         semantic_similarity_service: object | None = None,
+        explainability_service: ExplainabilityService | None = None,
     ):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
         self._llm_judge_service = (
@@ -82,6 +84,11 @@ class EvaluationService:
             semantic_similarity_service
             if semantic_similarity_service is not None
             else SemanticSimilarityService()
+        )
+        self._explainability_service = (
+            explainability_service
+            if explainability_service is not None
+            else ExplainabilityService()
         )
 
     def evaluate_gold_qa_dataset(
@@ -206,6 +213,9 @@ class EvaluationService:
                     "ndcg_at_k": None,
                     **empty_modality_row_fields(),
                 }
+                explain = self._explainability_service.build_explanation(row_payload)
+                row_payload["explanations"] = explain.get("explanations", [])
+                row_payload["suggestions"] = explain.get("suggestions", [])
                 rows.append(
                     BenchmarkRow(
                         entry_id=entry.id,
@@ -441,6 +451,9 @@ class EvaluationService:
                 "answer_correctness_score": ac_row,
                 **modality_row_fields_from_pipeline(pl),
             }
+            explain = self._explainability_service.build_explanation(row_payload)
+            row_payload["explanations"] = explain.get("explanations", [])
+            row_payload["suggestions"] = explain.get("suggestions", [])
             rows.append(
                 BenchmarkRow(
                     entry_id=entry.id,

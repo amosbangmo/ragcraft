@@ -331,6 +331,33 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 st.warning(msg)
 
     with section_card(
+        title="Explainability",
+        subtitle="Why this result scored the way it did and how to improve it.",
+        min_height=0,
+    ):
+        if row.get("failure_critical"):
+            st.error("High-confidence failure: investigate this case first.")
+        raw_expl = row.get("explanations")
+        raw_sugg = row.get("suggestions")
+        if raw_expl is None and raw_sugg is None:
+            st.caption("Explainability hints are not stored on this row — run a fresh dataset evaluation.")
+        else:
+            explanations = list(raw_expl) if isinstance(raw_expl, list) else []
+            suggestions = list(raw_sugg) if isinstance(raw_sugg, list) else []
+
+            if not explanations:
+                st.success("No major issues detected for this row.")
+            else:
+                st.markdown("**What likely happened**")
+                for e in explanations:
+                    st.write(f"- {e}")
+
+            if suggestions:
+                st.markdown("**Suggested improvements**")
+                for s in suggestions:
+                    st.write(f"- {s}")
+
+    with section_card(
         title="Expected vs retrieved (counts)",
         subtitle="Aggregate overlap where gold expectations exist for this entry.",
         min_height=0,
