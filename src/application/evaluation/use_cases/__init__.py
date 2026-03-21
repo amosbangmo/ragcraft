@@ -1,3 +1,4 @@
+from src.application.evaluation.use_cases.benchmark_execution import BenchmarkExecutionUseCase
 from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from src.application.evaluation.use_cases.delete_all_qa_dataset_entries import (
     DeleteAllQaDatasetEntriesUseCase,
@@ -9,6 +10,7 @@ from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaD
 from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 
 __all__ = [
+    "BenchmarkExecutionUseCase",
     "CreateQaDatasetEntryUseCase",
     "DeleteAllQaDatasetEntriesUseCase",
     "DeleteQaDatasetEntryUseCase",
