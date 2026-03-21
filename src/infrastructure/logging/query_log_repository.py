@@ -4,9 +4,9 @@ import json
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Protocol, runtime_checkable
 
 from src.core.paths import get_data_root
+from src.domain.shared.query_log_port import QueryLogPersistencePort
 
 
 def _parse_entry_timestamp(entry: dict) -> datetime | None:
@@ -25,19 +25,7 @@ def _parse_entry_timestamp(entry: dict) -> datetime | None:
     return dt.astimezone(timezone.utc)
 
 
-@runtime_checkable
-class QueryLogStore(Protocol):
-    def log(self, entry: dict) -> None: ...
-
-    def list_logs(
-        self,
-        *,
-        project_id: str | None = None,
-        user_id: str | None = None,
-        since_created_at: str | None = None,
-        until_created_at: str | None = None,
-        limit: int | None = None,
-    ) -> list[dict]: ...
+QueryLogStore = QueryLogPersistencePort
 
 
 class QueryLogRepository:
@@ -47,6 +35,8 @@ class QueryLogRepository:
     Each line is one JSON object. Thread-safe for concurrent writers.
     Legacy file-based store; retained for tests and optional import paths.
     """
+
+    # TODO(clean-arch): explicitly mark as QueryLogPersistencePort once wiring uses domain ports.
 
     def __init__(self, *, log_path: Path | None = None) -> None:
         root = log_path if log_path is not None else get_data_root() / "logs" / "query_logs.json"

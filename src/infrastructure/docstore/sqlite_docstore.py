@@ -4,6 +4,8 @@ from datetime import datetime
 from src.infrastructure.persistence.db import get_connection
 
 
+# TODO(clean-arch): implement AssetRepositoryPort; inject into DocStoreService instead of concrete type.
+
 class SQLiteDocStore:
     def upsert_asset(
         self,

@@ -9,6 +9,8 @@ from src.domain.project import Project
 class AnswerGenerationService:
     """Invokes the configured LLM on a prepared RAG prompt."""
 
+    # TODO(clean-arch): accept LanguageModelGateway (or Runnable) via constructor instead of module-level LLM.
+
     def generate_answer(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
         try:
             response = LLM.invoke(pipeline.prompt)

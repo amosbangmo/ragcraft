@@ -62,6 +62,8 @@ def _retrieval_strategy_columns(entry: dict) -> tuple[int | None, int | None, in
     return k_sql, uh_sql, af_sql
 
 
+# TODO(clean-arch): implement QueryLogPersistencePort; inject into QueryLogService.
+
 class SQLiteQueryLogRepository:
     """
     Persist query observability rows in SQLite (separate from docstore tables).

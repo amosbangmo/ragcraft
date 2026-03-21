@@ -4,6 +4,8 @@ from datetime import datetime
 from src.infrastructure.persistence.db import get_connection
 
 
+# TODO(clean-arch): implement QADatasetRepositoryPort; inject into QADatasetService.
+
 class QADatasetRepository:
     def create_entry(
         self,

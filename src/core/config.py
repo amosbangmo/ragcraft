@@ -153,3 +153,4 @@ LLM = ChatOpenAI(
     model=_get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
     temperature=float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
 )
+# TODO(clean-arch): register LLM behind an explicit LanguageModelGateway adapter at the composition root.

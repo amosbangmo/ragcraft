@@ -12,6 +12,8 @@ from src.infrastructure.vectorstore.faiss_store import (
 from src.core.exceptions import VectorStoreError
 
 
+# TODO(clean-arch): implement VectorStorePort; keep FAISS details behind this façade.
+
 class VectorStoreService:
     """
     Service responsible for loading, indexing and querying
