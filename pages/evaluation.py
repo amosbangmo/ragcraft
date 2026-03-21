@@ -498,6 +498,8 @@ def _render_dataset_evaluation_result(payload: dict):
     with scope[1]:
         _scope_metric("successful_queries", "Successful queries")
 
+    st.markdown("### Benchmark dashboard")
+    st.caption("Summary metrics, full results table, advanced charts, and hallucination drill-down.")
     render_evaluation_dashboard(summary=summary, rows=rows)
 
     st.markdown("### Download benchmark reports")
