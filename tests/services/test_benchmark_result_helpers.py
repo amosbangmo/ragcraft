@@ -1,5 +1,6 @@
 import unittest
 
+from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary, coerce_benchmark_result
 from tests.fixtures.benchmark_results import make_benchmark_result
 from tests.quality.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
@@ -45,3 +46,74 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
             min_avg_citation_source_f1=0.25,
         )
         self.assertEqual(collect_benchmark_regression_violations(result, thresholds), [])
+
+
+class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
+    def test_from_plain_dict_round_trips_to_dict(self):
+        row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "doc_id_recall": 0.8})
+        original = BenchmarkResult(
+            summary=BenchmarkSummary(data={"avg_doc_id_recall": 0.9}),
+            rows=[row],
+        )
+        restored = BenchmarkResult.from_plain_dict(original.to_dict())
+        self.assertEqual(restored.summary.data, original.summary.data)
+        self.assertEqual(len(restored.rows), 1)
+        self.assertEqual(restored.rows[0].entry_id, 7)
+        self.assertEqual(restored.rows[0].question, "What?")
+        self.assertEqual(restored.rows[0].data["confidence"], 0.5)
+        self.assertEqual(restored.rows[0].data["doc_id_recall"], 0.8)
+
+    def test_coerce_benchmark_result_accepts_instance_and_dict(self):
+        result = make_benchmark_result()
+        self.assertIs(coerce_benchmark_result(result), result)
+        as_dict = result.to_dict()
+        coerced = coerce_benchmark_result(as_dict)
+        self.assertIsInstance(coerced, BenchmarkResult)
+        self.assertEqual(coerced.summary.data, result.summary.data)
+
+    def test_coerce_benchmark_result_returns_none_for_garbage(self):
+        self.assertIsNone(coerce_benchmark_result(None))
+        self.assertIsNone(coerce_benchmark_result("x"))
+        self.assertIsNone(
+            coerce_benchmark_result({"summary": {}, "rows": [{"entry_id": "bad", "question": "q"}]})
+        )
+
+    def test_coerce_accepts_foreign_benchmark_result_class(self):
+        """Foreign ``BenchmarkResult`` with same name (Streamlit module reload)."""
+
+        class BenchmarkSummary:
+            def __init__(self, data: dict) -> None:
+                self.data = data
+
+            def to_dict(self) -> dict:
+                return dict(self.data)
+
+        class BenchmarkRow:
+            def __init__(self, entry_id: int, question: str, data: dict) -> None:
+                self.entry_id = entry_id
+                self.question = question
+                self.data = data
+
+            def to_dict(self) -> dict:
+                return {"entry_id": self.entry_id, "question": self.question, **self.data}
+
+        class BenchmarkResult:
+            def __init__(self, summary: BenchmarkSummary, rows: list) -> None:
+                self.summary = summary
+                self.rows = rows
+
+            def to_dict(self) -> dict:
+                return {
+                    "summary": self.summary.to_dict(),
+                    "rows": [r.to_dict() for r in self.rows],
+                }
+
+        dup = BenchmarkResult(
+            BenchmarkSummary({"avg_doc_id_recall": 0.5}),
+            [BenchmarkRow(3, "Q?", {"confidence": 0.9})],
+        )
+        coerced = coerce_benchmark_result(dup)
+        self.assertIsInstance(coerced, type(make_benchmark_result()))
+        self.assertEqual(coerced.summary.data["avg_doc_id_recall"], 0.5)
+        self.assertEqual(len(coerced.rows), 1)
+        self.assertEqual(coerced.rows[0].entry_id, 3)

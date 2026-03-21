@@ -122,7 +122,7 @@ def render_overview_insight_charts(rows: list[dict]) -> None:
         )
 
 
-def _render_advanced_analytics(rows: list[dict]) -> None:
+def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> None:
     with section_card(
         title="📊 Advanced Analytics",
         subtitle="Score distributions, trends across queries, hallucination signal, and pairwise metric relationships.",
@@ -144,6 +144,7 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
             value=0.0,
             step=0.05,
             help="Rows below this groundedness score are excluded from charts in this section.",
+            key=f"{widget_key_prefix}_min_groundedness",
         )
 
         g_series = _numeric_series(df, "groundedness_score", "groundedness")
@@ -160,6 +161,7 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
         sort_choice = st.selectbox(
             "Sort analytics preview",
             options=["dataset order", "groundedness ↓", "confidence ↓", "hallucination score ↑"],
+            key=f"{widget_key_prefix}_sort_analytics",
         )
         preview = df.copy()
         gs = _numeric_series(preview, "groundedness_score", "groundedness")
@@ -179,6 +181,7 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
             file_name="benchmark_analytics_rows.csv",
             mime="text/csv",
             use_container_width=True,
+            key=f"{widget_key_prefix}_download_filtered_csv",
         )
 
         st.markdown("##### Score distributions")
@@ -303,7 +306,12 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
             st.caption("Relevance vs faithfulness: missing columns.")
 
 
-def render_evaluation_dashboard(summary: dict, rows: list[dict]) -> None:
+def render_evaluation_dashboard(
+    summary: dict,
+    rows: list[dict],
+    *,
+    widget_key_prefix: str = "benchmark_dashboard",
+) -> None:
     inject_section_card_styles()
 
     if not summary and not rows:
@@ -363,7 +371,7 @@ def render_evaluation_dashboard(summary: dict, rows: list[dict]) -> None:
         else:
             st.dataframe(rows, use_container_width=True)
 
-    _render_advanced_analytics(rows)
+    _render_advanced_analytics(rows, widget_key_prefix=widget_key_prefix)
 
     hallucination_rows = [r for r in rows if _row_hallucination_flag(r)]
     with section_card(
@@ -377,11 +385,20 @@ def render_evaluation_dashboard(summary: dict, rows: list[dict]) -> None:
         elif not hallucination_rows:
             st.success("No hallucinations flagged for this run.")
         else:
+            view_tag = (
+                "dataset metrics"
+                if widget_key_prefix.startswith("dataset_")
+                else "analysis"
+            )
             for idx, row in enumerate(hallucination_rows):
                 q = row.get("question") or "—"
                 score = _coerce_float(row.get("hallucination_score"))
                 score_label = f"{score:.2f}" if score is not None else "—"
-                with st.expander(f"#{row.get('entry_id', idx)} — score {score_label}", expanded=False):
+                eid = row.get("entry_id", idx)
+                with st.expander(
+                    f"#{eid} — score {score_label} · {view_tag}",
+                    expanded=False,
+                ):
                     st.markdown("**Question**")
                     st.write(q)
                     ans = _row_answer_text(row)

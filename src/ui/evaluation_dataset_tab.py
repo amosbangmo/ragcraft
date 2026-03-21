@@ -243,8 +243,9 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                 error_mapper=_map_dataset_evaluation_error,
             )
 
-        def _on_dataset_eval_success(_payload: Any) -> None:
-            return
+        def _on_dataset_eval_success(payload: Any) -> None:
+            if isinstance(payload, dict) and "result" in payload and "error" not in payload:
+                st.success("Dataset evaluation completed. Structured results appear below.")
 
         render_result_payload(
             result_key=dataset_evaluation_result_key,
@@ -256,4 +257,4 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
         if not summary and not rows:
             st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
         else:
-            render_evaluation_dashboard(summary, rows)
+            render_evaluation_dashboard(summary, rows, widget_key_prefix="dataset_eval_metrics")

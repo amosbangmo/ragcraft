@@ -3,8 +3,8 @@ import streamlit as st
 from typing import Any, cast
 
 from src.app.ragcraft_app import RAGCraftApp
-from src.domain.benchmark_result import BenchmarkResult
-from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
+from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.evaluation_tabs import render_evaluation_tabs
@@ -33,9 +33,10 @@ def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None
     if raw is None or not isinstance(raw, dict) or "error" in raw:
         return None
     result = raw.get("result")
-    if not isinstance(result, BenchmarkResult):
+    coerced = coerce_benchmark_result(result)
+    if coerced is None:
         return None
-    return raw, result
+    return raw, coerced
 
 
 header = render_page_header(
@@ -67,8 +68,8 @@ entries = app.list_qa_dataset_entries(
 
 manual_for_tabs: ManualEvaluationResult | None = None
 manual_payload_raw = st.session_state.get(EVALUATION_RESULT_KEY)
-if isinstance(manual_payload_raw, ManualEvaluationResult):
-    manual_for_tabs = manual_payload_raw
+if is_manual_evaluation_result_like(manual_payload_raw):
+    manual_for_tabs = cast(ManualEvaluationResult, manual_payload_raw)
 
 bundle = _session_benchmark_bundle()
 summary: dict[str, Any] = {}

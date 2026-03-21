@@ -1,3 +1,4 @@
+from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.services.manual_evaluation_service import (
     build_expectation_comparison,
     detect_manual_evaluation_issues,
@@ -94,3 +95,32 @@ def test_detect_issues_dedupes_duplicate_messages():
         expected_answer="gold",
     )
     assert issues.count("No answer generated") == 1
+
+
+def test_is_manual_evaluation_result_like_domain_instance():
+    r = ManualEvaluationResult(
+        question="q",
+        answer="a",
+        expected_answer=None,
+        confidence=0.5,
+    )
+    assert is_manual_evaluation_result_like(r) is True
+
+
+def test_is_manual_evaluation_result_like_duplicate_named_class():
+    """Simulates Streamlit reload: same class name, different object identity."""
+
+    class ManualEvaluationResult:  # noqa: PLW1641 — intentional shadow for test
+        def __init__(self) -> None:
+            self.answer = "x"
+            self.question = "y"
+            self.confidence = 0.3
+
+    dup = ManualEvaluationResult()
+    assert is_manual_evaluation_result_like(dup) is True
+
+
+def test_is_manual_evaluation_result_like_rejects_garbage():
+    assert is_manual_evaluation_result_like(None) is False
+    assert is_manual_evaluation_result_like({}) is False
+    assert is_manual_evaluation_result_like("x") is False

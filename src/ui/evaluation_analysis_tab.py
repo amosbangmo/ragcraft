@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import streamlit as st
 
-from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.raw_assets import render_raw_assets
@@ -30,7 +30,7 @@ def render_evaluation_analysis_tab(payload: dict[str, Any]) -> None:
     st.markdown("---")
     st.markdown("### Advanced evaluation dashboard")
     if summary or rows:
-        render_evaluation_dashboard(summary, rows)
+        render_evaluation_dashboard(summary, rows, widget_key_prefix="analysis_eval_dashboard")
         with st.expander("Benchmark summary JSON", expanded=False):
             st.json(summary)
     else:
@@ -39,7 +39,11 @@ def render_evaluation_analysis_tab(payload: dict[str, Any]) -> None:
             "and comparative views."
         )
 
-    manual = manual_result if isinstance(manual_result, ManualEvaluationResult) else None
+    manual = (
+        cast(ManualEvaluationResult, manual_result)
+        if is_manual_evaluation_result_like(manual_result)
+        else None
+    )
     if manual is not None:
         st.markdown("---")
         st.markdown("### Manual evaluation (technical)")

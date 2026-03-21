@@ -11,7 +11,7 @@ import streamlit as st
 from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
-from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
@@ -132,8 +132,12 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
     st.markdown("</div>", unsafe_allow_html=True)
 
     def _on_success(result: Any) -> None:
-        if isinstance(result, ManualEvaluationResult):
-            render_manual_evaluation_result(result, raw_assets_collapsed=True, include_raw_assets=True)
+        if is_manual_evaluation_result_like(result):
+            render_manual_evaluation_result(
+                cast(ManualEvaluationResult, result),
+                raw_assets_collapsed=True,
+                include_raw_assets=True,
+            )
             return
         if isinstance(result, dict) and "error" not in result and "answer" in result:
             st.warning(

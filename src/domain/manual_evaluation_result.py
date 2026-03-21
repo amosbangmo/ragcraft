@@ -107,3 +107,22 @@ class ManualEvaluationResult:
             else None,
             "detected_issues": list(self.detected_issues),
         }
+
+
+def is_manual_evaluation_result_like(value: Any) -> bool:
+    """
+    True for ManualEvaluationResult instances.
+
+    After Streamlit reruns, ``isinstance(x, ManualEvaluationResult)`` can fail while
+    ``type(x).__name__`` is still ``ManualEvaluationResult`` (duplicate class object).
+    """
+    if value is None or isinstance(value, dict):
+        return False
+    if isinstance(value, ManualEvaluationResult):
+        return True
+    return (
+        type(value).__name__ == "ManualEvaluationResult"
+        and hasattr(value, "answer")
+        and hasattr(value, "question")
+        and hasattr(value, "confidence")
+    )

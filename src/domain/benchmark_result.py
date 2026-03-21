@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -91,3 +93,53 @@ class BenchmarkResult:
             "summary": self.summary.to_dict(),
             "rows": [row.to_dict() for row in self.rows],
         }
+
+    @classmethod
+    def from_plain_dict(cls, payload: dict[str, Any]) -> BenchmarkResult:
+        """
+        Rebuild from :meth:`to_dict` output (e.g. after Streamlit session_state round-trip).
+        """
+        summary_raw = payload.get("summary")
+        if not isinstance(summary_raw, dict):
+            summary_raw = {}
+        rows_raw = payload.get("rows")
+        if not isinstance(rows_raw, list):
+            rows_raw = []
+        summary = BenchmarkSummary(data=dict(summary_raw))
+        rows: list[BenchmarkRow] = []
+        reserved = frozenset({"entry_id", "question"})
+        for item in rows_raw:
+            if not isinstance(item, dict) or "entry_id" not in item:
+                continue
+            entry_id = int(item["entry_id"])
+            q = item.get("question", "")
+            question = q if isinstance(q, str) else str(q)
+            data = {k: v for k, v in item.items() if k not in reserved}
+            rows.append(BenchmarkRow(entry_id=entry_id, question=question, data=data))
+        return cls(summary=summary, rows=rows)
+
+
+def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:
+    """
+    Accept a canonical instance, a plain dict (session round-trip), or another
+    ``BenchmarkResult`` class after Streamlit reload (same name, different type id).
+    """
+    if isinstance(value, BenchmarkResult):
+        return value
+    if isinstance(value, dict):
+        try:
+            return BenchmarkResult.from_plain_dict(value)
+        except (TypeError, ValueError, KeyError):
+            return None
+    to_dict = getattr(value, "to_dict", None)
+    if (
+        type(value).__name__ == "BenchmarkResult"
+        and callable(to_dict)
+    ):
+        try:
+            dumped = to_dict()
+            if isinstance(dumped, dict):
+                return BenchmarkResult.from_plain_dict(dumped)
+        except (TypeError, ValueError, KeyError):
+            return None
+    return None
