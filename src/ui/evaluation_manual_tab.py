@@ -15,6 +15,8 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
+_MANUAL_QUESTION_KEY = "manual_eval_question"
+
 
 def parse_evaluation_csv_list(raw_value: str) -> list[str]:
     if not raw_value.strip():
@@ -52,7 +54,11 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         unsafe_allow_html=True,
     )
 
-    question = st.text_input("Evaluation question", placeholder="Enter a test question...")
+    st.text_input(
+        "Evaluation question",
+        placeholder="Enter a test question...",
+        key=_MANUAL_QUESTION_KEY,
+    )
 
     st.markdown("##### Optional expectations (for this run only)")
     st.caption(
@@ -79,11 +85,14 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
             key="manual_eval_expected_sources",
         )
 
+    def _current_question() -> str:
+        return str(st.session_state.get(_MANUAL_QUESTION_KEY) or "")
+
     def _run_evaluation():
         return app.evaluate_manual_question(
             user_id=user_id,
             project_id=project_id,
-            question=question,
+            question=_current_question(),
             expected_answer=manual_expected_answer.strip() or None,
             expected_doc_ids=parse_evaluation_csv_list(manual_expected_doc_ids),
             expected_sources=parse_evaluation_csv_list(manual_expected_sources),
@@ -106,26 +115,40 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         disabled=is_request_running(evaluation_request_key),
     )
 
-    if run_clicked and not question.strip():
+    q_stripped = _current_question().strip()
+    if run_clicked and not q_stripped:
         st.warning("Please enter an evaluation question.")
     else:
         run_request_action(
             request_key=evaluation_request_key,
             result_key=evaluation_result_key,
             trigger=run_clicked,
-            can_run=bool(question.strip()),
+            can_run=bool(q_stripped),
             action=_run_evaluation,
             spinner_text="Running evaluation...",
             error_mapper=_map_evaluation_error,
         )
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
     def _on_success(result: Any) -> None:
         if isinstance(result, ManualEvaluationResult):
             render_manual_evaluation_result(result, raw_assets_collapsed=True, include_raw_assets=True)
+            return
+        if isinstance(result, dict) and "error" not in result and "answer" in result:
+            st.warning(
+                "Result arrived as serialized data; showing a simplified view. "
+                "Reload the page if structured metrics are missing."
+            )
+            st.markdown("##### Answer")
+            st.write(result.get("answer") or "—")
+            with st.expander("Full payload (JSON)", expanded=False):
+                st.json(result)
+            return
+        st.caption(f"Unexpected evaluation payload (type: {type(result).__name__}).")
 
+    st.markdown("##### Results")
     render_result_payload(
         result_key=evaluation_result_key,
         on_success=_on_success,
     )
-
-    st.markdown("</div>", unsafe_allow_html=True)
