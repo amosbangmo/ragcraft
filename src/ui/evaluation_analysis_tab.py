@@ -40,7 +40,7 @@ def render_evaluation_analysis_tab(payload: dict[str, Any]) -> None:
             st.json(summary)
     else:
         st.info(
-            "Run **dataset evaluation** under **Dataset evaluation → Metrics** to populate charts, tables, "
+            "Run **dataset evaluation** under **Dataset evaluation → Overview** to populate charts, tables, "
             "and comparative views."
         )
 

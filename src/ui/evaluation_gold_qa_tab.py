@@ -230,5 +230,5 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
         st.markdown(
             "- Use **Generate → Append with dedup** to grow the dataset without repeating questions.\n"
             "- Prefer **Dataset evaluation → Entries** when you need to audit wording, gold fields, or remove a row.\n"
-            "- After substantive edits, re-run **Dataset evaluation → Metrics** to refresh aggregates."
+            "- After substantive edits, re-run **Dataset evaluation** (Overview tab) to refresh aggregates."
         )

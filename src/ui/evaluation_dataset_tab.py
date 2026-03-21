@@ -1,5 +1,5 @@
 """
-Dataset evaluation tab: benchmark the gold QA dataset with Overview / Entries / Metrics sub-tabs.
+Dataset evaluation tab: benchmark the gold QA dataset with Overview / Entries sub-tabs.
 """
 
 from __future__ import annotations
@@ -68,24 +68,128 @@ def _render_dataset_overview(
 
     if not summary and not rows:
         st.info(
-            "Add gold QA entries under **Gold QA dataset**, then run **dataset evaluation** from the **Metrics** sub-tab."
+            "Add gold QA entries under **Gold QA dataset**, then run **dataset evaluation** below."
         )
-        return
+    else:
+        st.markdown("##### Latest benchmark (summary)")
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            _summary_metric_cell(summary, "avg_groundedness", "Avg groundedness")
+        with m2:
+            _summary_metric_cell(summary, "avg_doc_id_recall", "Avg doc ID recall")
+        with m3:
+            _summary_metric_cell(
+                summary, "hallucination_rate", "Hallucination rate", as_percent=True
+            )
 
-    st.markdown("##### Latest benchmark (summary)")
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        _summary_metric_cell(summary, "avg_groundedness", "Avg groundedness")
-    with m2:
-        _summary_metric_cell(summary, "avg_doc_id_recall", "Avg doc ID recall")
-    with m3:
-        _summary_metric_cell(summary, "hallucination_rate", "Hallucination rate", as_percent=True)
+        m4, m5 = st.columns(2)
+        with m4:
+            _summary_metric_cell(summary, "avg_answer_relevance", "Avg answer relevance")
+        with m5:
+            _summary_metric_cell(summary, "avg_confidence", "Avg confidence")
 
-    m4, m5 = st.columns(2)
-    with m4:
-        _summary_metric_cell(summary, "avg_answer_relevance", "Avg answer relevance")
-    with m5:
-        _summary_metric_cell(summary, "avg_confidence", "Avg confidence")
+
+def _render_dataset_evaluation_run_and_results(
+    *,
+    app: RAGCraftApp,
+    user_id: str,
+    project_id: str,
+    wk: str,
+    entries: list[QADatasetEntry],
+    dataset_evaluation_request_key: str,
+    dataset_evaluation_result_key: str,
+    summary: dict[str, Any],
+    rows: list[dict[str, Any]],
+) -> None:
+    st.markdown("---")
+    st.markdown("##### Run dataset evaluation")
+    st.caption(
+        "Aggregated retrieval, answer, citation, and judge metrics over all gold QA entries."
+    )
+
+    dataset_eval_col1, dataset_eval_col2 = st.columns(2)
+    with dataset_eval_col1:
+        dataset_enable_query_rewrite = st.toggle(
+            "Enable query rewrite for dataset evaluation",
+            value=True,
+            help="Apply the same retrieval rewrite stage to every dataset question.",
+            key=f"eval_ds_query_rewrite_{wk}",
+        )
+    with dataset_eval_col2:
+        dataset_enable_hybrid_retrieval = st.toggle(
+            "Enable hybrid retrieval for dataset evaluation",
+            value=True,
+            help="Combine FAISS and BM25 during dataset evaluation.",
+            key=f"eval_ds_hybrid_{wk}",
+        )
+
+    def _run_dataset_evaluation():
+        return {
+            "result": app.evaluate_gold_qa_dataset(
+                user_id=user_id,
+                project_id=project_id,
+                enable_query_rewrite=dataset_enable_query_rewrite,
+                enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
+            ),
+            "enable_query_rewrite": dataset_enable_query_rewrite,
+            "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
+            "generated_at": datetime.now(timezone.utc),
+        }
+
+    def _map_dataset_evaluation_error(exc: Exception) -> str:
+        if isinstance(exc, VectorStoreError):
+            return get_user_error_message(exc, "Unable to query the FAISS index for dataset evaluation.")
+        if isinstance(exc, DocStoreError):
+            return get_user_error_message(
+                exc,
+                "Unable to inspect supporting assets from SQLite during dataset evaluation.",
+            )
+        if isinstance(exc, LLMServiceError):
+            return get_user_error_message(
+                exc,
+                "The language model failed while preparing a retrieval pipeline during dataset evaluation.",
+            )
+        return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
+
+    dataset_run_clicked = st.button(
+        "Run dataset evaluation",
+        use_container_width=True,
+        disabled=is_request_running(dataset_evaluation_request_key),
+        key=f"eval_ds_run_benchmark_{wk}",
+    )
+
+    if dataset_run_clicked and not entries:
+        st.warning("Please add at least one gold QA dataset entry before running dataset evaluation.")
+    else:
+        run_request_action(
+            request_key=dataset_evaluation_request_key,
+            result_key=dataset_evaluation_result_key,
+            trigger=dataset_run_clicked,
+            can_run=bool(entries),
+            action=_run_dataset_evaluation,
+            spinner_text="Running dataset retrieval metrics...",
+            error_mapper=_map_dataset_evaluation_error,
+        )
+
+    def _on_dataset_eval_success(payload: Any) -> None:
+        if isinstance(payload, dict) and "result" in payload and "error" not in payload:
+            st.success("Dataset evaluation completed. Structured results appear below.")
+
+    render_result_payload(
+        result_key=dataset_evaluation_result_key,
+        on_success=_on_dataset_eval_success,
+    )
+
+    st.markdown("---")
+    st.markdown("##### Structured results")
+    if not summary and not rows:
+        st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
+    else:
+        render_evaluation_dashboard(
+            summary,
+            rows,
+            widget_key_prefix=f"dataset_eval_metrics_{wk}",
+        )
 
 
 def _rows_by_entry_id(rows: list[dict[str, Any]]) -> dict[Any, dict[str, Any]]:
@@ -109,16 +213,27 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
     rows = cast(list[dict[str, Any]], payload.get("rows") or [])
 
     st.caption(
-        "Benchmark the gold QA dataset for this project: concise overview, per-entry inspection, "
-        "and full metrics plus charts after you run evaluation."
+        "Benchmark the gold QA dataset for this project: run evaluation and review aggregates on **Overview**, "
+        "or inspect and manage entries on **Entries**."
     )
 
-    tab_overview, tab_entries, tab_metrics = st.tabs(["Overview", "Entries", "Metrics"])
+    tab_overview, tab_entries = st.tabs(["Overview", "Entries"])
 
     with tab_overview:
         _render_dataset_overview(
             project_id=project_id,
             entry_count=len(entries),
+            summary=summary,
+            rows=rows,
+        )
+        _render_dataset_evaluation_run_and_results(
+            app=app,
+            user_id=user_id,
+            project_id=project_id,
+            wk=wk,
+            entries=entries,
+            dataset_evaluation_request_key=dataset_evaluation_request_key,
+            dataset_evaluation_result_key=dataset_evaluation_result_key,
             summary=summary,
             rows=rows,
         )
@@ -167,7 +282,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                         with st.expander("Latest benchmark scores for this entry", expanded=False):
                             render_benchmark_row_detail(br, include_full_row_json_expander=True)
                     else:
-                        st.caption("Run dataset evaluation (Metrics sub-tab) to attach scores to this entry.")
+                        st.caption("Run dataset evaluation from the **Overview** tab to attach scores to this entry.")
 
                     if st.button(
                         "Delete entry",
@@ -189,91 +304,3 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                                 f"Unable to delete QA dataset entry #{entry.id}: {exc}",
                             )
                         st.rerun()
-
-    with tab_metrics:
-        st.markdown("##### Run dataset evaluation")
-        st.caption("Aggregated retrieval, answer, citation, and judge metrics over all gold QA entries.")
-
-        dataset_eval_col1, dataset_eval_col2 = st.columns(2)
-        with dataset_eval_col1:
-            dataset_enable_query_rewrite = st.toggle(
-                "Enable query rewrite for dataset evaluation",
-                value=True,
-                help="Apply the same retrieval rewrite stage to every dataset question.",
-                key=f"eval_ds_query_rewrite_{wk}",
-            )
-        with dataset_eval_col2:
-            dataset_enable_hybrid_retrieval = st.toggle(
-                "Enable hybrid retrieval for dataset evaluation",
-                value=True,
-                help="Combine FAISS and BM25 during dataset evaluation.",
-                key=f"eval_ds_hybrid_{wk}",
-            )
-
-        def _run_dataset_evaluation():
-            return {
-                "result": app.evaluate_gold_qa_dataset(
-                    user_id=user_id,
-                    project_id=project_id,
-                    enable_query_rewrite=dataset_enable_query_rewrite,
-                    enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
-                ),
-                "enable_query_rewrite": dataset_enable_query_rewrite,
-                "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
-                "generated_at": datetime.now(timezone.utc),
-            }
-
-        def _map_dataset_evaluation_error(exc: Exception) -> str:
-            if isinstance(exc, VectorStoreError):
-                return get_user_error_message(exc, "Unable to query the FAISS index for dataset evaluation.")
-            if isinstance(exc, DocStoreError):
-                return get_user_error_message(
-                    exc,
-                    "Unable to inspect supporting assets from SQLite during dataset evaluation.",
-                )
-            if isinstance(exc, LLMServiceError):
-                return get_user_error_message(
-                    exc,
-                    "The language model failed while preparing a retrieval pipeline during dataset evaluation.",
-                )
-            return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
-
-        dataset_run_clicked = st.button(
-            "Run dataset evaluation",
-            use_container_width=True,
-            disabled=is_request_running(dataset_evaluation_request_key),
-            key=f"eval_ds_run_benchmark_{wk}",
-        )
-
-        if dataset_run_clicked and not entries:
-            st.warning("Please add at least one gold QA dataset entry before running dataset evaluation.")
-        else:
-            run_request_action(
-                request_key=dataset_evaluation_request_key,
-                result_key=dataset_evaluation_result_key,
-                trigger=dataset_run_clicked,
-                can_run=bool(entries),
-                action=_run_dataset_evaluation,
-                spinner_text="Running dataset retrieval metrics...",
-                error_mapper=_map_dataset_evaluation_error,
-            )
-
-        def _on_dataset_eval_success(payload: Any) -> None:
-            if isinstance(payload, dict) and "result" in payload and "error" not in payload:
-                st.success("Dataset evaluation completed. Structured results appear below.")
-
-        render_result_payload(
-            result_key=dataset_evaluation_result_key,
-            on_success=_on_dataset_eval_success,
-        )
-
-        st.markdown("---")
-        st.markdown("##### Structured results")
-        if not summary and not rows:
-            st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
-        else:
-            render_evaluation_dashboard(
-                summary,
-                rows,
-                widget_key_prefix=f"dataset_eval_metrics_{wk}",
-            )
