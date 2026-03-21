@@ -53,6 +53,7 @@ if "src.infrastructure.ingestion.summarizer" not in sys.modules:
     sys.modules["src.infrastructure.ingestion.summarizer"] = summarizer_module
 
 from src.core.exceptions import DocumentExtractionError, LLMServiceError, OCRDependencyError
+from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.services.ingestion_service import IngestionService
 
@@ -75,7 +76,7 @@ class TestIngestionService(unittest.TestCase):
         ]
         self.service.summarizer.summarize.return_value = "summary text"
 
-        docs, assets = self.service.ingest_file_path(
+        docs, assets, diagnostics = self.service.ingest_file_path(
             project=self.project,
             file_path=Path("x.pdf"),
             source_file="x.pdf",
@@ -87,6 +88,12 @@ class TestIngestionService(unittest.TestCase):
         self.assertEqual(len(assets), 1)
         self.assertEqual(assets[0]["summary"], "summary text")
         self.assertEqual(assets[0]["project_id"], "p1")
+        self.assertIsInstance(diagnostics, IngestionDiagnostics)
+        self.assertEqual(diagnostics.extracted_elements, 1)
+        self.assertEqual(diagnostics.generated_assets, 1)
+        self.assertGreaterEqual(diagnostics.extraction_ms, 0.0)
+        self.assertGreaterEqual(diagnostics.summarization_ms, 0.0)
+        self.assertGreaterEqual(diagnostics.total_ms, 0.0)
 
     @patch("src.services.ingestion_service.extract_elements")
     def test_ingest_file_path_raises_on_empty_elements(self, mock_extract):

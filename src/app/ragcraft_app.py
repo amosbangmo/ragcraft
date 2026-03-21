@@ -1,3 +1,6 @@
+import json
+import logging
+from dataclasses import replace
 from datetime import datetime
 from time import perf_counter
 
@@ -19,6 +22,7 @@ from src.services.qa_dataset_generation_service import QADatasetGenerationServic
 from src.services.benchmark_report_service import BenchmarkExportArtifacts, BenchmarkReportService
 from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
+from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
 
@@ -278,6 +282,31 @@ class RAGCraftApp:
             "deleted_assets": deleted_assets,
         }
 
+    def _maybe_log_ingestion_diagnostics(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+        diagnostics: IngestionDiagnostics,
+    ) -> None:
+        log = logging.getLogger("ragcraft.ingestion")
+        try:
+            log.info(
+                json.dumps(
+                    {
+                        "event": "ingestion_diagnostics",
+                        "user_id": user_id,
+                        "project_id": project_id,
+                        "source_file": source_file,
+                        **diagnostics.to_dict(),
+                    },
+                    ensure_ascii=False,
+                )
+            )
+        except Exception:
+            return
+
     def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
         project = self.get_project(user_id, project_id)
 
@@ -287,7 +316,7 @@ class RAGCraftApp:
             source_file=uploaded_file.name,
         )
 
-        summary_documents, raw_assets = self.ingestion_service.ingest_uploaded_file(
+        summary_documents, raw_assets, diagnostics = self.ingestion_service.ingest_uploaded_file(
             project,
             uploaded_file,
         )
@@ -298,15 +327,30 @@ class RAGCraftApp:
         for asset in raw_assets:
             self.docstore_service.save_asset(**asset)
 
+        indexing_ms = 0.0
         if summary_documents:
-            self.vectorstore_service.index_documents(project, summary_documents)
+            _, indexing_ms = self.vectorstore_service.index_documents(project, summary_documents)
+
+        diagnostics = replace(
+            diagnostics,
+            indexing_ms=indexing_ms,
+            total_ms=diagnostics.extraction_ms + diagnostics.summarization_ms + indexing_ms,
+        )
 
         self.invalidate_project_chain(user_id, project_id)
 
-        return {
+        payload = {
             "raw_assets": raw_assets,
             "replacement_info": replacement_info,
+            "diagnostics": diagnostics,
         }
+        self._maybe_log_ingestion_diagnostics(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=uploaded_file.name,
+            diagnostics=diagnostics,
+        )
+        return payload
 
     def reindex_project_document(self, user_id: str, project_id: str, source_file: str):
         project = self.get_project(user_id, project_id)
@@ -321,7 +365,7 @@ class RAGCraftApp:
             source_file=source_file,
         )
 
-        summary_documents, raw_assets = self.ingestion_service.ingest_file_path(
+        summary_documents, raw_assets, diagnostics = self.ingestion_service.ingest_file_path(
             project=project,
             file_path=file_path,
             source_file=source_file,
@@ -333,15 +377,30 @@ class RAGCraftApp:
         for asset in raw_assets:
             self.docstore_service.save_asset(**asset)
 
+        indexing_ms = 0.0
         if summary_documents:
-            self.vectorstore_service.index_documents(project, summary_documents)
+            _, indexing_ms = self.vectorstore_service.index_documents(project, summary_documents)
+
+        diagnostics = replace(
+            diagnostics,
+            indexing_ms=indexing_ms,
+            total_ms=diagnostics.extraction_ms + diagnostics.summarization_ms + indexing_ms,
+        )
 
         self.invalidate_project_chain(user_id, project_id)
 
-        return {
+        payload = {
             "raw_assets": raw_assets,
             "replacement_info": replacement_info,
+            "diagnostics": diagnostics,
         }
+        self._maybe_log_ingestion_diagnostics(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+            diagnostics=diagnostics,
+        )
+        return payload
 
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)

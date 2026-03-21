@@ -78,12 +78,16 @@ def _run_ingestion():
             asset_type = asset["content_type"]
             type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
 
+        diag = result.get("diagnostics")
+        diagnostics_dict = diag.to_dict() if diag is not None and hasattr(diag, "to_dict") else (diag or {})
+
         results.append(
             {
                 "file_name": uploaded_file.name,
                 "asset_count": len(assets),
                 "type_counts": type_counts,
                 "replacement_info": replacement_info,
+                "diagnostics": diagnostics_dict,
             }
         )
 
@@ -126,6 +130,27 @@ def _render_ingestion_result(results: list[dict]):
             st.success(
                 f"{file_name}: processed {asset_count} multimodal asset(s) {type_counts}"
             )
+
+        diagnostics = item.get("diagnostics") or {}
+        if diagnostics:
+            with st.expander(f"Pipeline diagnostics — {file_name}", expanded=False):
+                m1, m2, m3, m4 = st.columns(4)
+                with m1:
+                    st.metric("Total time (ms)", f"{diagnostics.get('total_ms', 0):.0f}")
+                with m2:
+                    st.metric("Extraction (ms)", f"{diagnostics.get('extraction_ms', 0):.0f}")
+                with m3:
+                    st.metric("Summarization (ms)", f"{diagnostics.get('summarization_ms', 0):.0f}")
+                with m4:
+                    st.metric("Indexing (ms)", f"{diagnostics.get('indexing_ms', 0):.0f}")
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.metric("Extracted elements", diagnostics.get("extracted_elements", 0))
+                with c2:
+                    st.metric("Generated assets", diagnostics.get("generated_assets", 0))
+                err_list = diagnostics.get("errors") or []
+                if err_list:
+                    st.warning("Warnings: " + "; ".join(str(e) for e in err_list))
 
 
 if process_clicked and not uploaded_files:

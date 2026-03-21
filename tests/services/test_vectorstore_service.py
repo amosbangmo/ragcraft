@@ -63,11 +63,12 @@ class TestVectorStoreService(unittest.TestCase):
             self.service.load(self.project)
 
     @patch("src.services.vectorstore_service.create_or_update_vector_store")
-    def test_index_documents_returns_none_for_empty_chunks(self, mock_create_or_update):
+    def test_index_documents_returns_empty_tuple_for_empty_chunks(self, mock_create_or_update):
         # Empty input should short-circuit and avoid touching infrastructure.
-        result = self.service.index_documents(self.project, [])
+        store, indexing_ms = self.service.index_documents(self.project, [])
 
-        self.assertIsNone(result)
+        self.assertIsNone(store)
+        self.assertEqual(indexing_ms, 0.0)
         mock_create_or_update.assert_not_called()
 
     @patch("src.services.vectorstore_service.save_vector_store")
@@ -77,9 +78,10 @@ class TestVectorStoreService(unittest.TestCase):
         vector_store = MagicMock()
         mock_create_or_update.return_value = vector_store
 
-        result = self.service.index_documents(self.project, chunks)
+        store, indexing_ms = self.service.index_documents(self.project, chunks)
 
-        self.assertIs(result, vector_store)
+        self.assertIs(store, vector_store)
+        self.assertGreaterEqual(indexing_ms, 0.0)
         mock_save.assert_called_once_with(vector_store, self.project.faiss_index_path)
 
     def test_similarity_search_returns_empty_when_store_missing(self):

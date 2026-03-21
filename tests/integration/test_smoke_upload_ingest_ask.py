@@ -4,6 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 
@@ -113,7 +114,12 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
                 "metadata": {"page_number": 1},
             }
         ]
-        app.ingestion_service.ingest_uploaded_file.return_value = (summary_documents, raw_assets)
+        app.ingestion_service.ingest_uploaded_file.return_value = (
+            summary_documents,
+            raw_assets,
+            IngestionDiagnostics(),
+        )
+        app.vectorstore_service.index_documents.return_value = (MagicMock(), 0.0)
 
         response = RAGResponse(
             question="What is in the document?",

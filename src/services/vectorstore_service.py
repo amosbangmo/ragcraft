@@ -1,3 +1,5 @@
+import time
+
 from langchain_core.documents import Document
 
 from src.domain.project import Project
@@ -25,10 +27,11 @@ class VectorStoreService:
                 user_message="Unable to load the vector index for the selected project.",
             ) from exc
 
-    def index_documents(self, project: Project, chunks: list[Document]):
+    def index_documents(self, project: Project, chunks: list[Document]) -> tuple[object | None, float]:
         if not chunks:
-            return None
+            return None, 0.0
 
+        t0 = time.perf_counter()
         try:
             vector_store = create_or_update_vector_store(
                 chunks=chunks,
@@ -38,7 +41,8 @@ class VectorStoreService:
             if vector_store is not None:
                 save_vector_store(vector_store, project.faiss_index_path)
 
-            return vector_store
+            indexing_ms = (time.perf_counter() - t0) * 1000.0
+            return vector_store, indexing_ms
         except Exception as exc:
             raise VectorStoreError(
                 f"Failed to index documents for project '{project.project_id}': {exc}",

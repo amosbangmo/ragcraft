@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -8,6 +9,7 @@ from src.core.exceptions import (
     LLMServiceError,
     OCRDependencyError,
 )
+from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.infrastructure.ingestion.loader import save_uploaded_file
 from src.infrastructure.ingestion.unstructured_extractor import extract_elements
@@ -24,7 +26,9 @@ class IngestionService:
         self.summarizer = ElementSummarizer()
         self.config = INGESTION_CONFIG
 
-    def ingest_uploaded_file(self, project: Project, uploaded_file) -> tuple[list[Document], list[dict]]:
+    def ingest_uploaded_file(
+        self, project: Project, uploaded_file
+    ) -> tuple[list[Document], list[dict], IngestionDiagnostics]:
         try:
             project.path.mkdir(parents=True, exist_ok=True)
         except Exception as exc:
@@ -53,7 +57,10 @@ class IngestionService:
         project: Project,
         file_path: str | Path,
         source_file: str,
-    ) -> tuple[list[Document], list[dict]]:
+    ) -> tuple[list[Document], list[dict], IngestionDiagnostics]:
+        pipeline_t0 = time.perf_counter()
+
+        t_extract0 = time.perf_counter()
         try:
             raw_elements = extract_elements(str(file_path), source_file)
         except OCRDependencyError:
@@ -73,6 +80,8 @@ class IngestionService:
                 user_message=f"Unable to extract content from '{source_file}'.",
             ) from exc
 
+        extraction_ms = (time.perf_counter() - t_extract0) * 1000.0
+
         if not raw_elements:
             raise DocumentExtractionError(
                 f"No extractable content found in file: {source_file}",
@@ -82,6 +91,7 @@ class IngestionService:
         summary_documents: list[Document] = []
         raw_assets: list[dict] = []
 
+        t_summ0 = time.perf_counter()
         for element in raw_elements:
             doc_id = element["doc_id"]
             content_type = element["content_type"]
@@ -133,4 +143,17 @@ class IngestionService:
                 }
             )
 
-        return summary_documents, raw_assets
+        summarization_ms = (time.perf_counter() - t_summ0) * 1000.0
+        pipeline_ms = (time.perf_counter() - pipeline_t0) * 1000.0
+
+        diagnostics = IngestionDiagnostics(
+            extraction_ms=extraction_ms,
+            summarization_ms=summarization_ms,
+            indexing_ms=0.0,
+            total_ms=pipeline_ms,
+            extracted_elements=len(raw_elements),
+            generated_assets=len(raw_assets),
+            errors=None,
+        )
+
+        return summary_documents, raw_assets, diagnostics
