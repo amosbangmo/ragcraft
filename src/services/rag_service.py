@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 
 from src.core.config import LLM, RETRIEVAL_CONFIG
 from src.core.exceptions import LLMServiceError
+from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.source_citation import SourceCitation
@@ -57,6 +58,18 @@ class RAGService:
         )
         self.config = RETRIEVAL_CONFIG
         self.query_log_service = query_log_service
+
+    @staticmethod
+    def _latency_fields_for_query_log(latency: PipelineLatency) -> dict:
+        d = latency.to_dict()
+        return {
+            "query_rewrite_ms": d["query_rewrite_ms"],
+            "retrieval_ms": d["retrieval_ms"],
+            "reranking_ms": d["reranking_ms"],
+            "prompt_build_ms": d["prompt_build_ms"],
+            "answer_generation_ms": d["answer_generation_ms"],
+            "total_latency_ms": d["total_ms"],
+        }
 
     def _safe_log_query(self, payload: dict) -> None:
         if self.query_log_service is None:
@@ -260,17 +273,21 @@ class RAGService:
             else enable_hybrid_retrieval_override
         )
 
+        t0 = perf_counter()
         rewritten_question = self._rewrite_question(
             question,
             chat_history,
             enable_query_rewrite=enable_query_rewrite,
         )
+        query_rewrite_ms = (perf_counter() - t0) * 1000.0
 
+        t0 = perf_counter()
         retrieval_payload = self._retrieve_summary_docs(
             project=project,
             retrieval_query=rewritten_question,
             enable_hybrid_retrieval=enable_hybrid_retrieval,
         )
+        retrieval_ms = (perf_counter() - t0) * 1000.0
 
         vector_summary_docs = retrieval_payload["vector_summary_docs"]
         bm25_summary_docs = retrieval_payload["bm25_summary_docs"]
@@ -287,11 +304,13 @@ class RAGService:
         if not recalled_raw_assets:
             return None
 
+        t0 = perf_counter()
         reranked_raw_assets = self.reranking_service.rerank(
             query=rewritten_question,
             raw_assets=recalled_raw_assets,
             top_k=self.config.max_prompt_assets,
         )
+        reranking_ms = (perf_counter() - t0) * 1000.0
 
         if not reranked_raw_assets:
             return None
@@ -302,6 +321,7 @@ class RAGService:
             selected_doc_ids,
         )
 
+        t0 = perf_counter()
         citation_objects = self.source_citation_service.build_citations(reranked_raw_assets)
         source_references = [self._citation_to_dict(citation) for citation in citation_objects]
 
@@ -314,12 +334,24 @@ class RAGService:
             chat_history=chat_history,
             raw_context=raw_context,
         )
+        prompt_build_ms = (perf_counter() - t0) * 1000.0
 
         confidence = self.confidence_service.compute_confidence(
             reranked_raw_assets=reranked_raw_assets,
         )
 
         retrieval_mode = "faiss+bm25" if enable_hybrid_retrieval else "faiss"
+
+        total_pipeline_ms = (perf_counter() - pipeline_started) * 1000.0
+        latency = PipelineLatency(
+            query_rewrite_ms=query_rewrite_ms,
+            retrieval_ms=retrieval_ms,
+            reranking_ms=reranking_ms,
+            prompt_build_ms=prompt_build_ms,
+            answer_generation_ms=0.0,
+            total_ms=total_pipeline_ms,
+        )
+        latency_dict = latency.to_dict()
 
         payload = {
             "question": question,
@@ -340,10 +372,11 @@ class RAGService:
             "raw_context": raw_context,
             "prompt": prompt,
             "confidence": confidence,
+            "latency": latency_dict,
+            "latency_ms": total_pipeline_ms,
         }
 
         if self.query_log_service is not None and not defer_query_log:
-            pipeline_ms = (perf_counter() - pipeline_started) * 1000.0
             self._safe_log_query(
                 {
                     "question": question,
@@ -352,8 +385,9 @@ class RAGService:
                     "user_id": project.user_id,
                     "selected_doc_ids": selected_doc_ids,
                     "retrieved_doc_ids": recalled_doc_ids,
-                    "latency_ms": pipeline_ms,
+                    "latency_ms": latency.total_ms,
                     "confidence": confidence,
+                    **self._latency_fields_for_query_log(latency),
                 }
             )
 
@@ -407,8 +441,18 @@ class RAGService:
         if pipeline is None:
             return None
 
+        gen_started = perf_counter()
         answer = self.generate_answer_from_pipeline(project=project, pipeline=pipeline)
+        answer_generation_ms = (perf_counter() - gen_started) * 1000.0
         total_ms = (perf_counter() - ask_started) * 1000.0
+        full_latency = merge_with_answer_stage(
+            pipeline.get("latency"),
+            answer_generation_ms=answer_generation_ms,
+            total_ms=total_ms,
+        )
+        full_latency_dict = full_latency.to_dict()
+        pipeline["latency"] = full_latency_dict
+        pipeline["latency_ms"] = total_ms
 
         if defer_log:
             self._safe_log_query(
@@ -422,6 +466,7 @@ class RAGService:
                     "latency_ms": total_ms,
                     "confidence": pipeline.get("confidence"),
                     "answer": answer,
+                    **self._latency_fields_for_query_log(full_latency),
                 }
             )
 
@@ -432,4 +477,5 @@ class RAGService:
             raw_assets=pipeline["reranked_raw_assets"],
             citations=pipeline["source_references"],
             confidence=pipeline["confidence"],
+            latency=full_latency_dict,
         )

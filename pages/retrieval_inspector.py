@@ -289,6 +289,34 @@ def _map_inspection_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}")
 
 
+def _render_pipeline_latency(latency: dict | None):
+    if not latency:
+        return
+
+    st.markdown("### Pipeline latency (ms)")
+    st.caption(
+        "Retrieval-side stages through prompt build; total is wall time for this inspection run "
+        "(answer generation is not executed here)."
+    )
+    cols = st.columns(6)
+    labels = [
+        ("Query rewrite", "query_rewrite_ms"),
+        ("Retrieval", "retrieval_ms"),
+        ("Reranking", "reranking_ms"),
+        ("Prompt build", "prompt_build_ms"),
+        ("Answer gen.", "answer_generation_ms"),
+        ("Total", "total_ms"),
+    ]
+    for col, (label, key) in zip(cols, labels):
+        with col:
+            val = latency.get(key)
+            try:
+                num = float(val) if val is not None else 0.0
+            except (TypeError, ValueError):
+                num = 0.0
+            st.metric(label, f"{num:.2f}")
+
+
 def _render_inspection_result(pipeline):
     if pipeline is None:
         st.warning("No retrieval result available for this query.")
@@ -312,6 +340,8 @@ def _render_inspection_result(pipeline):
             "Confidence",
             format_confidence_with_band(float(pipeline["confidence"])),
         )
+
+    _render_pipeline_latency(pipeline.get("latency"))
 
     with st.expander("1. Original query and rewritten retrieval query", expanded=True):
         st.markdown("**Original user query**")
@@ -385,6 +415,8 @@ def _render_inspection_result(pipeline):
             "selected_doc_ids": pipeline["selected_doc_ids"],
             "confidence": pipeline["confidence"],
             "source_references": pipeline["source_references"],
+            "latency_ms": pipeline.get("latency_ms"),
+            "latency": pipeline.get("latency"),
         }
 
         st.code(json.dumps(debug_payload, indent=2, ensure_ascii=False), language="json")

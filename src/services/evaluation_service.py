@@ -8,6 +8,24 @@ from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, Benchmark
 from src.services.llm_judge_service import LLMJudgeService
 
 
+def _latency_stage_row_fields(latency: dict | None) -> dict[str, float]:
+    if not latency:
+        return {
+            "query_rewrite_ms": 0.0,
+            "retrieval_ms": 0.0,
+            "reranking_ms": 0.0,
+            "prompt_build_ms": 0.0,
+            "answer_generation_ms": 0.0,
+        }
+    return {
+        "query_rewrite_ms": round(float(latency.get("query_rewrite_ms", 0.0)), 2),
+        "retrieval_ms": round(float(latency.get("retrieval_ms", 0.0)), 2),
+        "reranking_ms": round(float(latency.get("reranking_ms", 0.0)), 2),
+        "prompt_build_ms": round(float(latency.get("prompt_build_ms", 0.0)), 2),
+        "answer_generation_ms": round(float(latency.get("answer_generation_ms", 0.0)), 2),
+    }
+
+
 class EvaluationService:
     def __init__(self, llm_judge_service: object | None = None):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
@@ -67,6 +85,11 @@ class EvaluationService:
             pipeline = result.get("pipeline")
             answer = (result.get("answer") or "").strip()
             latency_ms = float(result.get("latency_ms", 0.0))
+            merged_latency = result.get("latency")
+            if not isinstance(merged_latency, dict) and pipeline is not None:
+                merged_latency = pipeline.get("latency")
+            if not isinstance(merged_latency, dict):
+                merged_latency = None
 
             expected_doc_ids = set(entry.expected_doc_ids or [])
             expected_sources = set(entry.expected_sources or [])
@@ -111,6 +134,7 @@ class EvaluationService:
                     "citation_source_f1": 0.0,
                     "confidence": 0.0,
                     "latency_ms": round(latency_ms, 1),
+                    **_latency_stage_row_fields(merged_latency),
                     "retrieval_mode": "none",
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
@@ -317,6 +341,7 @@ class EvaluationService:
                 "citation_source_f1": round(citation_source_f1, 2),
                 "confidence": round(confidence, 2),
                 "latency_ms": round(latency_ms, 1),
+                **_latency_stage_row_fields(merged_latency),
                 "retrieval_mode": pipeline.get("retrieval_mode", "unknown"),
                 "query_rewrite_enabled": bool(pipeline.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),

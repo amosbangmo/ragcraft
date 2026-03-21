@@ -55,6 +55,7 @@ class ManualEvaluationPipelineSignals:
     query_rewrite_enabled: bool
     hybrid_retrieval_enabled: bool
     latency_ms: float
+    stage_latency: dict[str, float] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

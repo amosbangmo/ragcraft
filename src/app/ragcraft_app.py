@@ -20,6 +20,7 @@ from src.services.benchmark_report_service import BenchmarkExportArtifacts, Benc
 from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.pipeline_latency import merge_with_answer_stage
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -558,17 +559,32 @@ class RAGCraftApp:
             )
 
             answer = ""
+            answer_generation_ms = 0.0
             if pipeline is not None:
+                gen_started = perf_counter()
                 answer = self.rag_service.generate_answer_from_pipeline(
                     project=project,
                     pipeline=pipeline,
                 )
+                answer_generation_ms = (perf_counter() - gen_started) * 1000.0
 
             latency_ms = (perf_counter() - started) * 1000.0
+            latency_dict = None
+            if pipeline is not None:
+                full_latency = merge_with_answer_stage(
+                    pipeline.get("latency"),
+                    answer_generation_ms=answer_generation_ms,
+                    total_ms=latency_ms,
+                )
+                latency_dict = full_latency.to_dict()
+                pipeline["latency"] = latency_dict
+                pipeline["latency_ms"] = latency_ms
+
             return {
                 "pipeline": pipeline,
                 "answer": answer,
                 "latency_ms": latency_ms,
+                "latency": latency_dict,
             }
 
         return self.evaluation_service.evaluate_gold_qa_dataset(

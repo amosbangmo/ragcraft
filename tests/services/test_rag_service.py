@@ -282,6 +282,22 @@ class TestRAGService(unittest.TestCase):
             reranked_raw_assets=reranked_assets,
         )
         self.assertEqual(payload["confidence"], expected_confidence)
+        self.assertIn("latency", payload)
+        self.assertIn("latency_ms", payload)
+        lat = payload["latency"]
+        self.assertIsInstance(lat, dict)
+        for key in (
+            "query_rewrite_ms",
+            "retrieval_ms",
+            "reranking_ms",
+            "prompt_build_ms",
+            "answer_generation_ms",
+            "total_ms",
+        ):
+            self.assertIn(key, lat)
+            self.assertGreaterEqual(lat[key], 0.0)
+        self.assertEqual(lat["answer_generation_ms"], 0.0)
+        self.assertEqual(payload["latency_ms"], lat["total_ms"])
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
@@ -293,6 +309,14 @@ class TestRAGService(unittest.TestCase):
             "reranked_raw_assets": [{"doc_id": "d1"}],
             "source_references": [{"doc_id": "d1"}],
             "confidence": 0.8,
+            "latency": {
+                "query_rewrite_ms": 0.1,
+                "retrieval_ms": 0.2,
+                "reranking_ms": 0.3,
+                "prompt_build_ms": 0.4,
+                "answer_generation_ms": 0.0,
+                "total_ms": 1.0,
+            },
         }
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
@@ -301,6 +325,9 @@ class TestRAGService(unittest.TestCase):
 
         self.assertEqual(response.answer, "final answer")
         self.assertEqual(response.confidence, 0.8)
+        self.assertIsNotNone(response.latency)
+        self.assertGreaterEqual(response.latency["answer_generation_ms"], 0.0)
+        self.assertGreater(response.latency["total_ms"], 0.0)
 
     @patch("src.services.rag_service.LLM")
     def test_ask_wraps_llm_errors(self, mock_llm):
@@ -353,6 +380,8 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(payload["answer"], "ans")
         self.assertEqual(payload["confidence"], 0.7)
         self.assertIsInstance(payload["latency_ms"], float)
+        self.assertIn("query_rewrite_ms", payload)
+        self.assertIn("total_latency_ms", payload)
 
 
 if __name__ == "__main__":

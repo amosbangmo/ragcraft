@@ -214,6 +214,35 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 metric_key="hybrid_retrieval_enabled",
             )
 
+        if any(
+            row.get(k) is not None
+            for k in (
+                "query_rewrite_ms",
+                "retrieval_ms",
+                "reranking_ms",
+                "prompt_build_ms",
+                "answer_generation_ms",
+            )
+        ):
+            with st.expander("Per-stage latency (ms)", expanded=False):
+                lc1, lc2, lc3 = st.columns(3)
+                with lc1:
+                    st.caption("Query rewrite")
+                    st.write(_f(row.get("query_rewrite_ms")))
+                with lc2:
+                    st.caption("Retrieval")
+                    st.write(_f(row.get("retrieval_ms")))
+                with lc3:
+                    st.caption("Reranking")
+                    st.write(_f(row.get("reranking_ms")))
+                lc4, lc5, _ = st.columns(3)
+                with lc4:
+                    st.caption("Prompt build")
+                    st.write(_f(row.get("prompt_build_ms")))
+                with lc5:
+                    st.caption("Answer generation")
+                    st.write(_f(row.get("answer_generation_ms")))
+
     with section_card(
         title="Detected issues",
         subtitle="Heuristic flags from judge and retrieval signals.",

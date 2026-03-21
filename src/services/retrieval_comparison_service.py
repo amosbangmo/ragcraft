@@ -102,6 +102,13 @@ class RetrievalComparisonService:
             enable_hybrid_retrieval_override=enable_hybrid_retrieval,
         )
         elapsed_ms = (perf_counter() - started) * 1000.0
+        if pipeline is not None:
+            instrumented = pipeline.get("latency_ms")
+            if instrumented is not None:
+                try:
+                    return pipeline, float(instrumented)
+                except (TypeError, ValueError):
+                    pass
         return pipeline, elapsed_ms
 
     def _extract_doc_ids(self, pipeline: dict | None) -> list[str]:

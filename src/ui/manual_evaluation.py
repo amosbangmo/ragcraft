@@ -264,6 +264,29 @@ def render_manual_evaluation_result(
                 ),
             ]
         )
+        if ps.stage_latency:
+            with st.expander("Per-stage latency (ms)", expanded=False):
+                sl = ps.stage_latency
+                r1, r2, r3 = st.columns(3)
+                with r1:
+                    st.caption("Query rewrite")
+                    st.write(f"{float(sl.get('query_rewrite_ms', 0.0)):.2f}")
+                with r2:
+                    st.caption("Retrieval")
+                    st.write(f"{float(sl.get('retrieval_ms', 0.0)):.2f}")
+                with r3:
+                    st.caption("Reranking")
+                    st.write(f"{float(sl.get('reranking_ms', 0.0)):.2f}")
+                r4, r5, r6 = st.columns(3)
+                with r4:
+                    st.caption("Prompt build")
+                    st.write(f"{float(sl.get('prompt_build_ms', 0.0)):.2f}")
+                with r5:
+                    st.caption("Answer generation")
+                    st.write(f"{float(sl.get('answer_generation_ms', 0.0)):.2f}")
+                with r6:
+                    st.caption("Total")
+                    st.write(f"{float(sl.get('total_ms', ps.latency_ms)):.2f}")
         st.markdown("</div>", unsafe_allow_html=True)
 
     if result.detected_issues:

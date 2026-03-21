@@ -3,6 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
+from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.manual_evaluation_result import (
     ManualEvaluationAnswerQuality,
     ManualEvaluationCitationQuality,
@@ -164,12 +165,26 @@ class ManualEvaluationService:
             chat_history=[],
         )
         answer = ""
+        answer_generation_ms = 0.0
         if pipeline is not None:
+            gen_started = perf_counter()
             answer = app.rag_service.generate_answer_from_pipeline(
                 project=project,
                 pipeline=pipeline,
             )
+            answer_generation_ms = (perf_counter() - gen_started) * 1000.0
         latency_ms = (perf_counter() - started) * 1000.0
+
+        full_latency_dict: dict[str, float] | None = None
+        if pipeline is not None:
+            full_lat = merge_with_answer_stage(
+                pipeline.get("latency"),
+                answer_generation_ms=answer_generation_ms,
+                total_ms=latency_ms,
+            )
+            full_latency_dict = full_lat.to_dict()
+            pipeline["latency"] = full_latency_dict
+            pipeline["latency_ms"] = latency_ms
 
         entry = QADatasetEntry(
             id=_MANUAL_EVAL_ENTRY_ID,
@@ -186,6 +201,7 @@ class ManualEvaluationService:
                 "pipeline": pipeline,
                 "answer": answer,
                 "latency_ms": latency_ms,
+                "latency": full_latency_dict,
             }
 
         benchmark = app.evaluation_service.evaluate_gold_qa_dataset(
@@ -287,6 +303,7 @@ class ManualEvaluationService:
             query_rewrite_enabled=bool(row.get("query_rewrite_enabled", False)),
             hybrid_retrieval_enabled=bool(row.get("hybrid_retrieval_enabled", False)),
             latency_ms=float(row.get("latency_ms", round(latency_ms, 1))),
+            stage_latency=full_latency_dict,
         )
 
         issues = detect_manual_evaluation_issues(

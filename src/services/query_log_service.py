@@ -73,12 +73,21 @@ class QueryLogService:
             except (TypeError, ValueError):
                 lat_val = None
 
+        def _optional_stage_ms(key: str) -> int | None:
+            raw = payload.get(key)
+            if raw is None:
+                return None
+            try:
+                return int(round(float(raw)))
+            except (TypeError, ValueError):
+                return None
+
         project_id = payload.get("project_id")
         user_id = payload.get("user_id")
         proj_str = project_id if isinstance(project_id, str) else (None if project_id is None else str(project_id))
         user_str = user_id if isinstance(user_id, str) else (None if user_id is None else str(user_id))
 
-        return {
+        entry: dict = {
             "question": _truncate_str(q_str, _MAX_TEXT_FIELD_LEN),
             "rewritten_query": _truncate_str(rw_str, _MAX_TEXT_FIELD_LEN),
             "project_id": proj_str,
@@ -90,3 +99,17 @@ class QueryLogService:
             "answer": _truncate_str(ans_str, _MAX_TEXT_FIELD_LEN),
             "timestamp": ts,
         }
+
+        for stage_key in (
+            "query_rewrite_ms",
+            "retrieval_ms",
+            "reranking_ms",
+            "prompt_build_ms",
+            "answer_generation_ms",
+            "total_latency_ms",
+        ):
+            stage_val = _optional_stage_ms(stage_key)
+            if stage_val is not None:
+                entry[stage_key] = stage_val
+
+        return entry

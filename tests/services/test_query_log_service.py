@@ -49,6 +49,31 @@ class TestQueryLogService(unittest.TestCase):
             self.assertEqual(rows[0]["confidence"], 0.5)
             self.assertIn("timestamp", rows[0])
 
+    def test_build_entry_includes_stage_latencies_when_present(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            service.log_query(
+                payload={
+                    "question": "q",
+                    "project_id": "p1",
+                    "user_id": "u1",
+                    "latency_ms": 100.2,
+                    "query_rewrite_ms": 1.2,
+                    "retrieval_ms": 2.3,
+                    "reranking_ms": 3.4,
+                    "prompt_build_ms": 4.5,
+                    "answer_generation_ms": 88.6,
+                    "total_latency_ms": 100.2,
+                }
+            )
+            rows = repo.list_logs()
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["query_rewrite_ms"], 1)
+            self.assertEqual(rows[0]["retrieval_ms"], 2)
+            self.assertEqual(rows[0]["total_latency_ms"], 100)
+
     def test_log_query_swallows_repository_errors(self):
         repo = MagicMock()
         repo.log.side_effect = OSError("boom")
