@@ -15,13 +15,24 @@ class QueryRewriteService:
     def __init__(self, max_history_messages: int = 6):
         self.max_history_messages = max_history_messages
 
-    def rewrite(self, *, question: str, chat_history: list[str] | None = None) -> str:
+    def rewrite(
+        self,
+        *,
+        question: str,
+        chat_history: list[str] | None = None,
+        max_history_messages: int | None = None,
+    ) -> str:
         normalized_question = (question or "").strip()
         if not normalized_question:
             return normalized_question
 
         history = chat_history or []
-        history_tail = history[-self.max_history_messages :]
+        limit = (
+            self.max_history_messages
+            if max_history_messages is None
+            else max(0, int(max_history_messages))
+        )
+        history_tail = history[-limit:]
         history_text = "\n".join(history_tail) if history_tail else "No prior chat history."
 
         prompt = f"""

@@ -1,28 +1,25 @@
 from __future__ import annotations
 
-from typing import Any
-
 from src.domain.query_intent import QueryIntent
+from src.domain.retrieval_settings import RetrievalSettings
 from src.domain.retrieval_strategy import RetrievalStrategy
 
 
 class AdaptiveRetrievalService:
     """
     Maps query intent (and light query-shape heuristics) to retrieval parameters.
-    Baseline values come from retrieval config; UNKNOWN intent preserves that baseline.
+    Baseline values come from retrieval settings; UNKNOWN intent preserves that baseline.
     """
-
-    def __init__(self, config: Any) -> None:
-        self._config = config
 
     def choose_strategy(
         self,
         *,
+        settings: RetrievalSettings,
         intent: QueryIntent,
         rewritten_query: str,
     ) -> RetrievalStrategy:
-        baseline_k = max(1, int(self._config.similarity_search_k))
-        baseline_hybrid = bool(self._config.enable_hybrid_retrieval)
+        baseline_k = max(1, int(settings.similarity_search_k))
+        baseline_hybrid = bool(settings.enable_hybrid_retrieval)
 
         words = (rewritten_query or "").split()
         n_words = len(words)

@@ -59,8 +59,22 @@ class PromptBuilderService:
         citations: list[SourceCitation],
         image_context_by_doc_id: dict[str, dict] | None = None,
         asset_groups: list[list[dict]] | None = None,
+        max_text_chars_per_asset: int | None = None,
+        max_table_chars_per_asset: int | None = None,
     ) -> str:
         """``raw_assets`` may be context-compressed upstream before this call."""
+        text_lim = (
+            self.max_text_chars_per_asset
+            if max_text_chars_per_asset is None
+            else int(max_text_chars_per_asset)
+        )
+        table_lim = (
+            self.max_table_chars_per_asset
+            if max_table_chars_per_asset is None
+            else int(max_table_chars_per_asset)
+        )
+        structured_budget = min(2800, max(400, table_lim))
+
         if image_context_by_doc_id is None:
             image_context_by_doc_id, _ = self.prepare_image_contexts(raw_assets)
         citation_by_id = {
@@ -78,6 +92,9 @@ class PromptBuilderService:
                 asset=asset,
                 citation=cit,
                 image_context=img_ctx,
+                max_text_chars=text_lim,
+                max_table_chars=table_lim,
+                structured_table_budget=structured_budget,
             )
             if layout_mode:
                 tag = self._layout_type_label(str(asset.get("content_type") or "unknown"))
@@ -160,20 +177,25 @@ Instructions:
             return s
         return s[: max_chars - 1] + "…"
 
-    def _format_structured_table_excerpt(self, structured: dict) -> str:
+    def _format_structured_table_excerpt(
+        self,
+        structured: dict,
+        *,
+        budget: int | None = None,
+    ) -> str:
         headers = list(structured.get("headers") or [])
         rows = list(structured.get("rows") or [])
         if not headers and not rows:
             return ""
 
-        budget = self._max_structured_block_chars
+        use_budget = self._max_structured_block_chars if budget is None else int(budget)
         lines: list[str] = []
         used = 0
 
         def consume(line: str) -> bool:
             nonlocal used
             need = len(line) + (1 if lines else 0)
-            if used + need > budget:
+            if used + need > use_budget:
                 return False
             lines.append(line)
             used += need
@@ -229,6 +251,9 @@ Instructions:
         asset: dict,
         citation: SourceCitation,
         image_context: dict | None = None,
+        max_text_chars: int | None = None,
+        max_table_chars: int | None = None,
+        structured_table_budget: int | None = None,
     ) -> str:
         content_type = asset.get("content_type", "unknown")
         source_file = asset.get("source_file", "unknown")
@@ -237,9 +262,15 @@ Instructions:
         summary = asset.get("summary", "") or ""
         doc_id = asset.get("doc_id", "?")
         citation_label = citation.prompt_label
+        text_limit = (
+            self.max_text_chars_per_asset if max_text_chars is None else int(max_text_chars)
+        )
+        table_limit = (
+            self.max_table_chars_per_asset if max_table_chars is None else int(max_table_chars)
+        )
 
         if content_type == "text":
-            trimmed = raw_content[: self.max_text_chars_per_asset]
+            trimmed = raw_content[:text_limit]
             return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: text
@@ -289,10 +320,10 @@ Table title:
 {table_title}
 {structured_block}
 Raw table HTML:
-{raw_content[: self.max_table_chars_per_asset]}
+{raw_content[:table_limit]}
 
 Raw table text:
-{table_text[: self.max_table_chars_per_asset]}
+{table_text[:table_limit]}
 """
 
         if content_type == "image":

@@ -60,7 +60,17 @@ if "src.services.hybrid_retrieval_service" not in sys.modules:
         def __init__(self, *, k1=1.5, b=0.75, epsilon=0.25):
             pass
 
-        def lexical_search(self, *, query: str, assets: list[dict], k: int, filters=None):
+        def lexical_search(
+            self,
+            *,
+            query: str,
+            assets: list[dict],
+            k: int,
+            filters=None,
+            k1=None,
+            b=None,
+            epsilon=None,
+        ):
             return []
 
     hybrid_module.HybridRetrievalService = HybridRetrievalService
@@ -135,6 +145,7 @@ class TestRAGService(unittest.TestCase):
     def test_rrf_merge_prioritizes_common_docs(self):
         service, *_ = self._build_service()
         service.config.rrf_k = 60
+        settings = service.retrieval_settings_service.get_default()
 
         # ranks: d1(1), d2(2) in primary; d2(1), d3(2) in secondary
         primary_docs = [
@@ -146,7 +157,11 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged = service._merge_summary_docs(
+            settings=settings,
+            primary_docs=primary_docs,
+            secondary_docs=secondary_docs,
+        )
         merged_ids = [doc.metadata["doc_id"] for doc in merged]
 
         # d2 appears in both lists at rank 1 in secondary and rank 2 in primary, so it should win.
@@ -155,6 +170,7 @@ class TestRAGService(unittest.TestCase):
     def test_rrf_merge_respects_max_docs(self):
         service, *_ = self._build_service()
         service.config.rrf_k = 60
+        settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
             Document(page_content="p1", metadata={"doc_id": "d1"}),
@@ -166,6 +182,7 @@ class TestRAGService(unittest.TestCase):
         ]
 
         merged = service._merge_summary_docs(
+            settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
             max_docs=2,
@@ -177,6 +194,7 @@ class TestRAGService(unittest.TestCase):
         service, *_ = self._build_service()
         service.config.rrf_k = 60
         service.config.hybrid_beta = 1.0
+        settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
             Document(page_content="p1", metadata={"doc_id": "d1"}),
@@ -187,7 +205,11 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged = service._merge_summary_docs(
+            settings=settings,
+            primary_docs=primary_docs,
+            secondary_docs=secondary_docs,
+        )
         merged_ids = [doc.metadata["doc_id"] for doc in merged]
 
         self.assertEqual(merged_ids, ["d1", "d2", "d3"])
@@ -196,6 +218,7 @@ class TestRAGService(unittest.TestCase):
         service, *_ = self._build_service()
         service.config.rrf_k = 60
         service.config.hybrid_beta = 0.0
+        settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
             Document(page_content="p1", metadata={"doc_id": "d1"}),
@@ -206,7 +229,11 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service._merge_summary_docs(primary_docs=primary_docs, secondary_docs=secondary_docs)
+        merged = service._merge_summary_docs(
+            settings=settings,
+            primary_docs=primary_docs,
+            secondary_docs=secondary_docs,
+        )
         merged_ids = [doc.metadata["doc_id"] for doc in merged]
 
         self.assertEqual(merged_ids, ["d2", "d3", "d1"])

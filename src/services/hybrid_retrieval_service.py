@@ -42,6 +42,9 @@ class HybridRetrievalService:
         assets: list[dict],
         k: int,
         filters: RetrievalFilters | None = None,
+        k1: float | None = None,
+        b: float | None = None,
+        epsilon: float | None = None,
     ) -> list[Document]:
         normalized_query = (query or "").strip()
         if not normalized_query or not assets or k <= 0:
@@ -78,9 +81,9 @@ class HybridRetrievalService:
 
         bm25 = BM25Okapi(
             corpus_tokens,
-            k1=self._bm25_k1,
-            b=self._bm25_b,
-            epsilon=self._bm25_epsilon,
+            k1=self._bm25_k1 if k1 is None else float(k1),
+            b=self._bm25_b if b is None else float(b),
+            epsilon=self._bm25_epsilon if epsilon is None else float(epsilon),
         )
         raw_scores = list(bm25.get_scores(query_tokens))
 

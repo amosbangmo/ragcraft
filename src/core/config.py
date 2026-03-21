@@ -47,6 +47,10 @@ def _get_str_env(name: str, default: str) -> str:
 
 @dataclass(frozen=True)
 class RetrievalConfig:
+    """
+    Env-backed defaults for retrieval. Runtime / per-request tuning flows through
+    ``RetrievalSettings`` and ``RetrievalSettingsService`` (see ``src.domain.retrieval_settings``).
+    """
     similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 25))
     bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 25))
     hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 25))

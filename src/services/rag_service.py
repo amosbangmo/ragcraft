@@ -1,4 +1,7 @@
+import logging
+from dataclasses import replace
 from time import perf_counter
+from typing import Any
 
 from langchain_core.documents import Document
 
@@ -12,6 +15,7 @@ from src.domain.retrieval_filters import (
     filter_summary_documents_by_filters,
     vector_search_fetch_k,
 )
+from src.domain.retrieval_settings import RetrievalSettings
 from src.domain.retrieval_strategy import RetrievalStrategy
 from src.domain.source_citation import SourceCitation
 from src.services.adaptive_retrieval_service import AdaptiveRetrievalService
@@ -27,10 +31,13 @@ from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
 from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
+from src.services.retrieval_settings_service import RetrievalSettingsService
 from src.services.section_retrieval_service import SectionRetrievalService
 from src.services.source_citation_service import SourceCitationService
 from src.services.table_qa_service import TableQAService
 from src.services.vectorstore_service import VectorStoreService
+
+logger = logging.getLogger(__name__)
 
 
 class RAGService:
@@ -55,6 +62,7 @@ class RAGService:
         docstore_service: DocStoreService,
         reranking_service: RerankingService,
         query_log_service: QueryLogService | None = None,
+        retrieval_settings_service: RetrievalSettingsService | None = None,
     ):
         self.vectorstore_service = vectorstore_service
         self.evaluation_service = evaluation_service
@@ -76,13 +84,24 @@ class RAGService:
         )
         self.query_intent_service = QueryIntentService()
         self.table_qa_service = TableQAService()
-        self.config = RETRIEVAL_CONFIG
-        self.adaptive_retrieval_service = AdaptiveRetrievalService(self.config)
+        self.adaptive_retrieval_service = AdaptiveRetrievalService()
         self.contextual_compression_service = ContextualCompressionService()
         self.query_log_service = query_log_service
         self.section_retrieval_service = SectionRetrievalService()
         self.layout_context_service = LayoutContextService()
         self.multimodal_orchestration_service = MultimodalOrchestrationService()
+        self.retrieval_settings_service = (
+            retrieval_settings_service or RetrievalSettingsService()
+        )
+
+    @property
+    def config(self) -> Any:
+        """Alias for the env-backed retrieval config object (mutable in tests)."""
+        return self.retrieval_settings_service.config_source
+
+    @config.setter
+    def config(self, value: Any) -> None:
+        self.retrieval_settings_service.set_config_source(value)
 
     @staticmethod
     def _latency_fields_for_query_log(latency: PipelineLatency) -> dict:
@@ -192,6 +211,7 @@ class RAGService:
         chat_history: list[str],
         *,
         enable_query_rewrite: bool,
+        settings: RetrievalSettings,
     ) -> str:
         if not enable_query_rewrite:
             return question
@@ -199,11 +219,13 @@ class RAGService:
         return self.query_rewrite_service.rewrite(
             question=question,
             chat_history=chat_history,
+            max_history_messages=settings.query_rewrite_max_history_messages,
         )
 
     def _merge_summary_docs(
         self,
         *,
+        settings: RetrievalSettings,
         primary_docs: list[Document],
         secondary_docs: list[Document],
         max_docs: int | None = None,
@@ -215,8 +237,8 @@ class RAGService:
           beta * (1 / (rrf_k + rank_semantic)) + (1 - beta) * (1 / (rrf_k + rank_lexical))
         for each list where the doc appears (primary = semantic/FAISS, secondary = BM25).
         """
-        rrf_k = self.config.rrf_k
-        hybrid_beta = self.config.hybrid_beta
+        rrf_k = settings.rrf_k
+        hybrid_beta = settings.hybrid_beta
 
         primary_ranks: dict[str, int] = {}
         secondary_ranks: dict[str, int] = {}
@@ -269,6 +291,7 @@ class RAGService:
     def _retrieve_summary_docs(
         self,
         *,
+        settings: RetrievalSettings,
         project: Project,
         retrieval_query: str,
         enable_hybrid_retrieval: bool,
@@ -278,7 +301,7 @@ class RAGService:
         k_vec = (
             int(similarity_search_k)
             if similarity_search_k is not None
-            else int(self.config.similarity_search_k)
+            else int(settings.similarity_search_k)
         )
         k_vec = max(1, k_vec)
         fetch_k = vector_search_fetch_k(base_k=k_vec, filters=filters)
@@ -304,15 +327,19 @@ class RAGService:
             bm25_summary_docs = self.hybrid_retrieval_service.lexical_search(
                 query=retrieval_query,
                 assets=project_assets,
-                k=self.config.bm25_search_k,
+                k=settings.bm25_search_k,
                 filters=filters,
+                k1=settings.bm25_k1,
+                b=settings.bm25_b,
+                epsilon=settings.bm25_epsilon,
             )
 
         merged_limit = k_vec
         if enable_hybrid_retrieval:
-            merged_limit += int(self.config.hybrid_search_k)
+            merged_limit += int(settings.hybrid_search_k)
 
         recalled_summary_docs = self._merge_summary_docs(
+            settings=settings,
             primary_docs=vector_summary_docs,
             secondary_docs=bm25_summary_docs,
             max_docs=merged_limit,
@@ -334,27 +361,34 @@ class RAGService:
         enable_hybrid_retrieval_override: bool | None = None,
         defer_query_log: bool = False,
         filters: RetrievalFilters | None = None,
+        retrieval_settings: dict[str, Any] | None = None,
     ) -> dict | None:
         pipeline_started = perf_counter()
         if chat_history is None:
             chat_history = []
 
-        enable_query_rewrite = (
-            self.config.enable_query_rewrite
-            if enable_query_rewrite_override is None
-            else enable_query_rewrite_override
+        rss = self.retrieval_settings_service
+        settings = rss.merge(rss.get_default(), retrieval_settings)
+        if enable_query_rewrite_override is not None:
+            settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
+        if enable_hybrid_retrieval_override is not None:
+            settings = replace(settings, enable_hybrid_retrieval=enable_hybrid_retrieval_override)
+
+        logger.debug(
+            "Retrieval settings (project_id=%s): %s",
+            project.project_id,
+            settings.to_log_dict(),
         )
-        enable_hybrid_retrieval = (
-            self.config.enable_hybrid_retrieval
-            if enable_hybrid_retrieval_override is None
-            else enable_hybrid_retrieval_override
-        )
+
+        enable_query_rewrite = settings.enable_query_rewrite
+        enable_hybrid_retrieval = settings.enable_hybrid_retrieval
 
         t0 = perf_counter()
         rewritten_question = self._rewrite_question(
             question,
             chat_history,
             enable_query_rewrite=enable_query_rewrite,
+            settings=settings,
         )
         query_rewrite_ms = (perf_counter() - t0) * 1000.0
 
@@ -367,6 +401,7 @@ class RAGService:
         use_adaptive_retrieval = enable_hybrid_retrieval_override is None
         if use_adaptive_retrieval:
             strategy = self.adaptive_retrieval_service.choose_strategy(
+                settings=settings,
                 intent=query_intent,
                 rewritten_query=rewritten_question,
             )
@@ -374,7 +409,7 @@ class RAGService:
             similarity_search_k = strategy.k
         else:
             strategy = RetrievalStrategy(
-                k=max(1, int(self.config.similarity_search_k)),
+                k=max(1, int(settings.similarity_search_k)),
                 use_hybrid=bool(enable_hybrid_retrieval),
                 apply_filters=True,
             )
@@ -386,6 +421,7 @@ class RAGService:
 
         t0 = perf_counter()
         retrieval_payload = self._retrieve_summary_docs(
+            settings=settings,
             project=project,
             retrieval_query=rewritten_question,
             enable_hybrid_retrieval=enable_hybrid_retrieval,
@@ -414,13 +450,13 @@ class RAGService:
             recalled_raw_assets=recalled_raw_assets,
         )
         expansion = self.section_retrieval_service.expand(
-            config=self.config,
+            config=settings,
             retrieved_assets=recalled_raw_assets,
             all_assets=corpus,
         )
         pre_rerank_raw_assets = expansion.assets
         section_expansion = {
-            "enabled": bool(self.config.enable_section_expansion),
+            "enabled": bool(settings.enable_section_expansion),
             "applied": expansion.applied,
             "section_expansion_count": expansion.section_expansion_count,
             "expanded_assets_count": expansion.expanded_assets_count,
@@ -431,7 +467,7 @@ class RAGService:
         reranked_raw_assets = self.reranking_service.rerank(
             query=rewritten_question,
             raw_assets=pre_rerank_raw_assets,
-            top_k=self.config.max_prompt_assets,
+            top_k=settings.max_prompt_assets,
             prefer_tables=table_aware_qa_enabled,
             table_boost=(
                 self.table_qa_service.table_priority_boost() if table_aware_qa_enabled else 0.0
@@ -452,7 +488,7 @@ class RAGService:
         chars_before = comp.prompt_char_estimate(reranked_raw_assets)
         prompt_context_assets = reranked_raw_assets
         compression_applied = False
-        if self.config.enable_contextual_compression:
+        if settings.enable_contextual_compression:
             try:
                 prompt_context_assets = comp.compress(
                     query=rewritten_question,
@@ -465,8 +501,8 @@ class RAGService:
         chars_after = comp.prompt_char_estimate(prompt_context_assets)
         ratio = (chars_after / chars_before) if chars_before > 0 else 1.0
         context_compression = {
-            "enabled": bool(self.config.enable_contextual_compression),
-            "applied": compression_applied and bool(self.config.enable_contextual_compression),
+            "enabled": bool(settings.enable_contextual_compression),
+            "applied": compression_applied and bool(settings.enable_contextual_compression),
             "chars_before": chars_before,
             "chars_after": chars_after,
             "ratio": round(ratio, 4),
@@ -491,6 +527,8 @@ class RAGService:
             citations=citation_objects,
             image_context_by_doc_id=image_ctx_by_id,
             asset_groups=asset_groups,
+            max_text_chars_per_asset=settings.max_text_chars_per_asset,
+            max_table_chars_per_asset=settings.max_table_chars_per_asset,
         )
         multimodal_analysis = self.multimodal_orchestration_service.analyze(prompt_context_assets)
         multimodal_orchestration_hint = self.multimodal_orchestration_service.build_prompt_hint(
@@ -602,6 +640,7 @@ class RAGService:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
+        retrieval_settings: dict[str, Any] | None = None,
     ) -> dict | None:
         return self._run_pipeline(
             project,
@@ -611,6 +650,7 @@ class RAGService:
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             defer_query_log=True,
             filters=filters,
+            retrieval_settings=retrieval_settings,
         )
 
     def generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
@@ -637,6 +677,7 @@ class RAGService:
         chat_history=None,
         *,
         filters: RetrievalFilters | None = None,
+        retrieval_settings: dict[str, Any] | None = None,
     ) -> RAGResponse | None:
         ask_started = perf_counter()
         defer_log = self.query_log_service is not None
@@ -646,6 +687,7 @@ class RAGService:
             chat_history,
             defer_query_log=defer_log,
             filters=filters,
+            retrieval_settings=retrieval_settings,
         )
 
         if pipeline is None:

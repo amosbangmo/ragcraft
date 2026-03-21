@@ -2,6 +2,7 @@ import unittest
 
 from src.core.config import RetrievalConfig
 from src.domain.query_intent import QueryIntent
+from src.domain.retrieval_settings import RetrievalSettings
 from src.services.adaptive_retrieval_service import AdaptiveRetrievalService
 
 
@@ -23,10 +24,12 @@ class TestAdaptiveRetrievalService(unittest.TestCase):
             query_rewrite_max_history_messages=6,
             enable_hybrid_retrieval=True,
         )
-        self.svc = AdaptiveRetrievalService(self.config)
+        self.settings = RetrievalSettings.from_retrieval_config(self.config)
+        self.svc = AdaptiveRetrievalService()
 
     def test_unknown_preserves_baseline(self) -> None:
         s = self.svc.choose_strategy(
+            settings=self.settings,
             intent=QueryIntent.UNKNOWN,
             rewritten_query="anything",
         )
@@ -36,6 +39,7 @@ class TestAdaptiveRetrievalService(unittest.TestCase):
 
     def test_factual_disables_hybrid_and_lowers_k(self) -> None:
         s = self.svc.choose_strategy(
+            settings=self.settings,
             intent=QueryIntent.FACTUAL,
             rewritten_query="What is the revenue in Q3?",
         )
@@ -46,6 +50,7 @@ class TestAdaptiveRetrievalService(unittest.TestCase):
 
     def test_exploratory_enables_hybrid_and_higher_k(self) -> None:
         s = self.svc.choose_strategy(
+            settings=self.settings,
             intent=QueryIntent.EXPLORATORY,
             rewritten_query="Give background and context on the strategy section",
         )
@@ -57,6 +62,7 @@ class TestAdaptiveRetrievalService(unittest.TestCase):
         for intent in (QueryIntent.TABLE, QueryIntent.IMAGE, QueryIntent.COMPARISON):
             with self.subTest(intent=intent):
                 s = self.svc.choose_strategy(
+                    settings=self.settings,
                     intent=intent,
                     rewritten_query="show the breakdown",
                 )
@@ -66,10 +72,12 @@ class TestAdaptiveRetrievalService(unittest.TestCase):
     def test_long_query_adjusts_k(self) -> None:
         long_q = " ".join(["word"] * 40)
         short = self.svc.choose_strategy(
+            settings=self.settings,
             intent=QueryIntent.EXPLORATORY,
             rewritten_query="short query here",
         )
         long = self.svc.choose_strategy(
+            settings=self.settings,
             intent=QueryIntent.EXPLORATORY,
             rewritten_query=long_q,
         )
