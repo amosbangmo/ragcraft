@@ -127,6 +127,8 @@ class BenchmarkReportService:
         }
         if result.correlations is not None:
             payload["correlations"] = dict(result.correlations)
+        if result.failures is not None:
+            payload["failures"] = dict(result.failures)
         text = json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default)
         return text.encode("utf-8")
 

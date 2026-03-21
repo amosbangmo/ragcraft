@@ -105,6 +105,7 @@ bundle = _session_benchmark_bundle()
 summary: dict[str, Any] = {}
 rows: list[dict[str, Any]] = []
 correlations: dict[str, Any] | None = None
+failures: dict[str, Any] | None = None
 bench_for_tabs: BenchmarkResult | None = None
 
 if bundle is not None:
@@ -112,6 +113,7 @@ if bundle is not None:
     summary = bench_for_tabs.summary.to_dict()
     rows = [row.to_dict() for row in bench_for_tabs.rows]
     correlations = bench_for_tabs.correlations
+    failures = bench_for_tabs.failures
 
 render_evaluation_tabs(
     manual_payload={
@@ -133,6 +135,7 @@ render_evaluation_tabs(
         "summary": summary,
         "rows": rows,
         "correlations": correlations,
+        "failures": failures,
     },
     gold_qa_payload={
         "app": app,

@@ -85,11 +85,14 @@ class BenchmarkResult:
     - future export/report layers
 
     Optional ``correlations`` holds Pearson summaries from :class:`~src.services.correlation_service.CorrelationService`.
+    Optional ``failures`` holds rule-based diagnostics from
+    :class:`~src.services.failure_analysis_service.FailureAnalysisService` (counts, examples, etc.).
     """
 
     summary: BenchmarkSummary
     rows: list[BenchmarkRow] = field(default_factory=list)
     correlations: dict[str, Any] | None = None
+    failures: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -98,6 +101,8 @@ class BenchmarkResult:
         }
         if self.correlations is not None:
             out["correlations"] = dict(self.correlations)
+        if self.failures is not None:
+            out["failures"] = dict(self.failures)
         return out
 
     @classmethod
@@ -126,7 +131,11 @@ class BenchmarkResult:
         correlations: dict[str, Any] | None = None
         if isinstance(corr_raw, dict):
             correlations = dict(corr_raw)
-        return cls(summary=summary, rows=rows, correlations=correlations)
+        fail_raw = payload.get("failures")
+        failures: dict[str, Any] | None = None
+        if isinstance(fail_raw, dict):
+            failures = dict(fail_raw)
+        return cls(summary=summary, rows=rows, correlations=correlations, failures=failures)
 
 
 def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:

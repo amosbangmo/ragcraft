@@ -6,6 +6,7 @@ import numpy as np
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.services.correlation_service import CorrelationService
+from src.services.failure_analysis_service import FailureAnalysisService
 from src.services.llm_judge_service import LLMJudgeService
 
 
@@ -32,6 +33,7 @@ class EvaluationService:
         self,
         llm_judge_service: object | None = None,
         correlation_service: CorrelationService | None = None,
+        failure_analysis_service: FailureAnalysisService | None = None,
     ):
         # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
         self._llm_judge_service = (
@@ -39,6 +41,11 @@ class EvaluationService:
         )
         self._correlation_service = (
             correlation_service if correlation_service is not None else CorrelationService()
+        )
+        self._failure_analysis_service = (
+            failure_analysis_service
+            if failure_analysis_service is not None
+            else FailureAnalysisService()
         )
 
     def evaluate_gold_qa_dataset(
@@ -102,6 +109,7 @@ class EvaluationService:
             expected_doc_ids = set(entry.expected_doc_ids or [])
             expected_sources = set(entry.expected_sources or [])
             expected_answer = (entry.expected_answer or "").strip()
+            has_expected_answer = bool(expected_answer)
 
             if expected_doc_ids:
                 entries_with_expected_doc_ids += 1
@@ -114,6 +122,7 @@ class EvaluationService:
 
             if pipeline is None:
                 row_payload = {
+                    "has_expected_answer": has_expected_answer,
                     "expected_doc_ids_count": len(expected_doc_ids),
                     "retrieved_doc_ids_count": 0,
                     "doc_id_overlap_count": 0,
@@ -321,6 +330,7 @@ class EvaluationService:
             hallucination_flags.append(has_hallucination)
 
             row_payload = {
+                "has_expected_answer": has_expected_answer,
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
                 "doc_id_overlap_count": doc_id_overlap_count,
@@ -448,10 +458,30 @@ class EvaluationService:
         correlation_rows = [dict(r.data) for r in rows]
         correlations = self._correlation_service.compute(correlation_rows)
 
+        row_dicts = [row.to_dict() for row in rows]
+        failure_full = self._failure_analysis_service.analyze(row_dicts)
+        row_failure_meta = failure_full.get("row_failures") or []
+        failures_report = {k: v for k, v in failure_full.items() if k != "row_failures"}
+
+        rebuilt: list[BenchmarkRow] = []
+        for idx, row in enumerate(rows):
+            meta = row_failure_meta[idx] if idx < len(row_failure_meta) else {}
+            labels = meta.get("failure_labels") if isinstance(meta, dict) else None
+            crit = meta.get("failure_critical") if isinstance(meta, dict) else None
+            if not isinstance(labels, list):
+                labels = []
+            d = dict(row.data)
+            d["failure_labels"] = list(labels)
+            d["failure_critical"] = bool(crit) if crit is not None else False
+            rebuilt.append(
+                BenchmarkRow(entry_id=row.entry_id, question=row.question, data=d)
+            )
+
         return BenchmarkResult(
             summary=BenchmarkSummary(data=summary_payload),
-            rows=rows,
+            rows=rebuilt,
             correlations=correlations,
+            failures=failures_report,
         )
 
     def _compute_precision_at_k(

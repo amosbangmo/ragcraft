@@ -160,6 +160,147 @@ def _render_correlation_analysis(
                     st.caption("Missing confidence or answer_f1 on rows.")
 
 
+_FAILURE_TYPE_LABELS: dict[str, str] = {
+    "retrieval_failure": "Retrieval miss",
+    "grounding_failure": "Grounding / gold mismatch",
+    "hallucination": "Hallucination signal",
+    "low_relevance": "Low relevance",
+    "low_confidence": "Low confidence",
+}
+
+
+def _resolve_failure_payload(
+    failures: dict[str, Any] | None,
+    rows: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if isinstance(failures, dict) and failures:
+        return failures
+    if not rows:
+        return None
+    from src.services.failure_analysis_service import FailureAnalysisService
+
+    analysis = FailureAnalysisService().analyze(list(rows))
+    analysis.pop("row_failures", None)
+    return analysis
+
+
+def _render_failure_analysis(
+    failures: dict[str, Any] | None,
+    rows: list[dict[str, Any]],
+) -> None:
+    with st.expander("Failure analysis", expanded=False):
+        st.caption(
+            "Heuristic tags from retrieval, judge scores, citation overlap, and gold answer F1. "
+            "A row may match several types. Metrics missing on a row skip that rule. "
+            "If this session predates failure analysis, counts are recomputed from the table below."
+        )
+        if not rows:
+            st.caption("No rows to analyze.")
+            return
+        payload = _resolve_failure_payload(failures, rows)
+        if not payload:
+            st.caption("No failure summary available.")
+            return
+
+        counts_raw = payload.get("counts")
+        counts: dict[str, Any] = counts_raw if isinstance(counts_raw, dict) else {}
+        failed_n = int(payload.get("failed_row_count") or 0)
+        crit_n = int(payload.get("critical_count") or 0)
+
+        if crit_n > 0:
+            st.error(
+                f"**{crit_n}** critical row(s): high confidence with low gold answer F1 — review these first."
+            )
+
+        st.metric("Rows with ≥1 failure tag", failed_n)
+        if not counts:
+            st.success("No failure tags matched for this run.")
+            return
+
+        top_types = payload.get("top_failure_types") or []
+        if isinstance(top_types, list) and top_types:
+            st.markdown("**Top failure types**")
+            lines: list[str] = []
+            for item in top_types[:5]:
+                if not isinstance(item, dict):
+                    continue
+                t = item.get("type")
+                c = item.get("count")
+                if t is None or c is None:
+                    continue
+                label = _FAILURE_TYPE_LABELS.get(str(t), str(t))
+                lines.append(f"• **{label}**: {c}")
+            if lines:
+                st.markdown("\n".join(lines))
+
+        chart_records: list[dict[str, Any]] = []
+        for k, v in counts.items():
+            if not isinstance(k, str):
+                continue
+            try:
+                n = int(v)
+            except (TypeError, ValueError):
+                continue
+            if n <= 0:
+                continue
+            chart_records.append(
+                {
+                    "failure_type": _FAILURE_TYPE_LABELS.get(k, k),
+                    "count": n,
+                }
+            )
+        chart_records.sort(key=lambda r: (-int(r["count"]), str(r["failure_type"])))
+        if chart_records:
+            st.markdown("**Distribution**")
+            cdf = pd.DataFrame(chart_records)
+            chart = (
+                alt.Chart(cdf)
+                .mark_bar()
+                .encode(
+                    x=alt.X("count:Q", title="Count", axis=_INT_AXIS),
+                    y=alt.Y("failure_type:N", title="", sort="-x"),
+                )
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+        examples = payload.get("examples") or {}
+        if isinstance(examples, dict) and examples:
+            st.markdown("**Sample failed queries** (up to 3 shown per type; 5 stored)")
+            for ftype, xs in examples.items():
+                if not isinstance(ftype, str) or not isinstance(xs, list) or not xs:
+                    continue
+                label = _FAILURE_TYPE_LABELS.get(ftype, ftype)
+                show = xs[:3]
+                for i, ex in enumerate(show):
+                    if not isinstance(ex, dict):
+                        continue
+                    crit = bool(ex.get("failure_critical"))
+                    eid = ex.get("entry_id", i)
+                    title = f"#{eid} — {label}"
+                    if crit:
+                        title = f"CRITICAL — {title}"
+                    with st.expander(title, expanded=False):
+                        if crit:
+                            st.caption("High confidence + low gold F1.")
+                        q = ex.get("question") or "—"
+                        st.markdown("**Question**")
+                        st.write(q)
+                        prev = ex.get("answer_preview")
+                        if isinstance(prev, str) and prev.strip():
+                            st.markdown("**Answer preview**")
+                            st.write(prev)
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            st.caption("doc recall / answer F1")
+                            st.write(f"{ex.get('doc_id_recall', '—')} / {ex.get('answer_f1', '—')}")
+                        with c2:
+                            st.caption("grounded / hallucination")
+                            st.write(f"{ex.get('groundedness', '—')} / {ex.get('hallucination_score', '—')}")
+                        with c3:
+                            st.caption("relevance / confidence")
+                            st.write(f"{ex.get('answer_relevance', '—')} / {ex.get('confidence', '—')}")
+
+
 def _numeric_series(df: pd.DataFrame, *candidates: str) -> pd.Series | None:
     for col in candidates:
         if col not in df.columns:
@@ -418,6 +559,7 @@ def render_evaluation_dashboard(
     *,
     widget_key_prefix: str = "benchmark_dashboard",
     correlations: dict[str, Any] | None = None,
+    failures: dict[str, Any] | None = None,
 ) -> None:
     inject_section_card_styles()
 
@@ -479,6 +621,8 @@ def render_evaluation_dashboard(
             st.dataframe(rows, use_container_width=True)
 
     _render_correlation_analysis(correlations, rows)
+
+    _render_failure_analysis(failures, rows)
 
     _render_advanced_analytics(rows, widget_key_prefix=widget_key_prefix)
 
