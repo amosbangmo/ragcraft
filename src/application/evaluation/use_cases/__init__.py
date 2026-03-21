@@ -7,7 +7,7 @@ from src.application.evaluation.use_cases.delete_all_qa_dataset_entries import (
     DeleteAllQaDatasetEntriesUseCase,
 )
 from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-from src.application.evaluation.use_cases.dtos import GenerateQaDatasetCommand
+from src.application.evaluation.dtos import GenerateQaDatasetCommand
 from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
 from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase

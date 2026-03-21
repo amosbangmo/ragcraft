@@ -119,6 +119,77 @@ def get_build_benchmark_export_artifacts_use_case() -> Any:
     return BuildBenchmarkExportArtifactsUseCase()
 
 
+def get_run_manual_evaluation_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
+
+    return RunManualEvaluationUseCase(
+        project_service=app.project_service,
+        rag_service=app.rag_service,
+        evaluation_service=app.evaluation_service,
+    )
+
+
+def get_run_gold_qa_dataset_evaluation_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.list_qa_dataset_entries import (
+        ListQaDatasetEntriesUseCase,
+    )
+    from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+        RunGoldQaDatasetEvaluationUseCase,
+    )
+
+    return RunGoldQaDatasetEvaluationUseCase(
+        list_qa_dataset_entries=ListQaDatasetEntriesUseCase(qa_dataset_service=app.qa_dataset_service),
+        project_service=app.project_service,
+        rag_service=app.rag_service,
+        evaluation_service=app.evaluation_service,
+    )
+
+
+def get_update_qa_dataset_entry_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.update_qa_dataset_entry import (
+        UpdateQaDatasetEntryUseCase,
+    )
+
+    return UpdateQaDatasetEntryUseCase(qa_dataset_service=app.qa_dataset_service)
+
+
+def get_delete_qa_dataset_entry_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.delete_qa_dataset_entry import (
+        DeleteQaDatasetEntryUseCase,
+    )
+
+    return DeleteQaDatasetEntryUseCase(qa_dataset_service=app.qa_dataset_service)
+
+
+def get_generate_qa_dataset_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
+
+    return GenerateQaDatasetUseCase(
+        qa_dataset_service=app.qa_dataset_service,
+        qa_dataset_generation_service=app.qa_dataset_generation_service,
+    )
+
+
+def get_list_retrieval_query_logs_use_case(
+    app: Annotated[Any, Depends(get_ragcraft_app)],
+) -> Any:
+    from src.application.evaluation.use_cases.list_retrieval_query_logs import (
+        ListRetrievalQueryLogsUseCase,
+    )
+
+    return ListRetrievalQueryLogsUseCase(query_log_service=app.rag_service.query_log_service)
+
+
 def get_ingest_uploaded_file_use_case(
     app: Annotated[Any, Depends(get_ragcraft_app)],
 ) -> Any:

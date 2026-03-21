@@ -9,6 +9,21 @@ from apps.api.schemas.chat import (
     PreviewSummaryRecallResponse,
     RetrievalFiltersPayload,
 )
+from apps.api.schemas.evaluation import (
+    BenchmarkExportStubResponse,
+    BenchmarkResultResponse,
+    DatasetBenchmarkRunRequest,
+    ManualEvaluationRequest,
+    ManualEvaluationResponse,
+    QaDatasetEntryCreateRequest,
+    QaDatasetEntryDeleteResponse,
+    QaDatasetEntryListResponse,
+    QaDatasetEntryResponse,
+    QaDatasetEntryUpdateRequest,
+    QaDatasetGenerateRequest,
+    QaDatasetGenerateResponse,
+    RetrievalLogsResponse,
+)
 from apps.api.schemas.projects import (
     CreateProjectRequest,
     CreateProjectResponse,
@@ -20,18 +35,31 @@ from apps.api.schemas.projects import (
 )
 
 __all__ = [
+    "BenchmarkExportStubResponse",
+    "BenchmarkResultResponse",
     "ChatAskRequest",
     "ChatAskResponse",
     "CreateProjectRequest",
     "CreateProjectResponse",
+    "DatasetBenchmarkRunRequest",
     "DeleteDocumentResponse",
     "IngestDocumentResponse",
     "IngestionDiagnosticsPayload",
+    "ManualEvaluationRequest",
+    "ManualEvaluationResponse",
     "PipelineInspectRequest",
     "PipelineInspectResponse",
     "PreviewSummaryRecallRequest",
     "PreviewSummaryRecallResponse",
     "ProjectDocumentsResponse",
     "ProjectListResponse",
+    "QaDatasetEntryCreateRequest",
+    "QaDatasetEntryDeleteResponse",
+    "QaDatasetEntryListResponse",
+    "QaDatasetEntryResponse",
+    "QaDatasetEntryUpdateRequest",
+    "QaDatasetGenerateRequest",
+    "QaDatasetGenerateResponse",
     "RetrievalFiltersPayload",
+    "RetrievalLogsResponse",
 ]

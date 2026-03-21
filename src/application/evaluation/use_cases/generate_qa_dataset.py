@@ -6,7 +6,7 @@ from src.services.qa_dataset_service import QADatasetService
 
 from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from .delete_all_qa_dataset_entries import DeleteAllQaDatasetEntriesUseCase
-from .dtos import GenerateQaDatasetCommand
+from src.application.evaluation.dtos import GenerateQaDatasetCommand
 
 
 class GenerateQaDatasetUseCase:

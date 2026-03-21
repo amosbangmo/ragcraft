@@ -1,12 +1,15 @@
 from datetime import datetime
-from time import perf_counter
 
 from src.infrastructure.persistence.db import init_app_db
 from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-from src.application.evaluation.use_cases.dtos import GenerateQaDatasetCommand
+from src.application.evaluation.dtos import GenerateQaDatasetCommand
 from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
 from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+    RunGoldQaDatasetEvaluationUseCase,
+)
+from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
 from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
 from src.application.ingestion.dtos import DeleteDocumentCommand, ReindexDocumentCommand
@@ -38,11 +41,9 @@ from src.application.evaluation.benchmark_export_dtos import (
 from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
-from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.manual_evaluation_result import ManualEvaluationResult
-from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.pipeline_payloads import PipelineBuildResult
 
 from src.core.chain_state import (
@@ -315,8 +316,11 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> ManualEvaluationResult:
-        return ManualEvaluationService.evaluate_question(
-            app=self,
+        return RunManualEvaluationUseCase(
+            project_service=self.project_service,
+            rag_service=self.rag_service,
+            evaluation_service=self.evaluation_service,
+        ).execute(
             user_id=user_id,
             project_id=project_id,
             question=question,
@@ -480,55 +484,18 @@ class RAGCraftApp:
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
     ):
-        entries = self.list_qa_dataset_entries(
+        return RunGoldQaDatasetEvaluationUseCase(
+            list_qa_dataset_entries=ListQaDatasetEntriesUseCase(
+                qa_dataset_service=self.qa_dataset_service,
+            ),
+            project_service=self.project_service,
+            rag_service=self.rag_service,
+            evaluation_service=self.evaluation_service,
+        ).execute(
             user_id=user_id,
             project_id=project_id,
-        )
-        project = self.get_project(user_id, project_id)
-
-        def pipeline_runner(entry):
-            started = perf_counter()
-            pipeline = self.inspect_retrieval(
-                user_id=user_id,
-                project_id=project_id,
-                question=entry.question,
-                chat_history=[],
-                enable_query_rewrite_override=enable_query_rewrite,
-                enable_hybrid_retrieval_override=enable_hybrid_retrieval,
-            )
-
-            answer = ""
-            answer_generation_ms = 0.0
-            if pipeline is not None:
-                gen_started = perf_counter()
-                answer = self.rag_service.generate_answer_from_pipeline(
-                    project=project,
-                    pipeline=pipeline,
-                )
-                answer_generation_ms = (perf_counter() - gen_started) * 1000.0
-
-            latency_ms = (perf_counter() - started) * 1000.0
-            latency_dict = None
-            if pipeline is not None:
-                full_latency = merge_with_answer_stage(
-                    pipeline.latency,
-                    answer_generation_ms=answer_generation_ms,
-                    total_ms=latency_ms,
-                )
-                latency_dict = full_latency.to_dict()
-                pipeline.latency = latency_dict
-                pipeline.latency_ms = latency_ms
-
-            return {
-                "pipeline": pipeline,
-                "answer": answer,
-                "latency_ms": latency_ms,
-                "latency": latency_dict,
-            }
-
-        return self.evaluation_service.evaluate_gold_qa_dataset(
-            entries=entries,
-            pipeline_runner=pipeline_runner,
+            enable_query_rewrite=enable_query_rewrite,
+            enable_hybrid_retrieval=enable_hybrid_retrieval,
         )
 
     def build_benchmark_export_artifacts(
