@@ -207,6 +207,41 @@ def _infer_nearby_title(elements: list, element_index: int) -> str | None:
     return None
 
 
+def _surrounding_text_snippet(
+    elements: list,
+    element_index: int,
+    *,
+    max_total: int = 520,
+    max_piece: int = 220,
+) -> str | None:
+    """
+    Short same-page text near an image/table (excludes other images), for RAG grounding.
+    """
+    current_page = _page_number_of(elements[element_index])
+    parts: list[str] = []
+    for offset in (-3, -2, -1, 1, 2, 3):
+        idx = element_index + offset
+        if idx < 0 or idx >= len(elements) or idx == element_index:
+            continue
+        el = elements[idx]
+        if _category_of(el) == "Image":
+            continue
+        if current_page is not None and _page_number_of(el) != current_page:
+            continue
+        t = _text_of(el)
+        if not t:
+            continue
+        if len(t) > max_piece:
+            t = t[: max_piece - 3] + "..."
+        parts.append(t)
+    if not parts:
+        return None
+    joined = " \n".join(parts)
+    if len(joined) > max_total:
+        return joined[: max_total - 1] + "…"
+    return joined
+
+
 # ---------------------------------------------------------------------
 # PDF partition with OCR fallback
 # ---------------------------------------------------------------------
@@ -355,6 +390,8 @@ def _build_image_asset(elements, element_index, element, source_file, image_bloc
             "page_number": getattr(metadata, "page_number", None),
             "image_mime_type": getattr(metadata, "image_mime_type", None),
             "image_title": _infer_nearby_title(elements, element_index),
+            "element_category": _category_of(element) or "Image",
+            "surrounding_text": _surrounding_text_snippet(elements, element_index),
             "image_block_extraction_enabled": image_block_enabled,
         },
     }

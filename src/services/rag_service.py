@@ -42,7 +42,8 @@ class RAGService:
        are included in reranker text when present)
     6. optional contextual compression of reranked assets for the prompt
     7. final prompt built from the compressed (or original) top assets, including structured
-       table excerpts from asset metadata when ingestion populated them
+       table excerpts from asset metadata when ingestion populated them, and image contextual
+       blocks (metadata, same-page excerpt, optional same-file text neighbors) when present
     """
 
     def __init__(
@@ -471,9 +472,13 @@ class RAGService:
         citation_objects = self.source_citation_service.build_citations(prompt_context_assets)
         source_references = [self._citation_to_dict(citation) for citation in citation_objects]
 
+        image_ctx_by_id, image_context_enriched = (
+            self.prompt_builder_service.prepare_image_contexts(prompt_context_assets)
+        )
         raw_context = self.prompt_builder_service.build_raw_context(
             raw_assets=prompt_context_assets,
             citations=citation_objects,
+            image_context_by_doc_id=image_ctx_by_id,
         )
         prompt = self.prompt_builder_service.build_prompt(
             question=question,
@@ -533,6 +538,7 @@ class RAGService:
             "prompt_context_assets": prompt_context_assets,
             "context_compression": context_compression,
             "source_references": source_references,
+            "image_context_enriched": image_context_enriched,
             "raw_context": raw_context,
             "prompt": prompt,
             "confidence": confidence,

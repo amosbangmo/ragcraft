@@ -1,4 +1,5 @@
 from src.domain.source_citation import SourceCitation
+from src.services.image_context_service import ImageContextService
 
 
 _MAX_STRUCTURED_TABLE_ROWS = 14
@@ -11,20 +12,54 @@ class PromptBuilderService:
         *,
         max_text_chars_per_asset: int,
         max_table_chars_per_asset: int,
+        image_context_service: ImageContextService | None = None,
     ):
         self.max_text_chars_per_asset = max_text_chars_per_asset
         self.max_table_chars_per_asset = max_table_chars_per_asset
         self._max_structured_block_chars = min(2800, max(400, max_table_chars_per_asset))
+        self._image_context = image_context_service or ImageContextService()
+
+    def prepare_image_contexts(
+        self,
+        raw_assets: list[dict],
+    ) -> tuple[dict[str, dict], bool]:
+        """
+        Precompute per-image context dicts (metadata + optional same-page / pool neighbors).
+        Returns (map doc_id -> context, any_image_used_enriched_signals).
+        """
+        by_id: dict[str, dict] = {}
+        any_enriched = False
+        for asset in raw_assets:
+            if asset.get("content_type") != "image":
+                continue
+            doc_id = asset.get("doc_id")
+            if not doc_id:
+                continue
+            neighbors = self._image_context.find_text_neighbors(asset, raw_assets)
+            ctx = self._image_context.build_context(asset, neighbors)
+            by_id[str(doc_id)] = ctx
+            if self._image_context.is_context_enriched(ctx):
+                any_enriched = True
+        return by_id, any_enriched
 
     def build_raw_context(
         self,
         *,
         raw_assets: list[dict],
         citations: list[SourceCitation],
+        image_context_by_doc_id: dict[str, dict] | None = None,
     ) -> str:
         """``raw_assets`` may be context-compressed upstream before this call."""
+        if image_context_by_doc_id is None:
+            image_context_by_doc_id, _ = self.prepare_image_contexts(raw_assets)
         blocks = [
-            self._format_raw_asset_for_prompt(asset=asset, citation=citation)
+            self._format_raw_asset_for_prompt(
+                asset=asset,
+                citation=citation,
+                image_context=image_context_by_doc_id.get(str(asset.get("doc_id")))
+                if asset.get("content_type") == "image" and asset.get("doc_id")
+                else None,
+            )
             for asset, citation in zip(raw_assets, citations)
         ]
         return "\n\n".join(blocks)
@@ -70,7 +105,8 @@ Instructions:
   - [Source 2][Tableau: Table 2]
   - [Source 3][Figure: Attention map]
 - When useful, mention whether the evidence came from text, table, or image assets.
-- For image assets, rely only on their provided metadata and image retrieval summary; do not invent unseen visual details.
+- For image assets, rely only on metadata, contextual text blocks, and the image retrieval summary; you cannot see pixels—do not invent visual details.
+- When citing image evidence, say so explicitly (e.g. "per image metadata / surrounding text / retrieval summary for [Source N]").
 - For table assets, when a structured table excerpt is provided, read values from it first for comparisons, rankings, and numeric facts; cross-check the raw table if needed.
 - Never invent document content that is not explicitly present in the raw context.
 """.strip()
@@ -144,7 +180,13 @@ Instructions:
 
         return "\n".join(lines)
 
-    def _format_raw_asset_for_prompt(self, *, asset: dict, citation: SourceCitation) -> str:
+    def _format_raw_asset_for_prompt(
+        self,
+        *,
+        asset: dict,
+        citation: SourceCitation,
+        image_context: dict | None = None,
+    ) -> str:
         content_type = asset.get("content_type", "unknown")
         source_file = asset.get("source_file", "unknown")
         raw_content = asset.get("raw_content", "") or ""
@@ -211,7 +253,7 @@ Raw table text:
 """
 
         if content_type == "image":
-            image_context = {
+            meta_for_prompt = {
                 "page_number": metadata.get("page_number"),
                 "page_start": metadata.get("page_start"),
                 "page_end": metadata.get("page_end"),
@@ -219,16 +261,45 @@ Raw table text:
                 "image_mime_type": metadata.get("image_mime_type"),
                 "element_category": metadata.get("element_category"),
                 "embedded_path": metadata.get("embedded_path"),
-                "image_title": metadata.get("image_title"),
                 "rerank_score": metadata.get("rerank_score"),
             }
+
+            if image_context is None:
+                neighbors = self._image_context.find_text_neighbors(asset, [asset])
+                image_context = self._image_context.build_context(asset, neighbors)
+
+            title_line = image_context.get("image_title") or metadata.get("image_title") or "(none)"
+            page_line = image_context.get("page_context") or "(unknown)"
+            ctx_summary = image_context.get("contextual_summary") or ""
+            surrounding = image_context.get("surrounding_text")
+            neighbor_block = image_context.get("neighbor_text")
+
+            extra_blocks = ""
+            if surrounding:
+                extra_blocks += f"""
+Same-page text excerpt (from extraction, not a vision read):
+{surrounding}
+"""
+            if neighbor_block:
+                extra_blocks += f"""
+Nearby retrieved text chunks (same document; use for grounding only):
+{neighbor_block}
+"""
+            if ctx_summary:
+                extra_blocks += f"""
+Contextual signals (for orientation):
+{ctx_summary}
+"""
 
             return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: image
 Doc ID: {doc_id}
 Source file: {source_file}
-Metadata: {image_context}
+Structural metadata: {meta_for_prompt}
+Image title / caption signal: {title_line}
+Page context: {page_line}
+{extra_blocks.strip()}
 
 Image retrieval summary:
 {summary}

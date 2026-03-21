@@ -311,6 +311,8 @@ class TestRAGService(unittest.TestCase):
         self.assertIn("section_expansion", payload)
         self.assertIn("pre_rerank_raw_assets", payload)
         self.assertEqual(payload["section_expansion"]["recall_pool_size"], 1)
+        self.assertIn("image_context_enriched", payload)
+        self.assertFalse(payload["image_context_enriched"])
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):

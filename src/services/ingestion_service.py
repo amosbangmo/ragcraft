@@ -133,6 +133,12 @@ class IngestionService:
                 if (parsed_table.get("rows") or parsed_table.get("headers")):
                     metadata["structured_table"] = parsed_table
 
+            if content_type == "image":
+                for optional_key in ("surrounding_text", "image_title"):
+                    v = metadata.get(optional_key)
+                    if isinstance(v, str) and not v.strip():
+                        metadata.pop(optional_key, None)
+
             summary_documents.append(
                 Document(
                     page_content=summary,

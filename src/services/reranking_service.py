@@ -137,6 +137,16 @@ class RerankingService:
             if s:
                 parts.append(s)
 
+        if asset.get("content_type") == "image":
+            surrounding = metadata.get("surrounding_text")
+            if surrounding is not None:
+                s = str(surrounding).strip()
+                if s:
+                    parts.append(s)
+            summary = (asset.get("summary") or "").strip()
+            if summary:
+                parts.append(summary)
+
         return "\n".join(parts)
 
     def _fallback_score(self, query: str, candidate_text: str) -> float:

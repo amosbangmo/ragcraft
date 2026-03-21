@@ -12,6 +12,7 @@ class ElementSummarizer:
         max_summary_input_chars = INGESTION_CONFIG.summary_max_input_chars
 
         if content_type == "image":
+            surrounding = metadata.get("surrounding_text")
             prompt = f"""
 You are generating a retrieval summary for an extracted image block from a document.
 
@@ -23,6 +24,7 @@ Known metadata:
 - embedded_path: {metadata.get("embedded_path")}
 - image_index: {metadata.get("image_index")}
 - image_title: {metadata.get("image_title")}
+- surrounding_text (same-page excerpt, may be empty): {surrounding}
 
 Instructions:
 - Produce a concise retrieval-oriented description

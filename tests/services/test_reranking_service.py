@@ -46,6 +46,23 @@ class TestRerankingService(unittest.TestCase):
         self.assertIn("Revenue", text)
         self.assertIn("Year", text)
 
+    def test_image_candidate_text_includes_summary_and_surrounding(self) -> None:
+        svc = RerankingService()
+        asset = {
+            "doc_id": "i1",
+            "content_type": "image",
+            "raw_content": "base64blob",
+            "summary": "Bar chart of sales by region.",
+            "metadata": {
+                "image_title": "Regional sales",
+                "surrounding_text": "Figure 4 compares Q1 and Q2.",
+            },
+        }
+        text = svc._build_candidate_text(asset)
+        self.assertIn("Regional sales", text)
+        self.assertIn("Q1", text)
+        self.assertIn("Bar chart", text)
+
 
 if __name__ == "__main__":
     unittest.main()

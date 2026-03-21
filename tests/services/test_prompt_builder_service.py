@@ -81,6 +81,75 @@ class TestPromptBuilderService(unittest.TestCase):
         self.assertNotIn("Structured table excerpt:", block)
         self.assertIn("Raw table HTML:", block)
 
+    def test_image_asset_includes_context_blocks(self) -> None:
+        image = {
+            "content_type": "image",
+            "doc_id": "im1",
+            "source_file": "r.pdf",
+            "summary": "A diagram of the workflow.",
+            "metadata": {
+                "page_number": 3,
+                "image_title": "Workflow diagram",
+                "surrounding_text": "See the steps illustrated here.",
+                "element_category": "Image",
+            },
+        }
+        text_neighbor = {
+            "content_type": "text",
+            "doc_id": "tx1",
+            "source_file": "r.pdf",
+            "raw_content": "Step one loads configuration.",
+            "metadata": {"page_start": 3, "page_end": 3, "source_file": "r.pdf"},
+        }
+        cit = SourceCitation(
+            source_number=1,
+            doc_id="im1",
+            source_file="r.pdf",
+            content_type="image",
+            page_label=None,
+            locator_label=None,
+            display_label="Source 1",
+            prompt_label="[Source 1]",
+            metadata={},
+        )
+        ctx_map, enriched = self.svc.prepare_image_contexts([image, text_neighbor])
+        self.assertTrue(enriched)
+        block = self.svc._format_raw_asset_for_prompt(
+            asset=image,
+            citation=cit,
+            image_context=ctx_map["im1"],
+        )
+        self.assertIn("Workflow diagram", block)
+        self.assertIn("Page 3", block)
+        self.assertIn("Same-page text excerpt", block)
+        self.assertIn("Nearby retrieved text chunks", block)
+        self.assertIn("Image retrieval summary:", block)
+        self.assertIn("diagram of the workflow", block.lower())
+
+    def test_image_fallback_without_precomputed_context(self) -> None:
+        image = {
+            "content_type": "image",
+            "doc_id": "im2",
+            "source_file": "r.pdf",
+            "summary": "Summary only.",
+            "metadata": {"image_title": "Fig A"},
+        }
+        cit = SourceCitation(
+            source_number=1,
+            doc_id="im2",
+            source_file="r.pdf",
+            content_type="image",
+            page_label=None,
+            locator_label=None,
+            display_label="Source 1",
+            prompt_label="[Source 1]",
+            metadata={},
+        )
+        block = self.svc._format_raw_asset_for_prompt(asset=image, citation=cit, image_context=None)
+        self.assertIn("Fig A", block)
+        self.assertIn("Image retrieval summary:", block)
+        self.assertIn("Summary only.", block)
+
 
 if __name__ == "__main__":
     unittest.main()
