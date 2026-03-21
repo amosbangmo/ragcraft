@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 from time import perf_counter
+from typing import TYPE_CHECKING
 
 from src.domain.project import Project
-from src.services.rag_service import RAGService
+
+if TYPE_CHECKING:
+    from src.services.rag_service import RAGService
 
 
 class RetrievalComparisonService:

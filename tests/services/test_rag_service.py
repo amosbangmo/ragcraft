@@ -2,6 +2,7 @@ import os
 import sys
 import types
 import unittest
+from dataclasses import asdict, is_dataclass
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -80,25 +81,31 @@ from src.domain.source_citation import SourceCitation
 from src.services.rag_service import RAGService
 
 
-class TestRAGService(unittest.TestCase):
-    def setUp(self):
-        # RETRIEVAL_CONFIG is a shared SimpleNamespace; tests that tweak hybrid_beta or rrf_k must not leak.
-        cfg = config_module.RETRIEVAL_CONFIG
-        cfg.hybrid_beta = 0.5
-        cfg.rrf_k = 60
+def _mutable_retrieval_config_view(cfg):
+    """RAGService tests mutate ``service.config``; real ``RetrievalConfig`` is frozen."""
+    if is_dataclass(cfg) and cfg.__dataclass_params__.frozen:
+        return SimpleNamespace(**asdict(cfg))
+    return cfg
 
+
+class TestRAGService(unittest.TestCase):
     def _build_service(self):
         vectorstore_service = MagicMock()
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
         reranking_service = MagicMock()
+        service = RAGService(
+            vectorstore_service=vectorstore_service,
+            evaluation_service=evaluation_service,
+            docstore_service=docstore_service,
+            reranking_service=reranking_service,
+        )
+        service.config = _mutable_retrieval_config_view(service.config)
+        # Match stable RRF expectations; real ``RetrievalConfig`` may come from env.
+        service.config.hybrid_beta = 0.5
+        service.config.rrf_k = 60
         return (
-            RAGService(
-                vectorstore_service=vectorstore_service,
-                evaluation_service=evaluation_service,
-                docstore_service=docstore_service,
-                reranking_service=reranking_service,
-            ),
+            service,
             vectorstore_service,
             evaluation_service,
             docstore_service,

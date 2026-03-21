@@ -7,12 +7,25 @@ from unittest.mock import MagicMock
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 
+# Populated in setUpModule; cleared in tearDownModule so stubbed packages do not
+# leak into other test modules (which may be collected / run in any order).
+_STUBBED_MODULE_NAMES: list[str] = []
+_MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
+    "src.app.ragcraft_app",
+    "src.services.qa_dataset_generation_service",
+    "src.services.qa_dataset_service",
+    "src.infrastructure.evaluation.qa_dataset_repository",
+)
+
+RAGCraftApp = None  # type: ignore[misc, assignment]
+
 
 def _install_module(module_name: str, **attributes):
     module = types.ModuleType(module_name)
     for key, value in attributes.items():
         setattr(module, key, value)
     sys.modules[module_name] = module
+    _STUBBED_MODULE_NAMES.append(module_name)
 
 
 class _DummyService:
@@ -20,30 +33,51 @@ class _DummyService:
         pass
 
 
-# Lightweight module stubs so importing RAGCraftApp does not require
-# optional runtime dependencies (LLM, FAISS, OCR stack, etc.).
-_install_module("src.infrastructure.persistence.db", init_app_db=lambda: None)
-_install_module("src.auth.auth_service", AuthService=_DummyService)
-_install_module("src.services.ingestion_service", IngestionService=_DummyService)
-_install_module("src.services.vectorstore_service", VectorStoreService=_DummyService)
-_install_module("src.services.evaluation_service", EvaluationService=_DummyService)
-_install_module("src.services.groundedness_service", GroundednessService=_DummyService)
-_install_module(
-    "src.services.citation_faithfulness_service",
-    CitationFaithfulnessService=_DummyService,
-)
-_install_module("src.services.answer_relevance_service", AnswerRelevanceService=_DummyService)
-_install_module("src.services.hallucination_service", HallucinationService=_DummyService)
-_install_module("src.services.chat_service", ChatService=_DummyService)
-_install_module("src.services.rag_service", RAGService=_DummyService)
-_install_module("src.services.docstore_service", DocStoreService=_DummyService)
-_install_module("src.services.reranking_service", RerankingService=_DummyService)
-_install_module(
-    "src.services.retrieval_comparison_service",
-    RetrievalComparisonService=_DummyService,
-)
+def _stub_get_connection():
+    conn = MagicMock(name="sqlite_conn")
+    conn.execute = MagicMock(return_value=MagicMock())
+    conn.commit = MagicMock()
+    conn.rollback = MagicMock()
+    conn.close = MagicMock()
+    return conn
 
-from src.app.ragcraft_app import RAGCraftApp
+
+def setUpModule():
+    global RAGCraftApp
+
+    _install_module(
+        "src.infrastructure.persistence.db",
+        init_app_db=lambda: None,
+        get_connection=_stub_get_connection,
+    )
+    _install_module("src.auth.auth_service", AuthService=_DummyService)
+    _install_module("src.services.ingestion_service", IngestionService=_DummyService)
+    _install_module("src.services.vectorstore_service", VectorStoreService=_DummyService)
+    _install_module("src.services.evaluation_service", EvaluationService=_DummyService)
+    _install_module("src.services.llm_judge_service", LLMJudgeService=_DummyService)
+    _install_module("src.services.chat_service", ChatService=_DummyService)
+    _install_module("src.services.rag_service", RAGService=_DummyService)
+    _install_module("src.services.docstore_service", DocStoreService=_DummyService)
+    _install_module("src.services.reranking_service", RerankingService=_DummyService)
+    _install_module(
+        "src.services.retrieval_comparison_service",
+        RetrievalComparisonService=_DummyService,
+    )
+
+    from src.app.ragcraft_app import RAGCraftApp as _RAGCraftApp
+
+    RAGCraftApp = _RAGCraftApp
+
+
+def tearDownModule():
+    global RAGCraftApp
+
+    RAGCraftApp = None
+    for name in _MODULES_TO_RELOAD_AFTER_SMOKE:
+        sys.modules.pop(name, None)
+    for name in _STUBBED_MODULE_NAMES:
+        sys.modules.pop(name, None)
+    _STUBBED_MODULE_NAMES.clear()
 
 
 class TestSmokeUploadIngestAsk(unittest.TestCase):

@@ -1,18 +1,6 @@
-import sys
-import types
 import unittest
 
 from src.domain.project import Project
-
-if "src.services.rag_service" not in sys.modules:
-    rag_module = types.ModuleType("src.services.rag_service")
-
-    class RAGService:
-        pass
-
-    rag_module.RAGService = RAGService
-    sys.modules["src.services.rag_service"] = rag_module
-
 from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 
