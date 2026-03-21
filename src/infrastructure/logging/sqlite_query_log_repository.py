@@ -90,6 +90,9 @@ class SQLiteQueryLogRepository:
             sec_exp = _maybe_int_ms(entry.get("section_expansion_count"))
             exp_assets = _maybe_int_ms(entry.get("expanded_assets_count"))
 
+            ta = entry.get("table_aware_qa_enabled")
+            ta_sql = None if ta is None else (1 if bool(ta) else 0)
+
             params = (
                 entry.get("user_id"),
                 entry.get("project_id"),
@@ -117,6 +120,7 @@ class SQLiteQueryLogRepository:
                 cc_ratio,
                 sec_exp,
                 exp_assets,
+                ta_sql,
                 created_at.strip(),
             )
 
@@ -134,8 +138,8 @@ class SQLiteQueryLogRepository:
                         retrieval_strategy_apply_filters,
                         context_compression_chars_before, context_compression_chars_after,
                         context_compression_ratio, section_expansion_count, expanded_assets_count,
-                        created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        table_aware_qa_enabled, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     params,
                 )
@@ -263,5 +267,9 @@ class SQLiteQueryLogRepository:
             mi = _maybe_int_ms(v)
             if mi is not None:
                 out[sec_key] = mi
+
+        ta_flag = r.get("table_aware_qa_enabled")
+        if ta_flag is not None:
+            out["table_aware_qa_enabled"] = bool(ta_flag)
 
         return out

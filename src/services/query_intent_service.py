@@ -10,6 +10,23 @@ class QueryIntentService:
     Designed to stay failure-safe and extensible (e.g. LLM fallback later).
     """
 
+    _TABLE_STRONG_PHRASES = (
+        "what does the table",
+        "what the table",
+        "according to table",
+        "according to the table",
+        "which row",
+        "which column",
+        "compare the values",
+        "final table",
+        "in the table",
+        "from the table",
+        "table show",
+        "table shows",
+        "table say",
+        "table says",
+        "what does the table say",
+    )
     _COMPARISON_MARKERS = (
         "compare",
         "comparison",
@@ -23,7 +40,26 @@ class QueryIntentService:
         " vs ",
         " vs.",
     )
-    _TABLE_MARKERS = ("table", "row", "column", "spreadsheet", "pivot")
+    _TABLE_MARKERS = (
+        "table",
+        "row",
+        "column",
+        "spreadsheet",
+        "pivot",
+        "metric",
+        "metrics",
+        "value",
+        "values",
+        "score",
+        "rank",
+        "ranking",
+        "highest",
+        "lowest",
+        "total",
+        "average",
+        "percentage",
+        "percent",
+    )
     _IMAGE_MARKERS = ("image", "figure", "diagram", "chart", "picture", "screenshot", "illustration")
     _EXPLORATORY_MARKERS = (
         "overview",
@@ -63,6 +99,10 @@ class QueryIntentService:
             return QueryIntent.UNKNOWN
 
         q = " ".join(raw.lower().split())
+
+        for phrase in self._TABLE_STRONG_PHRASES:
+            if phrase in q:
+                return QueryIntent.TABLE
 
         for marker in self._COMPARISON_MARKERS:
             if marker in q:

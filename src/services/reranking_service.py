@@ -27,7 +27,15 @@ class RerankingService:
         self._model = None
         self._model_load_failed = False
 
-    def rerank(self, query: str, raw_assets: list[dict], top_k: int) -> list[dict]:
+    def rerank(
+        self,
+        query: str,
+        raw_assets: list[dict],
+        top_k: int,
+        *,
+        prefer_tables: bool = False,
+        table_boost: float = 0.0,
+    ) -> list[dict]:
         if not query or not raw_assets or top_k <= 0:
             return []
 
@@ -40,6 +48,17 @@ class RerankingService:
         ]
 
         scores = self._score_candidates(query, candidates)
+
+        if prefer_tables and table_boost > 0:
+            scores = [
+                float(score)
+                + (
+                    float(table_boost)
+                    if (candidate["asset"].get("content_type") == "table")
+                    else 0.0
+                )
+                for score, candidate in zip(scores, candidates)
+            ]
 
         ranked_items = sorted(
             zip(candidates, scores),

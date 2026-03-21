@@ -72,6 +72,21 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         self.assertTrue(rs.get("use_hybrid"))
         self.assertFalse(rs.get("apply_filters"))
 
+    def test_insert_table_aware_flag_roundtrip(self) -> None:
+        repo = SQLiteQueryLogRepository()
+        repo.log(
+            {
+                "question": "q_ta",
+                "timestamp": "2025-04-01T12:00:00+00:00",
+                "project_id": "p_ta",
+                "user_id": "u_ta",
+                "table_aware_qa_enabled": True,
+            }
+        )
+        rows = repo.list_logs(project_id="p_ta")
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0].get("table_aware_qa_enabled"))
+
     def test_insert_context_compression_roundtrip(self) -> None:
         repo = SQLiteQueryLogRepository()
         repo.log(

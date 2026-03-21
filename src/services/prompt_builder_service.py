@@ -30,8 +30,13 @@ class PromptBuilderService:
         question: str,
         chat_history: list[str],
         raw_context: str,
+        table_aware_instruction: str | None = None,
     ) -> str:
         history_text = "\n".join(chat_history) if chat_history else "No prior chat history."
+
+        table_block = ""
+        if table_aware_instruction and table_aware_instruction.strip():
+            table_block = f"\n{table_aware_instruction.strip()}\n"
 
         return f"""
 You are an AI assistant answering questions using only the provided raw multimodal context.
@@ -44,7 +49,7 @@ Question:
 
 Raw multimodal context:
 {raw_context}
-
+{table_block}
 Instructions:
 - Use only the provided raw context.
 - Retrieval happened in two stages:

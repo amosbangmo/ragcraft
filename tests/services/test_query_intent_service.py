@@ -27,6 +27,24 @@ class TestQueryIntentService(unittest.TestCase):
     def test_table_keywords(self) -> None:
         self.assertEqual(self.svc.classify("Show values in the third row"), QueryIntent.TABLE)
         self.assertEqual(self.svc.classify("Which column has revenue?"), QueryIntent.TABLE)
+        self.assertEqual(
+            self.svc.classify("What are the metrics reported in the final table?"),
+            QueryIntent.TABLE,
+        )
+        self.assertEqual(
+            self.svc.classify("Which quarter had the highest revenue?"),
+            QueryIntent.TABLE,
+        )
+        self.assertEqual(
+            self.svc.classify("What does the table show about latency?"),
+            QueryIntent.TABLE,
+        )
+
+    def test_compare_values_phrase_is_table_before_generic_comparison(self) -> None:
+        self.assertEqual(
+            self.svc.classify("Compare the values in Table 2."),
+            QueryIntent.TABLE,
+        )
 
     def test_image_keywords(self) -> None:
         self.assertEqual(self.svc.classify("What does figure 3 show?"), QueryIntent.IMAGE)

@@ -27,6 +27,7 @@ from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
 from src.services.section_retrieval_service import SectionRetrievalService
 from src.services.source_citation_service import SourceCitationService
+from src.services.table_qa_service import TableQAService
 from src.services.vectorstore_service import VectorStoreService
 
 
@@ -69,6 +70,7 @@ class RAGService:
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
         )
         self.query_intent_service = QueryIntentService()
+        self.table_qa_service = TableQAService()
         self.config = RETRIEVAL_CONFIG
         self.adaptive_retrieval_service = AdaptiveRetrievalService(self.config)
         self.contextual_compression_service = ContextualCompressionService()
@@ -350,6 +352,10 @@ class RAGService:
         query_rewrite_ms = (perf_counter() - t0) * 1000.0
 
         query_intent = self.query_intent_service.classify(rewritten_question)
+        table_aware_qa_enabled = self.table_qa_service.is_table_query(
+            query_intent=query_intent,
+            question=rewritten_question,
+        )
 
         use_adaptive_retrieval = enable_hybrid_retrieval_override is None
         if use_adaptive_retrieval:
@@ -419,6 +425,10 @@ class RAGService:
             query=rewritten_question,
             raw_assets=pre_rerank_raw_assets,
             top_k=self.config.max_prompt_assets,
+            prefer_tables=table_aware_qa_enabled,
+            table_boost=(
+                self.table_qa_service.table_priority_boost() if table_aware_qa_enabled else 0.0
+            ),
         )
         reranking_ms = (perf_counter() - t0) * 1000.0
 
@@ -467,6 +477,11 @@ class RAGService:
             question=question,
             chat_history=chat_history,
             raw_context=raw_context,
+            table_aware_instruction=(
+                self.table_qa_service.build_table_prompt_hint()
+                if table_aware_qa_enabled
+                else None
+            ),
         )
         prompt_build_ms = (perf_counter() - t0) * 1000.0
 
@@ -491,6 +506,7 @@ class RAGService:
             "question": question,
             "rewritten_question": rewritten_question,
             "query_intent": query_intent.value,
+            "table_aware_qa_enabled": table_aware_qa_enabled,
             "chat_history": chat_history,
             "retrieval_mode": retrieval_mode,
             "query_rewrite_enabled": enable_query_rewrite,
@@ -536,6 +552,7 @@ class RAGService:
                     "hybrid_retrieval_enabled": enable_hybrid_retrieval,
                     "retrieval_mode": retrieval_mode,
                     "query_intent": query_intent.value,
+                    "table_aware_qa_enabled": table_aware_qa_enabled,
                     "retrieval_strategy": strategy.to_dict(),
                     "context_compression_chars_before": context_compression["chars_before"],
                     "context_compression_chars_after": context_compression["chars_after"],
@@ -634,6 +651,7 @@ class RAGService:
                     "hybrid_retrieval_enabled": pipeline.get("hybrid_retrieval_enabled"),
                     "retrieval_mode": pipeline.get("retrieval_mode"),
                     "query_intent": pipeline.get("query_intent"),
+                    "table_aware_qa_enabled": pipeline.get("table_aware_qa_enabled"),
                     "retrieval_strategy": pipeline.get("retrieval_strategy"),
                     "context_compression_chars_before": (
                         (pipeline.get("context_compression") or {}).get("chars_before")

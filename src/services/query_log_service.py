@@ -185,6 +185,10 @@ class QueryLogService:
             except (TypeError, ValueError):
                 pass
 
+        ta = payload.get("table_aware_qa_enabled")
+        if ta is not None:
+            entry["table_aware_qa_enabled"] = bool(ta)
+
         return entry
 
     def load_logs(

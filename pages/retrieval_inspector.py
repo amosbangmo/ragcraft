@@ -396,7 +396,7 @@ def _render_inspection_result(pipeline):
     strat_filters = rs.get("apply_filters")
     filters_active = pipeline.get("retrieval_filters") is not None
 
-    top_metrics = st.columns(4)
+    top_metrics = st.columns(5)
     with top_metrics[0]:
         st.metric("Mode", pipeline["retrieval_mode"])
     with top_metrics[1]:
@@ -405,6 +405,11 @@ def _render_inspection_result(pipeline):
         st.metric("Hybrid", "On" if pipeline["hybrid_retrieval_enabled"] else "Off")
     with top_metrics[3]:
         st.metric("Intent", str(pipeline.get("query_intent", "unknown")))
+    with top_metrics[4]:
+        st.metric(
+            "Table QA",
+            "On" if pipeline.get("table_aware_qa_enabled") else "Off",
+        )
 
     strat_cols = st.columns(5)
     with strat_cols[0]:
@@ -547,6 +552,7 @@ def _render_inspection_result(pipeline):
             "question": pipeline["question"],
             "rewritten_question": pipeline["rewritten_question"],
             "query_intent": pipeline.get("query_intent"),
+            "table_aware_qa_enabled": pipeline.get("table_aware_qa_enabled"),
             "chat_history": pipeline["chat_history"],
             "retrieval_mode": pipeline["retrieval_mode"],
             "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
