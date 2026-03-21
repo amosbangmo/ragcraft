@@ -16,7 +16,8 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from apps.api.config import load_settings
-from apps.api.routers import system
+from apps.api.error_handlers import register_exception_handlers
+from apps.api.routers import chat, system
 
 
 def create_app() -> FastAPI:
@@ -27,7 +28,9 @@ def create_app() -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
     )
+    register_exception_handlers(app)
     app.include_router(system.router)
+    app.include_router(chat.router)
     return app
 
 

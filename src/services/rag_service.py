@@ -77,6 +77,18 @@ class RAGService:
         )
 
     @property
+    def ask_question_use_case(self) -> AskQuestionUseCase:
+        return self._ask_question
+
+    @property
+    def inspect_pipeline_use_case(self) -> InspectPipelineUseCase:
+        return self._inspect_pipeline_uc
+
+    @property
+    def preview_summary_recall_use_case(self) -> PreviewSummaryRecallUseCase:
+        return self._preview_summary_recall_uc
+
+    @property
     def config(self) -> Any:
         return self.retrieval_settings_service.config_source
 
