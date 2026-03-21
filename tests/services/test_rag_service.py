@@ -90,7 +90,7 @@ def _mutable_retrieval_config_view(cfg):
 
 
 class TestRAGService(unittest.TestCase):
-    def _build_service(self):
+    def _build_service(self, query_log_service=None):
         vectorstore_service = MagicMock()
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
@@ -100,6 +100,7 @@ class TestRAGService(unittest.TestCase):
             evaluation_service=evaluation_service,
             docstore_service=docstore_service,
             reranking_service=reranking_service,
+            query_log_service=query_log_service,
         )
         service.config = _mutable_retrieval_config_view(service.config)
         # Match stable RRF expectations; real ``RetrievalConfig`` may come from env.
@@ -317,6 +318,41 @@ class TestRAGService(unittest.TestCase):
         with patch.object(service, "_run_pipeline", return_value=pipeline):
             with self.assertRaises(LLMServiceError):
                 service.ask(project=project, question="Q", chat_history=[])
+
+    @patch("src.services.rag_service.LLM")
+    def test_ask_emits_query_log_when_configured(self, mock_llm):
+        log_service = MagicMock()
+        service, *_ = self._build_service(query_log_service=log_service)
+        project = Project(user_id="u1", project_id="p1")
+        pipeline = {
+            "prompt": "prompt text",
+            "rewritten_question": "rw",
+            "selected_summary_docs": [],
+            "reranked_raw_assets": [],
+            "source_references": [],
+            "confidence": 0.7,
+            "selected_doc_ids": ["d1"],
+            "recalled_doc_ids": ["d1", "d2"],
+        }
+        mock_llm.invoke.return_value = SimpleNamespace(content="ans")
+
+        with patch.object(service, "_run_pipeline", return_value=pipeline) as run_pipeline:
+            service.ask(project=project, question="Q", chat_history=[])
+
+        run_pipeline.assert_called_once()
+        _, kwargs = run_pipeline.call_args
+        self.assertTrue(kwargs.get("defer_query_log"))
+        log_service.log_query.assert_called_once()
+        payload = log_service.log_query.call_args.kwargs["payload"]
+        self.assertEqual(payload["question"], "Q")
+        self.assertEqual(payload["rewritten_query"], "rw")
+        self.assertEqual(payload["project_id"], "p1")
+        self.assertEqual(payload["user_id"], "u1")
+        self.assertEqual(payload["selected_doc_ids"], ["d1"])
+        self.assertEqual(payload["retrieved_doc_ids"], ["d1", "d2"])
+        self.assertEqual(payload["answer"], "ans")
+        self.assertEqual(payload["confidence"], 0.7)
+        self.assertIsInstance(payload["latency_ms"], float)
 
 
 if __name__ == "__main__":

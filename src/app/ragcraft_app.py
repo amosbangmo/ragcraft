@@ -9,6 +9,7 @@ from src.services.vectorstore_service import VectorStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.chat_service import ChatService
+from src.services.query_log_service import QueryLogService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
@@ -58,6 +59,7 @@ class RAGCraftApp:
                 evaluation_service=self.evaluation_service,
                 docstore_service=self.docstore_service,
                 reranking_service=self.reranking_service,
+                query_log_service=QueryLogService(),
             )
 
         return self._rag_service

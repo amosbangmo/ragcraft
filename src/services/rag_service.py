@@ -1,3 +1,5 @@
+from time import perf_counter
+
 from langchain_core.documents import Document
 
 from src.core.config import LLM, RETRIEVAL_CONFIG
@@ -10,6 +12,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
 from src.services.prompt_builder_service import PromptBuilderService
+from src.services.query_log_service import QueryLogService
 from src.services.query_rewrite_service import QueryRewriteService
 from src.services.reranking_service import RerankingService
 from src.services.source_citation_service import SourceCitationService
@@ -32,6 +35,7 @@ class RAGService:
         evaluation_service: EvaluationService,
         docstore_service: DocStoreService,
         reranking_service: RerankingService,
+        query_log_service: QueryLogService | None = None,
     ):
         self.vectorstore_service = vectorstore_service
         self.evaluation_service = evaluation_service
@@ -52,6 +56,15 @@ class RAGService:
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
         )
         self.config = RETRIEVAL_CONFIG
+        self.query_log_service = query_log_service
+
+    def _safe_log_query(self, payload: dict) -> None:
+        if self.query_log_service is None:
+            return
+        try:
+            self.query_log_service.log_query(payload=payload)
+        except Exception:
+            pass
 
     def build_chain(self, project: Project):
         """
@@ -230,7 +243,9 @@ class RAGService:
         *,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
+        defer_query_log: bool = False,
     ) -> dict | None:
+        pipeline_started = perf_counter()
         if chat_history is None:
             chat_history = []
 
@@ -306,7 +321,7 @@ class RAGService:
 
         retrieval_mode = "faiss+bm25" if enable_hybrid_retrieval else "faiss"
 
-        return {
+        payload = {
             "question": question,
             "rewritten_question": rewritten_question,
             "chat_history": chat_history,
@@ -327,6 +342,23 @@ class RAGService:
             "confidence": confidence,
         }
 
+        if self.query_log_service is not None and not defer_query_log:
+            pipeline_ms = (perf_counter() - pipeline_started) * 1000.0
+            self._safe_log_query(
+                {
+                    "question": question,
+                    "rewritten_query": rewritten_question,
+                    "project_id": project.project_id,
+                    "user_id": project.user_id,
+                    "selected_doc_ids": selected_doc_ids,
+                    "retrieved_doc_ids": recalled_doc_ids,
+                    "latency_ms": pipeline_ms,
+                    "confidence": confidence,
+                }
+            )
+
+        return payload
+
     def inspect_pipeline(
         self,
         project: Project,
@@ -342,6 +374,7 @@ class RAGService:
             chat_history,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            defer_query_log=True,
         )
 
     def generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
@@ -362,12 +395,35 @@ class RAGService:
         return getattr(response, "content", str(response)).strip()
 
     def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
-        pipeline = self._run_pipeline(project, question, chat_history)
+        ask_started = perf_counter()
+        defer_log = self.query_log_service is not None
+        pipeline = self._run_pipeline(
+            project,
+            question,
+            chat_history,
+            defer_query_log=defer_log,
+        )
 
         if pipeline is None:
             return None
 
         answer = self.generate_answer_from_pipeline(project=project, pipeline=pipeline)
+        total_ms = (perf_counter() - ask_started) * 1000.0
+
+        if defer_log:
+            self._safe_log_query(
+                {
+                    "question": question,
+                    "rewritten_query": pipeline.get("rewritten_question"),
+                    "project_id": project.project_id,
+                    "user_id": project.user_id,
+                    "selected_doc_ids": pipeline.get("selected_doc_ids"),
+                    "retrieved_doc_ids": pipeline.get("recalled_doc_ids"),
+                    "latency_ms": total_ms,
+                    "confidence": pipeline.get("confidence"),
+                    "answer": answer,
+                }
+            )
 
         return RAGResponse(
             question=question,
