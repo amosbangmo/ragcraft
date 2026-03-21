@@ -13,7 +13,7 @@ import streamlit as st
 
 from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.core.evaluation_flow_errors import map_evaluation_flow_exception
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.services.benchmark_comparison_service import BenchmarkComparisonService
 from src.domain.qa_dataset_entry import QADatasetEntry
@@ -27,6 +27,7 @@ from src.ui.evaluation_question_detail import render_benchmark_row_detail
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import (
+    RUNNER_ERROR_KEY,
     is_request_running,
     read_dataset_evaluation_session_payload,
     render_result_payload,
@@ -201,19 +202,7 @@ def _render_dataset_evaluation_run_and_results(
         }
 
     def _map_dataset_evaluation_error(exc: Exception) -> str:
-        if isinstance(exc, VectorStoreError):
-            return get_user_error_message(exc, "Unable to query the FAISS index for dataset evaluation.")
-        if isinstance(exc, DocStoreError):
-            return get_user_error_message(
-                exc,
-                "Unable to inspect supporting assets from SQLite during dataset evaluation.",
-            )
-        if isinstance(exc, LLMServiceError):
-            return get_user_error_message(
-                exc,
-                "The language model failed while preparing a retrieval pipeline during dataset evaluation.",
-            )
-        return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
+        return map_evaluation_flow_exception(exc, dataset_evaluation=True)
 
     dataset_run_clicked = st.button(
         "Run dataset evaluation",
@@ -236,17 +225,27 @@ def _render_dataset_evaluation_run_and_results(
         )
 
     def _on_dataset_eval_success(payload: Any) -> None:
-        if isinstance(payload, dict) and "result" in payload and "error" not in payload:
-            st.success("Dataset evaluation completed. Structured results appear below.")
-            done = coerce_benchmark_result(payload.get("result"))
-            if done is not None:
-                _append_benchmark_to_history(
-                    project_id=project_id,
-                    result=done,
-                    generated_at=payload.get("generated_at"),
-                    enable_query_rewrite=payload.get("enable_query_rewrite"),
-                    enable_hybrid_retrieval=payload.get("enable_hybrid_retrieval"),
-                )
+        if not isinstance(payload, dict):
+            return
+        if RUNNER_ERROR_KEY in payload:
+            return
+        if "result" not in payload:
+            return
+        done = coerce_benchmark_result(payload.get("result"))
+        if done is None:
+            st.warning(
+                "Dataset evaluation finished, but results could not be read from this session. "
+                "Run **dataset evaluation** again."
+            )
+            return
+        st.success("Dataset evaluation completed. Structured results appear below.")
+        _append_benchmark_to_history(
+            project_id=project_id,
+            result=done,
+            generated_at=payload.get("generated_at"),
+            enable_query_rewrite=payload.get("enable_query_rewrite"),
+            enable_hybrid_retrieval=payload.get("enable_hybrid_retrieval"),
+        )
 
     render_result_payload(
         result_key=dataset_evaluation_result_key,

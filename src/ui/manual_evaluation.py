@@ -3,6 +3,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.services.llm_judge_service import JUDGE_FAILURE_REASON
 from src.ui.confidence_display import format_confidence_with_band
 from src.ui.metric_help import render_metric_with_help
 from src.ui.raw_assets import render_raw_assets
@@ -54,6 +55,22 @@ def render_manual_evaluation_result(
     raw_assets_collapsed: bool = False,
     include_raw_assets: bool = True,
 ) -> None:
+    if result.pipeline_failed:
+        st.warning(
+            "Retrieval pipeline did not complete. Missing rubric fields are **unavailable**, not weak scores."
+        )
+    elif result.judge_failed:
+        detail = ""
+        if result.judge_failure_reason and result.judge_failure_reason.strip() not in (
+            "",
+            JUDGE_FAILURE_REASON,
+        ):
+            detail = f" ({result.judge_failure_reason.strip()})"
+        st.info(
+            f"LLM judge did not return scores{detail}. Retrieval metrics may still apply; "
+            "judge rubric values show as unavailable (—), not as low grades."
+        )
+
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Answer</div>', unsafe_allow_html=True)
     st.markdown(

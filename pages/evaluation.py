@@ -7,7 +7,7 @@ from src.domain.benchmark_result import BenchmarkResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.evaluation_tabs import render_evaluation_tabs
-from src.ui.request_runner import read_dataset_evaluation_session_payload
+from src.ui.request_runner import analyze_dataset_evaluation_session_payload
 from src.auth.guards import require_authentication
 
 
@@ -50,6 +50,7 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
             DATASET_GENERATION_RESULT_KEY,
             DATASET_EVALUATION_REQUEST_KEY,
             DATASET_EVALUATION_RESULT_KEY,
+            "_eval_invalid_dataset_payload_warned_for",
         ):
             st.session_state.pop(k, None)
         st.session_state.pop("qa_dataset_success_message", None)
@@ -66,11 +67,20 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
 
 def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None:
     raw = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
-    parsed = read_dataset_evaluation_session_payload(raw)
-    if parsed is None or not isinstance(raw, dict):
-        return None
-    bench, _meta = parsed
-    return raw, bench
+    view = analyze_dataset_evaluation_session_payload(raw)
+    if view.kind == "ok" and view.result is not None and isinstance(raw, dict):
+        st.session_state.pop("_eval_invalid_dataset_payload_warned_for", None)
+        return raw, view.result
+    if view.kind == "invalid_result":
+        wkey = "_eval_invalid_dataset_payload_warned_for"
+        rid = id(raw)
+        if st.session_state.get(wkey) != rid:
+            st.warning(
+                "A dataset evaluation payload is in this session but could not be loaded. "
+                "Run **dataset evaluation** again to refresh metrics and exports."
+            )
+            st.session_state[wkey] = rid
+    return None
 
 
 header = render_page_header(

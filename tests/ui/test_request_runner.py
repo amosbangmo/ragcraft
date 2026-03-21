@@ -12,6 +12,33 @@ class _RerunStub(Exception):
     """Mirrors Streamlit stopping the script when ``st.rerun()`` is invoked."""
 
 
+class TestAnalyzeDatasetEvaluationSession(unittest.TestCase):
+    def test_analyze_missing_and_runner_error(self) -> None:
+        v = rr.analyze_dataset_evaluation_session_payload(None)
+        self.assertEqual(v.kind, "missing")
+        v2 = rr.analyze_dataset_evaluation_session_payload({rr.RUNNER_ERROR_KEY: "boom"})
+        self.assertEqual(v2.kind, "runner_error")
+        self.assertEqual(v2.runner_error_message, "boom")
+
+    def test_analyze_invalid_shape_and_invalid_result(self) -> None:
+        v = rr.analyze_dataset_evaluation_session_payload({"foo": 1})
+        self.assertEqual(v.kind, "invalid_shape")
+        v2 = rr.analyze_dataset_evaluation_session_payload({"result": "nope"})
+        self.assertEqual(v2.kind, "invalid_result")
+
+    def test_analyze_ok_matches_read_helper(self) -> None:
+        bench = BenchmarkResult(
+            summary=BenchmarkSummary(data={"avg_recall_at_k": 0.5}),
+            rows=[BenchmarkRow(entry_id=1, question="q", data={})],
+        )
+        raw = {"result": bench, "enable_query_rewrite": True}
+        v = rr.analyze_dataset_evaluation_session_payload(raw)
+        self.assertEqual(v.kind, "ok")
+        self.assertIsNotNone(v.result)
+        parsed = rr.read_dataset_evaluation_session_payload(raw)
+        self.assertIsNotNone(parsed)
+
+
 class TestRunnerPayloadHelpers(unittest.TestCase):
     def test_is_runner_error_payload(self) -> None:
         self.assertFalse(rr.is_runner_error_payload(None))

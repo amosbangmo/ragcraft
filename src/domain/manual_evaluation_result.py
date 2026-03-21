@@ -91,6 +91,9 @@ class ManualEvaluationResult:
     answer: str
     expected_answer: str | None
     confidence: float
+    pipeline_failed: bool = False
+    judge_failed: bool = False
+    judge_failure_reason: str | None = None
     prompt_sources: list[dict[str, Any]] = field(default_factory=list)
     raw_assets: list[dict[str, Any]] = field(default_factory=list)
     answer_quality: ManualEvaluationAnswerQuality | None = None
@@ -107,6 +110,9 @@ class ManualEvaluationResult:
             "answer": self.answer,
             "expected_answer": self.expected_answer,
             "confidence": self.confidence,
+            "pipeline_failed": self.pipeline_failed,
+            "judge_failed": self.judge_failed,
+            "judge_failure_reason": self.judge_failure_reason,
             "prompt_sources": list(self.prompt_sources),
             "raw_assets": list(self.raw_assets),
             "answer_quality": self.answer_quality.to_dict() if self.answer_quality else None,

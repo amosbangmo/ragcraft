@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import Any, Literal, TYPE_CHECKING
 
 import streamlit as st
 
@@ -11,6 +12,29 @@ if TYPE_CHECKING:
 # Session payload convention: failures from ``run_request_action`` use this key.
 # Success payloads must not use a top-level key with this name.
 RUNNER_ERROR_KEY = "error"
+
+DatasetEvalSessionKind = Literal[
+    "missing",
+    "runner_error",
+    "invalid_shape",
+    "invalid_result",
+    "ok",
+]
+
+
+@dataclass(frozen=True)
+class DatasetEvaluationSessionView:
+    """
+    Normalized read of a dataset-evaluation value from ``st.session_state``.
+
+    Separates runner transport errors, shape errors, empty session, and coercible results
+    so the UI does not treat broken payloads like “no data yet”.
+    """
+
+    kind: DatasetEvalSessionKind
+    result: Any = None  # ``BenchmarkResult`` when ``kind == "ok"``
+    meta: dict[str, Any] = field(default_factory=dict)
+    runner_error_message: str | None = None
 
 
 def is_request_running(request_key: str) -> bool:
@@ -31,6 +55,36 @@ def clear_result_payload(result_key: str) -> None:
     st.session_state.pop(result_key, None)
 
 
+def analyze_dataset_evaluation_session_payload(raw: Any) -> DatasetEvaluationSessionView:
+    """
+    Classify a dataset-evaluation session payload without conflating states.
+
+    Use :func:`read_dataset_evaluation_session_payload` when you only need a coerced
+    ``BenchmarkResult``; use this when the UI must distinguish **invalid_result** from **missing**.
+    """
+    from src.domain.benchmark_result import coerce_benchmark_result
+
+    if raw is None:
+        return DatasetEvaluationSessionView(kind="missing")
+    if is_runner_error_payload(raw):
+        msg = raw.get(RUNNER_ERROR_KEY)
+        text = msg if isinstance(msg, str) else (str(msg) if msg is not None else "")
+        return DatasetEvaluationSessionView(
+            kind="runner_error", runner_error_message=text or None
+        )
+    if not isinstance(raw, dict) or "result" not in raw:
+        return DatasetEvaluationSessionView(kind="invalid_shape")
+    coerced = coerce_benchmark_result(raw.get("result"))
+    if coerced is None:
+        return DatasetEvaluationSessionView(kind="invalid_result")
+    meta: dict[str, Any] = {
+        "enable_query_rewrite": bool(raw.get("enable_query_rewrite")),
+        "enable_hybrid_retrieval": bool(raw.get("enable_hybrid_retrieval")),
+        "generated_at": raw.get("generated_at"),
+    }
+    return DatasetEvaluationSessionView(kind="ok", result=coerced, meta=meta)
+
+
 def read_dataset_evaluation_session_payload(
     raw: Any,
 ) -> tuple[BenchmarkResult, dict[str, Any]] | None:
@@ -41,21 +95,12 @@ def read_dataset_evaluation_session_payload(
     ``result`` field; otherwise None. ``meta`` includes ``enable_query_rewrite``,
     ``enable_hybrid_retrieval``, and ``generated_at`` when present on the payload.
     """
-    from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
+    from src.domain.benchmark_result import BenchmarkResult
 
-    if raw is None or is_runner_error_payload(raw):
+    view = analyze_dataset_evaluation_session_payload(raw)
+    if view.kind != "ok" or view.result is None:
         return None
-    if not isinstance(raw, dict) or "result" not in raw:
-        return None
-    coerced = coerce_benchmark_result(raw.get("result"))
-    if coerced is None:
-        return None
-    meta: dict[str, Any] = {
-        "enable_query_rewrite": bool(raw.get("enable_query_rewrite")),
-        "enable_hybrid_retrieval": bool(raw.get("enable_hybrid_retrieval")),
-        "generated_at": raw.get("generated_at"),
-    }
-    return coerced, meta
+    return view.result, view.meta
 
 
 def _start_request(request_key: str) -> None:

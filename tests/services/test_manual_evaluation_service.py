@@ -2,6 +2,8 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manua
 from src.services.manual_evaluation_service import (
     build_expectation_comparison,
     detect_manual_evaluation_issues,
+    _row_optional_float,
+    _row_optional_int,
 )
 
 
@@ -18,6 +20,35 @@ def test_build_expectation_comparison_matched_and_missing():
     assert comp.missing_sources == ["x.pdf"]
     assert comp.retrieved_doc_ids == ["b", "c"]
     assert comp.expected_doc_ids == ["a", "b"]
+
+
+def test_row_optional_float_and_int():
+    assert _row_optional_float({"x": None}, "x") is None
+    assert _row_optional_float({"x": 0.25}, "x") == 0.25
+    assert _row_optional_float({"x": "bad"}, "x") is None
+    assert _row_optional_int({"n": 3}, "n") == 3
+    assert _row_optional_int({"n": None}, "n") is None
+
+
+def test_detect_issues_pipeline_failed_skips_no_answer_message():
+    issues = detect_manual_evaluation_issues(
+        answer_stripped="",
+        has_pipeline=False,
+        confidence=0.0,
+        groundedness=None,
+        answer_relevance=None,
+        hallucination_score=None,
+        has_hallucination=None,
+        recall_at_k=None,
+        source_recall=None,
+        prompt_doc_id_recall=None,
+        citation_doc_id_recall=None,
+        expected_doc_ids=[],
+        expected_sources=[],
+        expected_answer=None,
+        pipeline_failed=True,
+    )
+    assert "No answer generated" not in issues
 
 
 def test_detect_issues_no_answer_no_pipeline():

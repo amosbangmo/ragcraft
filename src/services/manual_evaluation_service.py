@@ -15,6 +15,7 @@ from src.domain.manual_evaluation_result import (
     ManualEvaluationRetrievalQuality,
 )
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.services.llm_judge_service import JUDGE_FAILURE_REASON
 
 if TYPE_CHECKING:
     from src.app.ragcraft_app import RAGCraftApp
@@ -82,10 +83,11 @@ def detect_manual_evaluation_issues(
     expected_doc_ids: list[str],
     expected_sources: list[str],
     expected_answer: str | None,
+    pipeline_failed: bool = False,
 ) -> list[str]:
     issues: list[str] = []
 
-    if not has_pipeline or not answer_stripped:
+    if (not has_pipeline or not answer_stripped) and not pipeline_failed:
         issues.append("No answer generated")
 
     if confidence < _CONFIDENCE_LOW:
@@ -129,6 +131,26 @@ def detect_manual_evaluation_issues(
             seen.add(item)
             ordered.append(item)
     return ordered
+
+
+def _row_optional_float(row: dict[str, Any], key: str) -> float | None:
+    v = row.get(key)
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _row_optional_int(row: dict[str, Any], key: str) -> int | None:
+    v = row.get(key)
+    if v is None:
+        return None
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
 
 
 def _ordered_sources_from_pipeline(
@@ -226,6 +248,10 @@ class ManualEvaluationService:
             pipeline_runner=pipeline_runner,
         )
         row = benchmark.rows[0].data
+        has_pipeline = pipeline is not None
+        judge_failed = bool(row.get("judge_failed"))
+        pipeline_failed = bool(row.get("pipeline_failed"))
+        judge_metrics_ok = has_pipeline and not judge_failed
 
         prompt_sources: list[dict[str, Any]] = []
         raw_assets: list[dict[str, Any]] = []
@@ -247,47 +273,54 @@ class ManualEvaluationService:
                 retrieved_sources=retrieved_sources,
             )
 
-        confidence = float(row.get("confidence", 0.0))
-        groundedness = float(row.get("groundedness_score", 0.0))
-        answer_relevance = float(row.get("answer_relevance_score", 0.0))
-        hallucination_score = float(row.get("hallucination_score", 0.0))
-        has_hallucination = bool(row.get("has_hallucination", False))
+        conf_raw = row.get("confidence")
+        confidence = float(conf_raw) if conf_raw is not None else 0.0
 
-        recall_at_k_v = float(row.get("recall_at_k", 0.0)) if exp_docs else None
-        source_recall_v = float(row.get("source_recall", 0.0)) if exp_src else None
-        precision_at_k_v = float(row.get("precision_at_k", 0.0)) if exp_docs else None
-        reciprocal_rank_v = float(row.get("reciprocal_rank", 0.0)) if exp_docs else None
-        average_precision_v = float(row.get("average_precision", 0.0)) if exp_docs else None
-
-        prompt_doc_p = float(row.get("prompt_doc_id_precision", 0.0)) if exp_docs else None
-        prompt_doc_r = float(row.get("prompt_doc_id_recall", 0.0)) if exp_docs else None
-        prompt_doc_f1 = float(row.get("prompt_doc_id_f1", 0.0)) if exp_docs else None
-
-        citation_doc_p = float(row.get("citation_doc_id_precision", 0.0)) if exp_docs else None
-        citation_doc_r = float(row.get("citation_doc_id_recall", 0.0)) if exp_docs else None
-        citation_doc_f1 = float(row.get("citation_doc_id_f1", 0.0)) if exp_docs else None
-        citation_overlap = int(row.get("citation_doc_id_overlap_count", 0))
-        citation_ids_n = int(row.get("citation_doc_ids_count", 0))
-
-        answer_f1 = float(row.get("answer_f1", 0.0)) if exp_ans else None
-        answer_correctness = (
-            float(row.get("answer_correctness_score", 0.0)) if has_pipeline else None
+        groundedness = _row_optional_float(row, "groundedness_score") if judge_metrics_ok else None
+        answer_relevance = _row_optional_float(row, "answer_relevance_score") if judge_metrics_ok else None
+        hallucination_score = _row_optional_float(row, "hallucination_score") if judge_metrics_ok else None
+        hallu_raw = row.get("has_hallucination")
+        has_hallucination = (
+            None
+            if not judge_metrics_ok
+            else (None if hallu_raw is None else bool(hallu_raw))
         )
-        semantic_sim = float(row.get("semantic_similarity", 0.0)) if exp_ans else None
-        ndcg_v = float(row.get("ndcg_at_k", 0.0)) if exp_docs else None
+        citation_faith = _row_optional_float(row, "citation_faithfulness_score") if judge_metrics_ok else None
+
+        recall_at_k_v = _row_optional_float(row, "recall_at_k") if exp_docs else None
+        source_recall_v = _row_optional_float(row, "source_recall") if exp_src else None
+        precision_at_k_v = _row_optional_float(row, "precision_at_k") if exp_docs else None
+        reciprocal_rank_v = _row_optional_float(row, "reciprocal_rank") if exp_docs else None
+        average_precision_v = _row_optional_float(row, "average_precision") if exp_docs else None
+
+        prompt_doc_p = _row_optional_float(row, "prompt_doc_id_precision") if exp_docs else None
+        prompt_doc_r = _row_optional_float(row, "prompt_doc_id_recall") if exp_docs else None
+        prompt_doc_f1 = _row_optional_float(row, "prompt_doc_id_f1") if exp_docs else None
+
+        citation_doc_p = _row_optional_float(row, "citation_doc_id_precision") if has_pipeline else None
+        citation_doc_r = _row_optional_float(row, "citation_doc_id_recall") if has_pipeline else None
+        citation_doc_f1 = _row_optional_float(row, "citation_doc_id_f1") if has_pipeline else None
+        citation_overlap = _row_optional_int(row, "citation_doc_id_overlap_count")
+        citation_ids_n = _row_optional_int(row, "citation_doc_ids_count")
+
+        answer_f1 = _row_optional_float(row, "answer_f1") if exp_ans else None
+        answer_correctness = (
+            _row_optional_float(row, "answer_correctness_score")
+            if judge_metrics_ok and exp_ans
+            else None
+        )
+        semantic_sim = _row_optional_float(row, "semantic_similarity") if exp_ans else None
+        ndcg_v = _row_optional_float(row, "ndcg_at_k") if exp_docs else None
 
         answer_stripped = (answer or "").strip()
-        has_pipeline = pipeline is not None
 
         answer_quality = ManualEvaluationAnswerQuality(
             confidence=confidence,
-            groundedness_score=groundedness if has_pipeline else None,
-            citation_faithfulness_score=(
-                float(row.get("citation_faithfulness_score", 0.0)) if has_pipeline else None
-            ),
-            answer_relevance_score=answer_relevance if has_pipeline else None,
-            hallucination_score=hallucination_score if has_pipeline else None,
-            has_hallucination=has_hallucination if has_pipeline else None,
+            groundedness_score=groundedness,
+            citation_faithfulness_score=citation_faith,
+            answer_relevance_score=answer_relevance,
+            hallucination_score=hallucination_score,
+            has_hallucination=has_hallucination,
             answer_f1=answer_f1,
             answer_correctness_score=answer_correctness,
             semantic_similarity=semantic_sim,
@@ -298,8 +331,8 @@ class ManualEvaluationService:
                 citation_doc_id_precision=citation_doc_p,
                 citation_doc_id_recall=citation_doc_r,
                 citation_doc_id_f1=citation_doc_f1,
-                citation_doc_id_overlap_count=citation_overlap if has_pipeline else None,
-                citation_doc_ids_count=citation_ids_n if has_pipeline else None,
+                citation_doc_id_overlap_count=citation_overlap,
+                citation_doc_ids_count=citation_ids_n,
             )
             if has_pipeline
             else None
@@ -311,14 +344,16 @@ class ManualEvaluationService:
             prompt_doc_id_f1=prompt_doc_f1,
         )
 
+        rdoc_n = _row_optional_int(row, "retrieved_doc_ids_count")
+        rsrc_n = _row_optional_int(row, "retrieved_sources_count")
         retrieval_quality = ManualEvaluationRetrievalQuality(
             recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
             precision_at_k=precision_at_k_v,
             reciprocal_rank=reciprocal_rank_v,
             average_precision=average_precision_v,
-            retrieved_doc_ids_count=int(row.get("retrieved_doc_ids_count", 0)),
-            selected_source_count=int(row.get("retrieved_sources_count", 0)),
+            retrieved_doc_ids_count=int(rdoc_n if rdoc_n is not None else 0),
+            selected_source_count=int(rsrc_n if rsrc_n is not None else 0),
             ndcg_at_k=ndcg_v,
         )
 
@@ -331,14 +366,32 @@ class ManualEvaluationService:
             stage_latency=full_latency_dict,
         )
 
-        issues = detect_manual_evaluation_issues(
+        jfr_raw = row.get("judge_failure_reason")
+        judge_failure_reason = (
+            jfr_raw.strip()
+            if isinstance(jfr_raw, str) and jfr_raw.strip()
+            else None
+        )
+
+        head_issues: list[str] = []
+        if pipeline_failed:
+            head_issues.append("Retrieval pipeline did not complete for this question.")
+        elif judge_failed:
+            if judge_failure_reason and judge_failure_reason != JUDGE_FAILURE_REASON:
+                head_issues.append(
+                    f"LLM judge could not score this answer ({judge_failure_reason})."
+                )
+            else:
+                head_issues.append("LLM judge could not score this answer.")
+
+        tail = detect_manual_evaluation_issues(
             answer_stripped=answer_stripped,
             has_pipeline=has_pipeline,
             confidence=confidence,
-            groundedness=groundedness if has_pipeline else None,
-            answer_relevance=answer_relevance if has_pipeline else None,
-            hallucination_score=hallucination_score if has_pipeline else None,
-            has_hallucination=has_hallucination if has_pipeline else None,
+            groundedness=groundedness,
+            answer_relevance=answer_relevance,
+            hallucination_score=hallucination_score,
+            has_hallucination=has_hallucination,
             recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
             prompt_doc_id_recall=prompt_doc_r,
@@ -346,13 +399,23 @@ class ManualEvaluationService:
             expected_doc_ids=exp_docs,
             expected_sources=exp_src,
             expected_answer=exp_ans,
+            pipeline_failed=pipeline_failed,
         )
+        seen_i: set[str] = set()
+        issues: list[str] = []
+        for item in head_issues + tail:
+            if item not in seen_i:
+                seen_i.add(item)
+                issues.append(item)
 
         return ManualEvaluationResult(
             question=q,
             answer=answer or "",
             expected_answer=exp_ans,
             confidence=confidence,
+            pipeline_failed=pipeline_failed,
+            judge_failed=judge_failed,
+            judge_failure_reason=judge_failure_reason,
             prompt_sources=prompt_sources,
             raw_assets=raw_assets,
             answer_quality=answer_quality,

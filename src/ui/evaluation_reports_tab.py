@@ -39,8 +39,9 @@ def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
     export = reports_payload.get("export")
     if not _is_benchmark_export_artifact(export):
         st.info(
-            "No benchmark export yet. Run **dataset evaluation** above when your gold QA dataset has entries; "
-            "download links will appear in this section."
+            "No benchmark export available yet. After you run **dataset evaluation** with at least one gold QA entry, "
+            "download links appear here. If you already ran evaluation but still see this message, the session "
+            "result may be invalid—run dataset evaluation again."
         )
         return
 

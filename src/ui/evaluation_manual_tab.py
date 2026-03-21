@@ -9,13 +9,13 @@ from typing import Any, cast
 import streamlit as st
 
 from src.app.ragcraft_app import RAGCraftApp
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.core.evaluation_flow_errors import map_evaluation_flow_exception
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.raw_assets import render_raw_assets
 from src.ui.request_runner import (
+    RUNNER_ERROR_KEY,
     get_session_payload,
     is_request_running,
     is_runner_error_payload,
@@ -90,15 +90,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         )
 
     def _map_evaluation_error(exc: Exception) -> str:
-        if isinstance(exc, VectorStoreError):
-            return get_user_error_message(exc, "Unable to query the FAISS index for this evaluation.")
-        if isinstance(exc, DocStoreError):
-            return get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite.")
-        if isinstance(exc, LLMServiceError):
-            return get_user_error_message(
-                exc, "The language model failed while generating the evaluation answer."
-            )
-        return get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}")
+        return map_evaluation_flow_exception(exc, dataset_evaluation=False)
 
     run_clicked = st.button(
         "Run evaluation",
@@ -131,7 +123,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
                 include_raw_assets=True,
             )
             return
-        if isinstance(result, dict) and "error" not in result and "answer" in result:
+        if isinstance(result, dict) and RUNNER_ERROR_KEY not in result and "answer" in result:
             st.warning(
                 "Result arrived as serialized data; showing a simplified view. "
                 "Reload the page if structured metrics are missing."
