@@ -16,7 +16,7 @@ _DEFAULT_SUMMARY: dict[str, Any] = {
     "entries_with_expected_doc_ids": 2,
     "entries_with_expected_sources": 2,
     "entries_with_expected_answers": 2,
-    "avg_doc_id_recall": 1.0,
+    "avg_recall_at_k": 1.0,
     "avg_source_recall": 1.0,
     "avg_precision_at_k": 1.0,
     "mrr": 1.0,

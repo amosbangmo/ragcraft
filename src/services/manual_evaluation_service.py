@@ -25,7 +25,7 @@ _GROUNDEDNESS_LOW = 0.5
 _ANSWER_RELEVANCE_LOW = 0.5
 _HALLUCINATION_SCORE_LOW = 0.5
 _PROMPT_SOURCE_RECALL_LOW = 0.5
-_DOC_ID_RECALL_LOW = 0.5
+_RECALL_AT_K_LOW = 0.5
 _SOURCE_RECALL_LOW = 0.5
 _CONFIDENCE_LOW = 0.45
 
@@ -73,7 +73,7 @@ def detect_manual_evaluation_issues(
     answer_relevance: float | None,
     hallucination_score: float | None,
     has_hallucination: bool | None,
-    doc_id_recall: float | None,
+    recall_at_k: float | None,
     source_recall: float | None,
     prompt_source_recall: float | None,
     expected_doc_ids: list[str],
@@ -99,7 +99,7 @@ def detect_manual_evaluation_issues(
     elif hallucination_score is not None and hallucination_score < _HALLUCINATION_SCORE_LOW:
         issues.append("Hallucination detected")
 
-    if expected_doc_ids and doc_id_recall is not None and doc_id_recall < _DOC_ID_RECALL_LOW:
+    if expected_doc_ids and recall_at_k is not None and recall_at_k < _RECALL_AT_K_LOW:
         issues.append("No expected document retrieved")
 
     if expected_sources:
@@ -252,7 +252,7 @@ class ManualEvaluationService:
             )
         )
 
-        doc_id_recall_v = float(row.get("doc_id_recall", 0.0)) if exp_docs else None
+        recall_at_k_v = float(row.get("recall_at_k", 0.0)) if exp_docs else None
         source_recall_v = float(row.get("source_recall", 0.0)) if exp_src else None
         precision_at_k_v = float(row.get("precision_at_k", 0.0)) if exp_docs else None
         reciprocal_rank_v = float(row.get("reciprocal_rank", 0.0)) if exp_docs else None
@@ -319,7 +319,7 @@ class ManualEvaluationService:
         )
 
         retrieval_quality = ManualEvaluationRetrievalQuality(
-            doc_id_recall=doc_id_recall_v,
+            recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
             precision_at_k=precision_at_k_v,
             reciprocal_rank=reciprocal_rank_v,
@@ -345,7 +345,7 @@ class ManualEvaluationService:
             answer_relevance=answer_relevance if has_pipeline else None,
             hallucination_score=hallucination_score if has_pipeline else None,
             has_hallucination=has_hallucination if has_pipeline else None,
-            doc_id_recall=doc_id_recall_v,
+            recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
             prompt_source_recall=prompt_src_r,
             expected_doc_ids=exp_docs,

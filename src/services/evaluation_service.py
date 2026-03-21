@@ -63,7 +63,7 @@ class EvaluationService:
         rows: list[BenchmarkRow] = []
 
         # Retrieval metrics.
-        doc_id_recall_values: list[float] = []
+        recall_at_k_values: list[float] = []
         source_recall_values: list[float] = []
         precision_at_k_values: list[float] = []
         reciprocal_rank_values: list[float] = []
@@ -136,7 +136,7 @@ class EvaluationService:
                     "expected_doc_ids_count": len(expected_doc_ids),
                     "retrieved_doc_ids_count": 0,
                     "doc_id_overlap_count": 0,
-                    "doc_id_recall": 0.0,
+                    "recall_at_k": 0.0,
                     "precision_at_k": 0.0,
                     "reciprocal_rank": 0.0,
                     "average_precision": 0.0,
@@ -228,7 +228,7 @@ class EvaluationService:
             prompt_doc_id_overlap_count = len(cited_doc_ids.intersection(expected_doc_ids))
             prompt_source_overlap_count = len(cited_sources.intersection(expected_sources))
 
-            doc_id_recall = 0.0
+            recall_at_k = 0.0
             source_recall = 0.0
             precision_at_k = 0.0
             reciprocal_rank = 0.0
@@ -247,7 +247,7 @@ class EvaluationService:
             prompt_source_f1 = 0.0
 
             if expected_doc_ids:
-                doc_id_recall = doc_id_overlap_count / len(expected_doc_ids)
+                recall_at_k = doc_id_overlap_count / len(expected_doc_ids)
                 precision_at_k = self._compute_precision_at_k(
                     ranked_doc_ids=ranked_doc_ids,
                     expected_doc_ids=expected_doc_ids,
@@ -261,7 +261,7 @@ class EvaluationService:
                     expected_doc_ids=expected_doc_ids,
                 )
 
-                doc_id_recall_values.append(doc_id_recall)
+                recall_at_k_values.append(recall_at_k)
                 precision_at_k_values.append(precision_at_k)
                 reciprocal_rank_values.append(reciprocal_rank)
                 average_precision_values.append(average_precision)
@@ -347,7 +347,7 @@ class EvaluationService:
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
                 "doc_id_overlap_count": doc_id_overlap_count,
-                "doc_id_recall": round(doc_id_recall, 2),
+                "recall_at_k": round(recall_at_k, 2),
                 "precision_at_k": round(precision_at_k, 2),
                 "reciprocal_rank": round(reciprocal_rank, 2),
                 "average_precision": round(average_precision, 2),
@@ -400,7 +400,7 @@ class EvaluationService:
             "entries_with_expected_doc_ids": entries_with_expected_doc_ids,
             "entries_with_expected_sources": entries_with_expected_sources,
             "entries_with_expected_answers": entries_with_expected_answers,
-            "avg_doc_id_recall": round(float(np.mean(doc_id_recall_values)), 2) if doc_id_recall_values else 0.0,
+            "avg_recall_at_k": round(float(np.mean(recall_at_k_values)), 2) if recall_at_k_values else 0.0,
             "avg_source_recall": round(float(np.mean(source_recall_values)), 2) if source_recall_values else 0.0,
             "avg_precision_at_k": round(float(np.mean(precision_at_k_values)), 2) if precision_at_k_values else 0.0,
             "mrr": round(float(np.mean(reciprocal_rank_values)), 2) if reciprocal_rank_values else 0.0,

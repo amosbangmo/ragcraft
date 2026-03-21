@@ -50,7 +50,7 @@ class BenchmarkRegressionThresholds:
     Any field left as ``None`` is not enforced.
     """
 
-    min_avg_doc_id_recall: float | None = None
+    min_avg_recall_at_k: float | None = None
     min_avg_answer_f1: float | None = None
     min_avg_prompt_source_f1: float | None = None
     min_avg_groundedness: float | None = None
@@ -74,12 +74,12 @@ def collect_benchmark_regression_violations(
                 f"{actual} < minimum {thresholds.min_successful_queries}"
             )
 
-    if thresholds.min_avg_doc_id_recall is not None:
-        actual = _summary_float(summary, "avg_doc_id_recall")
-        if actual < thresholds.min_avg_doc_id_recall:
+    if thresholds.min_avg_recall_at_k is not None:
+        actual = _summary_float(summary, "avg_recall_at_k")
+        if actual < thresholds.min_avg_recall_at_k:
             violations.append(
-                "avg_doc_id_recall "
-                f"{actual} < minimum {thresholds.min_avg_doc_id_recall}"
+                "avg_recall_at_k "
+                f"{actual} < minimum {thresholds.min_avg_recall_at_k}"
             )
 
     if thresholds.min_avg_answer_f1 is not None:

@@ -152,9 +152,9 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         c1, c2, c3 = st.columns(3)
         with c1:
             render_metric_with_help(
-                label="Doc ID recall",
-                value=_f(row.get("doc_id_recall")),
-                metric_key="doc_id_recall",
+                label="Recall@K",
+                value=_f(row.get("recall_at_k")),
+                metric_key="recall_at_k",
             )
         with c2:
             render_metric_with_help(
@@ -263,10 +263,10 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         ar = row.get("answer_relevance_score", row.get("answer_relevance"))
         if isinstance(ar, (int, float)) and ar < 0.5:
             flags.append("Low answer relevance")
-        dr = row.get("doc_id_recall")
+        dr = row.get("recall_at_k")
         exp_n = row.get("expected_doc_ids_count") or 0
         if exp_n and isinstance(dr, (int, float)) and dr < 0.5:
-            flags.append("Low doc ID recall vs expectations")
+            flags.append("Low Recall@K vs expectations")
         if not flags:
             st.success("No strong issue pattern detected for this row.")
         else:

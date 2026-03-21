@@ -28,12 +28,11 @@ METRIC_HELP: dict[str, str] = {
         "Average latency per successful query in this benchmark run. "
         "Lower is usually better for the same workload."
     ),
-    "doc_id_recall": (
-        "Share of expected document IDs that appear in retrieved results. "
-        "Closer to 1 is better when you provided expected doc_ids."
+    "recall_at_k": (
+        "Share of relevant documents retrieved in the top-K results. Closer to 1 is better."
     ),
-    "avg_doc_id_recall": (
-        "Average doc ID recall across entries with expected doc_ids. "
+    "avg_recall_at_k": (
+        "Mean recall@K across entries with expected doc_ids (same K as the evaluator). "
         "Closer to 1 is better."
     ),
     "source_recall": (

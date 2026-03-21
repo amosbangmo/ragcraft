@@ -36,7 +36,7 @@ class ManualEvaluationPromptSourceQuality:
 
 @dataclass(frozen=True)
 class ManualEvaluationRetrievalQuality:
-    doc_id_recall: float | None
+    recall_at_k: float | None
     source_recall: float | None
     precision_at_k: float | None
     reciprocal_rank: float | None

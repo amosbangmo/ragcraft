@@ -13,14 +13,14 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 3,
-                "avg_doc_id_recall": 0.85,
+                "avg_recall_at_k": 0.85,
                 "avg_answer_f1": 0.72,
                 "avg_prompt_source_f1": 0.61,
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=3,
-            min_avg_doc_id_recall=0.8,
+            min_avg_recall_at_k=0.8,
             min_avg_answer_f1=0.7,
             min_avg_prompt_source_f1=0.6,
         )
@@ -34,14 +34,14 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 2,
-                "avg_doc_id_recall": 0.5,
+                "avg_recall_at_k": 0.5,
                 "avg_answer_f1": 0.9,
                 "avg_prompt_source_f1": 0.9,
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=3,
-            min_avg_doc_id_recall=0.8,
+            min_avg_recall_at_k=0.8,
             min_avg_answer_f1=0.7,
             min_avg_prompt_source_f1=0.6,
         )
@@ -49,7 +49,7 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
             assert_benchmark_meets_thresholds(result, thresholds)
         message = str(ctx.exception)
         self.assertIn("successful_queries", message)
-        self.assertIn("avg_doc_id_recall", message)
+        self.assertIn("avg_recall_at_k", message)
 
     def test_groundedness_threshold_enforced_when_set(self):
         result = make_benchmark_result(
@@ -91,7 +91,7 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 0,
-                "avg_doc_id_recall": 0.0,
+                "avg_recall_at_k": 0.0,
             }
         )
         thresholds = BenchmarkRegressionThresholds()

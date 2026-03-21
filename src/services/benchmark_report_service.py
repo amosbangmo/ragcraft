@@ -181,7 +181,7 @@ class BenchmarkReportService:
             preferred_cols = [
                 "entry_id",
                 "question",
-                "doc_id_recall",
+                "recall_at_k",
                 "source_recall",
                 "answer_f1",
                 "answer_relevance",

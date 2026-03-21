@@ -93,7 +93,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=2,
-            min_avg_doc_id_recall=0.99,
+            min_avg_recall_at_k=0.99,
             min_avg_answer_f1=0.99,
             min_avg_prompt_source_f1=0.99,
             min_avg_groundedness=0.99,
@@ -151,7 +151,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=1,
-            min_avg_doc_id_recall=0.5,
+            min_avg_recall_at_k=0.5,
             min_avg_answer_f1=0.5,
             min_avg_prompt_source_f1=0.5,
             min_avg_groundedness=0.5,

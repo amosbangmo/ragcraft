@@ -293,8 +293,8 @@ def _render_failure_analysis(
                             st.write(prev)
                         c1, c2, c3 = st.columns(3)
                         with c1:
-                            st.caption("doc recall / answer F1")
-                            st.write(f"{ex.get('doc_id_recall', '—')} / {ex.get('answer_f1', '—')}")
+                            st.caption("Recall@K / answer F1")
+                            st.write(f"{ex.get('recall_at_k', '—')} / {ex.get('answer_f1', '—')}")
                         with c2:
                             st.caption("grounded / hallucination")
                             st.write(f"{ex.get('groundedness', '—')} / {ex.get('hallucination_score', '—')}")
@@ -358,8 +358,8 @@ def render_overview_insight_charts(rows: list[dict]) -> None:
         )
     with c2:
         _histogram_bar_chart(
-            "Doc ID recall",
-            _numeric_series(df, "doc_id_recall"),
+            "Recall@K",
+            _numeric_series(df, "recall_at_k"),
         )
 
 
@@ -725,7 +725,7 @@ def render_evaluation_dashboard(
     ):
         r1, r2, r3, r4 = st.columns(4)
         with r1:
-            _summary_metric(summary, "avg_doc_id_recall", "Avg doc_id recall")
+            _summary_metric(summary, "avg_recall_at_k", "Avg Recall@K")
         with r2:
             _summary_metric(summary, "avg_precision_at_k", "Avg precision@k")
         with r3:

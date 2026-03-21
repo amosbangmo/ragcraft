@@ -130,13 +130,13 @@ class FailureAnalysisService:
 
         retrieval_mode = row.get("retrieval_mode")
         exp_docs = _coerce_int(row.get("expected_doc_ids_count"))
-        doc_recall = _coerce_float(row.get("doc_id_recall"))
+        recall_at_k = _coerce_float(row.get("recall_at_k"))
 
         if retrieval_mode == "none" or (
             exp_docs is not None
             and exp_docs > 0
-            and doc_recall is not None
-            and doc_recall < self._q
+            and recall_at_k is not None
+            and recall_at_k < self._q
         ):
             labels.append("retrieval_failure")
 
@@ -221,7 +221,7 @@ class FailureAnalysisService:
             "failure_labels": list(labels),
             "failure_critical": bool(critical),
             "answer_preview": row.get("answer_preview") if isinstance(row.get("answer_preview"), str) else "",
-            "doc_id_recall": _coerce_float(row.get("doc_id_recall")),
+            "recall_at_k": _coerce_float(row.get("recall_at_k")),
             "answer_f1": _coerce_float(row.get("answer_f1")),
             "groundedness": _coerce_float(row.get("groundedness")),
             "hallucination_score": _coerce_float(row.get("hallucination_score")),

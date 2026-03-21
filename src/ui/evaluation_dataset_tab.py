@@ -78,7 +78,7 @@ def _render_dataset_overview(
         with m1:
             _summary_metric_cell(summary, "avg_groundedness", "Avg groundedness")
         with m2:
-            _summary_metric_cell(summary, "avg_doc_id_recall", "Avg doc ID recall")
+            _summary_metric_cell(summary, "avg_recall_at_k", "Avg Recall@K")
         with m3:
             _summary_metric_cell(
                 summary, "hallucination_rate", "Hallucination rate", as_percent=True

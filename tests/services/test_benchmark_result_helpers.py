@@ -18,12 +18,12 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
             }
         )
         # Drop keys entirely to simulate partial / legacy payloads.
-        result.summary.data.pop("avg_doc_id_recall", None)
+        result.summary.data.pop("avg_recall_at_k", None)
         result.summary.data.pop("avg_answer_f1", None)
         result.summary.data.pop("avg_prompt_source_f1", None)
 
         thresholds = BenchmarkRegressionThresholds(
-            min_avg_doc_id_recall=0.01,
+            min_avg_recall_at_k=0.01,
             min_avg_answer_f1=0.01,
             min_avg_prompt_source_f1=0.01,
         )
@@ -34,14 +34,14 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": "4",
-                "avg_doc_id_recall": "0.75",
+                "avg_recall_at_k": "0.75",
                 "avg_answer_f1": "0.5",
                 "avg_prompt_source_f1": "0.25",
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=4,
-            min_avg_doc_id_recall=0.75,
+            min_avg_recall_at_k=0.75,
             min_avg_answer_f1=0.5,
             min_avg_prompt_source_f1=0.25,
         )
@@ -50,12 +50,12 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
 
 class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
     def test_from_plain_dict_round_trips_to_dict(self):
-        row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "doc_id_recall": 0.8})
+        row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "recall_at_k": 0.8})
         correlations = {"available": True, "pairwise": {"confidence_vs_latency_ms": 0.25}}
         failures = {"failed_row_count": 1, "counts": {"retrieval_failure": 1}}
         multimodal_metrics = {"table_usage_rate": 0.25, "has_multimodal_assets": True}
         original = BenchmarkResult(
-            summary=BenchmarkSummary(data={"avg_doc_id_recall": 0.9}),
+            summary=BenchmarkSummary(data={"avg_recall_at_k": 0.9}),
             rows=[row],
             correlations=correlations,
             failures=failures,
@@ -67,7 +67,7 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
         self.assertEqual(restored.rows[0].entry_id, 7)
         self.assertEqual(restored.rows[0].question, "What?")
         self.assertEqual(restored.rows[0].data["confidence"], 0.5)
-        self.assertEqual(restored.rows[0].data["doc_id_recall"], 0.8)
+        self.assertEqual(restored.rows[0].data["recall_at_k"], 0.8)
         self.assertEqual(restored.correlations, correlations)
         self.assertEqual(restored.failures, failures)
         self.assertEqual(restored.multimodal_metrics, multimodal_metrics)
@@ -118,11 +118,11 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
                 }
 
         dup = BenchmarkResult(
-            BenchmarkSummary({"avg_doc_id_recall": 0.5}),
+            BenchmarkSummary({"avg_recall_at_k": 0.5}),
             [BenchmarkRow(3, "Q?", {"confidence": 0.9})],
         )
         coerced = coerce_benchmark_result(dup)
         self.assertIsInstance(coerced, type(make_benchmark_result()))
-        self.assertEqual(coerced.summary.data["avg_doc_id_recall"], 0.5)
+        self.assertEqual(coerced.summary.data["avg_recall_at_k"], 0.5)
         self.assertEqual(len(coerced.rows), 1)
         self.assertEqual(coerced.rows[0].entry_id, 3)

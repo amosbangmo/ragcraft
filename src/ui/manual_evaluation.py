@@ -196,7 +196,7 @@ def render_manual_evaluation_result(
         )
         _metric_row(
             [
-                ("Doc_id recall", _fmt_float(rq.doc_id_recall), "doc_id_recall"),
+                ("Recall@K", _fmt_float(rq.recall_at_k), "recall_at_k"),
                 ("Source recall", _fmt_float(rq.source_recall), "source_recall"),
                 ("Precision@K", _fmt_float(rq.precision_at_k), "precision_at_k"),
             ]
