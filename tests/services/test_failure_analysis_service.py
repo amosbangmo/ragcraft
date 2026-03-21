@@ -136,7 +136,7 @@ class TestFailureAnalysisService(unittest.TestCase):
         self.assertIn("table_misuse", out["row_failures"][0]["failure_labels"])
 
     def test_pipeline_failed_skips_hallucination_rules(self) -> None:
-        """Pipeline failure rows use placeholder scores; do not count as hallucination."""
+        """Pipeline failure rows skip heuristic failure taxonomy (metrics are N/A)."""
         rows = [
             {
                 "entry_id": 8,
@@ -149,7 +149,8 @@ class TestFailureAnalysisService(unittest.TestCase):
             }
         ]
         out = FailureAnalysisService().analyze(rows)
-        self.assertNotIn("hallucination", out["row_failures"][0]["failure_labels"])
+        self.assertEqual(out["row_failures"][0]["failure_labels"], [])
+        self.assertEqual(out["failed_row_count"], 0)
 
     def test_pipeline_failed_skips_image_hallucination(self) -> None:
         rows = [
@@ -165,7 +166,7 @@ class TestFailureAnalysisService(unittest.TestCase):
             }
         ]
         out = FailureAnalysisService().analyze(rows)
-        self.assertNotIn("image_hallucination", out["row_failures"][0]["failure_labels"])
+        self.assertEqual(out["row_failures"][0]["failure_labels"], [])
 
     def test_image_hallucination_when_image_context_and_hallucination(self) -> None:
         rows = [

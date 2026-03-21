@@ -36,6 +36,8 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     q = row.get("question") or "—"
     st.markdown(f"**Dataset entry** #{row.get('entry_id', '—')}")
     st.write(q)
+    if row.get("pipeline_failed"):
+        st.warning("⚠️ **Pipeline failed** — the answer pipeline did not complete; treat scores as N/A (shown as —).")
 
     with section_card(
         title="Answer",

@@ -709,6 +709,50 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("Groundedness vs relevance: missing columns.")
 
 
+def _render_health_overview(
+    summary: dict,
+    rows: list[dict],
+    failures: dict[str, Any] | None,
+) -> None:
+    n = int(summary.get("total_entries") or len(rows) or 0)
+    if n <= 0:
+        return
+    st.markdown("##### System health overview")
+    fail_payload = failures if isinstance(failures, dict) and failures else None
+    if fail_payload is None and rows:
+        from src.services.failure_analysis_service import FailureAnalysisService
+
+        full = FailureAnalysisService().analyze(list(rows))
+        fail_payload = {k: v for k, v in full.items() if k != "row_failures"}
+    counts = fail_payload.get("counts") if isinstance(fail_payload, dict) else None
+    if not isinstance(counts, dict):
+        counts = {}
+
+    def _pct(count: int) -> str:
+        return f"{100.0 * float(count) / float(n):.1f}%"
+
+    h1, h2, h3 = st.columns(3)
+    hr = _coerce_float(summary.get("hallucination_rate"))
+    with h1:
+        st.metric(
+            "Hallucination flag rate",
+            f"{hr * 100:.1f}%" if hr is not None else "—",
+            help="Share of rows where the judge set has_hallucination (same as summary).",
+        )
+    with h2:
+        st.metric(
+            "Retrieval failure (heuristic)",
+            _pct(int(counts.get("retrieval_failure", 0) or 0)),
+            help="Rows tagged retrieval_failure by failure analysis rules.",
+        )
+    with h3:
+        st.metric(
+            "Low relevance (heuristic)",
+            _pct(int(counts.get("low_relevance", 0) or 0)),
+            help="Rows tagged low_relevance by failure analysis rules.",
+        )
+
+
 def render_evaluation_dashboard(
     summary: dict,
     rows: list[dict],
@@ -721,14 +765,22 @@ def render_evaluation_dashboard(
     inject_section_card_styles()
 
     if not summary and not rows:
-        st.info("No benchmark results to display yet.")
+        st.info("Run evaluation to see results.")
         return
+
+    _render_health_overview(summary, rows, failures)
+
+    has_exp_docs = int(summary.get("entries_with_expected_doc_ids") or 0) > 0
+    has_exp_answers = int(summary.get("entries_with_expected_answers") or 0) > 0
+    has_exp_sources = int(summary.get("entries_with_expected_sources") or 0) > 0
 
     with section_card(
         title="Retrieval — ranked doc IDs",
         subtitle="Overlap and ranking quality vs gold expected_doc_ids (same K as your retrieval settings).",
         min_height=0,
     ):
+        if not has_exp_docs:
+            st.caption("No gold expected_doc_ids in this dataset — ranked-doc metrics are not applicable (—).")
         r1, r2, r3 = st.columns(3)
         with r1:
             _summary_metric(summary, "avg_recall_at_k", "Avg recall@K")
@@ -749,6 +801,8 @@ def render_evaluation_dashboard(
         subtitle="Expected source paths vs sources present in retrieval or prompt context.",
         min_height=0,
     ):
+        if not has_exp_sources:
+            st.caption("No gold expected_sources — source recall metrics are not applicable (—).")
         s1, s2 = st.columns(2)
         with s1:
             _summary_metric(summary, "avg_source_recall", "Avg source recall")
@@ -782,6 +836,8 @@ def render_evaluation_dashboard(
         subtitle="All distinct doc IDs attached as prompt sources vs expected_doc_ids.",
         min_height=0,
     ):
+        if not has_exp_docs:
+            st.caption("No gold expected_doc_ids — prompt doc ID overlap metrics are not applicable (—).")
         pr1, pr2, pr3, pr4 = st.columns(4)
         with pr1:
             _summary_metric(summary, "avg_prompt_doc_id_precision", "Prompt doc ID P")
@@ -797,6 +853,8 @@ def render_evaluation_dashboard(
         subtitle="Doc IDs inferred from [Source N] in the final answer vs expected_doc_ids.",
         min_height=0,
     ):
+        if not has_exp_docs:
+            st.caption("No gold expected_doc_ids — citation doc ID metrics are not applicable (—).")
         ci1, ci2, ci3, ci4 = st.columns(4)
         with ci1:
             _summary_metric(summary, "avg_citation_doc_id_precision", "Citation doc ID P")
@@ -812,6 +870,8 @@ def render_evaluation_dashboard(
         subtitle="Model-assessed grounding, citation use, relevance, correctness, and hallucination signals (0–1 scores where configured).",
         min_height=0,
     ):
+        if not has_exp_answers:
+            st.caption("Avg answer correctness is N/A without gold answers; other judge scores still reflect this run.")
         j1, j2, j3 = st.columns(3)
         with j1:
             _summary_metric(summary, "avg_groundedness_score", "Avg groundedness")
@@ -836,7 +896,7 @@ def render_evaluation_dashboard(
         min_height=0,
     ):
         if not rows:
-            st.caption("No per-entry rows returned for this run.")
+            st.caption("Run evaluation to see per-entry rows.")
         else:
             st.dataframe(rows, use_container_width=True)
 

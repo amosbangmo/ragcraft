@@ -128,6 +128,9 @@ class FailureAnalysisService:
         }
 
     def _classify_row(self, row: dict[str, Any]) -> tuple[list[str], bool]:
+        if _coerce_bool(row.get("pipeline_failed")) is True:
+            return [], False
+
         labels: list[str] = []
 
         retrieval_mode = row.get("retrieval_mode")
@@ -167,14 +170,10 @@ class FailureAnalysisService:
         ):
             labels.append("citation_failure")
 
-        pipeline_failed = _coerce_bool(row.get("pipeline_failed")) is True
-
         # Judge convention: higher hallucination_score = *less* hallucination (better grounded in context).
         hall_score = _coerce_float(row.get("hallucination_score"))
         hall_flag = _coerce_bool(row.get("has_hallucination"))
-        if not pipeline_failed and (
-            (hall_score is not None and hall_score < self._hall) or hall_flag is True
-        ):
+        if (hall_score is not None and hall_score < self._hall) or hall_flag is True:
             labels.append("hallucination")
 
         rel = _coerce_float(row.get("answer_relevance_score", row.get("answer_relevance")))
@@ -204,10 +203,8 @@ class FailureAnalysisService:
         if ctx_table and has_gold and answer_f1 is not None and answer_f1 < self._q:
             labels.append("table_misuse")
 
-        if (
-            ctx_image
-            and not pipeline_failed
-            and ((hall_score is not None and hall_score < self._hall) or hall_flag is True)
+        if ctx_image and (
+            (hall_score is not None and hall_score < self._hall) or hall_flag is True
         ):
             labels.append("image_hallucination")
 
