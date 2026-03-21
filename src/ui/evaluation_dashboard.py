@@ -96,6 +96,32 @@ def _histogram_bar_chart(label: str, series: pd.Series | None) -> None:
     st.altair_chart(chart, use_container_width=True)
 
 
+def render_overview_insight_charts(rows: list[dict]) -> None:
+    """
+    Lightweight charts for the Evaluation page Overview tab.
+    Reuses the same histogram helper as the full dashboard.
+    """
+    if not rows:
+        st.caption("Run dataset evaluation to see score distributions.")
+        return
+    df = pd.DataFrame(rows)
+    if df.empty:
+        st.caption("No rows available for charts.")
+        return
+    st.markdown("##### Score spread (this run)")
+    c1, c2 = st.columns(2)
+    with c1:
+        _histogram_bar_chart(
+            "Groundedness",
+            _numeric_series(df, "groundedness_score", "groundedness"),
+        )
+    with c2:
+        _histogram_bar_chart(
+            "Doc ID recall",
+            _numeric_series(df, "doc_id_recall"),
+        )
+
+
 def _render_advanced_analytics(rows: list[dict]) -> None:
     with section_card(
         title="📊 Advanced Analytics",

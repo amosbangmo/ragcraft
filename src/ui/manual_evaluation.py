@@ -27,7 +27,29 @@ def _metric_row(items: list[tuple[str, str]]) -> None:
             st.metric(label, display)
 
 
-def render_manual_evaluation_result(result: ManualEvaluationResult) -> None:
+def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
+    """Short summary after a manual run (Evaluation page Overview mode)."""
+    st.success("Manual evaluation completed.")
+    preview = (result.answer or "").strip()
+    if len(preview) > 280:
+        preview = preview[:280] + "…"
+    st.caption("Answer preview")
+    st.write(preview or "—")
+    aq = result.answer_quality
+    if aq and aq.groundedness_score is not None:
+        st.caption(
+            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — switch to **Per question** "
+            "for citations, retrieval metrics, and expected vs retrieved."
+        )
+    else:
+        st.caption("Switch to **Per question** for structured quality, citations, and retrieval signals.")
+
+
+def render_manual_evaluation_result(
+    result: ManualEvaluationResult,
+    *,
+    raw_assets_collapsed: bool = False,
+) -> None:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Answer</div>', unsafe_allow_html=True)
     st.markdown(
@@ -215,11 +237,18 @@ def render_manual_evaluation_result(result: ManualEvaluationResult) -> None:
                 st.code("\n".join(comp.expected_sources) or "—", language="text")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">Raw evidence</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="card-subtitle">Raw text, tables, and images passed into the prompt after reranking.</div>',
-        unsafe_allow_html=True,
-    )
-    render_raw_assets(result.raw_assets, mode="evaluation")
-    st.markdown("</div>", unsafe_allow_html=True)
+    if raw_assets_collapsed:
+        with st.expander("Raw evidence (advanced)", expanded=False):
+            st.caption(
+                "Raw text, tables, and images passed into the prompt after reranking."
+            )
+            render_raw_assets(result.raw_assets, mode="evaluation")
+    else:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Raw evidence</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="card-subtitle">Raw text, tables, and images passed into the prompt after reranking.</div>',
+            unsafe_allow_html=True,
+        )
+        render_raw_assets(result.raw_assets, mode="evaluation")
+        st.markdown("</div>", unsafe_allow_html=True)

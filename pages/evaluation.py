@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult
+from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.request_runner import (
@@ -11,8 +12,13 @@ from src.ui.request_runner import (
     run_request_action,
     render_result_payload,
 )
-from src.ui.evaluation_dashboard import render_evaluation_dashboard
-from src.ui.manual_evaluation import render_manual_evaluation_result
+from src.ui.evaluation_debug import render_evaluation_debug
+from src.ui.evaluation_overview import render_evaluation_overview
+from src.ui.evaluation_question_detail import (
+    render_benchmark_row_detail,
+    render_evaluation_question_detail,
+)
+from src.ui.manual_evaluation import render_manual_evaluation_compact
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import (
@@ -37,6 +43,7 @@ DATASET_GENERATION_REQUEST_KEY = "dataset_generation_request_running"
 DATASET_GENERATION_RESULT_KEY = "dataset_generation_result_payload"
 DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
+EVALUATION_VIEW_MODE_KEY = "evaluation_view_mode"
 
 
 def _parse_csv_list(raw_value: str) -> list[str]:
@@ -77,6 +84,16 @@ if "qa_dataset_success_message" in st.session_state:
 
 if "qa_dataset_error_message" in st.session_state:
     st.error(st.session_state.pop("qa_dataset_error_message"))
+
+view_mode = st.segmented_control(
+    "Evaluation view",
+    options=["Overview", "Per Question", "Debug"],
+    default=st.session_state.get(EVALUATION_VIEW_MODE_KEY, "Overview"),
+    key=EVALUATION_VIEW_MODE_KEY,
+    selection_mode="single",
+)
+if view_mode not in ("Overview", "Per Question", "Debug"):
+    view_mode = "Overview"
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Manual evaluation</div>', unsafe_allow_html=True)
@@ -133,11 +150,16 @@ def _map_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}")
 
 
-def _render_evaluation_result(result):
+def _render_evaluation_result(result: ManualEvaluationResult | None) -> None:
     if result is None:
         st.warning("No manual evaluation result available.")
         return
-    render_manual_evaluation_result(result)
+    if view_mode == "Per Question":
+        render_evaluation_question_detail(result)
+    elif view_mode == "Overview":
+        render_manual_evaluation_compact(result)
+    else:
+        st.success("Manual evaluation finished — see the **Debug** section below.")
 
 
 run_clicked = st.button(
@@ -474,7 +496,7 @@ def _map_dataset_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
 
 
-def _render_dataset_evaluation_result(payload: dict):
+def _render_dataset_evaluation_result(payload: dict) -> None:
     result = cast(BenchmarkResult, payload["result"])
     enable_query_rewrite = bool(payload["enable_query_rewrite"])
     enable_hybrid_retrieval = bool(payload["enable_hybrid_retrieval"])
@@ -486,15 +508,32 @@ def _render_dataset_evaluation_result(payload: dict):
         raw = summary.get(key)
         st.metric(label, raw if raw is not None else "—")
 
+    st.markdown("### Latest dataset run")
     scope = st.columns(2)
     with scope[0]:
         _scope_metric("total_entries", "Entries")
     with scope[1]:
         _scope_metric("successful_queries", "Successful queries")
 
-    st.markdown("### Benchmark dashboard")
-    st.caption("Summary metrics, full results table, advanced charts, and hallucination drill-down.")
-    render_evaluation_dashboard(summary=summary, rows=rows)
+    if view_mode == "Overview":
+        render_evaluation_overview(summary, rows)
+    elif view_mode == "Per Question":
+        if not rows:
+            st.info("No per-entry rows in this run.")
+        else:
+            labels = [
+                f"#{r.get('entry_id', '—')} — {(r.get('question') or '')[:80]}"
+                for r in rows
+            ]
+            pick = st.selectbox(
+                "Inspect question",
+                options=labels,
+                key="evaluation_benchmark_question_pick",
+            )
+            idx = labels.index(pick)
+            render_benchmark_row_detail(rows[idx])
+    else:
+        st.caption("Full benchmark dashboard and analytics are in the **Debug** section below.")
 
     st.markdown("### Download benchmark reports")
     export = app.build_benchmark_export_artifacts(
@@ -556,3 +595,26 @@ render_result_payload(
 )
 
 st.markdown("</div>", unsafe_allow_html=True)
+
+if view_mode == "Debug":
+    st.markdown("---")
+    bench_for_debug: BenchmarkResult | None = None
+    dataset_payload = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
+    if (
+        dataset_payload is not None
+        and isinstance(dataset_payload, dict)
+        and "error" not in dataset_payload
+    ):
+        maybe_result = dataset_payload.get("result")
+        if isinstance(maybe_result, BenchmarkResult):
+            bench_for_debug = maybe_result
+
+    manual_for_debug: ManualEvaluationResult | None = None
+    manual_payload = st.session_state.get(EVALUATION_RESULT_KEY)
+    if isinstance(manual_payload, ManualEvaluationResult):
+        manual_for_debug = manual_payload
+
+    render_evaluation_debug(
+        benchmark_result=bench_for_debug,
+        manual_result=manual_for_debug,
+    )
