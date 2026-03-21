@@ -37,7 +37,7 @@ METRIC_HELP: dict[str, str] = {
         "Closer to 1 is better."
     ),
     "source_recall": (
-        "Share of expected source files represented in retrieval or citations. "
+        "Share of expected source files represented in retrieval or prompt sources. "
         "Closer to 1 is better when expectations are set."
     ),
     "avg_source_recall": (
@@ -107,14 +107,14 @@ METRIC_HELP: dict[str, str] = {
         "Mean groundedness over the run. Closer to 1 is better."
     ),
     "citation_faithfulness": (
-        "Judge score: whether citations support the statements made. "
+        "Judge score: whether the answer is faithful to the prompt sources and retrieved context. "
         "Closer to 1 is better."
     ),
     "citation_faithfulness_score": (
-        "Same as citation faithfulness. Closer to 1 is better."
+        "Same as citation faithfulness (judge metric key). Closer to 1 is better."
     ),
     "avg_citation_faithfulness": (
-        "Mean citation faithfulness over the run. Closer to 1 is better."
+        "Mean citation faithfulness over the run (judge metric). Closer to 1 is better."
     ),
     "answer_relevance": (
         "Judge score: how well the answer addresses the question. "
@@ -142,49 +142,49 @@ METRIC_HELP: dict[str, str] = {
         "No is usually preferable."
     ),
     "citation_doc_id_precision": (
-        "Precision of cited doc IDs vs expected doc IDs. Higher is better."
+        "Precision of prompt-source doc IDs vs expected doc IDs. Higher is better."
     ),
     "avg_citation_doc_id_precision": (
-        "Mean citation doc ID precision. Higher is better."
+        "Mean citation doc ID precision (prompt sources vs expected). Higher is better."
     ),
     "citation_doc_id_recall": (
-        "Recall of expected doc IDs among citations. Higher is better."
+        "Recall of expected doc IDs among prompt sources. Higher is better."
     ),
     "avg_citation_doc_id_recall": (
-        "Mean citation doc ID recall. Higher is better."
+        "Mean citation doc ID recall (prompt sources). Higher is better."
     ),
     "citation_doc_id_f1": (
-        "F1 between cited and expected doc IDs. Closer to 1 is better."
+        "F1 between prompt-source and expected doc IDs. Closer to 1 is better."
     ),
     "avg_citation_doc_id_f1": (
-        "Mean citation doc ID F1. Closer to 1 is better."
+        "Mean citation doc ID F1 (prompt sources). Closer to 1 is better."
     ),
     "citation_source_precision": (
-        "Precision of cited sources vs expected sources. Higher is better."
+        "Precision of prompt sources vs expected sources. Higher is better."
     ),
     "avg_citation_source_precision": (
-        "Mean citation source precision. Higher is better."
+        "Mean citation source precision (prompt sources). Higher is better."
     ),
     "citation_source_recall": (
-        "Recall of expected sources in citations. Higher is better."
+        "Recall of expected sources among prompt sources. Higher is better."
     ),
     "avg_citation_source_recall": (
-        "Mean citation source recall. Higher is better."
+        "Mean citation source recall (prompt sources). Higher is better."
     ),
     "citation_source_f1": (
-        "F1 for cited vs expected sources. Closer to 1 is better."
+        "F1 for prompt sources vs expected sources. Closer to 1 is better."
     ),
     "avg_citation_source_f1": (
-        "Mean citation source F1. Closer to 1 is better."
+        "Mean citation source F1 (prompt sources). Closer to 1 is better."
     ),
     "cited_doc_ids_count": (
-        "Number of distinct document IDs cited in the answer for this row."
+        "Number of distinct document IDs in prompt sources for this row."
     ),
     "retrieved_doc_ids_count": (
         "Count of distinct doc IDs returned by retrieval for this question."
     ),
     "selected_source_count": (
-        "How many distinct sources were selected or cited for this run."
+        "How many distinct sources were selected for the prompt for this run."
     ),
     "doc_id_hit_rate": (
         "Share of entries where at least one expected doc ID was retrieved. "
@@ -195,10 +195,10 @@ METRIC_HELP: dict[str, str] = {
         "Higher is better."
     ),
     "citation_doc_id_hit_rate": (
-        "Share of entries where citations overlap expected doc IDs. Higher is better."
+        "Share of entries where prompt sources overlap expected doc IDs. Higher is better."
     ),
     "citation_source_hit_rate": (
-        "Share of entries where citations overlap expected sources. Higher is better."
+        "Share of entries where prompt sources overlap expected sources. Higher is better."
     ),
     "retrieval_mode": (
         "Which retrieval path ran for this query (for example vector-only vs hybrid)."

@@ -65,7 +65,7 @@ Compare FAISS vs Hybrid retrieval
 
 📷 **[SCREENSHOT – Chat UI]**
 
-*(Conversation with citations)*
+*(Conversation with prompt sources listed in the UI)*
 
 ---
 
@@ -346,14 +346,14 @@ This makes the system **transparent, debuggable, and educational**.
 
 - gold QA datasets per project
 - answer correctness scoring
-- citation precision/recall metrics
+- prompt-source vs expected overlap metrics (reported under existing ``citation_*`` benchmark fields)
 - automated RAG regression tests
 - downloadable benchmark reports
 
 ## LLM-as-a-Judge
 
 - groundedness scoring
-- citation faithfulness checks
+- citation faithfulness checks (judge; uses prompt sources and retrieved context)
 - hallucination detection
 - answer relevance scoring
 

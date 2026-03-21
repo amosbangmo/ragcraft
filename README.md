@@ -9,7 +9,7 @@
 
 RAGCraft is a **multi-user, multi-project RAG system** designed to go beyond simple chatbot demos and demonstrate how a more production-oriented document intelligence workflow can be implemented.
 
-The platform supports **document ingestion, multimodal asset extraction, hybrid retrieval, reranking, prompt construction, structured citations, pipeline inspection, document inspection, and retrieval-mode comparison**, making it possible not only to ask questions over documents, but also to understand **why** a given answer was produced.
+The platform supports **document ingestion, multimodal asset extraction, hybrid retrieval, reranking, prompt construction, structured prompt sources (sources provided to the model in the prompt), pipeline inspection, document inspection, and retrieval-mode comparison**, making it possible not only to ask questions over documents, but also to understand **why** a given answer was produced.
 
 ---
 
@@ -59,8 +59,8 @@ The demo allows you to:
 ## Prompting & Grounding
 
 - Prompt construction from **top reranked raw assets**
-- Structured source citations
-- Inline citation labels in final answers
+- Structured prompt sources (labeled sources in the prompt; not necessarily cited verbatim in the answer)
+- Inline references to prompt source labels in final answers when the model cites evidence
 - Prompt transparency through Retrieval Inspector
 
 ## Multimodal Asset Storage
@@ -147,7 +147,7 @@ Top-N assets selected
 Prompt construction
       │
       ▼
-LLM answer with citations
+LLM answer (may reference prompt source labels inline)
 ```
 
 Benefits:

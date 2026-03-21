@@ -211,12 +211,12 @@ def _render_raw_assets(assets: list[dict], title_prefix: str):
             _render_raw_asset_detail(asset)
 
 
-def _render_source_references(source_references: list[dict]):
-    if not source_references:
-        st.info("No source references generated.")
+def _render_prompt_sources(prompt_sources: list[dict]):
+    if not prompt_sources:
+        st.info("No prompt sources were provided to the model.")
         return
 
-    for ref in source_references:
+    for ref in prompt_sources:
         label = ref.get("inline_label", "")
         display = ref.get("display_label", "")
         rerank_score = ref.get("rerank_score")
@@ -557,8 +557,8 @@ def _render_inspection_result(pipeline):
             empty_message="No doc_ids were retained after reranking.",
         )
 
-        st.markdown("### Source references")
-        _render_source_references(pipeline["source_references"])
+        st.markdown("### Prompt sources")
+        _render_prompt_sources(pipeline["prompt_sources"])
 
         st.markdown("### Final prompt assets (after contextual compression)")
         st.caption(
@@ -592,7 +592,7 @@ def _render_inspection_result(pipeline):
             "recalled_doc_ids": pipeline["recalled_doc_ids"],
             "selected_doc_ids": pipeline["selected_doc_ids"],
             "confidence": pipeline["confidence"],
-            "source_references": pipeline["source_references"],
+            "prompt_sources": pipeline["prompt_sources"],
             "latency_ms": pipeline.get("latency_ms"),
             "latency": pipeline.get("latency"),
             "context_compression": pipeline.get("context_compression"),

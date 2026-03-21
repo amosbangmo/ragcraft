@@ -35,7 +35,7 @@ def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     ]
     return {
         "selected_doc_ids": doc_ids or ["d1"],
-        "source_references": refs
+        "prompt_sources": refs
         or [{"doc_id": "d1", "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}],
         "prompt_context_assets": prompt_assets,
         "confidence": 0.9,
@@ -123,7 +123,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             return {
                 "pipeline": {
                     "selected_doc_ids": ["wrong-id"],
-                    "source_references": [{"doc_id": "wrong-id", "source_file": "other.pdf"}],
+                    "prompt_sources": [{"doc_id": "wrong-id", "source_file": "other.pdf"}],
                     "confidence": 0.1,
                     "retrieval_mode": "faiss",
                     "query_rewrite_enabled": False,

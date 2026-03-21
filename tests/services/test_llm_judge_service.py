@@ -12,7 +12,7 @@ class TestLLMJudgeService(unittest.TestCase):
                 question="q",
                 answer="   ",
                 raw_context="ctx",
-                citations=[],
+                prompt_sources=[],
             )
         mock_fail.assert_not_called()
         self.assertEqual(
@@ -40,7 +40,7 @@ class TestLLMJudgeService(unittest.TestCase):
             question="q?",
             answer="The answer.",
             raw_context="some context",
-            citations=[{"doc_id": "d1"}],
+            prompt_sources=[{"doc_id": "d1"}],
         )
         self.assertEqual(r.groundedness_score, 0.9)
         self.assertEqual(r.citation_faithfulness_score, 0.85)
@@ -62,7 +62,7 @@ class TestLLMJudgeService(unittest.TestCase):
             question="q",
             answer="a",
             raw_context="c",
-            citations=[],
+            prompt_sources=[],
         )
         self.assertEqual(r.groundedness_score, 1.0)
         self.assertFalse(r.has_hallucination)
@@ -74,7 +74,7 @@ class TestLLMJudgeService(unittest.TestCase):
             question="q",
             answer="a",
             raw_context="c",
-            citations=[],
+            prompt_sources=[],
         )
         self.assertEqual(r, LLMJudgeService._failure_result())
 
@@ -85,7 +85,7 @@ class TestLLMJudgeService(unittest.TestCase):
             question="q",
             answer="a",
             raw_context="c",
-            citations=[],
+            prompt_sources=[],
         )
         self.assertEqual(r, LLMJudgeService._failure_result())
 
@@ -101,7 +101,7 @@ class TestLLMJudgeService(unittest.TestCase):
             question="q",
             answer="a",
             raw_context="c",
-            citations=[],
+            prompt_sources=[],
         )
         self.assertEqual(r.groundedness_score, 0.7)
         self.assertEqual(r.citation_faithfulness_score, 0.71)

@@ -8,6 +8,6 @@ class RAGResponse:
     answer: str
     source_documents: list[Any] = field(default_factory=list)
     raw_assets: list[Any] = field(default_factory=list)
-    citations: list[Any] = field(default_factory=list)
+    prompt_sources: list[Any] = field(default_factory=list)
     confidence: float = 0.0
     latency: dict[str, float] | None = None

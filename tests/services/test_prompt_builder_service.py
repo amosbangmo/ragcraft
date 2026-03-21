@@ -1,6 +1,6 @@
 import unittest
 
-from src.domain.source_citation import SourceCitation
+from src.domain.prompt_source import PromptSource
 from src.services.prompt_builder_service import PromptBuilderService
 
 
@@ -60,7 +60,7 @@ class TestPromptBuilderService(unittest.TestCase):
                 "table_text": "A\n1",
             },
         }
-        cit = SourceCitation(
+        cit = PromptSource(
             source_number=1,
             doc_id="d1",
             source_file="f.pdf",
@@ -71,7 +71,7 @@ class TestPromptBuilderService(unittest.TestCase):
             prompt_label="[Source 1]",
             metadata={},
         )
-        block = self.svc._format_raw_asset_for_prompt(asset=asset, citation=cit)
+        block = self.svc._format_raw_asset_for_prompt(asset=asset, prompt_source=cit)
         self.assertIn("Structured table excerpt:", block)
         self.assertIn("Column headers:", block)
         self.assertIn("Raw table HTML:", block)
@@ -85,7 +85,7 @@ class TestPromptBuilderService(unittest.TestCase):
             "summary": "s",
             "metadata": {"structured_table": {"headers": [], "rows": []}, "table_text": ""},
         }
-        cit = SourceCitation(
+        cit = PromptSource(
             source_number=1,
             doc_id="d1",
             source_file="f.pdf",
@@ -96,7 +96,7 @@ class TestPromptBuilderService(unittest.TestCase):
             prompt_label="[Source 1]",
             metadata={},
         )
-        block = self.svc._format_raw_asset_for_prompt(asset=asset, citation=cit)
+        block = self.svc._format_raw_asset_for_prompt(asset=asset, prompt_source=cit)
         self.assertNotIn("Structured table excerpt:", block)
         self.assertIn("Raw table HTML:", block)
 
@@ -120,7 +120,7 @@ class TestPromptBuilderService(unittest.TestCase):
             "raw_content": "Step one loads configuration.",
             "metadata": {"page_start": 3, "page_end": 3, "source_file": "r.pdf"},
         }
-        cit = SourceCitation(
+        cit = PromptSource(
             source_number=1,
             doc_id="im1",
             source_file="r.pdf",
@@ -135,7 +135,7 @@ class TestPromptBuilderService(unittest.TestCase):
         self.assertTrue(enriched)
         block = self.svc._format_raw_asset_for_prompt(
             asset=image,
-            citation=cit,
+            prompt_source=cit,
             image_context=ctx_map["im1"],
         )
         self.assertIn("Workflow diagram", block)
@@ -153,7 +153,7 @@ class TestPromptBuilderService(unittest.TestCase):
             "summary": "Summary only.",
             "metadata": {"image_title": "Fig A"},
         }
-        cit = SourceCitation(
+        cit = PromptSource(
             source_number=1,
             doc_id="im2",
             source_file="r.pdf",
@@ -164,7 +164,9 @@ class TestPromptBuilderService(unittest.TestCase):
             prompt_label="[Source 1]",
             metadata={},
         )
-        block = self.svc._format_raw_asset_for_prompt(asset=image, citation=cit, image_context=None)
+        block = self.svc._format_raw_asset_for_prompt(
+            asset=image, prompt_source=cit, image_context=None
+        )
         self.assertIn("Fig A", block)
         self.assertIn("Image retrieval summary:", block)
         self.assertIn("Summary only.", block)
@@ -185,7 +187,7 @@ class TestPromptBuilderService(unittest.TestCase):
             "summary": "s",
             "metadata": {"table_text": ""},
         }
-        c1 = SourceCitation(
+        c1 = PromptSource(
             source_number=1,
             doc_id="t1",
             source_file="f.pdf",
@@ -196,7 +198,7 @@ class TestPromptBuilderService(unittest.TestCase):
             prompt_label="[Source 1]",
             metadata={},
         )
-        c2 = SourceCitation(
+        c2 = PromptSource(
             source_number=2,
             doc_id="tb1",
             source_file="f.pdf",
@@ -209,7 +211,7 @@ class TestPromptBuilderService(unittest.TestCase):
         )
         ctx = self.svc.build_raw_context(
             raw_assets=[t, tb],
-            citations=[c1, c2],
+            prompt_sources=[c1, c2],
             asset_groups=[[t, tb]],
         )
         self.assertIn("=== ", ctx)

@@ -19,7 +19,7 @@ from src.ui.retrieval_settings_panel import (
     render_retrieval_settings_panel,
     retrieval_settings_to_request_dict,
 )
-from src.ui.source_citations import render_source_citations
+from src.ui.prompt_sources import render_prompt_sources
 
 
 st.set_page_config(
@@ -150,7 +150,7 @@ with st.chat_message("assistant"):
         band = confidence_band(float(response.confidence))
         st.markdown(f"**Confidence:** {response.confidence} ({band})")
 
-        render_source_citations(getattr(response, "citations", []))
+        render_prompt_sources(getattr(response, "prompt_sources", []))
         render_raw_assets(
             getattr(response, "raw_assets", []),
             heading="### Sources utilisées",

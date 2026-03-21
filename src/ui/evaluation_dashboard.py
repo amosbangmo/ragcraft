@@ -74,7 +74,7 @@ def _render_correlation_analysis(
     with st.expander("Correlation analysis", expanded=False):
         st.caption(
             "Pearson correlation (r) across rows. Answer correctness uses token **F1** vs the gold answer. "
-            "Citations use **source-level** precision/recall. |r| ≥ 0.6 is treated as a strong linear association."
+            "Prompt-source metrics use **source-level** precision/recall. |r| ≥ 0.6 is treated as a strong linear association."
         )
         if not correlations:
             st.caption("Correlations are attached after each dataset evaluation run.")
@@ -192,7 +192,7 @@ def _render_failure_analysis(
 ) -> None:
     with st.expander("Failure analysis", expanded=False):
         st.caption(
-            "Heuristic tags from retrieval, judge scores, citation overlap, and gold answer F1. "
+            "Heuristic tags from retrieval, judge scores, prompt-source overlap metrics, and gold answer F1. "
             "A row may match several types. Metrics missing on a row skip that rule. "
             "If this session predates failure analysis, counts are recomputed from the table below."
         )
@@ -369,7 +369,7 @@ def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
 
     with section_card(
         title="Multimodal performance",
-        subtitle="Usage of tables and images in retrieved or cited context, mixed-modality prompts, and quality "
+        subtitle="Usage of tables and images in retrieved context or prompt sources, mixed-modality prompts, and quality "
         "when those modalities appear.",
         min_height=0,
     ):
@@ -378,14 +378,14 @@ def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
             _summary_metric(
                 multimodal_metrics,
                 "table_usage_rate",
-                "Table usage (retrieval or citations)",
+                "Table usage (retrieval or prompt sources)",
                 as_percent=True,
             )
         with u2:
             _summary_metric(
                 multimodal_metrics,
                 "image_usage_rate",
-                "Image usage (retrieval or citations)",
+                "Image usage (retrieval or prompt sources)",
                 as_percent=True,
             )
         with u3:
@@ -673,7 +673,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
                 {"citation_faithfulness_score": faith, "answer_relevance_score": rel}
             ).dropna()
             if len(scatter2) >= 1:
-                st.caption("Answer relevance vs citation faithfulness")
+                st.caption("Answer relevance vs citation faithfulness (judge; uses prompt sources + context)")
                 sc2_chart = (
                     alt.Chart(scatter2)
                     .mark_circle()

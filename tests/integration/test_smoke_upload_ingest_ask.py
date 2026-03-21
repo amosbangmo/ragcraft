@@ -82,7 +82,7 @@ def tearDownModule():
 
 
 class TestSmokeUploadIngestAsk(unittest.TestCase):
-    def test_upload_to_ask_flow_returns_citations(self):
+    def test_upload_to_ask_flow_returns_prompt_sources(self):
         app = RAGCraftApp()
 
         user_id = "u1"
@@ -124,7 +124,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         response = RAGResponse(
             question="What is in the document?",
             answer="The document contains a summary.",
-            citations=[{"source_number": 1, "doc_id": "doc-1"}],
+            prompt_sources=[{"source_number": 1, "doc_id": "doc-1"}],
             raw_assets=raw_assets,
             confidence=0.9,
         )
@@ -142,8 +142,8 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         app.docstore_service.save_asset.assert_called_once_with(**raw_assets[0])
         app.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
         self.assertIsNotNone(ask_result)
-        self.assertTrue(ask_result.citations)
-        self.assertEqual(ask_result.citations[0]["doc_id"], "doc-1")
+        self.assertTrue(ask_result.prompt_sources)
+        self.assertEqual(ask_result.prompt_sources[0]["doc_id"], "doc-1")
 
 
 if __name__ == "__main__":

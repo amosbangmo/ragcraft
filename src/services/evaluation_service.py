@@ -201,24 +201,24 @@ class EvaluationService:
             ]
             selected_doc_ids = set(ranked_doc_ids)
 
-            source_references = pl.get("source_references", []) or []
+            prompt_sources = pl.get("prompt_sources", []) or []
             selected_sources = {
                 ref.get("source_file")
-                for ref in source_references
+                for ref in prompt_sources
                 if ref.get("source_file")
             }
 
-            # Citation-level doc/source sets are intentionally derived from the
-            # explicit source reference objects. This distinguishes "selected"
+            # Doc/source sets for citation metrics are intentionally derived from the
+            # explicit prompt source objects. This distinguishes "selected"
             # prompt assets from what the answer surfaces as citations.
             cited_doc_ids = {
                 ref.get("doc_id")
-                for ref in source_references
+                for ref in prompt_sources
                 if ref.get("doc_id")
             }
             cited_sources = {
                 ref.get("source_file")
-                for ref in source_references
+                for ref in prompt_sources
                 if ref.get("source_file")
             }
 
@@ -321,14 +321,14 @@ class EvaluationService:
             latency_values.append(latency_ms)
 
             refs_for_judge: list[dict] = []
-            if isinstance(source_references, list):
-                refs_for_judge = [r for r in source_references if isinstance(r, dict)]
+            if isinstance(prompt_sources, list):
+                refs_for_judge = [r for r in prompt_sources if isinstance(r, dict)]
 
             judge_result = self._llm_judge_service.evaluate(
                 question=entry.question,
                 answer=result.get("answer", ""),
                 raw_context=pl.get("raw_context", ""),
-                citations=refs_for_judge,
+                prompt_sources=refs_for_judge,
             )
             groundedness = judge_result.groundedness_score
             citation_faithfulness = judge_result.citation_faithfulness_score

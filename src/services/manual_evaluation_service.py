@@ -127,9 +127,9 @@ def _ordered_sources_from_pipeline(
     if not pipeline:
         return []
     refs = (
-        pipeline.source_references
+        pipeline.prompt_sources
         if isinstance(pipeline, PipelineBuildResult)
-        else (pipeline.get("source_references") or [])
+        else (pipeline.get("prompt_sources") or [])
     )
     if not isinstance(refs, list):
         return []
@@ -217,10 +217,10 @@ class ManualEvaluationService:
         )
         row = benchmark.rows[0].data
 
-        citations: list[dict[str, Any]] = []
+        prompt_sources: list[dict[str, Any]] = []
         raw_assets: list[dict[str, Any]] = []
         if pipeline is not None:
-            citations = [r for r in pipeline.source_references if isinstance(r, dict)]
+            prompt_sources = [r for r in pipeline.prompt_sources if isinstance(r, dict)]
             raw_assets = [a for a in pipeline.reranked_raw_assets if isinstance(a, dict)]
 
         ranked_doc_ids = [
@@ -330,7 +330,7 @@ class ManualEvaluationService:
             answer=answer or "",
             expected_answer=exp_ans,
             confidence=confidence,
-            citations=citations,
+            prompt_sources=prompt_sources,
             raw_assets=raw_assets,
             answer_quality=answer_quality,
             citation_quality=citation_quality,

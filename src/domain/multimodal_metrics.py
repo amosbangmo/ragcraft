@@ -1,7 +1,7 @@
 """
 Modality detection and aggregate metrics for benchmark / evaluation rows.
 
-Uses ``content_type`` on prompt assets and citations (``text`` | ``table`` | ``image``),
+Uses ``content_type`` on prompt assets and prompt sources (``text`` | ``table`` | ``image``),
 aligned with :class:`~src.domain.retrieved_asset.RetrievedAsset` and RAG pipeline payloads.
 """
 
@@ -42,11 +42,11 @@ def analyze_prompt_asset_modalities(assets: list[Any]) -> dict[str, Any]:
     }
 
 
-def analyze_citation_modalities(source_references: list[Any]) -> dict[str, Any]:
+def analyze_prompt_source_modalities(prompt_sources: list[Any]) -> dict[str, Any]:
     has_table = False
     has_image = False
     has_text = False
-    for ref in source_references or []:
+    for ref in prompt_sources or []:
         if not isinstance(ref, dict):
             continue
         ct = _norm_content_type(ref.get("content_type"))
@@ -69,9 +69,9 @@ def empty_modality_row_fields() -> dict[str, Any]:
         "retrieval_has_table": False,
         "retrieval_has_image": False,
         "retrieval_has_text": False,
-        "citation_has_table": False,
-        "citation_has_image": False,
-        "citation_has_text": False,
+        "prompt_source_has_table": False,
+        "prompt_source_has_image": False,
+        "prompt_source_has_text": False,
         "context_uses_table": False,
         "context_uses_image": False,
         "mixed_modality_prompt": False,
@@ -84,21 +84,21 @@ def modality_row_fields_from_pipeline(pipeline: dict[str, Any]) -> dict[str, Any
     if not isinstance(assets, list) or not assets:
         raw = pipeline.get("reranked_raw_assets")
         assets = raw if isinstance(raw, list) else []
-    refs = pipeline.get("source_references")
+    refs = pipeline.get("prompt_sources")
     if not isinstance(refs, list):
         refs = []
 
     pa = analyze_prompt_asset_modalities(assets)
-    ca = analyze_citation_modalities(refs)
+    ca = analyze_prompt_source_modalities(refs)
 
     return {
         "modality_evaluation_available": True,
         "retrieval_has_table": bool(pa["has_table"]),
         "retrieval_has_image": bool(pa["has_image"]),
         "retrieval_has_text": bool(pa["has_text"]),
-        "citation_has_table": bool(ca["has_table"]),
-        "citation_has_image": bool(ca["has_image"]),
-        "citation_has_text": bool(ca["has_text"]),
+        "prompt_source_has_table": bool(ca["has_table"]),
+        "prompt_source_has_image": bool(ca["has_image"]),
+        "prompt_source_has_text": bool(ca["has_text"]),
         "context_uses_table": bool(pa["has_table"] or ca["has_table"]),
         "context_uses_image": bool(pa["has_image"] or ca["has_image"]),
         "mixed_modality_prompt": bool(pa["mixed_modality_prompt"]),

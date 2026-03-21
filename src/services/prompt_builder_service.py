@@ -1,4 +1,4 @@
-from src.domain.source_citation import SourceCitation
+from src.domain.prompt_source import PromptSource
 from src.services.image_context_service import ImageContextService
 from src.services.layout_context_service import describe_layout_group
 
@@ -56,7 +56,7 @@ class PromptBuilderService:
         self,
         *,
         raw_assets: list[dict],
-        citations: list[SourceCitation],
+        prompt_sources: list[PromptSource],
         image_context_by_doc_id: dict[str, dict] | None = None,
         asset_groups: list[list[dict]] | None = None,
         max_text_chars_per_asset: int | None = None,
@@ -77,12 +77,12 @@ class PromptBuilderService:
 
         if image_context_by_doc_id is None:
             image_context_by_doc_id, _ = self.prepare_image_contexts(raw_assets)
-        citation_by_id = {
-            id(asset): citation for asset, citation in zip(raw_assets, citations, strict=True)
+        prompt_source_by_id = {
+            id(asset): ps for asset, ps in zip(raw_assets, prompt_sources, strict=True)
         }
 
         def format_one(asset: dict, *, layout_mode: bool) -> str:
-            cit = citation_by_id[id(asset)]
+            ps = prompt_source_by_id[id(asset)]
             img_ctx = (
                 image_context_by_doc_id.get(str(asset.get("doc_id")))
                 if asset.get("content_type") == "image" and asset.get("doc_id")
@@ -90,7 +90,7 @@ class PromptBuilderService:
             )
             body = self._format_raw_asset_for_prompt(
                 asset=asset,
-                citation=cit,
+                prompt_source=ps,
                 image_context=img_ctx,
                 max_text_chars=text_lim,
                 max_table_chars=table_lim,
@@ -158,9 +158,9 @@ Instructions:
 - Only the final reranked assets are included in the context.
 - If the answer is not supported by the raw context, say you don't know.
 - Be precise and concise.
-- Every factual claim grounded in a source should include its citation label.
-- Use the exact citation labels provided in each asset block.
-- Citations must be inline, for example:
+- Every factual claim grounded in a source should include its prompt source label.
+- Use the exact prompt source labels provided in each asset block.
+- Prompt source references must be inline, for example:
   - [Source 1]
   - [Source 2][Table: Table 2]
   - [Source 3][Figure: Attention map]
@@ -249,7 +249,7 @@ Instructions:
         self,
         *,
         asset: dict,
-        citation: SourceCitation,
+        prompt_source: PromptSource,
         image_context: dict | None = None,
         max_text_chars: int | None = None,
         max_table_chars: int | None = None,
@@ -261,7 +261,7 @@ Instructions:
         metadata = asset.get("metadata", {}) or {}
         summary = asset.get("summary", "") or ""
         doc_id = asset.get("doc_id", "?")
-        citation_label = citation.prompt_label
+        prompt_source_label = prompt_source.prompt_label
         text_limit = (
             self.max_text_chars_per_asset if max_text_chars is None else int(max_text_chars)
         )
@@ -271,8 +271,8 @@ Instructions:
 
         if content_type == "text":
             trimmed = raw_content[:text_limit]
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
+            return f"""Asset {prompt_source.source_number}
+Prompt source: {prompt_source_label}
 Type: text
 Doc ID: {doc_id}
 Source file: {source_file}
@@ -309,8 +309,8 @@ Structured reasoning notes:
 - For min, max, ranking, or totals, derive answers only from values shown in the excerpt or raw table; do not extrapolate missing cells.
 """
 
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
+            return f"""Asset {prompt_source.source_number}
+Prompt source: {prompt_source_label}
 Type: table
 Doc ID: {doc_id}
 Source file: {source_file}
@@ -365,8 +365,8 @@ Contextual signals (for orientation):
 {ctx_summary}
 """
 
-            return f"""Asset {citation.source_number}
-Citation: {citation_label}
+            return f"""Asset {prompt_source.source_number}
+Prompt source: {prompt_source_label}
 Type: image
 Doc ID: {doc_id}
 Source file: {source_file}
@@ -383,8 +383,8 @@ Raw image:
 """
 
         trimmed = raw_content[:2000]
-        return f"""Asset {citation.source_number}
-Citation: {citation_label}
+        return f"""Asset {prompt_source.source_number}
+Prompt source: {prompt_source_label}
 Type: {content_type}
 Doc ID: {doc_id}
 Source file: {source_file}

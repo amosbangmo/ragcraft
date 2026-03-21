@@ -49,7 +49,7 @@ class LLMJudgeService:
         question: str,
         answer: str,
         raw_context: str,
-        citations: list[dict],
+        prompt_sources: list[dict],
     ) -> LLMJudgeResult:
         a = (answer or "").strip()
         if not a:
@@ -60,7 +60,7 @@ class LLMJudgeService:
         if len(ctx) > self._MAX_CONTEXT_CHARS:
             ctx = ctx[: self._MAX_CONTEXT_CHARS]
 
-        refs_json = self._format_citations(citations)
+        refs_json = self._format_prompt_sources(prompt_sources)
         prompt = f"""You are an expert evaluator for retrieval-augmented question answering.
 Evaluate the ASSISTANT ANSWER in one pass and output ONE JSON object only (no markdown, no code fences, no text outside JSON).
 
@@ -68,7 +68,7 @@ Each score must be a number in [0, 1].
 
 Metrics:
 - groundedness_score: Are factual claims in the answer supported by RETRIEVED CONTEXT only (paraphrases OK)? Ignore real-world truth beyond the context.
-- citation_faithfulness_score: Do SOURCE REFERENCES and the context justify the answer's factual claims? If there are no references, judge faithfulness to the context alone.
+- citation_faithfulness_score: Do PROMPT SOURCES and the context justify the answer's factual claims? If there are no sources, judge faithfulness to the context alone.
 - answer_relevance_score: Does the answer address the USER QUESTION (coverage, focus, usefulness)? Do not score factual correctness against the real world.
 - hallucination_score: Higher = less hallucination / better supported by context. 1.0 = no unsupported substantive claims; 0.0 = fully unsupported vs context.
 - has_hallucination: true if ANY substantive claim is not supported by the provided context.
@@ -79,7 +79,7 @@ Required keys: groundedness_score, citation_faithfulness_score, answer_relevance
 USER QUESTION:
 {q}
 
-SOURCE REFERENCES (JSON):
+PROMPT SOURCES (JSON):
 {refs_json}
 
 RETRIEVED CONTEXT:
@@ -109,8 +109,8 @@ ASSISTANT ANSWER:
             reason=reason,
         )
 
-    def _format_citations(self, citations: list[dict]) -> str:
-        refs = citations if isinstance(citations, list) else []
+    def _format_prompt_sources(self, prompt_sources: list[dict]) -> str:
+        refs = prompt_sources if isinstance(prompt_sources, list) else []
         try:
             text = json.dumps(refs, ensure_ascii=False, indent=2)
         except (TypeError, ValueError):

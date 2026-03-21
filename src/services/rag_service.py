@@ -289,7 +289,7 @@ class RAGService:
             answer=answer,
             source_documents=pipeline.selected_summary_docs,
             raw_assets=pipeline.reranked_raw_assets,
-            citations=pipeline.source_references,
+            prompt_sources=pipeline.prompt_sources,
             confidence=pipeline.confidence,
             latency=full_latency_dict,
         )

@@ -2,8 +2,8 @@ import unittest
 
 from src.domain.multimodal_metrics import (
     aggregate_multimodal_metrics,
-    analyze_citation_modalities,
     analyze_prompt_asset_modalities,
+    analyze_prompt_source_modalities,
     empty_modality_row_fields,
     modality_row_fields_from_pipeline,
 )
@@ -23,9 +23,9 @@ class TestMultimodalMetrics(unittest.TestCase):
         self.assertEqual(a["modality_count"], 3)
         self.assertTrue(a["mixed_modality_prompt"])
 
-    def test_analyze_citations(self) -> None:
+    def test_analyze_prompt_sources(self) -> None:
         refs = [{"content_type": "table"}, {"doc_id": "x"}]
-        c = analyze_citation_modalities(refs)
+        c = analyze_prompt_source_modalities(refs)
         self.assertTrue(c["has_table"])
         self.assertFalse(c["has_image"])
 
@@ -36,7 +36,7 @@ class TestMultimodalMetrics(unittest.TestCase):
                 {"content_type": "table"},
             ],
             "reranked_raw_assets": [{"content_type": "image"}],
-            "source_references": [{"content_type": "image"}],
+            "prompt_sources": [{"content_type": "image"}],
         }
         f = modality_row_fields_from_pipeline(pl)
         self.assertTrue(f["modality_evaluation_available"])

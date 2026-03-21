@@ -6,7 +6,7 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.ui.confidence_display import format_confidence_with_band
 from src.ui.metric_help import render_metric_with_help
 from src.ui.raw_assets import render_raw_assets
-from src.ui.source_citations import render_source_citations
+from src.ui.prompt_sources import render_prompt_sources
 
 
 def _fmt_float(value: float | None) -> str:
@@ -41,11 +41,11 @@ def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
     aq = result.answer_quality
     if aq and aq.groundedness_score is not None:
         st.caption(
-            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — scroll this tab for citations, "
+            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — scroll this tab for prompt sources, "
             "retrieval metrics, and expected vs retrieved."
         )
     else:
-        st.caption("Scroll this tab for structured quality, citations, and retrieval signals.")
+        st.caption("Scroll this tab for structured quality, prompt sources, and retrieval signals.")
 
 
 def render_manual_evaluation_result(
@@ -74,8 +74,8 @@ def render_manual_evaluation_result(
             metric_key="confidence",
         )
 
-    st.caption("Citations summary")
-    render_source_citations(result.citations)
+    st.caption("Sources provided to the model")
+    render_prompt_sources(result.prompt_sources)
     st.markdown("</div>", unsafe_allow_html=True)
 
     aq = result.answer_quality
@@ -134,7 +134,7 @@ def render_manual_evaluation_result(
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Citation quality</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="card-subtitle">Overlap between cited assets and expected doc_ids / sources when provided.</div>',
+            '<div class="card-subtitle">Overlap between prompt sources and expected doc_ids / sources when provided.</div>',
             unsafe_allow_html=True,
         )
         _metric_row(
@@ -336,9 +336,9 @@ def render_manual_evaluation_result(
                 st.markdown("**Sources**")
                 st.caption("Matched")
                 st.code("\n".join(comp.matched_sources) or "—", language="text")
-                st.caption("Missing (expected but not cited)")
+                st.caption("Missing (expected but not in prompt sources)")
                 st.code("\n".join(comp.missing_sources) or "—", language="text")
-                st.caption("Retrieved / cited (order preserved)")
+                st.caption("Retrieved / prompt sources (order preserved)")
                 st.code("\n".join(comp.retrieved_sources) or "—", language="text")
                 st.caption("Expected sources (full list)")
                 st.code("\n".join(comp.expected_sources) or "—", language="text")

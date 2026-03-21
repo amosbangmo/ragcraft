@@ -112,7 +112,7 @@ class PipelineBuildResult:
     reranked_raw_assets: list[dict[str, Any]] = field(default_factory=list)
     prompt_context_assets: list[dict[str, Any]] = field(default_factory=list)
     context_compression: ContextCompressionStats = field(default_factory=ContextCompressionStats)
-    source_references: list[dict[str, Any]] = field(default_factory=list)
+    prompt_sources: list[dict[str, Any]] = field(default_factory=list)
     image_context_enriched: bool = False
     multimodal_analysis: dict[str, Any] = field(default_factory=dict)
     multimodal_orchestration_hint: str | None = None
@@ -147,7 +147,7 @@ class PipelineBuildResult:
             "reranked_raw_assets": self.reranked_raw_assets,
             "prompt_context_assets": self.prompt_context_assets,
             "context_compression": self.context_compression.to_dict(),
-            "source_references": self.source_references,
+            "prompt_sources": self.prompt_sources,
             "image_context_enriched": self.image_context_enriched,
             "multimodal_analysis": dict(self.multimodal_analysis),
             "multimodal_orchestration_hint": self.multimodal_orchestration_hint,

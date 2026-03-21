@@ -1,11 +1,11 @@
 import unittest
 
-from src.services.source_citation_service import SourceCitationService
+from src.services.prompt_source_service import PromptSourceService
 
 
-class TestSourceCitationService(unittest.TestCase):
+class TestPromptSourceService(unittest.TestCase):
     def setUp(self) -> None:
-        self.svc = SourceCitationService()
+        self.svc = PromptSourceService()
 
     def test_section_and_page_in_prompt_label(self) -> None:
         assets = [
@@ -21,12 +21,12 @@ class TestSourceCitationService(unittest.TestCase):
                 },
             }
         ]
-        cites = self.svc.build_citations(assets)
-        self.assertEqual(len(cites), 1)
-        self.assertIn("Section: Introduction", cites[0].display_label)
-        self.assertIn("[Section: Introduction]", cites[0].prompt_label)
-        self.assertIn("[Page 2]", cites[0].prompt_label)
-        self.assertIn("[Element 1]", cites[0].prompt_label)
+        sources = self.svc.build_prompt_sources(assets)
+        self.assertEqual(len(sources), 1)
+        self.assertIn("Section: Introduction", sources[0].display_label)
+        self.assertIn("[Section: Introduction]", sources[0].prompt_label)
+        self.assertIn("[Page 2]", sources[0].prompt_label)
+        self.assertIn("[Element 1]", sources[0].prompt_label)
 
     def test_no_section_unchanged_shape(self) -> None:
         assets = [
@@ -37,8 +37,8 @@ class TestSourceCitationService(unittest.TestCase):
                 "metadata": {},
             }
         ]
-        cites = self.svc.build_citations(assets)
-        self.assertEqual(cites[0].prompt_label, "[Source 1]")
+        sources = self.svc.build_prompt_sources(assets)
+        self.assertEqual(sources[0].prompt_label, "[Source 1]")
 
 
 if __name__ == "__main__":

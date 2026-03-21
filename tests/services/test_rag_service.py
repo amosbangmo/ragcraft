@@ -103,7 +103,7 @@ from src.core.exceptions import LLMServiceError
 from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
-from src.domain.source_citation import SourceCitation
+from src.domain.prompt_source import PromptSource
 from src.services.confidence_service import ConfidenceService
 from src.services.rag_service import RAGService
 
@@ -283,8 +283,8 @@ class TestRAGService(unittest.TestCase):
                 "summary": "summary",
             }
         ]
-        citations = [
-            SourceCitation(
+        prompt_sources_objs = [
+            PromptSource(
                 source_number=1,
                 doc_id="d1",
                 source_file="f1",
@@ -309,9 +309,9 @@ class TestRAGService(unittest.TestCase):
                 },
             ),
             patch.object(
-                service.pipeline_assembly_service.source_citation_service,
-                "build_citations",
-                return_value=citations,
+                service.pipeline_assembly_service.prompt_source_service,
+                "build_prompt_sources",
+                return_value=prompt_sources_objs,
             ),
             patch.object(
                 service.pipeline_assembly_service.prompt_builder_service,
@@ -335,7 +335,7 @@ class TestRAGService(unittest.TestCase):
         self.assertIsNotNone(payload)
         self.assertEqual(payload.rewritten_question, "rewritten")
         self.assertEqual(payload.selected_doc_ids, ["d1"])
-        self.assertEqual(payload.source_references[0]["doc_id"], "d1")
+        self.assertEqual(payload.prompt_sources[0]["doc_id"], "d1")
         expected_confidence = ConfidenceService().compute_confidence(
             reranked_raw_assets=reranked_assets,
         )
@@ -380,7 +380,7 @@ class TestRAGService(unittest.TestCase):
             prompt="prompt text",
             selected_summary_docs=[Document(page_content="sum", metadata={"doc_id": "d1"})],
             reranked_raw_assets=[{"doc_id": "d1"}],
-            source_references=[{"doc_id": "d1"}],
+            prompt_sources=[{"doc_id": "d1"}],
             confidence=0.8,
             context_compression=ContextCompressionStats(
                 enabled=True,
@@ -418,7 +418,7 @@ class TestRAGService(unittest.TestCase):
             prompt="prompt text",
             selected_summary_docs=[],
             reranked_raw_assets=[],
-            source_references=[],
+            prompt_sources=[],
             confidence=0.0,
         )
 
@@ -436,7 +436,7 @@ class TestRAGService(unittest.TestCase):
             rewritten_question="rw",
             selected_summary_docs=[],
             reranked_raw_assets=[],
-            source_references=[],
+            prompt_sources=[],
             confidence=0.7,
             selected_doc_ids=["d1"],
             recalled_doc_ids=["d1", "d2"],

@@ -14,7 +14,7 @@ from src.domain.pipeline_payloads import (
     SummaryRecallResult,
 )
 from src.domain.project import Project
-from src.domain.source_citation import SourceCitation
+from src.domain.prompt_source import PromptSource
 from src.services.confidence_service import ConfidenceService
 from src.services.contextual_compression_service import ContextualCompressionService
 from src.services.docstore_service import DocStoreService
@@ -23,14 +23,14 @@ from src.services.multimodal_orchestration_service import MultimodalOrchestratio
 from src.services.prompt_builder_service import PromptBuilderService
 from src.services.reranking_service import RerankingService
 from src.services.section_retrieval_service import SectionRetrievalService
-from src.services.source_citation_service import SourceCitationService
+from src.services.prompt_source_service import PromptSourceService
 from src.services.table_qa_service import TableQAService
 
 
 class PipelineAssemblyService:
     """
     After summary recall: rehydrate assets, expand sections, rerank, compress,
-    build citations, and assemble the final prompt context.
+    build prompt sources, and assemble the final prompt context.
     """
 
     def __init__(
@@ -43,7 +43,7 @@ class PipelineAssemblyService:
         self.reranking_service = reranking_service
         self.table_qa_service = table_qa_service
         self.confidence_service = ConfidenceService()
-        self.source_citation_service = SourceCitationService()
+        self.prompt_source_service = PromptSourceService()
         self.prompt_builder_service = PromptBuilderService(
             max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
             max_table_chars_per_asset=RETRIEVAL_CONFIG.max_table_chars_per_asset,
@@ -115,19 +115,21 @@ class PipelineAssemblyService:
         return list(by_doc.values())
 
     @staticmethod
-    def citation_to_dict(citation: SourceCitation) -> dict:
-        rerank_score = citation.metadata.get("rerank_score") if citation.metadata else None
+    def prompt_source_to_dict(prompt_source: PromptSource) -> dict:
+        rerank_score = (
+            prompt_source.metadata.get("rerank_score") if prompt_source.metadata else None
+        )
 
         return {
-            "source_number": citation.source_number,
-            "doc_id": citation.doc_id,
-            "source_file": citation.source_file,
-            "content_type": citation.content_type,
-            "page_label": citation.page_label,
-            "locator_label": citation.locator_label,
-            "display_label": citation.display_label,
-            "inline_label": citation.prompt_label,
-            "metadata": citation.metadata,
+            "source_number": prompt_source.source_number,
+            "doc_id": prompt_source.doc_id,
+            "source_file": prompt_source.source_file,
+            "content_type": prompt_source.content_type,
+            "page_label": prompt_source.page_label,
+            "locator_label": prompt_source.locator_label,
+            "display_label": prompt_source.display_label,
+            "inline_label": prompt_source.prompt_label,
+            "metadata": prompt_source.metadata,
             "rerank_score": rerank_score,
         }
 
@@ -231,8 +233,12 @@ class PipelineAssemblyService:
         )
 
         t0 = perf_counter()
-        citation_objects = self.source_citation_service.build_citations(prompt_context_assets)
-        source_references = [self.citation_to_dict(citation) for citation in citation_objects]
+        prompt_source_objects = self.prompt_source_service.build_prompt_sources(
+            prompt_context_assets
+        )
+        prompt_sources = [
+            self.prompt_source_to_dict(ps) for ps in prompt_source_objects
+        ]
 
         image_ctx_by_id, image_context_enriched = (
             self.prompt_builder_service.prepare_image_contexts(prompt_context_assets)
@@ -246,7 +252,7 @@ class PipelineAssemblyService:
 
         raw_context = self.prompt_builder_service.build_raw_context(
             raw_assets=prompt_context_assets,
-            citations=citation_objects,
+            prompt_sources=prompt_source_objects,
             image_context_by_doc_id=image_ctx_by_id,
             asset_groups=asset_groups,
             max_text_chars_per_asset=settings.max_text_chars_per_asset,
@@ -315,7 +321,7 @@ class PipelineAssemblyService:
             reranked_raw_assets=reranked_raw_assets,
             prompt_context_assets=prompt_context_assets,
             context_compression=context_compression,
-            source_references=source_references,
+            prompt_sources=prompt_sources,
             image_context_enriched=image_context_enriched,
             multimodal_analysis=multimodal_analysis,
             multimodal_orchestration_hint=multimodal_orchestration_hint,

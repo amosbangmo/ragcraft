@@ -44,7 +44,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
     q_key = f"manual_eval_question_{wk}"
 
     st.caption(
-        "Inspect one question interactively: run the pipeline, then review answer quality, citations, "
+        "Inspect one question interactively: run the pipeline, then review answer quality, prompt sources, "
         "retrieval, and issues. Raw evidence stays collapsed unless you expand it."
     )
 
@@ -63,7 +63,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
 
     st.markdown("##### Optional expectations (for this run only)")
     st.caption(
-        "These values are not saved to the gold QA dataset. Use them to score retrieval, citations, "
+        "These values are not saved to the gold QA dataset. Use them to score retrieval, prompt sources, "
         "and answer overlap locally."
     )
     manual_expected_answer = st.text_area(

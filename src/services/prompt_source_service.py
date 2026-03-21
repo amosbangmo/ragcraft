@@ -1,9 +1,9 @@
-from src.domain.source_citation import SourceCitation
+from src.domain.prompt_source import PromptSource
 
 
-class SourceCitationService:
-    def build_citations(self, raw_assets: list[dict]) -> list[SourceCitation]:
-        citations: list[SourceCitation] = []
+class PromptSourceService:
+    def build_prompt_sources(self, raw_assets: list[dict]) -> list[PromptSource]:
+        prompt_sources: list[PromptSource] = []
 
         for index, asset in enumerate(raw_assets, start=1):
             metadata = asset.get("metadata", {}) or {}
@@ -28,8 +28,8 @@ class SourceCitationService:
                 locator_label=locator_label,
             )
 
-            citations.append(
-                SourceCitation(
+            prompt_sources.append(
+                PromptSource(
                     source_number=index,
                     doc_id=doc_id,
                     source_file=source_file,
@@ -42,7 +42,7 @@ class SourceCitationService:
                 )
             )
 
-        return citations
+        return prompt_sources
 
     def _build_page_label(self, metadata: dict) -> str | None:
         page_number = metadata.get("page_number")

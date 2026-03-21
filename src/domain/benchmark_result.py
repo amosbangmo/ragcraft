@@ -39,6 +39,8 @@ class BenchmarkRow:
     ``has_hallucination`` (boolean). The unified judge also adds
     ``groundedness_score``, ``citation_faithfulness_score``, and
     ``answer_relevance_score`` (mirrors of the above for explicit naming).
+    Fields named ``citation_*`` for doc/source overlap compare **prompt sources**
+    (sources provided in the prompt) to gold expectations, not parsed answer citations.
     """
 
     entry_id: int

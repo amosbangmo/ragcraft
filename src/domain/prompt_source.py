@@ -3,7 +3,11 @@ from typing import Any
 
 
 @dataclass
-class SourceCitation:
+class PromptSource:
+    """
+    A source provided to the model in the prompt (not necessarily cited in the answer).
+    """
+
     source_number: int
     doc_id: str
     source_file: str
