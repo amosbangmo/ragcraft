@@ -74,7 +74,7 @@ def _render_correlation_analysis(
     with st.expander("Correlation analysis", expanded=False):
         st.caption(
             "Pearson correlation (r) across rows. Answer correctness uses token **F1** vs the gold answer. "
-            "Prompt-source metrics use **source-level** precision/recall. |r| ≥ 0.6 is treated as a strong linear association."
+            "Prompt overlap uses **doc ID** precision/recall from prompt sources. |r| ≥ 0.6 is treated as a strong linear association."
         )
         if not correlations:
             st.caption("Correlations are attached after each dataset evaluation run.")
@@ -192,7 +192,7 @@ def _render_failure_analysis(
 ) -> None:
     with st.expander("Failure analysis", expanded=False):
         st.caption(
-            "Heuristic tags from retrieval, judge scores, prompt-source overlap metrics, and gold answer F1. "
+            "Heuristic tags from retrieval, judge scores, prompt doc ID overlap, and gold answer F1. "
             "A row may match several types. Metrics missing on a row skip that rule. "
             "If this session predates failure analysis, counts are recomputed from the table below."
         )
@@ -297,10 +297,16 @@ def _render_failure_analysis(
                             st.write(f"{ex.get('recall_at_k', '—')} / {ex.get('answer_f1', '—')}")
                         with c2:
                             st.caption("grounded / hallucination")
-                            st.write(f"{ex.get('groundedness', '—')} / {ex.get('hallucination_score', '—')}")
+                            st.write(
+                                f"{ex.get('groundedness_score', ex.get('groundedness', '—'))} / "
+                                f"{ex.get('hallucination_score', '—')}"
+                            )
                         with c3:
                             st.caption("relevance / confidence")
-                            st.write(f"{ex.get('answer_relevance', '—')} / {ex.get('confidence', '—')}")
+                            st.write(
+                                f"{ex.get('answer_relevance_score', ex.get('answer_relevance', '—'))} / "
+                                f"{ex.get('confidence', '—')}"
+                            )
 
 
 def _numeric_series(df: pd.DataFrame, *candidates: str) -> pd.Series | None:
@@ -574,10 +580,8 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             )
         with h2:
             _histogram_bar_chart(
-                "Prompt source alignment",
-                _numeric_series(
-                    df, "prompt_source_alignment_score", "prompt_source_alignment", "citation_faithfulness_score", "citation_faithfulness"
-                ),
+                "Answer F1 (gold)",
+                _numeric_series(df, "answer_f1"),
             )
         with h3:
             _histogram_bar_chart(
@@ -593,8 +597,8 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         st.markdown("##### Trends by query index")
         trend_parts: dict[str, pd.Series] = {}
         for label, candidates in (
-            ("groundedness_score", ("groundedness_score", "groundedness")),
-            ("answer_relevance_score", ("answer_relevance_score", "answer_relevance")),
+            ("groundedness_score", ("groundedness_score",)),
+            ("answer_relevance_score", ("answer_relevance_score",)),
             ("confidence", ("confidence",)),
         ):
             s = _numeric_series(df, *candidates)
@@ -669,38 +673,24 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("Confidence vs groundedness: missing columns.")
 
         rel = _numeric_series(df, "answer_relevance_score", "answer_relevance")
-        prompt_align = _numeric_series(
-            df,
-            "prompt_source_alignment_score",
-            "prompt_source_alignment",
-            "citation_faithfulness_score",
-            "citation_faithfulness",
-        )
-        if rel is not None and prompt_align is not None:
-            scatter2 = pd.DataFrame(
-                {"prompt_source_alignment_score": prompt_align, "answer_relevance_score": rel}
-            ).dropna()
+        g3 = _numeric_series(df, "groundedness_score", "groundedness")
+        if rel is not None and g3 is not None:
+            scatter2 = pd.DataFrame({"groundedness_score": g3, "answer_relevance_score": rel}).dropna()
             if len(scatter2) >= 1:
-                st.caption("Answer relevance vs prompt source alignment (judge; uses prompt sources + context)")
+                st.caption("Answer relevance vs groundedness (judge scores)")
                 sc2_chart = (
                     alt.Chart(scatter2)
                     .mark_circle()
                     .encode(
-                        x=alt.X(
-                            "prompt_source_alignment_score:Q",
-                            axis=_FLOAT_AXIS_2DP,
-                        ),
-                        y=alt.Y(
-                            "answer_relevance_score:Q",
-                            axis=_FLOAT_AXIS_2DP,
-                        ),
+                        x=alt.X("groundedness_score:Q", axis=_FLOAT_AXIS_2DP),
+                        y=alt.Y("answer_relevance_score:Q", axis=_FLOAT_AXIS_2DP),
                     )
                 )
                 st.altair_chart(sc2_chart, use_container_width=True)
             else:
-                st.caption("Not enough paired relevance / prompt source alignment points.")
+                st.caption("Not enough paired groundedness / relevance points.")
         else:
-            st.caption("Relevance vs prompt source alignment: missing columns.")
+            st.caption("Groundedness vs relevance: missing columns.")
 
 
 def render_evaluation_dashboard(
@@ -748,19 +738,17 @@ def render_evaluation_dashboard(
 
     with section_card(
         title="LLM-as-a-judge",
-        subtitle="Groundedness, prompt source alignment, relevance, hallucination score, and flagged-row rate.",
+        subtitle="Groundedness, relevance, hallucination score, and flagged-row rate.",
         min_height=0,
     ):
-        j1, j2, j3, j4, j5 = st.columns(5)
+        j1, j2, j3, j4 = st.columns(4)
         with j1:
             _summary_metric(summary, "avg_groundedness", "Groundedness")
         with j2:
-            _summary_metric(summary, "avg_prompt_source_alignment", "Prompt source alignment")
-        with j3:
             _summary_metric(summary, "avg_answer_relevance", "Relevance")
-        with j4:
+        with j3:
             _summary_metric(summary, "avg_hallucination_score", "Hallucination")
-        with j5:
+        with j4:
             _summary_metric(summary, "hallucination_rate", "Hallucination rate", as_percent=True)
 
     if multimodal_metrics:

@@ -11,9 +11,6 @@ class ManualEvaluationAnswerQuality:
     answer_relevance_score: float | None
     hallucination_score: float | None
     has_hallucination: bool | None
-    answer_exact_match: float | None
-    answer_precision: float | None
-    answer_recall: float | None
     answer_f1: float | None
 
     def to_dict(self) -> dict[str, Any]:
@@ -25,10 +22,6 @@ class ManualEvaluationPromptSourceQuality:
     prompt_doc_id_precision: float | None
     prompt_doc_id_recall: float | None
     prompt_doc_id_f1: float | None
-    prompt_source_precision: float | None
-    prompt_source_recall: float | None
-    prompt_source_f1: float | None
-    prompt_source_alignment_score: float | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

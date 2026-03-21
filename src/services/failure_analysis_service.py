@@ -145,7 +145,7 @@ class FailureAnalysisService:
             has_gold = False
         answer_f1 = _coerce_float(row.get("answer_f1"))
 
-        groundedness = _coerce_float(row.get("groundedness"))
+        groundedness = _coerce_float(row.get("groundedness_score", row.get("groundedness")))
         prompt_doc_id_prec = _coerce_float(
             row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))
         )
@@ -165,7 +165,7 @@ class FailureAnalysisService:
         if (hall_score is not None and hall_score < self._hall) or hall_flag is True:
             labels.append("hallucination")
 
-        rel = _coerce_float(row.get("answer_relevance"))
+        rel = _coerce_float(row.get("answer_relevance_score", row.get("answer_relevance")))
         if rel is not None and rel < self._q:
             labels.append("low_relevance")
 
@@ -223,9 +223,11 @@ class FailureAnalysisService:
             "answer_preview": row.get("answer_preview") if isinstance(row.get("answer_preview"), str) else "",
             "recall_at_k": _coerce_float(row.get("recall_at_k")),
             "answer_f1": _coerce_float(row.get("answer_f1")),
-            "groundedness": _coerce_float(row.get("groundedness")),
+            "groundedness_score": _coerce_float(row.get("groundedness_score", row.get("groundedness"))),
             "hallucination_score": _coerce_float(row.get("hallucination_score")),
-            "answer_relevance": _coerce_float(row.get("answer_relevance")),
+            "answer_relevance_score": _coerce_float(
+                row.get("answer_relevance_score", row.get("answer_relevance"))
+            ),
             "confidence": _coerce_float(row.get("confidence")),
             "prompt_doc_id_precision": _coerce_float(
                 row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))

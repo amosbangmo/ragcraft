@@ -34,13 +34,11 @@ class BenchmarkRow:
     The ``data`` payload intentionally stays flexible so the evaluation layer can
     evolve incrementally without forcing a broad refactor across the UI.
 
-    Common LLM-judge fields include ``groundedness``, ``prompt_source_alignment``,
-    ``answer_relevance``, and ``hallucination_score`` (0–1 when configured), plus
-    ``has_hallucination`` (boolean). The unified judge also adds
-    ``groundedness_score``, ``prompt_source_alignment_score``, and
-    ``answer_relevance_score`` (mirrors of the above for explicit naming).
-    Fields named ``prompt_*`` for doc/source overlap compare **prompt sources**
-    (sources provided in the prompt) to gold expectations, not parsed answer citations.
+    LLM-judge fields use canonical keys ``groundedness_score``,
+    ``answer_relevance_score``, ``hallucination_score`` (0–1 when configured), and
+    ``has_hallucination`` (boolean).
+    Prompt doc ID overlap metrics (``prompt_doc_id_*``) compare **prompt sources**
+    (assets in the prompt) to gold ``expected_doc_ids``, not parsed answer citations.
     """
 
     entry_id: int
@@ -64,9 +62,9 @@ class BenchmarkSummary:
     the project move from dict-based evaluation to typed results without forcing
     every future metric to become a top-level dataclass field immediately.
 
-    Aggregate judge metrics include ``avg_groundedness``,
-    ``avg_prompt_source_alignment``, ``avg_answer_relevance``, ``avg_hallucination_score``,
-    and ``hallucination_rate`` (fraction of rows with ``has_hallucination`` true).
+    Aggregate judge metrics include ``avg_groundedness``, ``avg_answer_relevance``,
+    ``avg_hallucination_score``, and ``hallucination_rate`` (fraction of rows with
+    ``has_hallucination`` true).
     """
 
     data: dict[str, Any] = field(default_factory=dict)

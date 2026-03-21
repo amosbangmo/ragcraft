@@ -57,7 +57,7 @@ class TestMultimodalMetrics(unittest.TestCase):
                 "mixed_modality_prompt": False,
                 "has_expected_answer": True,
                 "answer_f1": 0.8,
-                "groundedness": 0.9,
+                "groundedness_score": 0.9,
             },
             {
                 **empty_modality_row_fields(),
@@ -67,7 +67,7 @@ class TestMultimodalMetrics(unittest.TestCase):
                 "mixed_modality_prompt": True,
                 "has_expected_answer": True,
                 "answer_f1": 0.5,
-                "groundedness": 0.4,
+                "groundedness_score": 0.4,
             },
         ]
         agg = aggregate_multimodal_metrics(rows)

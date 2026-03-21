@@ -19,7 +19,6 @@ class TestLLMJudgeService(unittest.TestCase):
             r,
             LLMJudgeResult(
                 groundedness_score=0.0,
-                prompt_source_alignment_score=0.0,
                 answer_relevance_score=0.0,
                 hallucination_score=1.0,
                 has_hallucination=False,
@@ -31,7 +30,7 @@ class TestLLMJudgeService(unittest.TestCase):
     def test_parse_full_json(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
-                '{"groundedness_score": 0.9, "prompt_source_alignment_score": 0.85, '
+                '{"groundedness_score": 0.9, '
                 '"answer_relevance_score": 0.88, "hallucination_score": 0.92, '
                 '"has_hallucination": false, "reason": "ok"}'
             )
@@ -43,17 +42,16 @@ class TestLLMJudgeService(unittest.TestCase):
             prompt_sources=[{"doc_id": "d1"}],
         )
         self.assertEqual(r.groundedness_score, 0.9)
-        self.assertEqual(r.prompt_source_alignment_score, 0.85)
         self.assertEqual(r.answer_relevance_score, 0.88)
         self.assertEqual(r.hallucination_score, 0.92)
         self.assertFalse(r.has_hallucination)
         self.assertEqual(r.reason, "ok")
 
     @patch("src.services.llm_judge_service.LLM")
-    def test_legacy_prompt_source_alignment_json_key_still_parsed(self, mock_llm: MagicMock) -> None:
+    def test_extra_legacy_keys_in_json_are_ignored(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
-                '{"groundedness_score": 0.8, "citation_faithfulness_score": 0.77, '
+                '{"groundedness_score": 0.8, "prompt_source_alignment_score": 0.77, '
                 '"answer_relevance_score": 0.7, "hallucination_score": 0.9, '
                 '"has_hallucination": false}'
             )
@@ -64,13 +62,14 @@ class TestLLMJudgeService(unittest.TestCase):
             raw_context="c",
             prompt_sources=[],
         )
-        self.assertEqual(r.prompt_source_alignment_score, 0.77)
+        self.assertEqual(r.groundedness_score, 0.8)
+        self.assertEqual(r.answer_relevance_score, 0.7)
 
     @patch("src.services.llm_judge_service.LLM")
     def test_strips_markdown_fence(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content="```json\n"
-            '{"groundedness_score": 1, "prompt_source_alignment_score": 1, '
+            '{"groundedness_score": 1, '
             '"answer_relevance_score": 1, "hallucination_score": 1, '
             '"has_hallucination": false}\n'
             "```"
@@ -110,7 +109,6 @@ class TestLLMJudgeService(unittest.TestCase):
     def test_regex_fallback_when_json_invalid(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content='noise {"groundedness_score": 0.7, "garbage" trailing '
-            '"prompt_source_alignment_score": 0.71 '
             '"answer_relevance_score": 0.72 '
             '"hallucination_score": 0.73, "has_hallucination": true}'
         )
@@ -121,7 +119,6 @@ class TestLLMJudgeService(unittest.TestCase):
             prompt_sources=[],
         )
         self.assertEqual(r.groundedness_score, 0.7)
-        self.assertEqual(r.prompt_source_alignment_score, 0.71)
         self.assertEqual(r.answer_relevance_score, 0.72)
         self.assertEqual(r.hallucination_score, 0.73)
         self.assertTrue(r.has_hallucination)

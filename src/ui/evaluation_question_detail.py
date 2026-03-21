@@ -54,13 +54,13 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         with c1:
             render_metric_with_help(
                 label="Groundedness",
-                value=_f(row.get("groundedness_score", row.get("groundedness"))),
+                value=_f(row.get("groundedness_score")),
                 metric_key="groundedness_score",
             )
         with c2:
             render_metric_with_help(
                 label="Answer relevance",
-                value=_f(row.get("answer_relevance_score", row.get("answer_relevance"))),
+                value=_f(row.get("answer_relevance_score")),
                 metric_key="answer_relevance_score",
             )
         with c3:
@@ -69,7 +69,7 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 value=_f(row.get("hallucination_score")),
                 metric_key="hallucination_score",
             )
-        c4, c5, c6 = st.columns(3)
+        c4, c5 = st.columns(2)
         with c4:
             render_metric_with_help(
                 label="Has hallucination",
@@ -82,24 +82,18 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
                 value=_f(row.get("answer_f1")),
                 metric_key="answer_f1",
             )
-        with c6:
-            render_metric_with_help(
-                label="Exact match (gold)",
-                value=_f(row.get("answer_exact_match")),
-                metric_key="answer_exact_match",
-            )
 
     with section_card(
         title="Prompt source quality",
-        subtitle="Prompt-source overlap with expected doc IDs and sources.",
+        subtitle="Prompt-source doc IDs vs gold expected doc IDs.",
         min_height=0,
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
             render_metric_with_help(
-                label="Prompt doc ID F1",
-                value=_f(row.get("prompt_doc_id_f1", row.get("citation_doc_id_f1"))),
-                metric_key="prompt_doc_id_f1",
+                label="Prompt doc ID precision",
+                value=_f(row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))),
+                metric_key="prompt_doc_id_precision",
             )
         with c2:
             render_metric_with_help(
@@ -109,39 +103,22 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
         with c3:
             render_metric_with_help(
-                label="Prompt source alignment",
-                value=_f(
-                    row.get(
-                        "prompt_source_alignment_score",
-                        row.get(
-                            "citation_faithfulness_score",
-                            row.get(
-                                "prompt_source_alignment",
-                                row.get("citation_faithfulness"),
-                            ),
-                        ),
-                    )
-                ),
-                metric_key="prompt_source_alignment_score",
+                label="Prompt doc ID F1",
+                value=_f(row.get("prompt_doc_id_f1", row.get("citation_doc_id_f1"))),
+                metric_key="prompt_doc_id_f1",
             )
-        c4, c5, c6 = st.columns(3)
+        c4, c5 = st.columns(2)
         with c4:
             render_metric_with_help(
-                label="Prompt source F1",
-                value=_f(row.get("prompt_source_f1", row.get("citation_source_f1"))),
-                metric_key="prompt_source_f1",
+                label="Cited doc IDs (count)",
+                value=_f(row.get("cited_doc_ids_count")),
+                metric_key="cited_doc_ids_count",
             )
         with c5:
             render_metric_with_help(
-                label="Prompt source recall",
-                value=_f(row.get("prompt_source_recall", row.get("citation_source_recall"))),
-                metric_key="prompt_source_recall",
-            )
-        with c6:
-            render_metric_with_help(
-                label="Prompt source doc IDs",
-                value=_f(row.get("cited_doc_ids_count")),
-                metric_key="cited_doc_ids_count",
+                label="Prompt doc ID overlap",
+                value=_f(row.get("prompt_doc_id_overlap_count")),
+                metric_key="prompt_doc_id_overlap_count",
             )
 
     with section_card(
@@ -257,10 +234,10 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         flags: list[str] = []
         if row.get("has_hallucination"):
             flags.append("Hallucination flagged by judge")
-        g = row.get("groundedness_score", row.get("groundedness"))
+        g = row.get("groundedness_score")
         if isinstance(g, (int, float)) and g < 0.5:
             flags.append("Low groundedness")
-        ar = row.get("answer_relevance_score", row.get("answer_relevance"))
+        ar = row.get("answer_relevance_score")
         if isinstance(ar, (int, float)) and ar < 0.5:
             flags.append("Low answer relevance")
         dr = row.get("recall_at_k")

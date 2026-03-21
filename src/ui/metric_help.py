@@ -66,28 +66,6 @@ METRIC_HELP: dict[str, str] = {
         "Mean average precision over questions: ranking quality when several relevant docs matter. "
         "Higher is better."
     ),
-    "answer_exact_match": (
-        "Token-level exact match score vs the expected answer when provided. "
-        "Closer to 1 is better."
-    ),
-    "answer_exact_match_rate": (
-        "Average exact-match score across rows with an expected answer. "
-        "Closer to 1 is better."
-    ),
-    "answer_precision": (
-        "Precision of the answer vs the gold text (token overlap). "
-        "Higher is better when an expected answer exists."
-    ),
-    "avg_answer_precision": (
-        "Mean answer precision across rows with gold answers. Higher is better."
-    ),
-    "answer_recall": (
-        "Recall of the answer vs the gold text (token overlap). "
-        "Higher is better when an expected answer exists."
-    ),
-    "avg_answer_recall": (
-        "Mean answer recall across rows with gold answers. Higher is better."
-    ),
     "answer_f1": (
         "Harmonic mean of answer precision and recall vs gold. "
         "Closer to 1 is better."
@@ -95,32 +73,15 @@ METRIC_HELP: dict[str, str] = {
     "avg_answer_f1": (
         "Mean answer F1 across rows with gold answers. Closer to 1 is better."
     ),
-    "groundedness": (
+    "groundedness_score": (
         "Judge score: how well the answer stays supported by retrieved evidence. "
         "Closer to 1 is better."
-    ),
-    "groundedness_score": (
-        "Same as groundedness: evidence alignment for the answer. Closer to 1 is better."
     ),
     "avg_groundedness": (
         "Mean groundedness over the run. Closer to 1 is better."
     ),
-    "prompt_source_alignment": (
-        "Judge score: whether the answer aligns with the prompt sources and retrieved context. "
-        "Closer to 1 is better."
-    ),
-    "prompt_source_alignment_score": (
-        "Same as prompt source alignment (judge metric key). Closer to 1 is better."
-    ),
-    "avg_prompt_source_alignment": (
-        "Mean prompt source alignment over the run (judge metric). Closer to 1 is better."
-    ),
-    "answer_relevance": (
-        "Judge score: how well the answer addresses the question. "
-        "Closer to 1 is better."
-    ),
     "answer_relevance_score": (
-        "Same as answer relevance. Closer to 1 is better."
+        "Judge score: how well the answer addresses the question. Closer to 1 is better."
     ),
     "avg_answer_relevance": (
         "Mean answer relevance over the run. Closer to 1 is better."
@@ -158,26 +119,11 @@ METRIC_HELP: dict[str, str] = {
     "avg_prompt_doc_id_f1": (
         "Mean prompt doc ID F1 (prompt sources). Closer to 1 is better."
     ),
-    "prompt_source_precision": (
-        "Precision of prompt sources vs expected sources. Higher is better."
-    ),
-    "avg_prompt_source_precision": (
-        "Mean prompt source precision (prompt sources). Higher is better."
-    ),
-    "prompt_source_recall": (
-        "Recall of expected sources among prompt sources. Higher is better."
-    ),
-    "avg_prompt_source_recall": (
-        "Mean prompt source recall (prompt sources). Higher is better."
-    ),
-    "prompt_source_f1": (
-        "F1 for prompt sources vs expected sources. Closer to 1 is better."
-    ),
-    "avg_prompt_source_f1": (
-        "Mean prompt source F1 (prompt sources). Closer to 1 is better."
-    ),
     "cited_doc_ids_count": (
         "Number of distinct document IDs in prompt sources for this row."
+    ),
+    "prompt_doc_id_overlap_count": (
+        "Count of expected doc IDs that also appear in prompt sources for this row."
     ),
     "retrieved_doc_ids_count": (
         "Count of distinct doc IDs returned by retrieval for this question."
@@ -195,9 +141,6 @@ METRIC_HELP: dict[str, str] = {
     ),
     "prompt_doc_id_hit_rate": (
         "Share of entries where prompt sources overlap expected doc IDs. Higher is better."
-    ),
-    "prompt_source_hit_rate": (
-        "Share of entries where prompt sources overlap expected sources. Higher is better."
     ),
     "retrieval_mode": (
         "Which retrieval path ran for this query (for example vector-only vs hybrid)."

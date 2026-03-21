@@ -71,22 +71,15 @@ class EvaluationService:
         confidence_values: list[float] = []
         latency_values: list[float] = []
 
-        # Answer correctness metrics.
-        answer_exact_match_values: list[float] = []
-        answer_precision_values: list[float] = []
-        answer_recall_values: list[float] = []
+        # Gold answer overlap (summary focuses on F1).
         answer_f1_values: list[float] = []
 
-        # Prompt-source overlap metrics (vs gold expectations).
+        # Prompt doc ID overlap (prompt sources vs gold expectations).
         prompt_doc_id_precision_values: list[float] = []
         prompt_doc_id_recall_values: list[float] = []
         prompt_doc_id_f1_values: list[float] = []
-        prompt_source_precision_values: list[float] = []
-        prompt_source_recall_values: list[float] = []
-        prompt_source_f1_values: list[float] = []
 
         groundedness_values: list[float] = []
-        prompt_source_alignment_values: list[float] = []
         answer_relevance_values: list[float] = []
         hallucination_score_values: list[float] = []
         hallucination_flags: list[bool] = []
@@ -98,7 +91,6 @@ class EvaluationService:
         doc_id_hits = 0
         source_hits = 0
         prompt_doc_id_hits = 0
-        prompt_source_hits = 0
         successful_queries = 0
 
         for entry in entries:
@@ -145,33 +137,21 @@ class EvaluationService:
                     "source_overlap_count": 0,
                     "source_recall": 0.0,
                     "answer_preview": "",
-                    "answer_exact_match": 0.0,
-                    "answer_precision": 0.0,
-                    "answer_recall": 0.0,
                     "answer_f1": 0.0,
                     "cited_doc_ids_count": 0,
                     "prompt_doc_id_overlap_count": 0,
                     "prompt_doc_id_precision": 0.0,
                     "prompt_doc_id_recall": 0.0,
                     "prompt_doc_id_f1": 0.0,
-                    "cited_sources_count": 0,
-                    "prompt_source_overlap_count": 0,
-                    "prompt_source_precision": 0.0,
-                    "prompt_source_recall": 0.0,
-                    "prompt_source_f1": 0.0,
                     "confidence": 0.0,
                     "latency_ms": round(latency_ms, 1),
                     **_latency_stage_row_fields(merged_latency),
                     "retrieval_mode": "none",
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
-                    "groundedness": 0.0,
-                    "prompt_source_alignment": 0.0,
-                    "answer_relevance": 0.0,
                     "hallucination_score": 0.0,
                     "has_hallucination": True,
                     "groundedness_score": 0.0,
-                    "prompt_source_alignment_score": 0.0,
                     "answer_relevance_score": 0.0,
                     **empty_modality_row_fields(),
                 }
@@ -183,7 +163,6 @@ class EvaluationService:
                     )
                 )
                 groundedness_values.append(0.0)
-                prompt_source_alignment_values.append(0.0)
                 answer_relevance_values.append(0.0)
                 hallucination_score_values.append(0.0)
                 hallucination_flags.append(True)
@@ -216,17 +195,11 @@ class EvaluationService:
                 for ref in prompt_sources
                 if ref.get("doc_id")
             }
-            cited_sources = {
-                ref.get("source_file")
-                for ref in prompt_sources
-                if ref.get("source_file")
-            }
 
             doc_id_overlap_count = len(selected_doc_ids.intersection(expected_doc_ids))
             source_overlap_count = len(selected_sources.intersection(expected_sources))
 
             prompt_doc_id_overlap_count = len(cited_doc_ids.intersection(expected_doc_ids))
-            prompt_source_overlap_count = len(cited_sources.intersection(expected_sources))
 
             recall_at_k = 0.0
             source_recall = 0.0
@@ -234,17 +207,11 @@ class EvaluationService:
             reciprocal_rank = 0.0
             average_precision = 0.0
 
-            answer_exact_match = 0.0
-            answer_precision = 0.0
-            answer_recall = 0.0
             answer_f1 = 0.0
 
             prompt_doc_id_precision = 0.0
             prompt_doc_id_recall = 0.0
             prompt_doc_id_f1 = 0.0
-            prompt_source_precision = 0.0
-            prompt_source_recall = 0.0
-            prompt_source_f1 = 0.0
 
             if expected_doc_ids:
                 recall_at_k = doc_id_overlap_count / len(expected_doc_ids)
@@ -288,32 +255,12 @@ class EvaluationService:
                 if source_overlap_count > 0:
                     source_hits += 1
 
-                prompt_source_precision, prompt_source_recall, prompt_source_f1 = (
-                    self._compute_set_precision_recall_f1(
-                        predicted_values=cited_sources,
-                        expected_values=expected_sources,
-                    )
-                )
-                prompt_source_precision_values.append(prompt_source_precision)
-                prompt_source_recall_values.append(prompt_source_recall)
-                prompt_source_f1_values.append(prompt_source_f1)
-
-                if prompt_source_overlap_count > 0:
-                    prompt_source_hits += 1
-
             if expected_answer:
-                answer_exact_match = self._compute_answer_exact_match(
-                    generated_answer=answer,
-                    expected_answer=expected_answer,
-                )
-                answer_precision, answer_recall, answer_f1 = self._compute_answer_precision_recall_f1(
+                _ap, _ar, answer_f1 = self._compute_answer_precision_recall_f1(
                     generated_answer=answer,
                     expected_answer=expected_answer,
                 )
 
-                answer_exact_match_values.append(answer_exact_match)
-                answer_precision_values.append(answer_precision)
-                answer_recall_values.append(answer_recall)
                 answer_f1_values.append(answer_f1)
 
             confidence = float(pl.get("confidence", 0.0))
@@ -331,13 +278,11 @@ class EvaluationService:
                 prompt_sources=refs_for_judge,
             )
             groundedness = judge_result.groundedness_score
-            prompt_source_alignment = judge_result.prompt_source_alignment_score
             answer_relevance = judge_result.answer_relevance_score
             hallucination_score = judge_result.hallucination_score
             has_hallucination = judge_result.has_hallucination
 
             groundedness_values.append(groundedness)
-            prompt_source_alignment_values.append(prompt_source_alignment)
             answer_relevance_values.append(answer_relevance)
             hallucination_score_values.append(hallucination_score)
             hallucination_flags.append(has_hallucination)
@@ -356,33 +301,21 @@ class EvaluationService:
                 "source_overlap_count": source_overlap_count,
                 "source_recall": round(source_recall, 2),
                 "answer_preview": answer[:240],
-                "answer_exact_match": round(answer_exact_match, 2),
-                "answer_precision": round(answer_precision, 2),
-                "answer_recall": round(answer_recall, 2),
                 "answer_f1": round(answer_f1, 2),
                 "cited_doc_ids_count": len(cited_doc_ids),
                 "prompt_doc_id_overlap_count": prompt_doc_id_overlap_count,
                 "prompt_doc_id_precision": round(prompt_doc_id_precision, 2),
                 "prompt_doc_id_recall": round(prompt_doc_id_recall, 2),
                 "prompt_doc_id_f1": round(prompt_doc_id_f1, 2),
-                "cited_sources_count": len(cited_sources),
-                "prompt_source_overlap_count": prompt_source_overlap_count,
-                "prompt_source_precision": round(prompt_source_precision, 2),
-                "prompt_source_recall": round(prompt_source_recall, 2),
-                "prompt_source_f1": round(prompt_source_f1, 2),
                 "confidence": round(confidence, 2),
                 "latency_ms": round(latency_ms, 1),
                 **_latency_stage_row_fields(merged_latency),
                 "retrieval_mode": pl.get("retrieval_mode", "unknown"),
                 "query_rewrite_enabled": bool(pl.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pl.get("hybrid_retrieval_enabled", False)),
-                "groundedness": round(groundedness, 2),
-                "prompt_source_alignment": round(prompt_source_alignment, 2),
-                "answer_relevance": round(answer_relevance, 2),
                 "hallucination_score": round(hallucination_score, 2),
                 "has_hallucination": bool(has_hallucination),
                 "groundedness_score": round(judge_result.groundedness_score, 2),
-                "prompt_source_alignment_score": round(judge_result.prompt_source_alignment_score, 2),
                 "answer_relevance_score": round(judge_result.answer_relevance_score, 2),
                 **modality_row_fields_from_pipeline(pl),
             }
@@ -413,15 +346,6 @@ class EvaluationService:
             "source_hit_rate": round(source_hits / entries_with_expected_sources, 2)
             if entries_with_expected_sources
             else 0.0,
-            "answer_exact_match_rate": round(float(np.mean(answer_exact_match_values)), 2)
-            if answer_exact_match_values
-            else 0.0,
-            "avg_answer_precision": round(float(np.mean(answer_precision_values)), 2)
-            if answer_precision_values
-            else 0.0,
-            "avg_answer_recall": round(float(np.mean(answer_recall_values)), 2)
-            if answer_recall_values
-            else 0.0,
             "avg_answer_f1": round(float(np.mean(answer_f1_values)), 2)
             if answer_f1_values
             else 0.0,
@@ -434,26 +358,11 @@ class EvaluationService:
             "avg_prompt_doc_id_f1": round(float(np.mean(prompt_doc_id_f1_values)), 2)
             if prompt_doc_id_f1_values
             else 0.0,
-            "avg_prompt_source_precision": round(float(np.mean(prompt_source_precision_values)), 2)
-            if prompt_source_precision_values
-            else 0.0,
-            "avg_prompt_source_recall": round(float(np.mean(prompt_source_recall_values)), 2)
-            if prompt_source_recall_values
-            else 0.0,
-            "avg_prompt_source_f1": round(float(np.mean(prompt_source_f1_values)), 2)
-            if prompt_source_f1_values
-            else 0.0,
             "prompt_doc_id_hit_rate": round(prompt_doc_id_hits / entries_with_expected_doc_ids, 2)
             if entries_with_expected_doc_ids
             else 0.0,
-            "prompt_source_hit_rate": round(prompt_source_hits / entries_with_expected_sources, 2)
-            if entries_with_expected_sources
-            else 0.0,
             "avg_groundedness": round(float(np.mean(groundedness_values)), 2)
             if groundedness_values
-            else 0.0,
-            "avg_prompt_source_alignment": round(float(np.mean(prompt_source_alignment_values)), 2)
-            if prompt_source_alignment_values
             else 0.0,
             "avg_answer_relevance": round(float(np.mean(answer_relevance_values)), 2)
             if answer_relevance_values
@@ -563,9 +472,6 @@ class EvaluationService:
         if not normalized:
             return []
         return [token for token in normalized.split(" ") if token]
-
-    def _compute_answer_exact_match(self, *, generated_answer: str, expected_answer: str) -> float:
-        return float(self._normalize_text(generated_answer) == self._normalize_text(expected_answer))
 
     def _compute_answer_precision_recall_f1(
         self,

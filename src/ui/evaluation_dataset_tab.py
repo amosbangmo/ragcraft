@@ -109,7 +109,7 @@ def _render_dataset_evaluation_run_and_results(
     st.markdown("---")
     st.markdown("##### Run dataset evaluation")
     st.caption(
-        "Aggregated retrieval, answer, prompt-source overlap, and judge metrics over all gold QA entries."
+        "Aggregated retrieval, gold answer F1, prompt doc ID overlap, and judge metrics over all gold QA entries."
     )
 
     dataset_eval_col1, dataset_eval_col2 = st.columns(2)

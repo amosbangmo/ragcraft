@@ -109,21 +109,6 @@ def render_manual_evaluation_result(
                     "hallucination_score",
                 ),
                 ("Has hallucination", _fmt_bool(aq.has_hallucination), "has_hallucination"),
-                (
-                    "Exact match (gold)",
-                    _fmt_float(aq.answer_exact_match),
-                    "answer_exact_match",
-                ),
-            ]
-        )
-        _metric_row(
-            [
-                (
-                    "Answer precision (gold)",
-                    _fmt_float(aq.answer_precision),
-                    "answer_precision",
-                ),
-                ("Answer recall (gold)", _fmt_float(aq.answer_recall), "answer_recall"),
                 ("Answer F1 (gold)", _fmt_float(aq.answer_f1), "answer_f1"),
             ]
         )
@@ -134,7 +119,7 @@ def render_manual_evaluation_result(
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Prompt source quality</div>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="card-subtitle">Overlap between prompt sources and expected doc_ids / sources when provided.</div>',
+            '<div class="card-subtitle">Prompt-source doc IDs vs expected doc_ids when provided.</div>',
             unsafe_allow_html=True,
         )
         _metric_row(
@@ -153,34 +138,6 @@ def render_manual_evaluation_result(
                     "Prompt doc_id F1",
                     _fmt_float(cq.prompt_doc_id_f1),
                     "prompt_doc_id_f1",
-                ),
-            ]
-        )
-        _metric_row(
-            [
-                (
-                    "Prompt source P",
-                    _fmt_float(cq.prompt_source_precision),
-                    "prompt_source_precision",
-                ),
-                (
-                    "Prompt source R",
-                    _fmt_float(cq.prompt_source_recall),
-                    "prompt_source_recall",
-                ),
-                (
-                    "Prompt source F1",
-                    _fmt_float(cq.prompt_source_f1),
-                    "prompt_source_f1",
-                ),
-            ]
-        )
-        _metric_row(
-            [
-                (
-                    "Prompt source alignment",
-                    _fmt_float(cq.prompt_source_alignment_score),
-                    "prompt_source_alignment_score",
                 ),
             ]
         )
@@ -299,7 +256,12 @@ def render_manual_evaluation_result(
         for issue in result.detected_issues:
             if issue == "No answer generated":
                 st.error(issue)
-            elif issue in {"Hallucination detected", "Low groundedness", "Low answer relevance"}:
+            elif issue in {
+                "Hallucination detected",
+                "Low groundedness",
+                "Low answer relevance",
+                "Low prompt doc ID recall",
+            }:
                 st.warning(issue)
             else:
                 st.info(issue)

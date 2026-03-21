@@ -24,7 +24,7 @@ _MANUAL_EVAL_ENTRY_ID = 0
 _GROUNDEDNESS_LOW = 0.5
 _ANSWER_RELEVANCE_LOW = 0.5
 _HALLUCINATION_SCORE_LOW = 0.5
-_PROMPT_SOURCE_RECALL_LOW = 0.5
+_PROMPT_DOC_ID_RECALL_LOW = 0.5
 _RECALL_AT_K_LOW = 0.5
 _SOURCE_RECALL_LOW = 0.5
 _CONFIDENCE_LOW = 0.45
@@ -75,7 +75,7 @@ def detect_manual_evaluation_issues(
     has_hallucination: bool | None,
     recall_at_k: float | None,
     source_recall: float | None,
-    prompt_source_recall: float | None,
+    prompt_doc_id_recall: float | None,
     expected_doc_ids: list[str],
     expected_sources: list[str],
     expected_answer: str | None,
@@ -105,8 +105,10 @@ def detect_manual_evaluation_issues(
     if expected_sources:
         if source_recall is not None and source_recall < _SOURCE_RECALL_LOW:
             issues.append("No expected source retrieved")
-        if prompt_source_recall is not None and prompt_source_recall < _PROMPT_SOURCE_RECALL_LOW:
-            issues.append("Low prompt source recall")
+
+    if expected_doc_ids:
+        if prompt_doc_id_recall is not None and prompt_doc_id_recall < _PROMPT_DOC_ID_RECALL_LOW:
+            issues.append("Low prompt doc ID recall")
 
     if expected_answer and not answer_stripped:
         issues.append("Missing answer vs expected reference")
@@ -242,15 +244,6 @@ class ManualEvaluationService:
         answer_relevance = float(row.get("answer_relevance_score", row.get("answer_relevance", 0.0)))
         hallucination_score = float(row.get("hallucination_score", 0.0))
         has_hallucination = bool(row.get("has_hallucination", False))
-        prompt_align = float(
-            row.get(
-                "prompt_source_alignment_score",
-                row.get(
-                    "citation_faithfulness_score",
-                    row.get("prompt_source_alignment", row.get("citation_faithfulness", 0.0)),
-                ),
-            )
-        )
 
         recall_at_k_v = float(row.get("recall_at_k", 0.0)) if exp_docs else None
         source_recall_v = float(row.get("source_recall", 0.0)) if exp_src else None
@@ -274,23 +267,6 @@ class ManualEvaluationService:
             else None
         )
 
-        prompt_src_p = (
-            float(row.get("prompt_source_precision", row.get("citation_source_precision", 0.0)))
-            if exp_src
-            else None
-        )
-        prompt_src_r = (
-            float(row.get("prompt_source_recall", row.get("citation_source_recall", 0.0)))
-            if exp_src
-            else None
-        )
-        prompt_src_f1 = (
-            float(row.get("prompt_source_f1", row.get("citation_source_f1", 0.0))) if exp_src else None
-        )
-
-        answer_em = float(row.get("answer_exact_match", 0.0)) if exp_ans else None
-        answer_p = float(row.get("answer_precision", 0.0)) if exp_ans else None
-        answer_r = float(row.get("answer_recall", 0.0)) if exp_ans else None
         answer_f1 = float(row.get("answer_f1", 0.0)) if exp_ans else None
 
         answer_stripped = (answer or "").strip()
@@ -302,9 +278,6 @@ class ManualEvaluationService:
             answer_relevance_score=answer_relevance if has_pipeline else None,
             hallucination_score=hallucination_score if has_pipeline else None,
             has_hallucination=has_hallucination if has_pipeline else None,
-            answer_exact_match=answer_em,
-            answer_precision=answer_p,
-            answer_recall=answer_r,
             answer_f1=answer_f1,
         )
 
@@ -312,10 +285,6 @@ class ManualEvaluationService:
             prompt_doc_id_precision=prompt_doc_p,
             prompt_doc_id_recall=prompt_doc_r,
             prompt_doc_id_f1=prompt_doc_f1,
-            prompt_source_precision=prompt_src_p,
-            prompt_source_recall=prompt_src_r,
-            prompt_source_f1=prompt_src_f1,
-            prompt_source_alignment_score=prompt_align if has_pipeline else None,
         )
 
         retrieval_quality = ManualEvaluationRetrievalQuality(
@@ -347,7 +316,7 @@ class ManualEvaluationService:
             has_hallucination=has_hallucination if has_pipeline else None,
             recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
-            prompt_source_recall=prompt_src_r,
+            prompt_doc_id_recall=prompt_doc_r,
             expected_doc_ids=exp_docs,
             expected_sources=exp_src,
             expected_answer=exp_ans,
