@@ -16,7 +16,9 @@ from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.services.benchmark_report_service import BenchmarkExportArtifacts, BenchmarkReportService
+from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
+from src.domain.manual_evaluation_result import ManualEvaluationResult
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -341,6 +343,26 @@ class RAGCraftApp:
     def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
         project = self.get_project(user_id, project_id)
         return self.rag_service.ask(project, question, chat_history)
+
+    def evaluate_manual_question(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        question: str,
+        expected_answer: str | None = None,
+        expected_doc_ids: list[str] | None = None,
+        expected_sources: list[str] | None = None,
+    ) -> ManualEvaluationResult:
+        return ManualEvaluationService.evaluate_question(
+            app=self,
+            user_id=user_id,
+            project_id=project_id,
+            question=question,
+            expected_answer=expected_answer,
+            expected_doc_ids=expected_doc_ids,
+            expected_sources=expected_sources,
+        )
 
     def inspect_retrieval(
         self,

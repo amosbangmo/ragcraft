@@ -4,17 +4,15 @@ from datetime import datetime, timezone
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult
-from src.ui.confidence_display import format_confidence_with_band
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
-from src.ui.raw_assets import render_raw_assets
 from src.ui.request_runner import (
     is_request_running,
     run_request_action,
     render_result_payload,
 )
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
-from src.ui.source_citations import render_source_citations
+from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import (
@@ -83,19 +81,45 @@ if "qa_dataset_error_message" in st.session_state:
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Manual evaluation</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="card-subtitle">Run a single question and inspect the answer, citations, and raw evidence.</div>',
+    '<div class="card-subtitle">Run a single question with optional gold expectations and inspect structured quality signals, citations, and raw evidence.</div>',
     unsafe_allow_html=True,
 )
 
 question = st.text_input("Evaluation question", placeholder="Enter a test question...")
 
+st.markdown("##### Optional expectations (for this run only)")
+st.caption(
+    "These values are not saved to the gold QA dataset. Use them to score retrieval, citations, and answer overlap locally."
+)
+manual_expected_answer = st.text_area(
+    "Expected answer (optional)",
+    placeholder="Reference answer for token overlap and exact-match metrics.",
+    height=100,
+    key="manual_eval_expected_answer",
+)
+col_me1, col_me2 = st.columns(2)
+with col_me1:
+    manual_expected_doc_ids = st.text_input(
+        "Expected doc_ids (optional, comma-separated)",
+        placeholder="doc_1, doc_2",
+        key="manual_eval_expected_doc_ids",
+    )
+with col_me2:
+    manual_expected_sources = st.text_input(
+        "Expected source files (optional, comma-separated)",
+        placeholder="report.pdf, notes.txt",
+        key="manual_eval_expected_sources",
+    )
+
 
 def _run_evaluation():
-    return app.ask_question(
+    return app.evaluate_manual_question(
         user_id=user_id,
         project_id=project_id,
         question=question,
-        chat_history=[],
+        expected_answer=manual_expected_answer.strip() or None,
+        expected_doc_ids=_parse_csv_list(manual_expected_doc_ids),
+        expected_sources=_parse_csv_list(manual_expected_sources),
     )
 
 
@@ -109,45 +133,11 @@ def _map_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}")
 
 
-def _render_evaluation_result(response):
-    if response is None:
-        st.warning("No RAG response available.")
+def _render_evaluation_result(result):
+    if result is None:
+        st.warning("No manual evaluation result available.")
         return
-
-    c1, c2 = st.columns([3, 1])
-
-    with c1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">Answer</div>', unsafe_allow_html=True)
-        st.write(response.answer)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with c2:
-        st.metric(
-            "Confidence",
-            format_confidence_with_band(float(response.confidence)),
-        )
-
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">Source citations</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="card-subtitle">Structured citation layer generated from the raw retrieved assets.</div>',
-        unsafe_allow_html=True,
-    )
-    render_source_citations(getattr(response, "citations", []))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="card-title">Raw evidence used</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="card-subtitle">Review the raw text, tables, and extracted images selected after summary retrieval.</div>',
-        unsafe_allow_html=True,
-    )
-    render_raw_assets(
-        response.raw_assets,
-        mode="evaluation",
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    render_manual_evaluation_result(result)
 
 
 run_clicked = st.button(
