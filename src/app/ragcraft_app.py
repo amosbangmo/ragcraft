@@ -10,6 +10,7 @@ from src.services.evaluation_service import EvaluationService
 from src.services.groundedness_service import GroundednessService
 from src.services.citation_faithfulness_service import CitationFaithfulnessService
 from src.services.answer_relevance_service import AnswerRelevanceService
+from src.services.hallucination_service import HallucinationService
 from src.services.chat_service import ChatService
 from src.services.rag_service import RAGService
 from src.services.docstore_service import DocStoreService
@@ -40,6 +41,7 @@ class RAGCraftApp:
             groundedness_service=GroundednessService(),
             citation_faithfulness_service=CitationFaithfulnessService(),
             answer_relevance_service=AnswerRelevanceService(),
+            hallucination_service=HallucinationService(),
         )
         self.chat_service = ChatService()
         self.docstore_service = DocStoreService()

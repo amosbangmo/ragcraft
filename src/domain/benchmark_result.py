@@ -33,7 +33,8 @@ class BenchmarkRow:
     evolve incrementally without forcing a broad refactor across the UI.
 
     Common LLM-judge fields include ``groundedness``, ``citation_faithfulness``,
-    and ``answer_relevance`` (each 0–1 when the corresponding service is configured).
+    ``answer_relevance``, and ``hallucination_score`` (0–1 when configured), plus
+    ``has_hallucination`` (boolean).
     """
 
     entry_id: int
@@ -58,7 +59,8 @@ class BenchmarkSummary:
     every future metric to become a top-level dataclass field immediately.
 
     Aggregate judge metrics include ``avg_groundedness``,
-    ``avg_citation_faithfulness``, and ``avg_answer_relevance`` (means over evaluated rows).
+    ``avg_citation_faithfulness``, ``avg_answer_relevance``, ``avg_hallucination_score``,
+    and ``hallucination_rate`` (fraction of rows with ``has_hallucination`` true).
     """
 
     data: dict[str, Any] = field(default_factory=dict)

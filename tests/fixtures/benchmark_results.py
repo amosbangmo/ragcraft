@@ -40,6 +40,8 @@ _DEFAULT_SUMMARY: dict[str, Any] = {
     "avg_groundedness": 1.0,
     "avg_citation_faithfulness": 1.0,
     "avg_answer_relevance": 1.0,
+    "avg_hallucination_score": 1.0,
+    "hallucination_rate": 0.0,
 }
 
 

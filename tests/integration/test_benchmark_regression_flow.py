@@ -41,6 +41,21 @@ class StubAnswerRelevanceService:
         return self._score
 
 
+class StubHallucinationService:
+    def __init__(self, score: float, has_hallucination: bool) -> None:
+        self._score = score
+        self._has_hallucination = has_hallucination
+
+    def compute_hallucination(
+        self,
+        *,
+        question: str,
+        answer: str,
+        raw_context: str,
+    ) -> tuple[float, bool]:
+        return self._score, self._has_hallucination
+
+
 def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     doc_ids = list(entry.expected_doc_ids or [])
     sources = list(entry.expected_sources or [])
@@ -95,6 +110,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             groundedness_service=StubGroundednessService(1.0),
             citation_faithfulness_service=StubCitationFaithfulnessService(1.0),
             answer_relevance_service=StubAnswerRelevanceService(1.0),
+            hallucination_service=StubHallucinationService(1.0, False),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
@@ -143,6 +159,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             groundedness_service=StubGroundednessService(0.0),
             citation_faithfulness_service=StubCitationFaithfulnessService(0.0),
             answer_relevance_service=StubAnswerRelevanceService(0.0),
+            hallucination_service=StubHallucinationService(0.0, True),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,

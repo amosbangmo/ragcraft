@@ -525,6 +525,12 @@ def _render_dataset_evaluation_result(payload: dict):
     with correctness_metrics[7]:
         st.metric("Avg citation faithfulness", summary["avg_citation_faithfulness"])
 
+    hallucination_metrics = st.columns(2)
+    with hallucination_metrics[0]:
+        st.metric("Avg hallucination score", summary["avg_hallucination_score"])
+    with hallucination_metrics[1]:
+        st.metric("Hallucination rate", summary["hallucination_rate"])
+
     citation_doc_metrics = st.columns(4)
     with citation_doc_metrics[0]:
         st.metric("Citation doc_id precision", summary["avg_citation_doc_id_precision"])
@@ -558,7 +564,14 @@ def _render_dataset_evaluation_result(payload: dict):
         st.metric("Entries with expected sources", summary["entries_with_expected_sources"])
 
     st.markdown("### Per-entry metrics")
-    st.dataframe(rows, use_container_width=True)
+    display_rows: list[dict] = []
+    for row in rows:
+        display_row = dict(row)
+        flag = display_row.get("has_hallucination")
+        if isinstance(flag, bool):
+            display_row["has_hallucination"] = "Hallucination" if flag else "Supported"
+        display_rows.append(display_row)
+    st.dataframe(display_rows, use_container_width=True)
 
     st.markdown("### Download benchmark reports")
     export = app.build_benchmark_export_artifacts(

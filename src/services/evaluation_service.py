@@ -13,12 +13,14 @@ class EvaluationService:
         groundedness_service: object | None = None,
         citation_faithfulness_service: object | None = None,
         answer_relevance_service: object | None = None,
+        hallucination_service: object | None = None,
     ):
         # Optional LLM-judge implementations; kept untyped so importing ``EvaluationService``
         # does not pull LLM / OpenAI dependencies.
         self._groundedness_service = groundedness_service
         self._citation_faithfulness_service = citation_faithfulness_service
         self._answer_relevance_service = answer_relevance_service
+        self._hallucination_service = hallucination_service
 
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
@@ -82,6 +84,8 @@ class EvaluationService:
         groundedness_values: list[float] = []
         citation_faithfulness_values: list[float] = []
         answer_relevance_values: list[float] = []
+        hallucination_score_values: list[float] = []
+        hallucination_flags: list[bool] = []
 
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
@@ -148,6 +152,8 @@ class EvaluationService:
                     "groundedness": 0.0,
                     "citation_faithfulness": 0.0,
                     "answer_relevance": 0.0,
+                    "hallucination_score": 0.0,
+                    "has_hallucination": True,
                 }
                 rows.append(
                     BenchmarkRow(
@@ -159,6 +165,8 @@ class EvaluationService:
                 groundedness_values.append(0.0)
                 citation_faithfulness_values.append(0.0)
                 answer_relevance_values.append(0.0)
+                hallucination_score_values.append(0.0)
+                hallucination_flags.append(True)
                 latency_values.append(latency_ms)
                 continue
 
@@ -324,6 +332,17 @@ class EvaluationService:
                 answer_relevance = 0.0
             answer_relevance_values.append(answer_relevance)
 
+            if self._hallucination_service is not None and answer:
+                hallucination_score, has_hallucination = self._hallucination_service.compute_hallucination(
+                    question=entry.question,
+                    answer=answer,
+                    raw_context=raw_context,
+                )
+            else:
+                hallucination_score, has_hallucination = 1.0, False
+            hallucination_score_values.append(hallucination_score)
+            hallucination_flags.append(has_hallucination)
+
             row_payload = {
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
@@ -359,6 +378,8 @@ class EvaluationService:
                 "groundedness": round(groundedness, 2),
                 "citation_faithfulness": round(citation_faithfulness, 2),
                 "answer_relevance": round(answer_relevance, 2),
+                "hallucination_score": round(hallucination_score, 2),
+                "has_hallucination": bool(has_hallucination),
             }
             rows.append(
                 BenchmarkRow(
@@ -431,6 +452,15 @@ class EvaluationService:
             else 0.0,
             "avg_answer_relevance": round(float(np.mean(answer_relevance_values)), 2)
             if answer_relevance_values
+            else 0.0,
+            "avg_hallucination_score": round(float(np.mean(hallucination_score_values)), 2)
+            if hallucination_score_values
+            else 0.0,
+            "hallucination_rate": round(
+                sum(1 for flag in hallucination_flags if flag) / len(hallucination_flags),
+                2,
+            )
+            if hallucination_flags
             else 0.0,
         }
 

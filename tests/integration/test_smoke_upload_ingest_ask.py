@@ -33,6 +33,7 @@ _install_module(
     CitationFaithfulnessService=_DummyService,
 )
 _install_module("src.services.answer_relevance_service", AnswerRelevanceService=_DummyService)
+_install_module("src.services.hallucination_service", HallucinationService=_DummyService)
 _install_module("src.services.chat_service", ChatService=_DummyService)
 _install_module("src.services.rag_service", RAGService=_DummyService)
 _install_module("src.services.docstore_service", DocStoreService=_DummyService)

@@ -183,6 +183,8 @@ class BenchmarkReportService:
                 "answer_relevance",
                 "groundedness",
                 "citation_faithfulness",
+                "hallucination_score",
+                "has_hallucination",
                 "citation_doc_id_f1",
                 "citation_source_f1",
                 "confidence",
