@@ -1,7 +1,9 @@
 """
 Central registry and helpers for metric tooltips on the Evaluation UI.
 
-Add new metrics by extending ``METRIC_HELP`` and rendering via ``render_metric_with_help``.
+Add new metrics by extending ``METRIC_HELP`` and registering metadata in
+:mod:`src.domain.benchmark_metric_taxonomy` (family, direction, scoring kind, judge-failed policy),
+then rendering via ``render_metric_with_help``.
 
 Tooltip copy follows a consistent structure where applicable:
 
@@ -408,6 +410,30 @@ METRIC_HELP: dict[str, str] = {
         "Measures which project’s corpus and QA dataset this Evaluation view uses. "
         "Range: project identifier / label. "
         "Ensures metrics are interpreted against the right knowledge base. "
+        "Neutral (context)."
+    ),
+    "table_usage_rate": (
+        "Measures the share of successful pipeline rows where table content appeared in retrieval or prompt sources. "
+        "Range: 0–1 (often shown as a percentage). "
+        "Diagnostic usage signal — not a quality score by itself. "
+        "Neutral (context); pair with conditional quality metrics such as table correctness."
+    ),
+    "image_usage_rate": (
+        "Measures the share of successful pipeline rows where image content appeared in retrieval or prompt sources. "
+        "Range: 0–1 (often shown as a percentage). "
+        "Diagnostic usage signal — not a quality score by itself. "
+        "Neutral (context); pair with image groundedness when the judge scored those rows."
+    ),
+    "multimodal_answers_rate": (
+        "Measures the share of rows whose prompt mixed at least two asset content types (e.g. text + table). "
+        "Range: 0–1 (often shown as a percentage). "
+        "Reflects prompt composition, not retrieval quality alone. "
+        "Neutral (context)."
+    ),
+    "eligible_rows": (
+        "Count of successful pipeline rows that reported modality metadata for multimodal aggregates. "
+        "Range: non-negative integer. "
+        "Denominator for multimodal usage rates in the dashboard. "
         "Neutral (context)."
     ),
     "table_correctness": (

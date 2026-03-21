@@ -4,24 +4,7 @@ from typing import Any
 
 import numpy as np
 
-# Display name -> row payload key (``BenchmarkRow.data`` / ``to_dict``).
-CORRELATION_METRIC_KEYS: tuple[tuple[str, str], ...] = (
-    ("confidence", "confidence"),
-    ("answer_f1", "answer_f1"),
-    ("recall_at_k", "recall_at_k"),
-    ("reciprocal_rank", "reciprocal_rank"),
-    ("average_precision", "average_precision"),
-    ("groundedness_score", "groundedness_score"),
-    ("citation_faithfulness_score", "citation_faithfulness_score"),
-    ("answer_relevance_score", "answer_relevance_score"),
-    ("answer_correctness_score", "answer_correctness_score"),
-    ("semantic_similarity", "semantic_similarity"),
-    ("ndcg_at_k", "ndcg_at_k"),
-    ("prompt_doc_id_precision", "prompt_doc_id_precision"),
-    ("prompt_doc_id_recall", "prompt_doc_id_recall"),
-    ("citation_doc_id_f1", "citation_doc_id_f1"),
-    ("latency_ms", "latency_ms"),
-)
+from src.domain.benchmark_metric_taxonomy import CORRELATION_METRIC_KEYS
 
 _STRONG_THRESHOLD = 0.6
 
@@ -53,6 +36,9 @@ def _pearson_pair(x: np.ndarray, y: np.ndarray) -> float | None:
 class CorrelationService:
     """
     Pearson correlations between core evaluation metrics on per-entry rows.
+
+    Included row keys are defined in :data:`~src.domain.benchmark_metric_taxonomy.CORRELATION_METRIC_KEYS`
+    (display label → payload key).
 
     Skips gracefully when columns are missing, constant, or there are too few points.
     """

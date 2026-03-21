@@ -1,5 +1,9 @@
 """
-Unified benchmark dashboard: retrieval metrics, LLM-judge scores, per-row table, hallucination highlights.
+Unified benchmark dashboard: retrieval, overlap, LLM-judge, pipeline, multimodal, and failure views.
+
+Cards in ``render_evaluation_dashboard`` follow the families in
+:mod:`src.domain.benchmark_metric_taxonomy` (ranked-doc retrieval, sources, pipeline runtime,
+gold-answer overlap, prompt/citation doc-ID overlap, judge scores, then multimodal when present).
 """
 
 from __future__ import annotations
@@ -878,6 +882,16 @@ def render_evaluation_dashboard(
     comparison: list[dict[str, Any]] | None = None,
     failure_comparison: list[dict[str, Any]] | None = None,
 ) -> None:
+    """
+    Main benchmark layout. Section order is intentional and mirrors ``BenchmarkMetricFamily``:
+
+    1. Run comparison (session A vs B) — above the fold when present
+    2. Auto-debug, health overview
+    3. Retrieval (ranked doc IDs), retrieval (sources), pipeline performance
+    4. Gold answer overlap, prompt doc-ID overlap, answer citation overlap
+    5. LLM judge aggregates, optional multimodal card, per-entry table
+    6. Correlation matrix, failure analysis, advanced analytics, hallucination insights
+    """
     inject_section_card_styles()
 
     _render_benchmark_comparison(comparison, failure_comparison)

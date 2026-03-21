@@ -460,6 +460,7 @@ class EvaluationService:
             # Judge summary metrics (avg_*, hallucination_rate) are filled only from rows where
             # ``judge_failed`` is false — see appends to *groundedness_values* etc. above.
             # ``pipeline_failure_rate`` counts rows with ``pipeline_failed`` only.
+            # Taxonomy: ``src.domain.benchmark_metric_taxonomy`` (JudgeFailedPolicy, families).
             judge_fields = _judge_row_fields(
                 judge_result,
                 judge_failed=judge_failed,

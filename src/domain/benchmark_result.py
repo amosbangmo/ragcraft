@@ -34,6 +34,9 @@ class BenchmarkRow:
     The ``data`` payload intentionally stays flexible so the evaluation layer can
     evolve incrementally without forcing a broad refactor across the UI.
 
+    Metric families, comparison direction, and ``judge_failed`` semantics are summarized in
+    :mod:`src.domain.benchmark_metric_taxonomy`.
+
     LLM-judge fields use canonical keys ``groundedness_score``,
     ``citation_faithfulness_score``, ``answer_relevance_score``,
     ``hallucination_score``, ``answer_correctness_score`` (0–1 when configured),
@@ -69,6 +72,9 @@ class BenchmarkSummary:
     As with ``BenchmarkRow``, the payload remains flexible on purpose. This lets
     the project move from dict-based evaluation to typed results without forcing
     every future metric to become a top-level dataclass field immediately.
+
+    See :mod:`src.domain.benchmark_metric_taxonomy` for how aggregates map to families and how
+    ``judge_failed`` rows are excluded from judge means.
 
     Aggregate judge metrics use the same stem as per-row scores: ``avg_groundedness_score``,
     ``avg_citation_faithfulness_score``, ``avg_answer_relevance_score``,

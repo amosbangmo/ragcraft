@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from src.domain.benchmark_metric_taxonomy import markdown_family_guide_lines
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRunMetadata
 
 
@@ -202,6 +203,8 @@ class BenchmarkReportService:
                 "- **`pipeline_failure_rate`** counts only rows where the answer pipeline did not complete "
                 "(distinct from judge failures).",
                 "- Per-row judge fields may be blank / `None` when the judge failed for that entry — that is not a score of zero.",
+                "",
+                *markdown_family_guide_lines(),
                 "",
                 "## Summary metrics",
                 "",

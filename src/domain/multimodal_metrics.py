@@ -3,6 +3,9 @@ Modality detection and aggregate metrics for benchmark / evaluation rows.
 
 Uses ``content_type`` on prompt assets and prompt sources (``text`` | ``table`` | ``image``),
 aligned with :class:`~src.domain.retrieved_asset.RetrievedAsset` and RAG pipeline payloads.
+
+Aggregates such as ``table_usage_rate`` belong to the ``multimodal`` family in
+:mod:`src.domain.benchmark_metric_taxonomy`.
 """
 
 from __future__ import annotations

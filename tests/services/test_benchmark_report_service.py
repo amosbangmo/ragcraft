@@ -82,6 +82,7 @@ class TestBenchmarkReportService(unittest.TestCase):
         self.assertIn("## Notes", md)
         self.assertIn("judge_failed", md)
         self.assertIn("pipeline_failure_rate", md)
+        self.assertIn("retrieval_ranked_docs", md)
 
     def test_build_accepts_iso_string_generated_at(self) -> None:
         result = self._minimal_result()

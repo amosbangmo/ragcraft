@@ -2,20 +2,17 @@ from __future__ import annotations
 
 from typing import Any
 
-# Higher-is-better metrics where a large drop vs baseline is flagged as critical.
-_CRITICAL_REGRESSION_METRICS = frozenset(
-    {"avg_answer_f1", "avg_groundedness_score", "avg_answer_correctness"}
+from src.domain.benchmark_metric_taxonomy import (
+    CRITICAL_REGRESSION_METRIC_KEYS,
+    LOWER_IS_BETTER_METRIC_KEYS,
 )
+
+# Higher-is-better metrics where a large drop vs baseline is flagged as critical.
+_CRITICAL_REGRESSION_METRICS = CRITICAL_REGRESSION_METRIC_KEYS
 _CRITICAL_DELTA = -0.05
 
 # Deltas are always B − A; for these keys, a *lower* value in B is an improvement.
-LOWER_IS_BETTER_METRICS = frozenset(
-    {
-        "avg_latency_ms",
-        "pipeline_failure_rate",
-        "hallucination_rate",
-    }
-)
+LOWER_IS_BETTER_METRICS = LOWER_IS_BETTER_METRIC_KEYS
 
 
 def _numeric_scalar(value: object) -> float | None:
