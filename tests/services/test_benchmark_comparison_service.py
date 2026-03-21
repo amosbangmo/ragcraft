@@ -61,6 +61,25 @@ class TestBenchmarkComparisonService(unittest.TestCase):
         rows = self.svc.compare(a, b)
         self.assertEqual(rows[0]["direction"], "critical_regression")
 
+    def test_lower_is_better_neutral_when_equal(self) -> None:
+        a = {"avg_latency_ms": 50.0, "hallucination_rate": 0.1}
+        b = {"avg_latency_ms": 50.0, "hallucination_rate": 0.1}
+        rows = self.svc.compare(a, b)
+        self.assertTrue(all(r["direction"] == "neutral" for r in rows))
+
+    def test_higher_is_better_neutral_when_equal(self) -> None:
+        a = {"avg_recall_at_k": 0.7}
+        b = {"avg_recall_at_k": 0.7}
+        rows = self.svc.compare(a, b)
+        self.assertEqual(rows[0]["direction"], "neutral")
+
+    def test_pipeline_failure_rate_lower_is_better(self) -> None:
+        a = {"pipeline_failure_rate": 0.2}
+        b = {"pipeline_failure_rate": 0.05}
+        rows = self.svc.compare(a, b)
+        self.assertEqual(rows[0]["direction"], "improved")
+        self.assertEqual(rows[0]["delta"], -0.15)
+
 
 if __name__ == "__main__":
     unittest.main()

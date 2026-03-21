@@ -2,6 +2,10 @@ import unittest
 
 import pandas as pd
 
+from src.services.benchmark_comparison_service import (
+    BenchmarkComparisonService,
+    LOWER_IS_BETTER_METRICS,
+)
 from src.ui import evaluation_dashboard as ed
 
 
@@ -27,6 +31,8 @@ class TestEvaluationDashboardCoercions(unittest.TestCase):
         self.assertFalse(
             ed._row_hallucination_flag({"judge_failed": True, "has_hallucination": True})
         )
+        self.assertFalse(ed._row_hallucination_flag({"judge_failed": True}))
+        self.assertFalse(ed._row_hallucination_flag({}))
 
     def test_row_answer_text_priority(self) -> None:
         self.assertEqual(
@@ -59,6 +65,40 @@ class TestEvaluationDashboardNumericSeries(unittest.TestCase):
         self.assertIsNone(ed._numeric_series(df, "missing"))
 
 
+class TestDataframeJudgeValidForHallucination(unittest.TestCase):
+    def test_excludes_judge_failed_rows(self) -> None:
+        df = pd.DataFrame(
+            [
+                {"judge_failed": True, "has_hallucination": True},
+                {"judge_failed": False, "has_hallucination": True},
+            ]
+        )
+        out = ed._dataframe_judge_valid_for_hallucination(df)
+        self.assertEqual(len(out), 1)
+        self.assertFalse(bool(out.iloc[0]["judge_failed"]))
+
+    def test_passthrough_when_no_judge_failed_column(self) -> None:
+        df = pd.DataFrame([{"has_hallucination": True}])
+        out = ed._dataframe_judge_valid_for_hallucination(df)
+        self.assertEqual(len(out), 1)
+
+
+class TestComparisonLowerIsBetterAlignment(unittest.TestCase):
+    def test_dashboard_uses_service_lower_is_better_set(self) -> None:
+        self.assertIs(ed.LOWER_IS_BETTER_METRICS, LOWER_IS_BETTER_METRICS)
+
+    def test_improved_metrics_split_by_direction_semantics(self) -> None:
+        a = {"avg_latency_ms": 100.0, "avg_recall_at_k": 0.5, "hallucination_rate": 0.2}
+        b = {"avg_latency_ms": 90.0, "avg_recall_at_k": 0.6, "hallucination_rate": 0.1}
+        rows = BenchmarkComparisonService().compare(a, b)
+        df = pd.DataFrame(rows)
+        improved = df[df["direction"] == "improved"]
+        lo = improved[improved["metric"].isin(LOWER_IS_BETTER_METRICS)]
+        hi = improved[~improved["metric"].isin(LOWER_IS_BETTER_METRICS)]
+        self.assertEqual(set(lo["metric"]), {"avg_latency_ms", "hallucination_rate"})
+        self.assertEqual(set(hi["metric"]), {"avg_recall_at_k"})
+
+
 class TestEvaluationDashboardResolveFailurePayload(unittest.TestCase):
     def test_uses_nonempty_failures_dict(self) -> None:
         payload = {"counts": {"retrieval_failure": 2}, "failed_row_count": 2}
@@ -81,6 +121,19 @@ class TestEvaluationDashboardResolveFailurePayload(unittest.TestCase):
 
     def test_none_failures_with_empty_rows(self) -> None:
         self.assertIsNone(ed._resolve_failure_payload(None, rows=[]))
+
+    def test_empty_failures_dict_recomputes_from_rows(self) -> None:
+        rows = [
+            {
+                "entry_id": 1,
+                "question": "q",
+                "recall_at_k": 0.0,
+                "expected_doc_ids_count": 1,
+            }
+        ]
+        out = ed._resolve_failure_payload({}, rows=rows)
+        self.assertIsInstance(out, dict)
+        self.assertIn("counts", out)
 
 
 if __name__ == "__main__":

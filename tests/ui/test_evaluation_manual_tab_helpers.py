@@ -14,6 +14,12 @@ class TestParseEvaluationCsvList(unittest.TestCase):
             ["a", "b", "c"],
         )
 
+    def test_unicode_tokens(self) -> None:
+        self.assertEqual(parse_evaluation_csv_list("café, naïve"), ["café", "naïve"])
+
+    def test_skips_empty_segments(self) -> None:
+        self.assertEqual(parse_evaluation_csv_list("a,,,b"), ["a", "b"])
+
 
 if __name__ == "__main__":
     unittest.main()

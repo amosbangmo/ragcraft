@@ -18,6 +18,10 @@ from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.services.benchmark_comparison_service import BenchmarkComparisonService
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
+from src.ui.evaluation_history_labels import (
+    build_benchmark_history_entry_label,
+    format_benchmark_run_selector_label,
+)
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
@@ -51,27 +55,13 @@ def _append_benchmark_to_history(
     if not isinstance(hist, list):
         hist = []
         root[project_id] = hist
-    rid = (result.run_id or "")[:12]
-    if isinstance(generated_at, datetime):
-        tlabel = generated_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    else:
-        tlabel = str(generated_at)[:32] if generated_at else ""
-    qr_on = enable_query_rewrite is True
-    hy_on = enable_hybrid_retrieval is True
-    settings_bits: list[str] = []
-    if enable_query_rewrite is not None:
-        settings_bits.append("query rewrite on" if qr_on else "query rewrite off")
-    if enable_hybrid_retrieval is not None:
-        settings_bits.append("hybrid on" if hy_on else "hybrid off")
-    settings = " · ".join(settings_bits)
-    if rid and settings:
-        label = f"{tlabel} · {rid} · {settings}"
-    elif rid:
-        label = f"{tlabel} · {rid}"
-    elif settings:
-        label = f"{tlabel} · {settings}" if tlabel else settings
-    else:
-        label = tlabel or f"run {len(hist) + 1}"
+    label = build_benchmark_history_entry_label(
+        generated_at=generated_at,
+        run_id=result.run_id,
+        enable_query_rewrite=enable_query_rewrite,
+        enable_hybrid_retrieval=enable_hybrid_retrieval,
+        fallback_run_number=len(hist) + 1,
+    )
     entry: dict[str, Any] = {
         "run_id": result.run_id or "",
         "label": label,
@@ -88,16 +78,7 @@ def _append_benchmark_to_history(
 
 
 def _run_label(entry: dict[str, Any], index: int) -> str:
-    lab = entry.get("label")
-    rid = entry.get("run_id") or ""
-    short = f"{rid[:8]}…" if len(rid) > 8 else rid
-    base = lab if isinstance(lab, str) else f"Run {index + 1}"
-    parts = [f"{base} ({short})" if short else base]
-    qr = entry.get("enable_query_rewrite")
-    hy = entry.get("enable_hybrid_retrieval")
-    if isinstance(qr, bool) and isinstance(hy, bool):
-        parts.append(f"QR {'on' if qr else 'off'} · Hyb {'on' if hy else 'off'}")
-    return " — ".join(parts)
+    return format_benchmark_run_selector_label(entry, index)
 
 
 def _coerce_float(value: object) -> float | None:

@@ -57,6 +57,13 @@ def _row_hallucination_flag(row: dict) -> bool:
     return _coerce_hallucination_flag(row.get("has_hallucination"))
 
 
+def _dataframe_judge_valid_for_hallucination(df: pd.DataFrame) -> pd.DataFrame:
+    """Rows used for hallucination flag counts in the dashboard (excludes judge failures)."""
+    if "judge_failed" not in df.columns:
+        return df
+    return df[df["judge_failed"].ne(True)].reset_index(drop=True)
+
+
 def _row_answer_text(row: dict) -> str | None:
     for key in ("answer", "answer_preview", "generated_answer"):
         val = row.get(key)
@@ -657,11 +664,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             "That exclusion is intentional so operational judge outages are never mixed into hallucination tallies."
         )
         if "has_hallucination" in df.columns:
-            hall_df = (
-                df
-                if "judge_failed" not in df.columns
-                else df[df["judge_failed"].ne(True)].reset_index(drop=True)
-            )
+            hall_df = _dataframe_judge_valid_for_hallucination(df)
             if hall_df.empty:
                 st.caption("No judge-valid rows in this filtered slice.")
             else:
