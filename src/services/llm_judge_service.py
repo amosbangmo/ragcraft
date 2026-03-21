@@ -7,6 +7,9 @@ from typing import Any
 from src.core.config import LLM
 from src.domain.llm_judge_result import LLMJudgeResult
 
+# Sentinel for :meth:`LLMJudgeService._failure_result` (evaluation layer sets ``judge_failed`` from this).
+JUDGE_FAILURE_REASON = "judge_failure"
+
 
 class LLMJudgeService:
     """
@@ -32,9 +35,9 @@ class LLMJudgeService:
             citation_faithfulness_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=0.0,
-            has_hallucination=False,
+            has_hallucination=True,
             answer_correctness_score=0.0,
-            reason=None,
+            reason=JUDGE_FAILURE_REASON,
         )
 
     @staticmethod

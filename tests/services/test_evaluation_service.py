@@ -10,6 +10,7 @@ from src.services.evaluation_service import (
     _r2,
     _rate,
 )
+from src.services.llm_judge_service import LLMJudgeService
 
 
 class _StubJudge:
@@ -192,6 +193,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
         self.assertEqual(result.summary.data.get("total_entries"), 1)
         row = result.rows[0].data
         self.assertTrue(row.get("pipeline_failed"))
+        self.assertIs(row.get("judge_failed"), False)
         self.assertEqual(row.get("retrieval_mode"), "none")
         self.assertIsNone(row.get("recall_at_k"))
         self.assertEqual(row.get("latency_ms"), 12.3)
@@ -244,6 +246,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
         self.assertEqual(result.summary.data.get("successful_queries"), 1)
         row = result.rows[0].data
         self.assertFalse(row.get("pipeline_failed"))
+        self.assertIs(row.get("judge_failed"), False)
         self.assertEqual(row.get("recall_at_k"), 1.0)
         self.assertEqual(row.get("hit_at_k"), 1.0)
         self.assertEqual(row.get("answer_f1"), 1.0)
@@ -255,6 +258,73 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
         self.assertEqual(row.get("answer_correctness_score"), 0.95)
         self.assertIsNotNone(result.summary.data.get("avg_answer_f1"))
         self.assertIsInstance(result.correlations, dict)
+
+    def test_judge_failure_row_flagged_and_excluded_from_judge_aggregates(self) -> None:
+        good = LLMJudgeResult(
+            groundedness_score=0.8,
+            citation_faithfulness_score=0.8,
+            answer_relevance_score=0.8,
+            hallucination_score=0.9,
+            has_hallucination=False,
+            answer_correctness_score=0.85,
+            reason=None,
+        )
+        bad = LLMJudgeService._failure_result()
+
+        class _SwitchJudge:
+            def __init__(self) -> None:
+                self._n = 0
+
+            def evaluate(self, **_kwargs) -> LLMJudgeResult:
+                self._n += 1
+                return bad if self._n == 1 else good
+
+        def _entry(eid: int) -> QADatasetEntry:
+            return QADatasetEntry(
+                id=eid,
+                user_id="u",
+                project_id="p",
+                question="Q?",
+                expected_answer="gold",
+                expected_doc_ids=["d1"],
+                expected_sources=[],
+            )
+
+        def runner(_e: QADatasetEntry):
+            return {
+                "pipeline": PipelineBuildResult(
+                    selected_doc_ids=["d1"],
+                    prompt_sources=[
+                        {"source_number": 1, "doc_id": "d1", "source_file": "a.pdf"},
+                    ],
+                    raw_context="ctx",
+                    confidence=0.5,
+                    retrieval_mode="faiss",
+                    query_rewrite_enabled=False,
+                    hybrid_retrieval_enabled=False,
+                ),
+                "answer": "gold",
+                "latency_ms": 1.0,
+            }
+
+        result = EvaluationService(
+            llm_judge_service=_SwitchJudge(),
+            semantic_similarity_service=_StubSemanticSimilarity(),
+        ).evaluate_gold_qa_dataset(
+            entries=[_entry(1), _entry(2)],
+            pipeline_runner=runner,
+        )
+        r0, r1 = result.rows[0].data, result.rows[1].data
+        self.assertTrue(r0.get("judge_failed"))
+        self.assertFalse(r1.get("judge_failed"))
+        self.assertEqual(r0.get("groundedness_score"), 0.0)
+        summ = result.summary.data
+        self.assertEqual(summ.get("avg_groundedness_score"), 0.8)
+        self.assertEqual(summ.get("avg_hallucination_score"), 0.9)
+        self.assertEqual(summ.get("avg_answer_correctness"), 0.85)
+        self.assertEqual(summ.get("hallucination_rate"), 0.0)
+        self.assertIn("judge_failure", r0.get("failure_labels", []))
+        self.assertNotIn("hallucination", r0.get("failure_labels", []))
 
 
 if __name__ == "__main__":

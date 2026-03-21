@@ -184,6 +184,27 @@ class TestFailureAnalysisService(unittest.TestCase):
         out = FailureAnalysisService().analyze(rows)
         self.assertIn("image_hallucination", out["row_failures"][0]["failure_labels"])
 
+    def test_judge_failed_labels_judge_failure_not_hallucination(self) -> None:
+        rows = [
+            {
+                "entry_id": 20,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 0,
+                "judge_failed": True,
+                "groundedness_score": 0.0,
+                "hallucination_score": 0.0,
+                "has_hallucination": True,
+                "answer_relevance_score": 0.0,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        labels = out["row_failures"][0]["failure_labels"]
+        self.assertIn("judge_failure", labels)
+        self.assertNotIn("hallucination", labels)
+        self.assertNotIn("grounding_failure", labels)
+        self.assertNotIn("low_relevance", labels)
+
 
 if __name__ == "__main__":
     unittest.main()

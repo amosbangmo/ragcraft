@@ -44,6 +44,8 @@ class BenchmarkRow:
     (assets in the prompt) to gold ``expected_doc_ids``.
     Citation doc ID metrics (``citation_doc_id_*``, ``citation_doc_ids_count``) use
     **parsed** ``[Source N]`` labels in the generated answer mapped via ``prompt_sources``.
+    ``judge_failed`` is true when the LLM judge used a failure fallback (not when the pipeline
+    failed before judging).
     """
 
     entry_id: int
@@ -70,7 +72,8 @@ class BenchmarkSummary:
     Aggregate judge metrics use the same stem as per-row scores: ``avg_groundedness_score``,
     ``avg_citation_faithfulness_score``, ``avg_answer_relevance_score``,
     ``avg_answer_correctness``, ``avg_hallucination_score``, and ``hallucination_rate``
-    (fraction of rows with ``has_hallucination`` true). Retrieval summaries use
+    (fraction of rows with ``has_hallucination`` true among rows where ``judge_failed`` is false).
+    Retrieval summaries use
     ``avg_reciprocal_rank``, ``avg_average_precision``, and ``avg_ndcg_at_k``.
     Gold-answer embedding mean is ``avg_semantic_similarity`` (rows with expected answers only).
     """

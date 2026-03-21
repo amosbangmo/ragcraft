@@ -3,6 +3,11 @@ from dataclasses import dataclass
 
 @dataclass
 class LLMJudgeResult:
+    """
+    Per-row LLM-judge output. When the judge call fails or the payload is unusable,
+    ``reason`` is the machine-readable sentinel ``judge_failure`` (see ``LLMJudgeService``).
+    """
+
     groundedness_score: float
     citation_faithfulness_score: float
     answer_relevance_score: float

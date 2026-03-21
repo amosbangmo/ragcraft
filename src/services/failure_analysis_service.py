@@ -7,6 +7,7 @@ FAILURE_LABEL_ORDER: tuple[str, ...] = (
     "retrieval_failure",
     "context_selection_failure",
     "citation_failure",
+    "judge_failure",
     "grounding_failure",
     "hallucination",
     "low_relevance",
@@ -132,6 +133,7 @@ class FailureAnalysisService:
             return [], False
 
         labels: list[str] = []
+        judge_failed = _coerce_bool(row.get("judge_failed")) is True
 
         retrieval_mode = row.get("retrieval_mode")
         exp_docs = _coerce_int(row.get("expected_doc_ids_count"))
@@ -153,7 +155,7 @@ class FailureAnalysisService:
         groundedness = _coerce_float(row.get("groundedness_score"))
         prompt_doc_id_prec = _coerce_float(row.get("prompt_doc_id_precision"))
         citation_doc_id_rec = _coerce_float(row.get("citation_doc_id_recall"))
-        if groundedness is not None and groundedness < self._q:
+        if not judge_failed and groundedness is not None and groundedness < self._q:
             labels.append("grounding_failure")
 
         if (
@@ -175,12 +177,13 @@ class FailureAnalysisService:
         # Judge convention: higher hallucination_score = *less* hallucination (better grounded in context).
         hall_score = _coerce_float(row.get("hallucination_score"))
         hall_flag = _coerce_bool(row.get("has_hallucination"))
-        if (hall_score is not None and hall_score < self._hall) or hall_flag is True:
-            labels.append("hallucination")
+        if not judge_failed:
+            if (hall_score is not None and hall_score < self._hall) or hall_flag is True:
+                labels.append("hallucination")
 
-        rel = _coerce_float(row.get("answer_relevance_score", row.get("answer_relevance")))
-        if rel is not None and rel < self._q:
-            labels.append("low_relevance")
+            rel = _coerce_float(row.get("answer_relevance_score", row.get("answer_relevance")))
+            if rel is not None and rel < self._q:
+                labels.append("low_relevance")
 
         conf = _coerce_float(row.get("confidence"))
         if conf is not None and conf < self._low_conf:
@@ -205,10 +208,17 @@ class FailureAnalysisService:
         if ctx_table and has_gold and answer_f1 is not None and answer_f1 < self._q:
             labels.append("table_misuse")
 
-        if ctx_image and (
-            (hall_score is not None and hall_score < self._hall) or hall_flag is True
+        if (
+            ctx_image
+            and not judge_failed
+            and (
+                (hall_score is not None and hall_score < self._hall) or hall_flag is True
+            )
         ):
             labels.append("image_hallucination")
+
+        if judge_failed:
+            labels.append("judge_failure")
 
         ordered = [lb for lb in FAILURE_LABEL_ORDER if lb in labels]
 

@@ -18,7 +18,7 @@ from src.services.auto_debug_service import AutoDebugService
 from src.services.correlation_service import CorrelationService
 from src.services.explainability_service import ExplainabilityService
 from src.services.failure_analysis_service import FailureAnalysisService
-from src.services.llm_judge_service import LLMJudgeService
+from src.services.llm_judge_service import JUDGE_FAILURE_REASON, LLMJudgeService
 from src.services.semantic_similarity_service import SemanticSimilarityService
 
 logger = logging.getLogger(__name__)
@@ -215,6 +215,7 @@ class EvaluationService:
                     "hallucination_score": None,
                     "has_hallucination": False,
                     "pipeline_failed": True,
+                    "judge_failed": False,
                     "groundedness_score": None,
                     "citation_faithfulness_score": None,
                     "answer_relevance_score": None,
@@ -393,21 +394,23 @@ class EvaluationService:
                 prompt_sources=refs_for_judge,
                 expected_answer=expected_answer if has_expected_answer else None,
             )
+            judge_failed = getattr(judge_result, "reason", None) == JUDGE_FAILURE_REASON
             groundedness = judge_result.groundedness_score
             citation_faithfulness = judge_result.citation_faithfulness_score
             answer_relevance = judge_result.answer_relevance_score
             hallucination_score = judge_result.hallucination_score
             has_hallucination = judge_result.has_hallucination
 
-            groundedness_values.append(groundedness)
-            citation_faithfulness_values.append(citation_faithfulness)
-            answer_relevance_values.append(answer_relevance)
-            hallucination_score_values.append(hallucination_score)
-            hallucination_flags.append(has_hallucination)
-            if has_expected_answer:
-                answer_correctness_values.append(
-                    float(getattr(judge_result, "answer_correctness_score", 0.0))
-                )
+            if not judge_failed:
+                groundedness_values.append(groundedness)
+                citation_faithfulness_values.append(citation_faithfulness)
+                answer_relevance_values.append(answer_relevance)
+                hallucination_score_values.append(hallucination_score)
+                hallucination_flags.append(has_hallucination)
+                if has_expected_answer:
+                    answer_correctness_values.append(
+                        float(getattr(judge_result, "answer_correctness_score", 0.0))
+                    )
             ac_row = (
                 _r2(float(getattr(judge_result, "answer_correctness_score", 0.0)))
                 if has_expected_answer
@@ -452,6 +455,7 @@ class EvaluationService:
                 "hallucination_score": _r2(hallucination_score),
                 "has_hallucination": bool(has_hallucination),
                 "pipeline_failed": False,
+                "judge_failed": judge_failed,
                 "groundedness_score": _r2(judge_result.groundedness_score),
                 "citation_faithfulness_score": _r2(judge_result.citation_faithfulness_score),
                 "answer_relevance_score": _r2(judge_result.answer_relevance_score),
