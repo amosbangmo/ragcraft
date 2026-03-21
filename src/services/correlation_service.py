@@ -64,6 +64,8 @@ class CorrelationService:
                 "reason": "no_rows",
                 "metrics_used": [],
                 "sample_size": 0,
+                "row_count": 0,
+                "pairwise_sample_sizes": {},
                 "matrix": {},
                 "pairwise": {},
                 "highlights": {"strong_positive": [], "strong_negative": []},
@@ -78,11 +80,14 @@ class CorrelationService:
                 row_keys.append(rkey)
 
         if len(logical_names) < 2:
+            n_insufficient = len(rows)
             return {
                 "available": False,
                 "reason": "insufficient_metrics",
                 "metrics_used": logical_names,
-                "sample_size": len(rows),
+                "sample_size": n_insufficient,
+                "row_count": n_insufficient,
+                "pairwise_sample_sizes": {},
                 "matrix": {},
                 "pairwise": {},
                 "highlights": {"strong_positive": [], "strong_negative": []},
@@ -106,16 +111,19 @@ class CorrelationService:
             for i in range(len(logical_names))
         }
         pairwise: dict[str, float] = {}
+        pairwise_sample_sizes: dict[str, int] = {}
 
         for i in range(len(logical_names)):
             for j in range(i + 1, len(logical_names)):
-                r_ij = _pearson_pair(cols[i], cols[j])
                 a, b = logical_names[i], logical_names[j]
+                pair_key = f"{a}_vs_{b}"
+                mask = np.isfinite(cols[i]) & np.isfinite(cols[j])
+                pairwise_sample_sizes[pair_key] = int(mask.sum())
+                r_ij = _pearson_pair(cols[i], cols[j])
                 matrix[a][b] = r_ij
                 matrix[b][a] = r_ij
                 if r_ij is not None:
-                    key = f"{a}_vs_{b}"
-                    pairwise[key] = round(r_ij, 4)
+                    pairwise[pair_key] = round(r_ij, 4)
             matrix[logical_names[i]][logical_names[i]] = 1.0
 
         strong_pos: list[tuple[str, str, float]] = []
@@ -139,6 +147,8 @@ class CorrelationService:
             "reason": None,
             "metrics_used": logical_names,
             "sample_size": n,
+            "row_count": n,
+            "pairwise_sample_sizes": pairwise_sample_sizes,
             "matrix": matrix,
             "pairwise": pairwise,
             "highlights": {

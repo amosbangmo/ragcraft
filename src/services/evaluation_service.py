@@ -6,8 +6,6 @@ import re
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
-
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.multimodal_metrics import (
@@ -22,6 +20,8 @@ from src.services.explainability_service import ExplainabilityService
 from src.services.failure_analysis_service import FailureAnalysisService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.semantic_similarity_service import SemanticSimilarityService
+
+logger = logging.getLogger(__name__)
 
 
 def _latency_stage_row_fields(latency: dict | None) -> dict[str, float]:
@@ -95,6 +95,11 @@ class EvaluationService:
         self._auto_debug_service = (
             auto_debug_service if auto_debug_service is not None else AutoDebugService()
         )
+
+    def _attach_explainability(self, row_payload: dict) -> None:
+        explain = self._explainability_service.build_explanation(row_payload)
+        row_payload["explanations"] = explain.get("explanations", [])
+        row_payload["suggestions"] = explain.get("suggestions", [])
 
     def evaluate_gold_qa_dataset(
         self,
@@ -218,9 +223,6 @@ class EvaluationService:
                     "ndcg_at_k": None,
                     **empty_modality_row_fields(),
                 }
-                explain = self._explainability_service.build_explanation(row_payload)
-                row_payload["explanations"] = explain.get("explanations", [])
-                row_payload["suggestions"] = explain.get("suggestions", [])
                 rows.append(
                     BenchmarkRow(
                         entry_id=entry.id,
@@ -456,9 +458,6 @@ class EvaluationService:
                 "answer_correctness_score": ac_row,
                 **modality_row_fields_from_pipeline(pl),
             }
-            explain = self._explainability_service.build_explanation(row_payload)
-            row_payload["explanations"] = explain.get("explanations", [])
-            row_payload["suggestions"] = explain.get("suggestions", [])
             rows.append(
                 BenchmarkRow(
                     entry_id=entry.id,
@@ -563,6 +562,7 @@ class EvaluationService:
             d = dict(row.data)
             d["failure_labels"] = list(labels)
             d["failure_critical"] = bool(crit) if crit is not None else False
+            self._attach_explainability(d)
             rebuilt.append(
                 BenchmarkRow(entry_id=row.entry_id, question=row.question, data=d)
             )

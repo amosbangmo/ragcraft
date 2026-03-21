@@ -14,6 +14,11 @@ class LLMJudgeService:
     and hallucination signals in one structured JSON response.
     """
 
+    # When ``has_hallucination`` is missing from the model output, infer from
+    # ``hallucination_score`` (higher = less hallucination), aligned with
+    # failure-analysis thresholds (e.g. DEFAULT_HALLUCINATION_THRESHOLD).
+    _HAS_HALLUCINATION_SCORE_FALLBACK_THRESHOLD = 0.5
+
     _MAX_CONTEXT_CHARS = 14_000
     _MAX_REF_JSON_CHARS = 8_000
 
@@ -176,7 +181,7 @@ ASSISTANT ANSWER:
         ac = 0.0 if ac is None else self._clamp01(ac)
         flag = self._regex_bool(text, r'"has_hallucination"\s*:\s*(true|false)')
         if flag is None:
-            flag = h < 1.0
+            flag = h < self._HAS_HALLUCINATION_SCORE_FALLBACK_THRESHOLD
         reason = self._regex_reason(text)
         return g, cf, r, h, ac, flag, reason
 
@@ -203,7 +208,7 @@ ASSISTANT ANSWER:
         b = self._regex_bool(text, r'"has_hallucination"\s*:\s*(true|false)')
         if b is not None:
             return b
-        return hallucination_score < 1.0
+        return hallucination_score < self._HAS_HALLUCINATION_SCORE_FALLBACK_THRESHOLD
 
     def _read_reason(self, data: dict[str, Any]) -> str | None:
         raw = data.get("reason")
