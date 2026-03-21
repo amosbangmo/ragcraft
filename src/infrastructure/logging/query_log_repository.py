@@ -2,9 +2,42 @@ from __future__ import annotations
 
 import json
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from src.core.paths import get_data_root
+
+
+def _parse_entry_timestamp(entry: dict) -> datetime | None:
+    raw = entry.get("timestamp")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    s = raw.strip()
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+@runtime_checkable
+class QueryLogStore(Protocol):
+    def log(self, entry: dict) -> None: ...
+
+    def list_logs(
+        self,
+        *,
+        project_id: str | None = None,
+        user_id: str | None = None,
+        since_created_at: str | None = None,
+        until_created_at: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict]: ...
 
 
 class QueryLogRepository:
@@ -12,6 +45,7 @@ class QueryLogRepository:
     Append-only query log storage (newline-delimited JSON in a single file).
 
     Each line is one JSON object. Thread-safe for concurrent writers.
+    Legacy file-based store; retained for tests and optional import paths.
     """
 
     def __init__(self, *, log_path: Path | None = None) -> None:
@@ -33,7 +67,15 @@ class QueryLogRepository:
         except Exception:
             return
 
-    def list_logs(self, *, project_id: str | None = None) -> list[dict]:
+    def list_logs(
+        self,
+        *,
+        project_id: str | None = None,
+        user_id: str | None = None,
+        since_created_at: str | None = None,
+        until_created_at: str | None = None,
+        limit: int | None = None,
+    ) -> list[dict]:
         try:
             with self._lock:
                 if not self._path.is_file():
@@ -55,5 +97,23 @@ class QueryLogRepository:
                 continue
             if project_id is not None and row.get("project_id") != project_id:
                 continue
+            if user_id is not None and row.get("user_id") != user_id:
+                continue
+            ts = _parse_entry_timestamp(row)
+            if since_created_at is not None and since_created_at.strip():
+                since_dt = _parse_entry_timestamp({"timestamp": since_created_at})
+                if since_dt is not None and (ts is None or ts < since_dt):
+                    continue
+            if until_created_at is not None and until_created_at.strip():
+                until_dt = _parse_entry_timestamp({"timestamp": until_created_at})
+                if until_dt is not None and (ts is None or ts > until_dt):
+                    continue
             rows.append(row)
+
+        rows.sort(
+            key=lambda r: _parse_entry_timestamp(r) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+        if limit is not None and limit >= 0:
+            rows = rows[: int(limit)]
         return rows

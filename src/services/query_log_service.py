@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
-from src.infrastructure.logging.query_log_repository import QueryLogRepository
+from src.infrastructure.logging.query_log_repository import QueryLogRepository, QueryLogStore
+from src.infrastructure.logging.sqlite_query_log_repository import SQLiteQueryLogRepository
 
 
 def parse_query_log_timestamp(entry: dict) -> datetime | None:
@@ -46,8 +48,8 @@ def _normalize_id_list(value: object) -> list[str] | None:
 
 
 class QueryLogService:
-    def __init__(self, repository: QueryLogRepository | None = None) -> None:
-        self._repository = repository or QueryLogRepository()
+    def __init__(self, repository: QueryLogStore | None = None) -> None:
+        self._repository = repository or SQLiteQueryLogRepository()
 
     def log_query(self, *, payload: dict) -> None:
         try:
@@ -141,23 +143,34 @@ class QueryLogService:
         self,
         *,
         project_id: str | None = None,
+        user_id: str | None = None,
         since_utc: datetime | None = None,
         until_utc: datetime | None = None,
         last_n: int | None = None,
     ) -> list[dict]:
-        rows = self._repository.list_logs(project_id=project_id)
-        filtered: list[dict] = []
-        for row in rows:
-            ts = parse_query_log_timestamp(row)
-            if since_utc is not None and (ts is None or ts < since_utc):
-                continue
-            if until_utc is not None and (ts is None or ts > until_utc):
-                continue
-            filtered.append(row)
-        filtered.sort(
-            key=lambda r: parse_query_log_timestamp(r) or datetime.min.replace(tzinfo=timezone.utc),
-            reverse=True,
+        since_s = since_utc.isoformat() if since_utc is not None else None
+        until_s = until_utc.isoformat() if until_utc is not None else None
+        return self._repository.list_logs(
+            project_id=project_id,
+            user_id=user_id,
+            since_created_at=since_s,
+            until_created_at=until_s,
+            limit=last_n,
         )
-        if last_n is not None and last_n >= 0:
-            filtered = filtered[:last_n]
-        return filtered
+
+    def import_legacy_file_logs(self, *, log_path: Path | None = None) -> int:
+        """
+        One-time import from newline-delimited JSON (legacy file store).
+        Re-importing the same file may create duplicate rows in SQLite.
+        """
+        try:
+            legacy = QueryLogRepository(log_path=log_path)
+            records = legacy.list_logs()
+            if not records:
+                return 0
+            sink = SQLiteQueryLogRepository()
+            for entry in records:
+                sink.log(entry)
+            return len(records)
+        except Exception:
+            return 0

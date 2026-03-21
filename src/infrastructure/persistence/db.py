@@ -87,5 +87,45 @@ def init_app_db():
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS query_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            project_id TEXT,
+            question TEXT NOT NULL,
+            rewritten_query TEXT,
+            retrieval_mode TEXT,
+            hybrid_retrieval_enabled INTEGER,
+            selected_doc_ids_json TEXT,
+            recalled_doc_ids_json TEXT,
+            confidence REAL,
+            answer_preview TEXT,
+            latency_ms REAL,
+            query_rewrite_ms REAL,
+            retrieval_ms REAL,
+            reranking_ms REAL,
+            prompt_build_ms REAL,
+            answer_generation_ms REAL,
+            total_latency_ms REAL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_query_logs_project_created
+        ON query_logs(project_id, created_at)
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_query_logs_user_project
+        ON query_logs(user_id, project_id)
+        """
+    )
+
     conn.commit()
     conn.close()

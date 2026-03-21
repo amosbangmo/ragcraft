@@ -1,3 +1,4 @@
+import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -6,7 +7,111 @@ from unittest.mock import MagicMock
 from datetime import datetime, timezone
 
 from src.infrastructure.logging.query_log_repository import QueryLogRepository
+from src.infrastructure.logging.sqlite_query_log_repository import SQLiteQueryLogRepository
+from src.infrastructure.persistence.db import init_app_db
 from src.services.query_log_service import QueryLogService, parse_query_log_timestamp
+
+
+class TestSQLiteQueryLogRepository(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmpdir = TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self._prev_sqlite = os.environ.get("SQLITE_DB_PATH")
+        os.environ["SQLITE_DB_PATH"] = str(Path(self._tmpdir.name) / "query_logs_test.db")
+
+        def _restore() -> None:
+            if self._prev_sqlite is None:
+                os.environ.pop("SQLITE_DB_PATH", None)
+            else:
+                os.environ["SQLITE_DB_PATH"] = self._prev_sqlite
+
+        self.addCleanup(_restore)
+        init_app_db()
+
+    def test_insert_list_roundtrip_json_lists(self) -> None:
+        repo = SQLiteQueryLogRepository()
+        repo.log(
+            {
+                "question": "q1",
+                "timestamp": "2025-01-01T12:00:00+00:00",
+                "project_id": "p1",
+                "user_id": "u1",
+                "selected_doc_ids": ["d1", "d2"],
+                "retrieved_doc_ids": ["r1"],
+            }
+        )
+        rows = repo.list_logs(project_id="p1")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["selected_doc_ids"], ["d1", "d2"])
+        self.assertEqual(rows[0]["retrieved_doc_ids"], ["r1"])
+        self.assertEqual(rows[0]["timestamp"], "2025-01-01T12:00:00+00:00")
+
+    def test_list_logs_user_and_limit(self) -> None:
+        repo = SQLiteQueryLogRepository()
+        for i, uid in enumerate(["u1", "u1", "u2"]):
+            repo.log(
+                {
+                    "question": f"q{i}",
+                    "timestamp": f"2025-06-{10+i:02d}T12:00:00+00:00",
+                    "project_id": "px",
+                    "user_id": uid,
+                }
+            )
+        rows = repo.list_logs(project_id="px", user_id="u1", limit=1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["user_id"], "u1")
+
+
+class TestQueryLogServiceSqlite(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmpdir = TemporaryDirectory()
+        self.addCleanup(self._tmpdir.cleanup)
+        self._prev_sqlite = os.environ.get("SQLITE_DB_PATH")
+        os.environ["SQLITE_DB_PATH"] = str(Path(self._tmpdir.name) / "query_logs_svc_test.db")
+
+        def _restore() -> None:
+            if self._prev_sqlite is None:
+                os.environ.pop("SQLITE_DB_PATH", None)
+            else:
+                os.environ["SQLITE_DB_PATH"] = self._prev_sqlite
+
+        self.addCleanup(_restore)
+        init_app_db()
+
+    def test_default_repository_sqlite_load_logs(self) -> None:
+        svc = QueryLogService()
+        svc.log_query(
+            payload={
+                "question": "hello",
+                "project_id": "p9",
+                "user_id": "u9",
+                "timestamp": "2025-03-01T10:00:00+00:00",
+                "latency_ms": 5,
+            }
+        )
+        rows = svc.load_logs(project_id="p9")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["question"], "hello")
+        self.assertEqual(rows[0]["latency_ms"], 5)
+
+    def test_import_legacy_file_logs(self) -> None:
+        with TemporaryDirectory() as tmp:
+            legacy_path = Path(tmp) / "old.jsonl"
+            repo = QueryLogRepository(log_path=legacy_path)
+            repo.log(
+                {
+                    "question": "fromfile",
+                    "project_id": "pimp",
+                    "user_id": "u1",
+                    "timestamp": "2024-01-02T12:00:00+00:00",
+                }
+            )
+            svc = QueryLogService()
+            n = svc.import_legacy_file_logs(log_path=legacy_path)
+            self.assertEqual(n, 1)
+            rows = svc.load_logs(project_id="pimp")
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["question"], "fromfile")
 
 
 class TestQueryLogRepository(unittest.TestCase):

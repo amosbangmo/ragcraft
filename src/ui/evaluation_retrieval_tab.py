@@ -19,7 +19,7 @@ def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
 
     st.caption(
         "Retrieval-focused KPIs and distributions from stored query logs (latency, confidence, hybrid usage). "
-        "Use filters to narrow the window; logs are read from the shared query log file."
+        "Use filters to narrow the window; logs are read from the application SQLite database."
     )
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)

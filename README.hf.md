@@ -366,10 +366,10 @@ This makes the system **transparent, debuggable, and educational**.
 
 ## Observability
 
-- per-stage latency metrics
-- retrieval analytics dashboard
 - query logs
+- per-stage latency metrics
 - ingestion diagnostics
+- retrieval analytics dashboard
 
 ## Multimodal Intelligence
 
