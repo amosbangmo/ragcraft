@@ -38,17 +38,18 @@ def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
     aq = result.answer_quality
     if aq and aq.groundedness_score is not None:
         st.caption(
-            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — switch to **Per question** "
+            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — open the **Questions** tab "
             "for citations, retrieval metrics, and expected vs retrieved."
         )
     else:
-        st.caption("Switch to **Per question** for structured quality, citations, and retrieval signals.")
+        st.caption("Open the **Questions** tab for structured quality, citations, and retrieval signals.")
 
 
 def render_manual_evaluation_result(
     result: ManualEvaluationResult,
     *,
     raw_assets_collapsed: bool = False,
+    include_raw_assets: bool = True,
 ) -> None:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Answer</div>', unsafe_allow_html=True)
@@ -236,6 +237,9 @@ def render_manual_evaluation_result(
                 st.caption("Expected sources (full list)")
                 st.code("\n".join(comp.expected_sources) or "—", language="text")
         st.markdown("</div>", unsafe_allow_html=True)
+
+    if not include_raw_assets:
+        return
 
     if raw_assets_collapsed:
         with st.expander("Raw evidence (advanced)", expanded=False):

@@ -1,7 +1,8 @@
 import streamlit as st
 
 from datetime import datetime, timezone
-from typing import cast
+from typing import Any, cast
+
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
@@ -12,13 +13,7 @@ from src.ui.request_runner import (
     run_request_action,
     render_result_payload,
 )
-from src.ui.evaluation_debug import render_evaluation_debug
-from src.ui.evaluation_overview import render_evaluation_overview
-from src.ui.evaluation_question_detail import (
-    render_benchmark_row_detail,
-    render_evaluation_question_detail,
-)
-from src.ui.manual_evaluation import render_manual_evaluation_compact
+from src.ui.evaluation_tabs import render_evaluation_tabs
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import (
@@ -43,7 +38,6 @@ DATASET_GENERATION_REQUEST_KEY = "dataset_generation_request_running"
 DATASET_GENERATION_RESULT_KEY = "dataset_generation_result_payload"
 DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
-EVALUATION_VIEW_MODE_KEY = "evaluation_view_mode"
 
 
 def _parse_csv_list(raw_value: str) -> list[str]:
@@ -61,6 +55,21 @@ def _parse_csv_list(raw_value: str) -> list[str]:
         values.append(cleaned)
 
     return values
+
+
+def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None:
+    raw = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
+    if raw is None or not isinstance(raw, dict) or "error" in raw:
+        return None
+    result = raw.get("result")
+    if not isinstance(result, BenchmarkResult):
+        return None
+    return raw, result
+
+
+def _noop_payload(_payload: Any) -> None:
+    """Results are surfaced via tab renderers on each rerun."""
+    return
 
 
 header = render_page_header(
@@ -84,16 +93,6 @@ if "qa_dataset_success_message" in st.session_state:
 
 if "qa_dataset_error_message" in st.session_state:
     st.error(st.session_state.pop("qa_dataset_error_message"))
-
-view_mode = st.segmented_control(
-    "Evaluation view",
-    options=["Overview", "Per Question", "Debug"],
-    default=st.session_state.get(EVALUATION_VIEW_MODE_KEY, "Overview"),
-    key=EVALUATION_VIEW_MODE_KEY,
-    selection_mode="single",
-)
-if view_mode not in ("Overview", "Per Question", "Debug"):
-    view_mode = "Overview"
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Manual evaluation</div>', unsafe_allow_html=True)
@@ -150,18 +149,6 @@ def _map_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}")
 
 
-def _render_evaluation_result(result: ManualEvaluationResult | None) -> None:
-    if result is None:
-        st.warning("No manual evaluation result available.")
-        return
-    if view_mode == "Per Question":
-        render_evaluation_question_detail(result)
-    elif view_mode == "Overview":
-        render_manual_evaluation_compact(result)
-    else:
-        st.success("Manual evaluation finished — see the **Debug** section below.")
-
-
 run_clicked = st.button(
     "Run evaluation",
     use_container_width=True,
@@ -183,7 +170,7 @@ else:
 
 render_result_payload(
     result_key=EVALUATION_RESULT_KEY,
-    on_success=_render_evaluation_result,
+    on_success=_noop_payload,
 )
 
 st.markdown("</div>", unsafe_allow_html=True)
@@ -496,80 +483,6 @@ def _map_dataset_evaluation_error(exc: Exception) -> str:
     return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
 
 
-def _render_dataset_evaluation_result(payload: dict) -> None:
-    result = cast(BenchmarkResult, payload["result"])
-    enable_query_rewrite = bool(payload["enable_query_rewrite"])
-    enable_hybrid_retrieval = bool(payload["enable_hybrid_retrieval"])
-
-    summary = result.summary.to_dict()
-    rows = [row.to_dict() for row in result.rows]
-
-    def _scope_metric(key: str, label: str) -> None:
-        raw = summary.get(key)
-        st.metric(label, raw if raw is not None else "—")
-
-    st.markdown("### Latest dataset run")
-    scope = st.columns(2)
-    with scope[0]:
-        _scope_metric("total_entries", "Entries")
-    with scope[1]:
-        _scope_metric("successful_queries", "Successful queries")
-
-    if view_mode == "Overview":
-        render_evaluation_overview(summary, rows)
-    elif view_mode == "Per Question":
-        if not rows:
-            st.info("No per-entry rows in this run.")
-        else:
-            labels = [
-                f"#{r.get('entry_id', '—')} — {(r.get('question') or '')[:80]}"
-                for r in rows
-            ]
-            pick = st.selectbox(
-                "Inspect question",
-                options=labels,
-                key="evaluation_benchmark_question_pick",
-            )
-            idx = labels.index(pick)
-            render_benchmark_row_detail(rows[idx])
-    else:
-        st.caption("Full benchmark dashboard and analytics are in the **Debug** section below.")
-
-    st.markdown("### Download benchmark reports")
-    export = app.build_benchmark_export_artifacts(
-        project_id=project_id,
-        result=result,
-        enable_query_rewrite=enable_query_rewrite,
-        enable_hybrid_retrieval=enable_hybrid_retrieval,
-        generated_at=payload.get("generated_at"),
-    )
-    dl1, dl2, dl3 = st.columns(3)
-    with dl1:
-        st.download_button(
-            label="JSON report",
-            data=export.json_bytes,
-            file_name=export.json_filename,
-            mime="application/json",
-            use_container_width=True,
-        )
-    with dl2:
-        st.download_button(
-            label="CSV report",
-            data=export.csv_bytes,
-            file_name=export.csv_filename,
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with dl3:
-        st.download_button(
-            label="Markdown report",
-            data=export.markdown_bytes,
-            file_name=export.markdown_filename,
-            mime="text/markdown",
-            use_container_width=True,
-        )
-
-
 dataset_run_clicked = st.button(
     "Run dataset evaluation",
     use_container_width=True,
@@ -591,30 +504,77 @@ else:
 
 render_result_payload(
     result_key=DATASET_EVALUATION_RESULT_KEY,
-    on_success=_render_dataset_evaluation_result,
+    on_success=_noop_payload,
 )
 
 st.markdown("</div>", unsafe_allow_html=True)
 
-if view_mode == "Debug":
-    st.markdown("---")
-    bench_for_debug: BenchmarkResult | None = None
-    dataset_payload = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
-    if (
-        dataset_payload is not None
-        and isinstance(dataset_payload, dict)
-        and "error" not in dataset_payload
-    ):
-        maybe_result = dataset_payload.get("result")
-        if isinstance(maybe_result, BenchmarkResult):
-            bench_for_debug = maybe_result
+st.markdown("---")
+st.markdown("### Analysis")
 
-    manual_for_debug: ManualEvaluationResult | None = None
-    manual_payload = st.session_state.get(EVALUATION_RESULT_KEY)
-    if isinstance(manual_payload, ManualEvaluationResult):
-        manual_for_debug = manual_payload
+manual_for_tabs: ManualEvaluationResult | None = None
+manual_payload = st.session_state.get(EVALUATION_RESULT_KEY)
+if isinstance(manual_payload, ManualEvaluationResult):
+    manual_for_tabs = manual_payload
 
-    render_evaluation_debug(
-        benchmark_result=bench_for_debug,
-        manual_result=manual_for_debug,
+bundle = _session_benchmark_bundle()
+summary: dict[str, Any] = {}
+rows: list[dict[str, Any]] = []
+bench_for_tabs: BenchmarkResult | None = None
+reports_export = None
+
+if bundle is not None:
+    payload_dict, bench_for_tabs = bundle
+    summary = bench_for_tabs.summary.to_dict()
+    rows = [row.to_dict() for row in bench_for_tabs.rows]
+    reports_export = app.build_benchmark_export_artifacts(
+        project_id=project_id,
+        result=bench_for_tabs,
+        enable_query_rewrite=bool(payload_dict.get("enable_query_rewrite")),
+        enable_hybrid_retrieval=bool(payload_dict.get("enable_hybrid_retrieval")),
+        generated_at=payload_dict.get("generated_at"),
     )
+
+available_questions: list[dict[str, Any]] = []
+if manual_for_tabs is not None:
+    mq = (manual_for_tabs.question or "").strip()
+    preview = mq[:72] + ("…" if len(mq) > 72 else "") if mq else "Manual evaluation"
+    available_questions.append(
+        {
+            "id": "manual",
+            "label": f"Manual — {preview}",
+            "kind": "manual",
+            "manual_result": manual_for_tabs,
+        }
+    )
+for row in rows:
+    qtext = row.get("question") or ""
+    qprev = qtext[:80] + ("…" if len(qtext) > 80 else "")
+    eid = row.get("entry_id", "—")
+    available_questions.append(
+        {
+            "id": f"bench_{eid}",
+            "label": f"#{eid} — {qprev}",
+            "kind": "benchmark",
+            "row": row,
+        }
+    )
+
+render_evaluation_tabs(
+    overview_payload={
+        "summary": summary,
+        "rows": rows,
+        "manual_result": manual_for_tabs,
+    },
+    question_payload={
+        "available_questions": available_questions,
+        "selected_question_payload": None,
+    },
+    debug_payload={
+        "benchmark_result": bench_for_tabs,
+        "manual_result": manual_for_tabs,
+    },
+    reports_payload={
+        "export": reports_export,
+    },
+)

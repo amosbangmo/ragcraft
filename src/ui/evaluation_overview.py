@@ -49,7 +49,7 @@ def _collect_global_issues(summary: dict) -> list[str]:
     if hall_rate is not None and hall_rate >= 0.2:
         issues.append(
             f"Hallucination rate is elevated ({hall_rate * 100:.0f}% of rows flagged). "
-            "Review flagged entries in Debug or Per question."
+            "Review flagged entries in **Questions** or **Debug**."
         )
 
     doc_recall = _coerce_float(summary.get("avg_doc_id_recall"))
@@ -93,9 +93,9 @@ def render_evaluation_overview(summary: dict, rows: list[dict]) -> None:
         return
 
     st.info(
-        "**How to use this page:** stay on **Overview** for aggregate quality, open **Per question** "
-        "to review one manual or dataset row in depth, and use **Debug** only when you need tables, "
-        "charts, and raw JSON or evidence."
+        "**How to use this workspace:** **Overview** for aggregate quality, **Questions** to review one "
+        "manual or dataset row in depth, **Reports** for downloads, and **Debug** when you need full "
+        "tables, charts, and raw JSON or evidence."
     )
 
     m1, m2, m3 = st.columns(3)
@@ -112,7 +112,10 @@ def render_evaluation_overview(summary: dict, rows: list[dict]) -> None:
         if band:
             st.caption(f"Label: **{band}** (aggregate)")
     with m3:
-        _summary_metric_cell(summary, "avg_citation_faithfulness", "Avg citation faithfulness")
+        if _coerce_float(summary.get("avg_citation_faithfulness")) is not None:
+            _summary_metric_cell(summary, "avg_citation_faithfulness", "Avg citation faithfulness")
+        else:
+            _summary_metric_cell(summary, "avg_citation_source_f1", "Avg citation source F1")
 
     m4, m5, m6 = st.columns(3)
     with m4:

@@ -20,7 +20,7 @@ def render_evaluation_debug(
     """
     Technical inspection: full tables/charts for benchmarks and raw manual evaluation data.
     """
-    st.caption("**Advanced mode** — full metrics, analytics, and raw payloads for engineers.")
+    st.caption("Advanced mode — technical inspection (full metrics, analytics, and raw payloads).")
     st.markdown("### Debug")
 
     if benchmark_result is None and manual_result is None:

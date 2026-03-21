@@ -29,7 +29,7 @@ def _f(value: object) -> str:
     return str(value)
 
 
-def render_benchmark_row_detail(row: dict) -> None:
+def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bool = True) -> None:
     """One benchmark dataset row, grouped like the manual evaluation layout."""
     inject_section_card_styles()
     q = row.get("question") or "—"
@@ -162,5 +162,6 @@ def render_benchmark_row_detail(row: dict) -> None:
                 st.caption(f"Retrieved (distinct): {row.get('retrieved_sources_count', '—')}")
                 st.caption(f"Overlap: {row.get('source_overlap_count', '—')}")
 
-    with st.expander("Full row payload (technical)", expanded=False):
-        st.json(row)
+    if include_full_row_json_expander:
+        with st.expander("Full row payload (technical)", expanded=False):
+            st.json(row)
