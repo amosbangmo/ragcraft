@@ -8,6 +8,12 @@ from langchain_core.documents import Document
 from src.core.config import LLM, RETRIEVAL_CONFIG
 from src.core.exceptions import LLMServiceError
 from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
+from src.domain.pipeline_payloads import (
+    ContextCompressionStats,
+    PipelineBuildResult,
+    SectionExpansionStats,
+    SummaryRecallResult,
+)
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import (
@@ -361,7 +367,7 @@ class RAGService:
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> SummaryRecallResult:
         rss = self.retrieval_settings_service
         settings = rss.merge(
             rss.from_project(project.user_id, project.project_id),
@@ -428,20 +434,22 @@ class RAGService:
         )
         retrieval_ms = (perf_counter() - t0) * 1000.0
 
-        return {
-            "settings": settings,
-            "rewritten_question": rewritten_question,
-            "query_rewrite_ms": query_rewrite_ms,
-            "query_intent": query_intent,
-            "table_aware_qa_enabled": table_aware_qa_enabled,
-            "use_adaptive_retrieval": use_adaptive_retrieval,
-            "strategy": strategy,
-            "enable_hybrid_retrieval": enable_hybrid_retrieval,
-            "enable_query_rewrite": enable_query_rewrite,
-            "filters_for_retrieval": filters_for_retrieval,
-            "retrieval_payload": retrieval_payload,
-            "retrieval_ms": retrieval_ms,
-        }
+        return SummaryRecallResult(
+            settings=settings,
+            rewritten_question=rewritten_question,
+            query_rewrite_ms=query_rewrite_ms,
+            query_intent=query_intent,
+            table_aware_qa_enabled=table_aware_qa_enabled,
+            use_adaptive_retrieval=use_adaptive_retrieval,
+            strategy=strategy,
+            enable_hybrid_retrieval=enable_hybrid_retrieval,
+            enable_query_rewrite=enable_query_rewrite,
+            filters_for_retrieval=filters_for_retrieval,
+            vector_summary_docs=retrieval_payload["vector_summary_docs"],
+            bm25_summary_docs=retrieval_payload["bm25_summary_docs"],
+            recalled_summary_docs=retrieval_payload["recalled_summary_docs"],
+            retrieval_ms=retrieval_ms,
+        )
 
     def preview_summary_recall(
         self,
@@ -469,18 +477,18 @@ class RAGService:
             filters=filters,
             retrieval_settings=retrieval_settings,
         )
-        recalled = bundle["retrieval_payload"]["recalled_summary_docs"]
+        recalled = bundle.recalled_summary_docs
         if not recalled:
             return None
         return {
-            "rewritten_question": bundle["rewritten_question"],
+            "rewritten_question": bundle.rewritten_question,
             "recalled_summary_docs": recalled,
-            "vector_summary_docs": bundle["retrieval_payload"]["vector_summary_docs"],
-            "bm25_summary_docs": bundle["retrieval_payload"]["bm25_summary_docs"],
-            "retrieval_mode": "faiss+bm25" if bundle["enable_hybrid_retrieval"] else "faiss",
-            "query_rewrite_enabled": bundle["enable_query_rewrite"],
-            "hybrid_retrieval_enabled": bundle["enable_hybrid_retrieval"],
-            "use_adaptive_retrieval": bundle["use_adaptive_retrieval"],
+            "vector_summary_docs": bundle.vector_summary_docs,
+            "bm25_summary_docs": bundle.bm25_summary_docs,
+            "retrieval_mode": "faiss+bm25" if bundle.enable_hybrid_retrieval else "faiss",
+            "query_rewrite_enabled": bundle.enable_query_rewrite,
+            "hybrid_retrieval_enabled": bundle.enable_hybrid_retrieval,
+            "use_adaptive_retrieval": bundle.use_adaptive_retrieval,
         }
 
     def _run_pipeline(
@@ -494,7 +502,7 @@ class RAGService:
         defer_query_log: bool = False,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
-    ) -> dict | None:
+    ) -> PipelineBuildResult | None:
         pipeline_started = perf_counter()
         if chat_history is None:
             chat_history = []
@@ -509,22 +517,21 @@ class RAGService:
             retrieval_settings=retrieval_settings,
         )
 
-        settings = bundle["settings"]
-        query_rewrite_ms = bundle["query_rewrite_ms"]
-        query_intent = bundle["query_intent"]
-        table_aware_qa_enabled = bundle["table_aware_qa_enabled"]
-        use_adaptive_retrieval = bundle["use_adaptive_retrieval"]
-        strategy = bundle["strategy"]
-        enable_hybrid_retrieval = bundle["enable_hybrid_retrieval"]
-        filters_for_retrieval = bundle["filters_for_retrieval"]
-        retrieval_payload = bundle["retrieval_payload"]
-        retrieval_ms = bundle["retrieval_ms"]
-        rewritten_question = bundle["rewritten_question"]
-        enable_query_rewrite = bundle["enable_query_rewrite"]
+        settings = bundle.settings
+        query_rewrite_ms = bundle.query_rewrite_ms
+        query_intent = bundle.query_intent
+        table_aware_qa_enabled = bundle.table_aware_qa_enabled
+        use_adaptive_retrieval = bundle.use_adaptive_retrieval
+        strategy = bundle.strategy
+        enable_hybrid_retrieval = bundle.enable_hybrid_retrieval
+        filters_for_retrieval = bundle.filters_for_retrieval
+        retrieval_ms = bundle.retrieval_ms
+        rewritten_question = bundle.rewritten_question
+        enable_query_rewrite = bundle.enable_query_rewrite
 
-        vector_summary_docs = retrieval_payload["vector_summary_docs"]
-        bm25_summary_docs = retrieval_payload["bm25_summary_docs"]
-        recalled_summary_docs = retrieval_payload["recalled_summary_docs"]
+        vector_summary_docs = bundle.vector_summary_docs
+        bm25_summary_docs = bundle.bm25_summary_docs
+        recalled_summary_docs = bundle.recalled_summary_docs
 
         if not recalled_summary_docs:
             return None
@@ -547,13 +554,13 @@ class RAGService:
             all_assets=corpus,
         )
         pre_rerank_raw_assets = expansion.assets
-        section_expansion = {
-            "enabled": bool(settings.enable_section_expansion),
-            "applied": expansion.applied,
-            "section_expansion_count": expansion.section_expansion_count,
-            "expanded_assets_count": expansion.expanded_assets_count,
-            "recall_pool_size": len(recalled_raw_assets),
-        }
+        section_expansion = SectionExpansionStats(
+            enabled=bool(settings.enable_section_expansion),
+            applied=expansion.applied,
+            section_expansion_count=expansion.section_expansion_count,
+            expanded_assets_count=expansion.expanded_assets_count,
+            recall_pool_size=len(recalled_raw_assets),
+        )
 
         t0 = perf_counter()
         reranked_raw_assets = self.reranking_service.rerank(
@@ -592,13 +599,13 @@ class RAGService:
 
         chars_after = comp.prompt_char_estimate(prompt_context_assets)
         ratio = (chars_after / chars_before) if chars_before > 0 else 1.0
-        context_compression = {
-            "enabled": bool(settings.enable_contextual_compression),
-            "applied": compression_applied and bool(settings.enable_contextual_compression),
-            "chars_before": chars_before,
-            "chars_after": chars_after,
-            "ratio": round(ratio, 4),
-        }
+        context_compression = ContextCompressionStats(
+            enabled=bool(settings.enable_contextual_compression),
+            applied=compression_applied and bool(settings.enable_contextual_compression),
+            chars_before=chars_before,
+            chars_after=chars_after,
+            ratio=round(ratio, 4),
+        )
 
         t0 = perf_counter()
         citation_objects = self.source_citation_service.build_citations(prompt_context_assets)
@@ -657,44 +664,44 @@ class RAGService:
         )
         latency_dict = latency.to_dict()
 
-        payload = {
-            "question": question,
-            "rewritten_question": rewritten_question,
-            "query_intent": query_intent.value,
-            "table_aware_qa_enabled": table_aware_qa_enabled,
-            "chat_history": chat_history,
-            "retrieval_mode": retrieval_mode,
-            "query_rewrite_enabled": enable_query_rewrite,
-            "hybrid_retrieval_enabled": enable_hybrid_retrieval,
-            "adaptive_retrieval_enabled": use_adaptive_retrieval,
-            "retrieval_strategy": strategy.to_dict(),
-            "retrieval_filters": (
+        payload = PipelineBuildResult(
+            question=question,
+            rewritten_question=rewritten_question,
+            query_intent=query_intent,
+            table_aware_qa_enabled=table_aware_qa_enabled,
+            chat_history=list(chat_history),
+            retrieval_mode=retrieval_mode,
+            query_rewrite_enabled=enable_query_rewrite,
+            hybrid_retrieval_enabled=enable_hybrid_retrieval,
+            adaptive_retrieval_enabled=use_adaptive_retrieval,
+            retrieval_strategy=strategy,
+            retrieval_filters=(
                 filters_for_retrieval.to_dict()
                 if filters_for_retrieval is not None
                 else None
             ),
-            "vector_summary_docs": vector_summary_docs,
-            "bm25_summary_docs": bm25_summary_docs,
-            "recalled_summary_docs": recalled_summary_docs,
-            "recalled_doc_ids": recalled_doc_ids,
-            "recalled_raw_assets": recalled_raw_assets,
-            "pre_rerank_raw_assets": pre_rerank_raw_assets,
-            "section_expansion": section_expansion,
-            "selected_summary_docs": selected_summary_docs,
-            "selected_doc_ids": selected_doc_ids,
-            "reranked_raw_assets": reranked_raw_assets,
-            "prompt_context_assets": prompt_context_assets,
-            "context_compression": context_compression,
-            "source_references": source_references,
-            "image_context_enriched": image_context_enriched,
-            "multimodal_analysis": multimodal_analysis,
-            "multimodal_orchestration_hint": multimodal_orchestration_hint,
-            "raw_context": raw_context,
-            "prompt": prompt,
-            "confidence": confidence,
-            "latency": latency_dict,
-            "latency_ms": total_pipeline_ms,
-        }
+            vector_summary_docs=vector_summary_docs,
+            bm25_summary_docs=bm25_summary_docs,
+            recalled_summary_docs=recalled_summary_docs,
+            recalled_doc_ids=recalled_doc_ids,
+            recalled_raw_assets=recalled_raw_assets,
+            pre_rerank_raw_assets=pre_rerank_raw_assets,
+            section_expansion=section_expansion,
+            selected_summary_docs=selected_summary_docs,
+            selected_doc_ids=selected_doc_ids,
+            reranked_raw_assets=reranked_raw_assets,
+            prompt_context_assets=prompt_context_assets,
+            context_compression=context_compression,
+            source_references=source_references,
+            image_context_enriched=image_context_enriched,
+            multimodal_analysis=multimodal_analysis,
+            multimodal_orchestration_hint=multimodal_orchestration_hint,
+            raw_context=raw_context,
+            prompt=prompt,
+            confidence=confidence,
+            latency=latency_dict,
+            latency_ms=total_pipeline_ms,
+        )
 
         if self.query_log_service is not None and not defer_query_log:
             self._safe_log_query(
@@ -712,11 +719,11 @@ class RAGService:
                     "query_intent": query_intent.value,
                     "table_aware_qa_enabled": table_aware_qa_enabled,
                     "retrieval_strategy": strategy.to_dict(),
-                    "context_compression_chars_before": context_compression["chars_before"],
-                    "context_compression_chars_after": context_compression["chars_after"],
-                    "context_compression_ratio": context_compression["ratio"],
-                    "section_expansion_count": section_expansion["section_expansion_count"],
-                    "expanded_assets_count": section_expansion["expanded_assets_count"],
+                    "context_compression_chars_before": context_compression.chars_before,
+                    "context_compression_chars_after": context_compression.chars_after,
+                    "context_compression_ratio": context_compression.ratio,
+                    "section_expansion_count": section_expansion.section_expansion_count,
+                    "expanded_assets_count": section_expansion.expanded_assets_count,
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -733,7 +740,7 @@ class RAGService:
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
-    ) -> dict | None:
+    ) -> PipelineBuildResult | None:
         return self._run_pipeline(
             project,
             question,
@@ -745,7 +752,7 @@ class RAGService:
             retrieval_settings=retrieval_settings,
         )
 
-    def generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
+    def generate_answer_from_pipeline(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
         """
         Generate the final answer from an already-prepared pipeline payload.
 
@@ -753,7 +760,7 @@ class RAGService:
         same answer generation logic without duplicating LLM invocation code.
         """
         try:
-            response = LLM.invoke(pipeline["prompt"])
+            response = LLM.invoke(pipeline.prompt)
         except Exception as exc:
             raise LLMServiceError(
                 f"Failed to generate answer for project '{project.project_id}': {exc}",
@@ -794,44 +801,36 @@ class RAGService:
         answer_generation_ms = (perf_counter() - gen_started) * 1000.0
         total_ms = (perf_counter() - ask_started) * 1000.0
         full_latency = merge_with_answer_stage(
-            pipeline.get("latency"),
+            pipeline.latency,
             answer_generation_ms=answer_generation_ms,
             total_ms=total_ms,
         )
         full_latency_dict = full_latency.to_dict()
-        pipeline["latency"] = full_latency_dict
-        pipeline["latency_ms"] = total_ms
+        pipeline.latency = full_latency_dict
+        pipeline.latency_ms = total_ms
 
         if defer_log:
             self._safe_log_query(
                 {
                     "question": question,
-                    "rewritten_query": pipeline.get("rewritten_question"),
+                    "rewritten_query": pipeline.rewritten_question,
                     "project_id": project.project_id,
                     "user_id": project.user_id,
-                    "selected_doc_ids": pipeline.get("selected_doc_ids"),
-                    "retrieved_doc_ids": pipeline.get("recalled_doc_ids"),
+                    "selected_doc_ids": pipeline.selected_doc_ids,
+                    "retrieved_doc_ids": pipeline.recalled_doc_ids,
                     "latency_ms": total_ms,
-                    "confidence": pipeline.get("confidence"),
+                    "confidence": pipeline.confidence,
                     "answer": answer,
-                    "hybrid_retrieval_enabled": pipeline.get("hybrid_retrieval_enabled"),
-                    "retrieval_mode": pipeline.get("retrieval_mode"),
-                    "query_intent": pipeline.get("query_intent"),
-                    "table_aware_qa_enabled": pipeline.get("table_aware_qa_enabled"),
-                    "retrieval_strategy": pipeline.get("retrieval_strategy"),
-                    "context_compression_chars_before": (
-                        (pipeline.get("context_compression") or {}).get("chars_before")
-                    ),
-                    "context_compression_chars_after": (
-                        (pipeline.get("context_compression") or {}).get("chars_after")
-                    ),
-                    "context_compression_ratio": (pipeline.get("context_compression") or {}).get("ratio"),
-                    "section_expansion_count": (pipeline.get("section_expansion") or {}).get(
-                        "section_expansion_count"
-                    ),
-                    "expanded_assets_count": (pipeline.get("section_expansion") or {}).get(
-                        "expanded_assets_count"
-                    ),
+                    "hybrid_retrieval_enabled": pipeline.hybrid_retrieval_enabled,
+                    "retrieval_mode": pipeline.retrieval_mode,
+                    "query_intent": pipeline.query_intent.value,
+                    "table_aware_qa_enabled": pipeline.table_aware_qa_enabled,
+                    "retrieval_strategy": pipeline.retrieval_strategy.to_dict(),
+                    "context_compression_chars_before": pipeline.context_compression.chars_before,
+                    "context_compression_chars_after": pipeline.context_compression.chars_after,
+                    "context_compression_ratio": pipeline.context_compression.ratio,
+                    "section_expansion_count": pipeline.section_expansion.section_expansion_count,
+                    "expanded_assets_count": pipeline.section_expansion.expanded_assets_count,
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )
@@ -839,9 +838,9 @@ class RAGService:
         return RAGResponse(
             question=question,
             answer=answer,
-            source_documents=pipeline["selected_summary_docs"],
-            raw_assets=pipeline["reranked_raw_assets"],
-            citations=pipeline["source_references"],
-            confidence=pipeline["confidence"],
+            source_documents=pipeline.selected_summary_docs,
+            raw_assets=pipeline.reranked_raw_assets,
+            citations=pipeline.source_references,
+            confidence=pipeline.confidence,
             latency=full_latency_dict,
         )

@@ -27,6 +27,14 @@ if "src.core.config" not in sys.modules:
     sys.modules["src.core.config"] = types.ModuleType("src.core.config")
 
 config_module = sys.modules["src.core.config"]
+# ``retrieval_settings`` imports this symbol; tests stub the module before importing RAGService.
+if not hasattr(config_module, "RetrievalConfig"):
+
+    class RetrievalConfig:
+        pass
+
+    config_module.RetrievalConfig = RetrievalConfig
+
 # Fill only the config attributes this service needs at import/runtime.
 if not hasattr(config_module, "LLM"):
     config_module.LLM = SimpleNamespace(invoke=lambda prompt: SimpleNamespace(content="ok"))
@@ -40,6 +48,7 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         enable_contextual_compression=True,
         similarity_search_k=15,
         bm25_search_k=10,
+        hybrid_search_k=10,
         bm25_k1=1.5,
         bm25_b=0.75,
         bm25_epsilon=0.25,
@@ -91,7 +100,9 @@ if "src.infrastructure.vectorstore.faiss_store" not in sys.modules:
 
 from langchain_core.documents import Document
 from src.core.exceptions import LLMServiceError
+from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
+from src.domain.query_intent import QueryIntent
 from src.domain.source_citation import SourceCitation
 from src.services.confidence_service import ConfidenceService
 from src.services.rag_service import RAGService
@@ -308,17 +319,16 @@ class TestRAGService(unittest.TestCase):
             payload = service._run_pipeline(project=project, question="question", chat_history=["h1"])
 
         self.assertIsNotNone(payload)
-        self.assertEqual(payload["rewritten_question"], "rewritten")
-        self.assertEqual(payload["selected_doc_ids"], ["d1"])
-        self.assertEqual(payload["source_references"][0]["doc_id"], "d1")
+        self.assertEqual(payload.rewritten_question, "rewritten")
+        self.assertEqual(payload.selected_doc_ids, ["d1"])
+        self.assertEqual(payload.source_references[0]["doc_id"], "d1")
         expected_confidence = ConfidenceService().compute_confidence(
             reranked_raw_assets=reranked_assets,
         )
-        self.assertEqual(payload["confidence"], expected_confidence)
-        self.assertIn("latency", payload)
-        self.assertIn("latency_ms", payload)
-        lat = payload["latency"]
-        self.assertIsInstance(lat, dict)
+        self.assertEqual(payload.confidence, expected_confidence)
+        self.assertIsInstance(payload.latency, dict)
+        self.assertGreaterEqual(payload.latency_ms, 0.0)
+        lat = payload.latency
         for key in (
             "query_rewrite_ms",
             "retrieval_ms",
@@ -330,18 +340,13 @@ class TestRAGService(unittest.TestCase):
             self.assertIn(key, lat)
             self.assertGreaterEqual(lat[key], 0.0)
         self.assertEqual(lat["answer_generation_ms"], 0.0)
-        self.assertEqual(payload["latency_ms"], lat["total_ms"])
-        self.assertEqual(payload["query_intent"], "factual")
-        self.assertIn("context_compression", payload)
-        self.assertIn("prompt_context_assets", payload)
-        self.assertEqual(len(payload["prompt_context_assets"]), 1)
-        self.assertIn("section_expansion", payload)
-        self.assertIn("pre_rerank_raw_assets", payload)
-        self.assertEqual(payload["section_expansion"]["recall_pool_size"], 1)
-        self.assertIn("image_context_enriched", payload)
-        self.assertFalse(payload["image_context_enriched"])
+        self.assertEqual(payload.latency_ms, lat["total_ms"])
+        self.assertEqual(payload.query_intent, QueryIntent.FACTUAL)
+        self.assertEqual(len(payload.prompt_context_assets), 1)
+        self.assertEqual(payload.section_expansion.recall_pool_size, 1)
+        self.assertFalse(payload.image_context_enriched)
         self.assertEqual(
-            payload.get("multimodal_analysis"),
+            payload.multimodal_analysis,
             {
                 "has_text": True,
                 "has_table": False,
@@ -349,26 +354,28 @@ class TestRAGService(unittest.TestCase):
                 "modality_count": 1,
             },
         )
-        self.assertEqual(payload.get("multimodal_orchestration_hint"), "")
+        self.assertEqual(payload.multimodal_orchestration_hint, "")
+        self.assertIsInstance(payload.context_compression, ContextCompressionStats)
+        self.assertGreaterEqual(len(payload.pre_rerank_raw_assets), 1)
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
-        pipeline = {
-            "prompt": "prompt text",
-            "selected_summary_docs": [Document(page_content="sum", metadata={"doc_id": "d1"})],
-            "reranked_raw_assets": [{"doc_id": "d1"}],
-            "source_references": [{"doc_id": "d1"}],
-            "confidence": 0.8,
-            "context_compression": {
-                "enabled": True,
-                "applied": True,
-                "chars_before": 100,
-                "chars_after": 50,
-                "ratio": 0.5,
-            },
-            "latency": {
+        pipeline = PipelineBuildResult(
+            prompt="prompt text",
+            selected_summary_docs=[Document(page_content="sum", metadata={"doc_id": "d1"})],
+            reranked_raw_assets=[{"doc_id": "d1"}],
+            source_references=[{"doc_id": "d1"}],
+            confidence=0.8,
+            context_compression=ContextCompressionStats(
+                enabled=True,
+                applied=True,
+                chars_before=100,
+                chars_after=50,
+                ratio=0.5,
+            ),
+            latency={
                 "query_rewrite_ms": 0.1,
                 "retrieval_ms": 0.2,
                 "reranking_ms": 0.3,
@@ -376,7 +383,7 @@ class TestRAGService(unittest.TestCase):
                 "answer_generation_ms": 0.0,
                 "total_ms": 1.0,
             },
-        }
+        )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
         with patch.object(service, "_run_pipeline", return_value=pipeline):
@@ -393,13 +400,13 @@ class TestRAGService(unittest.TestCase):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
         mock_llm.invoke.side_effect = RuntimeError("timeout")
-        pipeline = {
-            "prompt": "prompt text",
-            "selected_summary_docs": [],
-            "reranked_raw_assets": [],
-            "source_references": [],
-            "confidence": 0.0,
-        }
+        pipeline = PipelineBuildResult(
+            prompt="prompt text",
+            selected_summary_docs=[],
+            reranked_raw_assets=[],
+            source_references=[],
+            confidence=0.0,
+        )
 
         with patch.object(service, "_run_pipeline", return_value=pipeline):
             with self.assertRaises(LLMServiceError):
@@ -410,19 +417,19 @@ class TestRAGService(unittest.TestCase):
         log_service = MagicMock()
         service, *_ = self._build_service(query_log_service=log_service)
         project = Project(user_id="u1", project_id="p1")
-        pipeline = {
-            "prompt": "prompt text",
-            "rewritten_question": "rw",
-            "selected_summary_docs": [],
-            "reranked_raw_assets": [],
-            "source_references": [],
-            "confidence": 0.7,
-            "selected_doc_ids": ["d1"],
-            "recalled_doc_ids": ["d1", "d2"],
-            "hybrid_retrieval_enabled": False,
-            "retrieval_mode": "faiss",
-            "query_intent": "table",
-        }
+        pipeline = PipelineBuildResult(
+            prompt="prompt text",
+            rewritten_question="rw",
+            selected_summary_docs=[],
+            reranked_raw_assets=[],
+            source_references=[],
+            confidence=0.7,
+            selected_doc_ids=["d1"],
+            recalled_doc_ids=["d1", "d2"],
+            hybrid_retrieval_enabled=False,
+            retrieval_mode="faiss",
+            query_intent=QueryIntent.TABLE,
+        )
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
         with patch.object(service, "_run_pipeline", return_value=pipeline) as run_pipeline:

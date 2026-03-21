@@ -4,6 +4,7 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from src.domain.pipeline_latency import merge_with_answer_stage
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.manual_evaluation_result import (
     ManualEvaluationAnswerQuality,
     ManualEvaluationCitationQuality,
@@ -120,10 +121,16 @@ def detect_manual_evaluation_issues(
     return ordered
 
 
-def _ordered_sources_from_pipeline(pipeline: dict[str, Any] | None) -> list[str]:
+def _ordered_sources_from_pipeline(
+    pipeline: PipelineBuildResult | dict[str, Any] | None,
+) -> list[str]:
     if not pipeline:
         return []
-    refs = pipeline.get("source_references") or []
+    refs = (
+        pipeline.source_references
+        if isinstance(pipeline, PipelineBuildResult)
+        else (pipeline.get("source_references") or [])
+    )
     if not isinstance(refs, list):
         return []
     ordered: list[str] = []
@@ -178,13 +185,13 @@ class ManualEvaluationService:
         full_latency_dict: dict[str, float] | None = None
         if pipeline is not None:
             full_lat = merge_with_answer_stage(
-                pipeline.get("latency"),
+                pipeline.latency,
                 answer_generation_ms=answer_generation_ms,
                 total_ms=latency_ms,
             )
             full_latency_dict = full_lat.to_dict()
-            pipeline["latency"] = full_latency_dict
-            pipeline["latency_ms"] = latency_ms
+            pipeline.latency = full_latency_dict
+            pipeline.latency_ms = latency_ms
 
         entry = QADatasetEntry(
             id=_MANUAL_EVAL_ENTRY_ID,
@@ -213,15 +220,11 @@ class ManualEvaluationService:
         citations: list[dict[str, Any]] = []
         raw_assets: list[dict[str, Any]] = []
         if pipeline is not None:
-            refs = pipeline.get("source_references") or []
-            if isinstance(refs, list):
-                citations = [r for r in refs if isinstance(r, dict)]
-            assets = pipeline.get("reranked_raw_assets") or []
-            if isinstance(assets, list):
-                raw_assets = [a for a in assets if isinstance(a, dict)]
+            citations = [r for r in pipeline.source_references if isinstance(r, dict)]
+            raw_assets = [a for a in pipeline.reranked_raw_assets if isinstance(a, dict)]
 
         ranked_doc_ids = [
-            doc_id for doc_id in (pipeline.get("selected_doc_ids", []) if pipeline else []) if doc_id
+            doc_id for doc_id in (pipeline.selected_doc_ids if pipeline else []) if doc_id
         ]
         retrieved_sources = _ordered_sources_from_pipeline(pipeline)
 

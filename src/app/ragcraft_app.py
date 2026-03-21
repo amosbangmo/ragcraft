@@ -28,6 +28,7 @@ from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
+from src.domain.pipeline_payloads import PipelineBuildResult
 
 from src.core.chain_state import (
     get_cached_chain,
@@ -463,7 +464,7 @@ class RAGCraftApp:
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict | None = None,
-    ):
+    ) -> PipelineBuildResult | None:
         project = self.get_project(user_id, project_id)
         return self.rag_service.inspect_pipeline(
             project,
@@ -684,13 +685,13 @@ class RAGCraftApp:
             latency_dict = None
             if pipeline is not None:
                 full_latency = merge_with_answer_stage(
-                    pipeline.get("latency"),
+                    pipeline.latency,
                     answer_generation_ms=answer_generation_ms,
                     total_ms=latency_ms,
                 )
                 latency_dict = full_latency.to_dict()
-                pipeline["latency"] = latency_dict
-                pipeline["latency_ms"] = latency_ms
+                pipeline.latency = latency_dict
+                pipeline.latency_ms = latency_ms
 
             return {
                 "pipeline": pipeline,

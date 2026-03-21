@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from time import perf_counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 
 if TYPE_CHECKING:
@@ -92,7 +93,7 @@ class RetrievalComparisonService:
         question: str,
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
-    ) -> tuple[dict | None, float]:
+    ) -> tuple[PipelineBuildResult | None, float]:
         started = perf_counter()
         pipeline = self.rag_service.inspect_pipeline(
             project,
@@ -103,7 +104,7 @@ class RetrievalComparisonService:
         )
         elapsed_ms = (perf_counter() - started) * 1000.0
         if pipeline is not None:
-            instrumented = pipeline.get("latency_ms")
+            instrumented = pipeline.latency_ms
             if instrumented is not None:
                 try:
                     return pipeline, float(instrumented)
@@ -111,20 +112,26 @@ class RetrievalComparisonService:
                     pass
         return pipeline, elapsed_ms
 
-    def _extract_doc_ids(self, pipeline: dict | None) -> list[str]:
-        return list(self._safe_get(pipeline, "recalled_doc_ids", []))
+    def _extract_doc_ids(self, pipeline: PipelineBuildResult | None) -> list[str]:
+        if pipeline is None:
+            return []
+        return list(pipeline.recalled_doc_ids)
 
-    def _get_rewritten_query(self, faiss_pipeline: dict | None, hybrid_pipeline: dict | None) -> str:
+    def _get_rewritten_query(
+        self,
+        faiss_pipeline: PipelineBuildResult | None,
+        hybrid_pipeline: PipelineBuildResult | None,
+    ) -> str:
         if faiss_pipeline is not None:
-            return str(faiss_pipeline.get("rewritten_question", ""))
+            return str(faiss_pipeline.rewritten_question)
         if hybrid_pipeline is not None:
-            return str(hybrid_pipeline.get("rewritten_question", ""))
+            return str(hybrid_pipeline.rewritten_question)
         return ""
 
-    def _safe_get(self, payload: dict | None, key: str, default):
+    def _safe_get(self, payload: PipelineBuildResult | None, key: str, default: Any) -> Any:
         if payload is None:
             return default
-        return payload.get(key, default)
+        return getattr(payload, key, default)
 
     def _build_summary(self, rows: list[dict], *, enable_query_rewrite: bool) -> dict:
         if not rows:

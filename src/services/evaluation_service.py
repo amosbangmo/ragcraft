@@ -5,6 +5,7 @@ import re
 import numpy as np
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.multimodal_metrics import (
     aggregate_multimodal_metrics,
     empty_modality_row_fields,
@@ -107,7 +108,11 @@ class EvaluationService:
             latency_ms = float(result.get("latency_ms", 0.0))
             merged_latency = result.get("latency")
             if not isinstance(merged_latency, dict) and pipeline is not None:
-                merged_latency = pipeline.get("latency")
+                merged_latency = (
+                    pipeline.latency
+                    if isinstance(pipeline, PipelineBuildResult)
+                    else pipeline.get("latency")
+                )
             if not isinstance(merged_latency, dict):
                 merged_latency = None
 
@@ -187,14 +192,16 @@ class EvaluationService:
 
             successful_queries += 1
 
+            pl = pipeline.to_dict() if isinstance(pipeline, PipelineBuildResult) else pipeline
+
             ranked_doc_ids = [
                 doc_id
-                for doc_id in pipeline.get("selected_doc_ids", [])
+                for doc_id in pl.get("selected_doc_ids", [])
                 if doc_id
             ]
             selected_doc_ids = set(ranked_doc_ids)
 
-            source_references = pipeline.get("source_references", []) or []
+            source_references = pl.get("source_references", []) or []
             selected_sources = {
                 ref.get("source_file")
                 for ref in source_references
@@ -309,7 +316,7 @@ class EvaluationService:
                 answer_recall_values.append(answer_recall)
                 answer_f1_values.append(answer_f1)
 
-            confidence = float(pipeline.get("confidence", 0.0))
+            confidence = float(pl.get("confidence", 0.0))
             confidence_values.append(confidence)
             latency_values.append(latency_ms)
 
@@ -320,7 +327,7 @@ class EvaluationService:
             judge_result = self._llm_judge_service.evaluate(
                 question=entry.question,
                 answer=result.get("answer", ""),
-                raw_context=pipeline.get("raw_context", ""),
+                raw_context=pl.get("raw_context", ""),
                 citations=refs_for_judge,
             )
             groundedness = judge_result.groundedness_score
@@ -366,9 +373,9 @@ class EvaluationService:
                 "confidence": round(confidence, 2),
                 "latency_ms": round(latency_ms, 1),
                 **_latency_stage_row_fields(merged_latency),
-                "retrieval_mode": pipeline.get("retrieval_mode", "unknown"),
-                "query_rewrite_enabled": bool(pipeline.get("query_rewrite_enabled", False)),
-                "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),
+                "retrieval_mode": pl.get("retrieval_mode", "unknown"),
+                "query_rewrite_enabled": bool(pl.get("query_rewrite_enabled", False)),
+                "hybrid_retrieval_enabled": bool(pl.get("hybrid_retrieval_enabled", False)),
                 "groundedness": round(groundedness, 2),
                 "citation_faithfulness": round(citation_faithfulness, 2),
                 "answer_relevance": round(answer_relevance, 2),
@@ -377,7 +384,7 @@ class EvaluationService:
                 "groundedness_score": round(judge_result.groundedness_score, 2),
                 "citation_faithfulness_score": round(judge_result.citation_faithfulness_score, 2),
                 "answer_relevance_score": round(judge_result.answer_relevance_score, 2),
-                **modality_row_fields_from_pipeline(pipeline),
+                **modality_row_fields_from_pipeline(pl),
             }
             rows.append(
                 BenchmarkRow(

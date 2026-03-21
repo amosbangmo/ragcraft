@@ -4,6 +4,7 @@ import streamlit as st
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.retrieval_presets import PRESET_UI_LABELS, parse_retrieval_preset
 from src.domain.retrieval_settings import RetrievalSettings
@@ -403,6 +404,9 @@ def _render_inspection_result(pipeline):
     if pipeline is None:
         st.warning("No retrieval result available for this query.")
         return
+
+    if isinstance(pipeline, PipelineBuildResult):
+        pipeline = pipeline.to_dict()
 
     rs = pipeline.get("retrieval_strategy") or {}
     strat_k = rs.get("k")

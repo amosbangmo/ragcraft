@@ -1,7 +1,31 @@
 import unittest
 
+from langchain_core.documents import Document
+
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.services.retrieval_comparison_service import RetrievalComparisonService
+
+
+def _fake_pipeline(
+    *,
+    rewritten_question: str,
+    recalled_n: int,
+    recalled_doc_ids: list[str],
+    reranked_raw_assets: list[dict],
+    selected_doc_ids: list[str],
+    confidence: float,
+) -> PipelineBuildResult:
+    return PipelineBuildResult(
+        rewritten_question=rewritten_question,
+        recalled_summary_docs=[
+            Document(page_content=str(i), metadata={}) for i in range(recalled_n)
+        ],
+        recalled_doc_ids=list(recalled_doc_ids),
+        reranked_raw_assets=reranked_raw_assets,
+        selected_doc_ids=list(selected_doc_ids),
+        confidence=confidence,
+    )
 
 
 class _FakeRAGService:
@@ -27,22 +51,22 @@ class TestRetrievalComparisonService(unittest.TestCase):
 
     def test_compare_builds_summary_and_rows(self):
         pipelines = {
-            ("q1", False): {
-                "rewritten_question": "q1",
-                "recalled_summary_docs": [1],
-                "recalled_doc_ids": ["d1"],
-                "reranked_raw_assets": [{"doc_id": "d1"}],
-                "selected_doc_ids": ["d1"],
-                "confidence": 0.5,
-            },
-            ("q1", True): {
-                "rewritten_question": "q1",
-                "recalled_summary_docs": [1, 2],
-                "recalled_doc_ids": ["d1", "d2"],
-                "reranked_raw_assets": [{"doc_id": "d1"}, {"doc_id": "d2"}],
-                "selected_doc_ids": ["d1", "d2"],
-                "confidence": 0.7,
-            },
+            ("q1", False): _fake_pipeline(
+                rewritten_question="q1",
+                recalled_n=1,
+                recalled_doc_ids=["d1"],
+                reranked_raw_assets=[{"doc_id": "d1"}],
+                selected_doc_ids=["d1"],
+                confidence=0.5,
+            ),
+            ("q1", True): _fake_pipeline(
+                rewritten_question="q1",
+                recalled_n=2,
+                recalled_doc_ids=["d1", "d2"],
+                reranked_raw_assets=[{"doc_id": "d1"}, {"doc_id": "d2"}],
+                selected_doc_ids=["d1", "d2"],
+                confidence=0.7,
+            ),
         }
         service = RetrievalComparisonService(rag_service=_FakeRAGService(pipelines))
 
