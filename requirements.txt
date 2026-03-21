@@ -22,6 +22,9 @@ lxml
 # Vector store
 faiss-cpu
 
+# Viz (evaluation dashboard)
+matplotlib
+
 # Utils
 python-dotenv
 tiktoken

@@ -4,6 +4,22 @@ from datetime import datetime, timezone
 
 from src.infrastructure.logging.query_log_repository import QueryLogRepository
 
+
+def parse_query_log_timestamp(entry: dict) -> datetime | None:
+    raw = entry.get("timestamp")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    s = raw.strip()
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
 _MAX_TEXT_FIELD_LEN = 2000
 _MAX_LIST_IDS = 200
 
@@ -112,4 +128,36 @@ class QueryLogService:
             if stage_val is not None:
                 entry[stage_key] = stage_val
 
+        h = payload.get("hybrid_retrieval_enabled")
+        if h is not None:
+            entry["hybrid_retrieval_enabled"] = bool(h)
+        rm = payload.get("retrieval_mode")
+        if isinstance(rm, str) and rm.strip():
+            entry["retrieval_mode"] = rm.strip()
+
         return entry
+
+    def load_logs(
+        self,
+        *,
+        project_id: str | None = None,
+        since_utc: datetime | None = None,
+        until_utc: datetime | None = None,
+        last_n: int | None = None,
+    ) -> list[dict]:
+        rows = self._repository.list_logs(project_id=project_id)
+        filtered: list[dict] = []
+        for row in rows:
+            ts = parse_query_log_timestamp(row)
+            if since_utc is not None and (ts is None or ts < since_utc):
+                continue
+            if until_utc is not None and (ts is None or ts > until_utc):
+                continue
+            filtered.append(row)
+        filtered.sort(
+            key=lambda r: parse_query_log_timestamp(r) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+        if last_n is not None and last_n >= 0:
+            filtered = filtered[:last_n]
+        return filtered

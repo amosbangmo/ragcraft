@@ -387,6 +387,8 @@ class RAGService:
                     "retrieved_doc_ids": recalled_doc_ids,
                     "latency_ms": latency.total_ms,
                     "confidence": confidence,
+                    "hybrid_retrieval_enabled": enable_hybrid_retrieval,
+                    "retrieval_mode": retrieval_mode,
                     **self._latency_fields_for_query_log(latency),
                 }
             )
@@ -466,6 +468,8 @@ class RAGService:
                     "latency_ms": total_ms,
                     "confidence": pipeline.get("confidence"),
                     "answer": answer,
+                    "hybrid_retrieval_enabled": pipeline.get("hybrid_retrieval_enabled"),
+                    "retrieval_mode": pipeline.get("retrieval_mode"),
                     **self._latency_fields_for_query_log(full_latency),
                 }
             )

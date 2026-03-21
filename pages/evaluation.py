@@ -141,4 +141,8 @@ render_evaluation_tabs(
         "dataset_generation_result_key": DATASET_GENERATION_RESULT_KEY,
         "entry_count": len(entries),
     },
+    retrieval_payload={
+        "project_id": project_id,
+        "widget_key_suffix": eval_widget_suffix,
+    },
 )

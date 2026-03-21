@@ -360,6 +360,8 @@ class TestRAGService(unittest.TestCase):
             "confidence": 0.7,
             "selected_doc_ids": ["d1"],
             "recalled_doc_ids": ["d1", "d2"],
+            "hybrid_retrieval_enabled": False,
+            "retrieval_mode": "faiss",
         }
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
@@ -382,6 +384,8 @@ class TestRAGService(unittest.TestCase):
         self.assertIsInstance(payload["latency_ms"], float)
         self.assertIn("query_rewrite_ms", payload)
         self.assertIn("total_latency_ms", payload)
+        self.assertFalse(payload["hybrid_retrieval_enabled"])
+        self.assertEqual(payload["retrieval_mode"], "faiss")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ if (Test-Path $venvActivate) {
 }
 
 Set-Location $repoRoot
+python -m unittest discover -s tests/ui -p "test_*.py"
 python -m unittest discover -s tests/services -p "test_*.py"
 python -m unittest discover -s tests/integration -p "test_*.py"
 python -m unittest discover -s tests/quality -p "test_*.py"

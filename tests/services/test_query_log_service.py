@@ -3,8 +3,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
 
+from datetime import datetime, timezone
+
 from src.infrastructure.logging.query_log_repository import QueryLogRepository
-from src.services.query_log_service import QueryLogService
+from src.services.query_log_service import QueryLogService, parse_query_log_timestamp
 
 
 class TestQueryLogRepository(unittest.TestCase):
@@ -79,6 +81,57 @@ class TestQueryLogService(unittest.TestCase):
         repo.log.side_effect = OSError("boom")
         service = QueryLogService(repository=repo)
         service.log_query(payload={"question": "q"})
+
+    def test_load_logs_last_n_and_date_filter(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            t0 = "2024-01-01T12:00:00+00:00"
+            t1 = "2024-06-01T12:00:00+00:00"
+            t2 = "2024-12-01T12:00:00+00:00"
+            for ts, q in [(t0, "a"), (t1, "b"), (t2, "c")]:
+                service.log_query(
+                    payload={
+                        "question": q,
+                        "project_id": "p1",
+                        "user_id": "u1",
+                        "timestamp": ts,
+                        "latency_ms": 10,
+                    }
+                )
+            rows = service.load_logs(project_id="p1", last_n=2)
+            self.assertEqual([r["question"] for r in rows], ["c", "b"])
+            since = datetime(2024, 3, 1, tzinfo=timezone.utc)
+            until = datetime(2024, 9, 1, tzinfo=timezone.utc)
+            mid = service.load_logs(project_id="p1", since_utc=since, until_utc=until)
+            self.assertEqual(len(mid), 1)
+            self.assertEqual(mid[0]["question"], "b")
+
+    def test_parse_query_log_timestamp_z_suffix(self):
+        dt = parse_query_log_timestamp({"timestamp": "2020-05-05T10:00:00Z"})
+        self.assertIsNotNone(dt)
+        assert dt is not None
+        self.assertEqual(dt.year, 2020)
+        self.assertEqual(dt.month, 5)
+
+    def test_build_entry_stores_hybrid_fields(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "logs.json"
+            repo = QueryLogRepository(log_path=path)
+            service = QueryLogService(repository=repo)
+            service.log_query(
+                payload={
+                    "question": "q",
+                    "project_id": "p1",
+                    "user_id": "u1",
+                    "hybrid_retrieval_enabled": True,
+                    "retrieval_mode": "faiss+bm25",
+                }
+            )
+            rows = repo.list_logs()
+            self.assertTrue(rows[0]["hybrid_retrieval_enabled"])
+            self.assertEqual(rows[0]["retrieval_mode"], "faiss+bm25")
 
 
 if __name__ == "__main__":
