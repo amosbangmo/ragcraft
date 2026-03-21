@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
 
 import streamlit as st
 
+from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_presets import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -12,7 +14,10 @@ from src.domain.retrieval_presets import (
     parse_retrieval_preset,
 )
 from src.domain.retrieval_settings import RetrievalSettings
+from src.services.project_settings_service import ProjectSettingsService
 from src.services.retrieval_settings_service import RetrievalSettingsService
+
+_RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
 
 # Backward compatibility for tests and imports
 PRESET_PRECISE = RetrievalPreset.PRECISE.value
@@ -62,6 +67,73 @@ def retrieval_settings_to_request_dict(settings: RetrievalSettings) -> dict:
     return dict(asdict(settings))
 
 
+def _retrieval_persist_signature_key(user_id: str, project_id: str) -> str:
+    return f"_retrieval_persist_sig_{user_id}_{project_id}"
+
+
+def _sync_retrieval_panel_from_project(
+    *,
+    user_id: str,
+    project_id: str,
+    project_settings_service: ProjectSettingsService,
+) -> None:
+    target = f"{user_id}:{project_id}"
+    if st.session_state.get(_RETRIEVAL_PANEL_BOUND_PROJECT) == target:
+        return
+
+    ps = project_settings_service.load(user_id, project_id)
+    st.session_state["retrieval_preset"] = parse_retrieval_preset(ps.retrieval_preset).value
+    st.session_state["retrieval_advanced"] = ps.retrieval_advanced
+    if ps.retrieval_advanced:
+        st.session_state["retrieval_query_rewrite"] = ps.enable_query_rewrite
+        st.session_state["retrieval_hybrid"] = ps.enable_hybrid_retrieval
+    else:
+        p = parse_retrieval_preset(ps.retrieval_preset)
+        rw, hy = _PRESET_DEFAULT_TOGGLES.get(p.value, (True, True))
+        st.session_state["retrieval_query_rewrite"] = rw
+        st.session_state["retrieval_hybrid"] = hy
+
+    st.session_state[_RETRIEVAL_PANEL_BOUND_PROJECT] = target
+    st.session_state[_retrieval_persist_signature_key(user_id, project_id)] = json.dumps(
+        [
+            st.session_state["retrieval_preset"],
+            st.session_state["retrieval_advanced"],
+            st.session_state["retrieval_query_rewrite"],
+            st.session_state["retrieval_hybrid"],
+        ]
+    )
+
+
+def _maybe_persist_retrieval_project_settings(
+    *,
+    user_id: str,
+    project_id: str,
+    project_settings_service: ProjectSettingsService,
+) -> None:
+    sig_key = _retrieval_persist_signature_key(user_id, project_id)
+    sig = json.dumps(
+        [
+            st.session_state["retrieval_preset"],
+            st.session_state["retrieval_advanced"],
+            st.session_state["retrieval_query_rewrite"],
+            st.session_state["retrieval_hybrid"],
+        ]
+    )
+    if st.session_state.get(sig_key) == sig:
+        return
+    project_settings_service.save(
+        ProjectSettings(
+            user_id=user_id,
+            project_id=project_id,
+            retrieval_preset=str(st.session_state["retrieval_preset"]),
+            retrieval_advanced=bool(st.session_state["retrieval_advanced"]),
+            enable_query_rewrite=bool(st.session_state["retrieval_query_rewrite"]),
+            enable_hybrid_retrieval=bool(st.session_state["retrieval_hybrid"]),
+        )
+    )
+    st.session_state[sig_key] = sig
+
+
 def _on_retrieval_preset_changed() -> None:
     preset = str(st.session_state.get("retrieval_preset", RetrievalPreset.BALANCED.value))
     rw, hy = _PRESET_DEFAULT_TOGGLES.get(
@@ -77,6 +149,9 @@ def render_retrieval_settings_panel(
     title: str = "Retrieval",
     expanded: bool = False,
     service: RetrievalSettingsService | None = None,
+    user_id: str | None = None,
+    project_id: str | None = None,
+    project_settings_service: ProjectSettingsService | None = None,
 ) -> RetrievalSettings:
     """
     Render retrieval preset (and optional advanced overrides) and persist merged settings.
@@ -86,6 +161,9 @@ def render_retrieval_settings_panel(
     - ``retrieval_advanced`` — show rewrite / hybrid overrides
     - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — used when advanced is on
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
+
+    When ``user_id``, ``project_id``, and ``project_settings_service`` are provided,
+    the panel loads stored preferences for that project and saves changes automatically.
     """
     svc = service or RetrievalSettingsService()
 
@@ -103,6 +181,13 @@ def render_retrieval_settings_panel(
         st.session_state["retrieval_query_rewrite"] = True
     if "retrieval_hybrid" not in st.session_state:
         st.session_state["retrieval_hybrid"] = True
+
+    if user_id and project_id and project_settings_service:
+        _sync_retrieval_panel_from_project(
+            user_id=user_id,
+            project_id=project_id,
+            project_settings_service=project_settings_service,
+        )
 
     with st.expander(title, expanded=expanded):
         st.selectbox(
@@ -146,6 +231,13 @@ def render_retrieval_settings_panel(
         )
     else:
         settings = svc.from_preset(str(st.session_state["retrieval_preset"]))
+
+    if user_id and project_id and project_settings_service:
+        _maybe_persist_retrieval_project_settings(
+            user_id=user_id,
+            project_id=project_id,
+            project_settings_service=project_settings_service,
+        )
 
     st.session_state["retrieval_settings"] = settings
     return settings

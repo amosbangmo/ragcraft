@@ -40,7 +40,13 @@ if not project_id:
 
 project = app.get_project(user_id, project_id)
 
-retrieval_settings = render_retrieval_settings_panel(title="Retrieval settings", expanded=False)
+retrieval_settings = render_retrieval_settings_panel(
+    title="Retrieval settings",
+    expanded=False,
+    user_id=user_id,
+    project_id=project_id,
+    project_settings_service=app.project_settings_service,
+)
 
 query = st.text_input("Search query", placeholder="Type a semantic query...")
 

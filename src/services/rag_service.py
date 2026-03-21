@@ -363,7 +363,10 @@ class RAGService:
         retrieval_settings: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         rss = self.retrieval_settings_service
-        settings = rss.merge(rss.get_default(), retrieval_settings)
+        settings = rss.merge(
+            rss.from_project(project.user_id, project.project_id),
+            retrieval_settings,
+        )
         if enable_query_rewrite_override is not None:
             settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
         if enable_hybrid_retrieval_override is not None:

@@ -103,7 +103,13 @@ with col1:
 with col2:
     st.metric("Documents", len(documents))
 
-retrieval_settings = render_retrieval_settings_panel(title="Retrieval settings", expanded=False)
+retrieval_settings = render_retrieval_settings_panel(
+    title="Retrieval settings",
+    expanded=False,
+    user_id=user_id,
+    project_id=project_id,
+    project_settings_service=app.project_settings_service,
+)
 
 app.chat_service.init(project.project_id)
 

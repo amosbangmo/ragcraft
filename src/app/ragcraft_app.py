@@ -13,7 +13,9 @@ from src.services.evaluation_service import EvaluationService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.chat_service import ChatService
 from src.services.query_log_service import QueryLogService
+from src.services.project_settings_service import ProjectSettingsService
 from src.services.rag_service import RAGService
+from src.services.retrieval_settings_service import RetrievalSettingsService
 from src.services.docstore_service import DocStoreService
 from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
@@ -53,6 +55,7 @@ class RAGCraftApp:
             project_service=self.project_service,
         )
         self.benchmark_report_service = BenchmarkReportService()
+        self.project_settings_service = ProjectSettingsService()
 
         self._rag_service = None
         self._retrieval_comparison_service = None
@@ -66,6 +69,9 @@ class RAGCraftApp:
                 docstore_service=self.docstore_service,
                 reranking_service=self.reranking_service,
                 query_log_service=QueryLogService(),
+                retrieval_settings_service=RetrievalSettingsService(
+                    project_settings_service=self.project_settings_service,
+                ),
             )
 
         return self._rag_service

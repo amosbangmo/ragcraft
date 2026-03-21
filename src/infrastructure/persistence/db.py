@@ -137,6 +137,21 @@ def init_app_db():
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS project_retrieval_settings (
+            user_id TEXT NOT NULL,
+            project_id TEXT NOT NULL,
+            retrieval_preset TEXT NOT NULL DEFAULT 'balanced',
+            retrieval_advanced INTEGER NOT NULL DEFAULT 0,
+            enable_query_rewrite INTEGER NOT NULL DEFAULT 1,
+            enable_hybrid_retrieval INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, project_id)
+        )
+        """
+    )
+
     for ddl in (
         "ALTER TABLE query_logs ADD COLUMN query_intent TEXT",
         "ALTER TABLE query_logs ADD COLUMN retrieval_strategy_k INTEGER",

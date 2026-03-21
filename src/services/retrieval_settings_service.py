@@ -4,12 +4,14 @@ from dataclasses import fields, replace
 from typing import Any
 
 from src.core.config import RETRIEVAL_CONFIG, RetrievalConfig
+from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_presets import (
     PRECISE_SEARCH_K,
     RetrievalPreset,
     parse_retrieval_preset,
 )
 from src.domain.retrieval_settings import RetrievalSettings
+from src.services.project_settings_service import ProjectSettingsService
 
 
 class RetrievalSettingsService:
@@ -20,10 +22,16 @@ class RetrievalSettingsService:
     object with the same attributes.
     """
 
-    def __init__(self, config_source: RetrievalConfig | Any | None = None) -> None:
+    def __init__(
+        self,
+        config_source: RetrievalConfig | Any | None = None,
+        *,
+        project_settings_service: ProjectSettingsService | None = None,
+    ) -> None:
         self._config_source: RetrievalConfig | Any = (
             RETRIEVAL_CONFIG if config_source is None else config_source
         )
+        self._project_settings_service = project_settings_service
 
     @property
     def config_source(self) -> RetrievalConfig | Any:
@@ -34,6 +42,32 @@ class RetrievalSettingsService:
 
     def get_default(self) -> RetrievalSettings:
         return RetrievalSettings.from_object(self._config_source)
+
+    def retrieval_settings_for_saved_project(self, ps: ProjectSettings) -> RetrievalSettings:
+        """Build ``RetrievalSettings`` from persisted project preferences."""
+        base = self.from_preset(ps.retrieval_preset)
+        if not ps.retrieval_advanced:
+            return base
+        return self.merge(
+            base,
+            {
+                "enable_query_rewrite": ps.enable_query_rewrite,
+                "enable_hybrid_retrieval": ps.enable_hybrid_retrieval,
+            },
+        )
+
+    def from_project(self, user_id: str, project_id: str) -> RetrievalSettings:
+        """
+        Effective retrieval settings for a workspace when the UI does not pass overrides.
+
+        Without a ``ProjectSettingsService``, returns ``get_default()`` so standalone
+        ``RAGService`` construction matches the pre–per-project merge base. With a
+        service, missing rows use **Balanced** preset semantics via ``load`` defaults.
+        """
+        pss = self._project_settings_service
+        if pss is None:
+            return self.get_default()
+        return self.retrieval_settings_for_saved_project(pss.load(user_id, project_id))
 
     def from_preset(self, preset: str | RetrievalPreset) -> RetrievalSettings:
         """

@@ -90,9 +90,10 @@ if not projects:
 for project_id in projects:
     documents = app.get_project_document_details(user_id, project_id)
     is_current = project_id == st.session_state.get("project_id")
+    retrieval_label = app.project_settings_service.preset_label_for_project(user_id, project_id)
 
     with st.expander(
-        f"{'✅ ' if is_current else '📂 '}{project_id} — {len(documents)} document(s)",
+        f"{'✅ ' if is_current else '📂 '}{project_id} — {len(documents)} document(s) · retrieval: {retrieval_label}",
         expanded=is_current,
     ):
         col_a, col_b = st.columns([1, 4])

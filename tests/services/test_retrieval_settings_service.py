@@ -4,6 +4,9 @@ import unittest
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from src.core.config import RETRIEVAL_CONFIG, RetrievalConfig
+from unittest.mock import MagicMock
+
+from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_presets import PRECISE_SEARCH_K, RetrievalPreset
 from src.domain.retrieval_settings import RetrievalSettings
 from src.services.retrieval_settings_service import RetrievalSettingsService
@@ -64,6 +67,41 @@ class TestRetrievalSettingsService(unittest.TestCase):
         self.assertTrue(s.enable_hybrid_retrieval)
         self.assertGreaterEqual(s.similarity_search_k, 30)
         self.assertGreaterEqual(s.similarity_search_k, base.similarity_search_k)
+
+    def test_from_project_without_service_matches_get_default(self) -> None:
+        svc = RetrievalSettingsService()
+        s = svc.from_project("any", "project")
+        self.assertEqual(s, svc.get_default())
+
+    def test_from_project_uses_project_settings_service(self) -> None:
+        pss = MagicMock()
+        pss.load.return_value = ProjectSettings(
+            user_id="u",
+            project_id="p",
+            retrieval_preset=RetrievalPreset.PRECISE.value,
+            retrieval_advanced=False,
+            enable_query_rewrite=True,
+            enable_hybrid_retrieval=False,
+        )
+        svc = RetrievalSettingsService(project_settings_service=pss)
+        s = svc.from_project("u", "p")
+        pss.load.assert_called_once_with("u", "p")
+        self.assertFalse(s.enable_hybrid_retrieval)
+        self.assertEqual(s.similarity_search_k, PRECISE_SEARCH_K)
+
+    def test_retrieval_settings_for_saved_project_advanced_merges_toggles(self) -> None:
+        svc = RetrievalSettingsService()
+        ps = ProjectSettings(
+            user_id="u",
+            project_id="p",
+            retrieval_preset=RetrievalPreset.BALANCED.value,
+            retrieval_advanced=True,
+            enable_query_rewrite=False,
+            enable_hybrid_retrieval=False,
+        )
+        s = svc.retrieval_settings_for_saved_project(ps)
+        self.assertFalse(s.enable_query_rewrite)
+        self.assertFalse(s.enable_hybrid_retrieval)
 
 
 if __name__ == "__main__":
