@@ -18,6 +18,21 @@ from src.application.ingestion.use_cases.replace_document_assets import (
     replace_document_assets_for_reingest,
 )
 from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
+from src.application.projects.use_cases.create_project import CreateProjectUseCase
+from src.application.projects.use_cases.get_project_document_details import (
+    GetProjectDocumentDetailsUseCase,
+)
+from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+    GetProjectRetrievalPresetLabelUseCase,
+)
+from src.application.projects.use_cases.invalidate_project_chain_cache import (
+    InvalidateProjectChainCacheUseCase,
+)
+from src.application.projects.use_cases.list_document_assets_for_source import (
+    ListDocumentAssetsForSourceUseCase,
+)
+from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
+from src.application.projects.use_cases.list_projects import ListProjectsUseCase
 from src.services.rag_service import RAGService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.application.evaluation.benchmark_export_dtos import (
@@ -27,6 +42,7 @@ from src.application.evaluation.benchmark_export_dtos import (
 from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
+from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.manual_evaluation_result import ManualEvaluationResult
@@ -35,8 +51,8 @@ from src.domain.pipeline_payloads import PipelineBuildResult
 from src.core.chain_state import (
     get_cached_chain,
     set_cached_chain,
-    invalidate_project_chain,
     invalidate_all_project_chains,
+    invalidate_project_chain as _drop_cached_chain_for_project,
 )
 
 
@@ -63,6 +79,11 @@ class RAGCraftApp:
         self.qa_dataset_generation_service = self._backend.qa_dataset_generation_service
         self.project_settings_service = self._backend.project_settings_service
         self.query_log_service = self._backend.query_log_service
+
+    @property
+    def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
+        """Port for retrieval preset persistence (UI and API use this instead of the concrete service type)."""
+        return self.project_settings_service
 
     @property
     def rag_service(self) -> RAGService:
@@ -203,9 +224,11 @@ class RAGCraftApp:
 
         return cached_object
 
-    def invalidate_project_chain(self, user_id: str, project_id: str):
-        project = self.get_project(user_id, project_id)
-        invalidate_project_chain(project.project_id)
+    def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
+        InvalidateProjectChainCacheUseCase(
+            project_service=self.project_service,
+            invalidate_project_chain=_drop_cached_chain_for_project,
+        ).execute(user_id=user_id, project_id=project_id)
 
     def invalidate_all_project_chains(self):
         invalidate_all_project_chains()

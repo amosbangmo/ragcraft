@@ -45,7 +45,7 @@ retrieval_settings = render_retrieval_settings_panel(
     expanded=False,
     user_id=user_id,
     project_id=project_id,
-    project_settings_service=app.project_settings_service,
+    settings_repository=app.project_settings_repository,
 )
 
 query = st.text_input("Search query", placeholder="Type a semantic query...")

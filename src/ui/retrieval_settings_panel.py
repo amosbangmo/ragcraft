@@ -6,6 +6,7 @@ from dataclasses import asdict
 import streamlit as st
 
 from src.domain.project_settings import ProjectSettings
+from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.retrieval_presets import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -14,7 +15,6 @@ from src.domain.retrieval_presets import (
     parse_retrieval_preset,
 )
 from src.domain.retrieval_settings import RetrievalSettings
-from src.services.project_settings_service import ProjectSettingsService
 from src.services.retrieval_settings_service import RetrievalSettingsService
 
 _RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
@@ -75,7 +75,7 @@ def _sync_retrieval_panel_from_project(
     *,
     user_id: str,
     project_id: str,
-    project_settings_service: ProjectSettingsService,
+    settings_repository: ProjectSettingsRepositoryPort,
 ) -> None:
     target = f"{user_id}:{project_id}"
     if st.session_state.get(_RETRIEVAL_PANEL_BOUND_PROJECT) == target:
@@ -108,7 +108,7 @@ def _maybe_persist_retrieval_project_settings(
     *,
     user_id: str,
     project_id: str,
-    project_settings_service: ProjectSettingsService,
+    settings_repository: ProjectSettingsRepositoryPort,
 ) -> None:
     sig_key = _retrieval_persist_signature_key(user_id, project_id)
     sig = json.dumps(
@@ -121,7 +121,7 @@ def _maybe_persist_retrieval_project_settings(
     )
     if st.session_state.get(sig_key) == sig:
         return
-    project_settings_service.save(
+    settings_repository.save(
         ProjectSettings(
             user_id=user_id,
             project_id=project_id,
@@ -162,7 +162,7 @@ def render_retrieval_settings_panel(
     - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — used when advanced is on
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
 
-    When ``user_id``, ``project_id``, and ``project_settings_service`` are provided,
+    When ``user_id``, ``project_id``, and ``settings_repository`` are provided,
     the panel loads stored preferences for that project and saves changes automatically.
     """
     svc = service or RetrievalSettingsService()
@@ -182,11 +182,11 @@ def render_retrieval_settings_panel(
     if "retrieval_hybrid" not in st.session_state:
         st.session_state["retrieval_hybrid"] = True
 
-    if user_id and project_id and project_settings_service:
+    if user_id and project_id and settings_repository:
         _sync_retrieval_panel_from_project(
             user_id=user_id,
             project_id=project_id,
-            project_settings_service=project_settings_service,
+            settings_repository=settings_repository,
         )
 
     with st.expander(title, expanded=expanded):
@@ -232,11 +232,11 @@ def render_retrieval_settings_panel(
     else:
         settings = svc.from_preset(str(st.session_state["retrieval_preset"]))
 
-    if user_id and project_id and project_settings_service:
+    if user_id and project_id and settings_repository:
         _maybe_persist_retrieval_project_settings(
             user_id=user_id,
             project_id=project_id,
-            project_settings_service=project_settings_service,
+            settings_repository=settings_repository,
         )
 
     st.session_state["retrieval_settings"] = settings
