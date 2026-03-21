@@ -155,14 +155,16 @@ class FailureAnalysisService:
         citation_doc_id_rec = _coerce_float(row.get("citation_doc_id_recall"))
         if groundedness is not None and groundedness < self._q:
             labels.append("grounding_failure")
-        elif (
+
+        if (
             exp_docs is not None
             and exp_docs > 0
             and prompt_doc_id_prec is not None
             and prompt_doc_id_prec < self._q
         ):
             labels.append("context_selection_failure")
-        elif (
+
+        if (
             exp_docs is not None
             and exp_docs > 0
             and citation_doc_id_rec is not None

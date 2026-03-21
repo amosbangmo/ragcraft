@@ -814,11 +814,15 @@ def render_evaluation_dashboard(
         subtitle="Latency and model confidence averaged across successful queries.",
         min_height=0,
     ):
-        p1, p2 = st.columns(2)
+        p1, p2, p3 = st.columns(3)
         with p1:
             _summary_metric(summary, "avg_latency_ms", "Avg latency (ms)")
         with p2:
             _summary_metric(summary, "avg_confidence", "Avg confidence")
+        with p3:
+            _summary_metric(
+                summary, "pipeline_failure_rate", "Pipeline failure rate", as_percent=True
+            )
 
     with section_card(
         title="Gold answer overlap",

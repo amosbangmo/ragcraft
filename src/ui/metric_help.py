@@ -43,6 +43,12 @@ METRIC_HELP: dict[str, str] = {
         "Summarizes typical responsiveness for the workload. "
         "Lower is better for the same quality bar."
     ),
+    "pipeline_failure_rate": (
+        "Measures the share of dataset rows where the answer pipeline did not complete. "
+        "Range: 0–1 (often shown as a percentage). "
+        "Numerator is failed queries; denominator is total evaluated rows. "
+        "Lower is better."
+    ),
     "recall_at_k": (
         "Measures the fraction of expected document IDs that appear in the top-K ranked list. "
         "Range: 0–1. "

@@ -213,7 +213,6 @@ class EvaluationService:
                         data=row_payload,
                     )
                 )
-                hallucination_flags.append(False)
                 latency_values.append(latency_ms)
                 continue
 
@@ -353,8 +352,17 @@ class EvaluationService:
                 )
                 semantic_similarity_values.append(semantic_similarity_row)
 
-            confidence = float(pl.get("confidence", 0.0))
-            confidence_values.append(confidence)
+            confidence_raw = pl.get("confidence")
+            confidence: float | None
+            if confidence_raw is None:
+                confidence = None
+            else:
+                try:
+                    confidence = float(confidence_raw)
+                except (TypeError, ValueError):
+                    confidence = None
+            if confidence is not None:
+                confidence_values.append(confidence)
             latency_values.append(latency_ms)
 
             refs_for_judge: list[dict] = []
@@ -455,6 +463,7 @@ class EvaluationService:
             "avg_ndcg_at_k": _mean_round(ndcg_at_k_values, 2),
             "avg_confidence": _mean_round(confidence_values, 2),
             "avg_latency_ms": _mean_round(latency_values, 1),
+            "pipeline_failure_rate": _rate(len(rows) - successful_queries, len(rows)),
             "hit_at_k": _rate(doc_id_hits, entries_with_expected_doc_ids),
             "source_hit_rate": _rate(source_hits, entries_with_expected_sources),
             "avg_answer_f1": _mean_round(answer_f1_values, 2),

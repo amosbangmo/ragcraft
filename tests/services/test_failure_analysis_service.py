@@ -92,7 +92,7 @@ class TestFailureAnalysisService(unittest.TestCase):
         self.assertIn("citation_failure", out["row_failures"][0]["failure_labels"])
         self.assertNotIn("grounding_failure", out["row_failures"][0]["failure_labels"])
 
-    def test_groundedness_still_grounding_failure_not_context_selection(self) -> None:
+    def test_groundedness_plus_context_and_citation_can_coexist(self) -> None:
         rows = [
             {
                 "entry_id": 12,
@@ -105,9 +105,10 @@ class TestFailureAnalysisService(unittest.TestCase):
             }
         ]
         out = FailureAnalysisService().analyze(rows)
-        self.assertIn("grounding_failure", out["row_failures"][0]["failure_labels"])
-        self.assertNotIn("context_selection_failure", out["row_failures"][0]["failure_labels"])
-        self.assertNotIn("citation_failure", out["row_failures"][0]["failure_labels"])
+        labels = out["row_failures"][0]["failure_labels"]
+        self.assertIn("grounding_failure", labels)
+        self.assertIn("context_selection_failure", labels)
+        self.assertIn("citation_failure", labels)
 
     def test_retrieval_mode_none(self) -> None:
         rows = [
