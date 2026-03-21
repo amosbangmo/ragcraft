@@ -5,6 +5,7 @@ import streamlit as st
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_presets import PRESET_UI_LABELS, parse_retrieval_preset
 from src.domain.retrieval_settings import RetrievalSettings
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
@@ -242,7 +243,10 @@ if not project_id:
 rs_panel = st.session_state.get("retrieval_settings")
 if isinstance(rs_panel, RetrievalSettings):
     st.markdown("### Retrieval panel (session)")
-    preset_label = st.session_state.get("retrieval_preset", "—")
+    _pr = st.session_state.get("retrieval_preset")
+    preset_label = (
+        PRESET_UI_LABELS[parse_retrieval_preset(_pr)] if _pr is not None else "—"
+    )
     st.caption(
         f"Preset: **{preset_label}** · Query rewrite: **{'On' if rs_panel.enable_query_rewrite else 'Off'}** · "
         f"Hybrid retrieval: **{'On' if rs_panel.enable_hybrid_retrieval else 'Off'}**"

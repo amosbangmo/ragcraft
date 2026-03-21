@@ -4,6 +4,11 @@ from dataclasses import fields, replace
 from typing import Any
 
 from src.core.config import RETRIEVAL_CONFIG, RetrievalConfig
+from src.domain.retrieval_presets import (
+    PRECISE_SEARCH_K,
+    RetrievalPreset,
+    parse_retrieval_preset,
+)
 from src.domain.retrieval_settings import RetrievalSettings
 
 
@@ -29,6 +34,50 @@ class RetrievalSettingsService:
 
     def get_default(self) -> RetrievalSettings:
         return RetrievalSettings.from_object(self._config_source)
+
+    def from_preset(self, preset: str | RetrievalPreset) -> RetrievalSettings:
+        """
+        Map a named preset to a full ``RetrievalSettings`` instance.
+
+        Centralizes preset semantics; optional UI overrides merge on top via ``merge``.
+        """
+        p = parse_retrieval_preset(preset)
+        base = self.get_default()
+
+        if p == RetrievalPreset.BALANCED:
+            return self.validate(
+                replace(
+                    base,
+                    enable_query_rewrite=True,
+                    enable_hybrid_retrieval=True,
+                )
+            )
+
+        if p == RetrievalPreset.PRECISE:
+            k = PRECISE_SEARCH_K
+            return self.validate(
+                replace(
+                    base,
+                    enable_query_rewrite=True,
+                    enable_hybrid_retrieval=False,
+                    similarity_search_k=k,
+                    bm25_search_k=k,
+                    hybrid_search_k=k,
+                )
+            )
+
+        # Exploratory
+        k = max(30, int(base.similarity_search_k * 1.5))
+        return self.validate(
+            replace(
+                base,
+                enable_query_rewrite=False,
+                enable_hybrid_retrieval=True,
+                similarity_search_k=k,
+                bm25_search_k=max(base.bm25_search_k, k),
+                hybrid_search_k=max(base.hybrid_search_k, k),
+            )
+        )
 
     def merge(
         self,

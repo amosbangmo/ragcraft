@@ -1,76 +1,60 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from typing import Callable
 
 import streamlit as st
 
+from src.domain.retrieval_presets import (
+    PRESET_DESCRIPTIONS,
+    PRESET_SELECT_ORDER,
+    PRESET_UI_LABELS,
+    RetrievalPreset,
+    parse_retrieval_preset,
+)
 from src.domain.retrieval_settings import RetrievalSettings
 from src.services.retrieval_settings_service import RetrievalSettingsService
 
-PRESET_PRECISE = "Precise"
-PRESET_BALANCED = "Balanced"
-PRESET_EXPLORATORY = "Exploratory"
+# Backward compatibility for tests and imports
+PRESET_PRECISE = RetrievalPreset.PRECISE.value
+PRESET_BALANCED = RetrievalPreset.BALANCED.value
+PRESET_EXPLORATORY = RetrievalPreset.EXPLORATORY.value
 
-PRESET_OPTIONS: tuple[str, ...] = (PRESET_PRECISE, PRESET_BALANCED, PRESET_EXPLORATORY)
+PRESET_OPTIONS: tuple[str, ...] = tuple(p.value for p in PRESET_SELECT_ORDER)
 
-# When the user picks a preset, seed toggles to these defaults (they can still override).
 _PRESET_DEFAULT_TOGGLES: dict[str, tuple[bool, bool]] = {
-    PRESET_PRECISE: (True, False),
-    PRESET_BALANCED: (True, True),
-    PRESET_EXPLORATORY: (False, True),
+    RetrievalPreset.PRECISE.value: (True, False),
+    RetrievalPreset.BALANCED.value: (True, True),
+    RetrievalPreset.EXPLORATORY.value: (False, True),
 }
 
-_PRECISE_K = 8
 
-
-def _preset_field_overrides(preset: str) -> Callable[[RetrievalSettings], dict[str, int]]:
-    def _precise(_base: RetrievalSettings) -> dict[str, int]:
-        return {
-            "similarity_search_k": _PRECISE_K,
-            "bm25_search_k": _PRECISE_K,
-            "hybrid_search_k": _PRECISE_K,
-        }
-
-    def _balanced(_base: RetrievalSettings) -> dict[str, int]:
-        return {}
-
-    def _exploratory(base: RetrievalSettings) -> dict[str, int]:
-        k = max(30, int(base.similarity_search_k * 1.5))
-        return {
-            "similarity_search_k": k,
-            "bm25_search_k": max(base.bm25_search_k, k),
-            "hybrid_search_k": max(base.hybrid_search_k, k),
-        }
-
-    builders: dict[str, Callable[[RetrievalSettings], dict[str, int]]] = {
-        PRESET_PRECISE: _precise,
-        PRESET_BALANCED: _balanced,
-        PRESET_EXPLORATORY: _exploratory,
-    }
-    return builders[preset]
+def _label_for_preset_value(value: str) -> str:
+    p = parse_retrieval_preset(value)
+    return PRESET_UI_LABELS[p]
 
 
 def build_ui_retrieval_settings(
     *,
     preset: str,
-    enable_query_rewrite: bool,
-    enable_hybrid_retrieval: bool,
+    enable_query_rewrite: bool | None = None,
+    enable_hybrid_retrieval: bool | None = None,
     service: RetrievalSettingsService | None = None,
 ) -> RetrievalSettings:
     """
-    Merge env-backed defaults with preset k-shaping and user toggles.
-    Exposed for unit tests (preset mapping correctness).
-    """
-    if preset not in _PRESET_DEFAULT_TOGGLES:
-        preset = PRESET_BALANCED
+    Preset-backed settings, optionally merged with advanced toggle overrides.
 
+    Exposed for unit tests (preset mapping and merge behavior).
+    """
     svc = service or RetrievalSettingsService()
-    base = svc.get_default()
-    overrides: dict = dict(_preset_field_overrides(preset)(base))
-    overrides["enable_query_rewrite"] = bool(enable_query_rewrite)
-    overrides["enable_hybrid_retrieval"] = bool(enable_hybrid_retrieval)
-    return svc.merge(base, overrides)
+    settings = svc.from_preset(preset)
+    overrides: dict = {}
+    if enable_query_rewrite is not None:
+        overrides["enable_query_rewrite"] = bool(enable_query_rewrite)
+    if enable_hybrid_retrieval is not None:
+        overrides["enable_hybrid_retrieval"] = bool(enable_hybrid_retrieval)
+    if overrides:
+        return svc.merge(settings, overrides)
+    return settings
 
 
 def retrieval_settings_to_request_dict(settings: RetrievalSettings) -> dict:
@@ -79,8 +63,11 @@ def retrieval_settings_to_request_dict(settings: RetrievalSettings) -> dict:
 
 
 def _on_retrieval_preset_changed() -> None:
-    preset = st.session_state.get("retrieval_preset", PRESET_BALANCED)
-    rw, hy = _PRESET_DEFAULT_TOGGLES.get(preset, (True, True))
+    preset = str(st.session_state.get("retrieval_preset", RetrievalPreset.BALANCED.value))
+    rw, hy = _PRESET_DEFAULT_TOGGLES.get(
+        parse_retrieval_preset(preset).value,
+        (True, True),
+    )
     st.session_state["retrieval_query_rewrite"] = rw
     st.session_state["retrieval_hybrid"] = hy
 
@@ -92,52 +79,73 @@ def render_retrieval_settings_panel(
     service: RetrievalSettingsService | None = None,
 ) -> RetrievalSettings:
     """
-    Render safe retrieval controls and persist the result in session state.
+    Render retrieval preset (and optional advanced overrides) and persist merged settings.
 
     Session keys:
-    - ``retrieval_preset`` — selected preset label
-    - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — toggle values
+    - ``retrieval_preset`` — ``precise`` | ``balanced`` | ``exploratory``
+    - ``retrieval_advanced`` — show rewrite / hybrid overrides
+    - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — used when advanced is on
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
     """
+    svc = service or RetrievalSettingsService()
+
     if "retrieval_preset" not in st.session_state:
-        st.session_state["retrieval_preset"] = PRESET_BALANCED
+        st.session_state["retrieval_preset"] = RetrievalPreset.BALANCED.value
+    else:
+        st.session_state["retrieval_preset"] = parse_retrieval_preset(
+            st.session_state["retrieval_preset"]
+        ).value
+
+    if "retrieval_advanced" not in st.session_state:
+        st.session_state["retrieval_advanced"] = False
+
     if "retrieval_query_rewrite" not in st.session_state:
         st.session_state["retrieval_query_rewrite"] = True
     if "retrieval_hybrid" not in st.session_state:
         st.session_state["retrieval_hybrid"] = True
 
     with st.expander(title, expanded=expanded):
-        st.caption(
-            "Presets shape how many summaries are considered; toggles control rewrite and "
-            "hybrid (semantic + keyword) recall. Advanced scoring parameters stay on server defaults."
-        )
-
         st.selectbox(
             "Retrieval preset",
             options=list(PRESET_OPTIONS),
+            format_func=_label_for_preset_value,
             key="retrieval_preset",
             on_change=_on_retrieval_preset_changed,
         )
 
-        c1, c2 = st.columns(2)
-        with c1:
-            st.toggle(
-                "Query rewrite",
-                key="retrieval_query_rewrite",
-                help="Rewrite the question into a retrieval-friendly query before search.",
-            )
-        with c2:
-            st.toggle(
-                "Hybrid retrieval",
-                key="retrieval_hybrid",
-                help="Combine vector search with keyword (BM25) search over summaries.",
-            )
+        active = parse_retrieval_preset(st.session_state["retrieval_preset"])
+        st.caption(PRESET_DESCRIPTIONS[active])
 
-    settings = build_ui_retrieval_settings(
-        preset=str(st.session_state["retrieval_preset"]),
-        enable_query_rewrite=bool(st.session_state["retrieval_query_rewrite"]),
-        enable_hybrid_retrieval=bool(st.session_state["retrieval_hybrid"]),
-        service=service,
-    )
+        st.toggle(
+            "Advanced: override query rewrite & hybrid",
+            key="retrieval_advanced",
+            help="When off, the preset alone defines rewrite, hybrid, and k. When on, the toggles below apply on top of the preset k-shaping.",
+        )
+
+        if st.session_state["retrieval_advanced"]:
+            c1, c2 = st.columns(2)
+            with c1:
+                st.toggle(
+                    "Query rewrite",
+                    key="retrieval_query_rewrite",
+                    help="Rewrite the question into a retrieval-friendly query before search.",
+                )
+            with c2:
+                st.toggle(
+                    "Hybrid retrieval",
+                    key="retrieval_hybrid",
+                    help="Combine vector search with keyword (BM25) search over summaries.",
+                )
+
+    if st.session_state["retrieval_advanced"]:
+        settings = build_ui_retrieval_settings(
+            preset=str(st.session_state["retrieval_preset"]),
+            enable_query_rewrite=bool(st.session_state["retrieval_query_rewrite"]),
+            enable_hybrid_retrieval=bool(st.session_state["retrieval_hybrid"]),
+            service=svc,
+        )
+    else:
+        settings = svc.from_preset(str(st.session_state["retrieval_preset"]))
+
     st.session_state["retrieval_settings"] = settings
     return settings
