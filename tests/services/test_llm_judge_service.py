@@ -19,6 +19,7 @@ class TestLLMJudgeService(unittest.TestCase):
             r,
             LLMJudgeResult(
                 groundedness_score=0.0,
+                citation_faithfulness_score=0.0,
                 answer_relevance_score=0.0,
                 hallucination_score=1.0,
                 has_hallucination=False,
@@ -30,7 +31,7 @@ class TestLLMJudgeService(unittest.TestCase):
     def test_parse_full_json(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
-                '{"groundedness_score": 0.9, '
+                '{"groundedness_score": 0.9, "citation_faithfulness_score": 0.85, '
                 '"answer_relevance_score": 0.88, "hallucination_score": 0.92, '
                 '"has_hallucination": false, "reason": "ok"}'
             )
@@ -42,6 +43,7 @@ class TestLLMJudgeService(unittest.TestCase):
             prompt_sources=[{"doc_id": "d1"}],
         )
         self.assertEqual(r.groundedness_score, 0.9)
+        self.assertEqual(r.citation_faithfulness_score, 0.85)
         self.assertEqual(r.answer_relevance_score, 0.88)
         self.assertEqual(r.hallucination_score, 0.92)
         self.assertFalse(r.has_hallucination)
@@ -69,7 +71,7 @@ class TestLLMJudgeService(unittest.TestCase):
     def test_strips_markdown_fence(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content="```json\n"
-            '{"groundedness_score": 1, '
+            '{"groundedness_score": 1, "citation_faithfulness_score": 1, '
             '"answer_relevance_score": 1, "hallucination_score": 1, '
             '"has_hallucination": false}\n'
             "```"
@@ -81,6 +83,7 @@ class TestLLMJudgeService(unittest.TestCase):
             prompt_sources=[],
         )
         self.assertEqual(r.groundedness_score, 1.0)
+        self.assertEqual(r.citation_faithfulness_score, 1.0)
         self.assertFalse(r.has_hallucination)
 
     @patch("src.services.llm_judge_service.LLM")
@@ -119,6 +122,7 @@ class TestLLMJudgeService(unittest.TestCase):
             prompt_sources=[],
         )
         self.assertEqual(r.groundedness_score, 0.7)
+        self.assertEqual(r.citation_faithfulness_score, 0.7)
         self.assertEqual(r.answer_relevance_score, 0.72)
         self.assertEqual(r.hallucination_score, 0.73)
         self.assertTrue(r.has_hallucination)

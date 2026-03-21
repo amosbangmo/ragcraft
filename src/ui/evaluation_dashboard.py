@@ -74,7 +74,8 @@ def _render_correlation_analysis(
     with st.expander("Correlation analysis", expanded=False):
         st.caption(
             "Pearson correlation (r) across rows. Answer correctness uses token **F1** vs the gold answer. "
-            "Prompt overlap uses **doc ID** precision/recall from prompt sources. |r| ≥ 0.6 is treated as a strong linear association."
+            "Prompt overlap uses **doc ID** sets from prompt sources; answer citation overlap uses **[Source N]** "
+            "labels parsed from the reply. |r| ≥ 0.6 is treated as a strong linear association."
         )
         if not correlations:
             st.caption("Correlations are attached after each dataset evaluation run.")
@@ -192,7 +193,7 @@ def _render_failure_analysis(
 ) -> None:
     with st.expander("Failure analysis", expanded=False):
         st.caption(
-            "Heuristic tags from retrieval, judge scores, prompt doc ID overlap, and gold answer F1. "
+            "Heuristic tags from retrieval, judge scores, prompt vs answer citation doc ID overlap, and gold answer F1. "
             "A row may match several types. Metrics missing on a row skip that rule. "
             "If this session predates failure analysis, counts are recomputed from the table below."
         )
@@ -737,18 +738,59 @@ def render_evaluation_dashboard(
             _summary_metric(summary, "avg_confidence", "Avg confidence")
 
     with section_card(
-        title="LLM-as-a-judge",
-        subtitle="Groundedness, relevance, hallucination score, and flagged-row rate.",
+        title="Gold answer overlap",
+        subtitle="Token F1 between generated answers and expected answers (where gold text exists).",
         min_height=0,
     ):
-        j1, j2, j3, j4 = st.columns(4)
+        g1, _ = st.columns(2)
+        with g1:
+            _summary_metric(summary, "avg_answer_f1", "Avg answer F1")
+
+    with section_card(
+        title="Prompt selection (doc IDs in context)",
+        subtitle="All distinct doc IDs attached as prompt sources vs expected_doc_ids.",
+        min_height=0,
+    ):
+        pr1, pr2, pr3, pr4 = st.columns(4)
+        with pr1:
+            _summary_metric(summary, "avg_prompt_doc_id_precision", "Prompt doc ID P")
+        with pr2:
+            _summary_metric(summary, "avg_prompt_doc_id_recall", "Prompt doc ID R")
+        with pr3:
+            _summary_metric(summary, "avg_prompt_doc_id_f1", "Prompt doc ID F1")
+        with pr4:
+            _summary_metric(summary, "prompt_doc_id_hit_rate", "Prompt doc ID hit rate", as_percent=True)
+
+    with section_card(
+        title="Answer citation overlap",
+        subtitle="Doc IDs inferred from [Source N] in the final answer vs expected_doc_ids.",
+        min_height=0,
+    ):
+        ci1, ci2, ci3, ci4 = st.columns(4)
+        with ci1:
+            _summary_metric(summary, "avg_citation_doc_id_precision", "Citation doc ID P")
+        with ci2:
+            _summary_metric(summary, "avg_citation_doc_id_recall", "Citation doc ID R")
+        with ci3:
+            _summary_metric(summary, "avg_citation_doc_id_f1", "Citation doc ID F1")
+        with ci4:
+            _summary_metric(summary, "citation_doc_id_hit_rate", "Citation doc ID hit rate", as_percent=True)
+
+    with section_card(
+        title="LLM-as-a-judge",
+        subtitle="Semantic scores: grounding, citation faithfulness, relevance, hallucination.",
+        min_height=0,
+    ):
+        j1, j2, j3, j4, j5 = st.columns(5)
         with j1:
             _summary_metric(summary, "avg_groundedness", "Groundedness")
         with j2:
-            _summary_metric(summary, "avg_answer_relevance", "Relevance")
+            _summary_metric(summary, "avg_citation_faithfulness", "Citation faithfulness")
         with j3:
-            _summary_metric(summary, "avg_hallucination_score", "Hallucination")
+            _summary_metric(summary, "avg_answer_relevance", "Relevance")
         with j4:
+            _summary_metric(summary, "avg_hallucination_score", "Hallucination")
+        with j5:
             _summary_metric(summary, "hallucination_rate", "Hallucination rate", as_percent=True)
 
     if multimodal_metrics:

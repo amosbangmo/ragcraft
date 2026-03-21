@@ -32,6 +32,7 @@ def test_detect_issues_no_answer_no_pipeline():
         recall_at_k=None,
         source_recall=None,
         prompt_doc_id_recall=None,
+        citation_doc_id_recall=None,
         expected_doc_ids=[],
         expected_sources=[],
         expected_answer=None,
@@ -52,11 +53,32 @@ def test_detect_issues_hallucination_flag():
         recall_at_k=None,
         source_recall=None,
         prompt_doc_id_recall=None,
+        citation_doc_id_recall=None,
         expected_doc_ids=[],
         expected_sources=[],
         expected_answer=None,
     )
     assert issues == ["Hallucination detected"]
+
+
+def test_detect_issues_low_citation_recall():
+    issues = detect_manual_evaluation_issues(
+        answer_stripped="ok",
+        has_pipeline=True,
+        confidence=0.9,
+        groundedness=0.9,
+        answer_relevance=0.9,
+        hallucination_score=0.9,
+        has_hallucination=False,
+        recall_at_k=1.0,
+        source_recall=None,
+        prompt_doc_id_recall=1.0,
+        citation_doc_id_recall=0.0,
+        expected_doc_ids=["d1"],
+        expected_sources=[],
+        expected_answer=None,
+    )
+    assert "Low answer citation recall (expected doc IDs)" in issues
 
 
 def test_detect_issues_low_doc_recall():
@@ -71,6 +93,7 @@ def test_detect_issues_low_doc_recall():
         recall_at_k=0.0,
         source_recall=None,
         prompt_doc_id_recall=None,
+        citation_doc_id_recall=None,
         expected_doc_ids=["d1"],
         expected_sources=[],
         expected_answer=None,
@@ -90,6 +113,7 @@ def test_detect_issues_dedupes_duplicate_messages():
         recall_at_k=None,
         source_recall=None,
         prompt_doc_id_recall=None,
+        citation_doc_id_recall=None,
         expected_doc_ids=[],
         expected_sources=[],
         expected_answer="gold",

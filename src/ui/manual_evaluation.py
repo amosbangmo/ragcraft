@@ -95,21 +95,77 @@ def render_manual_evaluation_result(
                 ),
                 ("Groundedness", _fmt_float(aq.groundedness_score), "groundedness_score"),
                 (
-                    "Answer relevance",
-                    _fmt_float(aq.answer_relevance_score),
-                    "answer_relevance_score",
+                    "Citation faithfulness",
+                    _fmt_float(aq.citation_faithfulness_score),
+                    "citation_faithfulness_score",
                 ),
             ]
         )
         _metric_row(
             [
                 (
+                    "Answer relevance",
+                    _fmt_float(aq.answer_relevance_score),
+                    "answer_relevance_score",
+                ),
+                (
                     "Hallucination score (↑ better)",
                     _fmt_float(aq.hallucination_score),
                     "hallucination_score",
                 ),
                 ("Has hallucination", _fmt_bool(aq.has_hallucination), "has_hallucination"),
+            ]
+        )
+        _metric_row(
+            [
                 ("Answer F1 (gold)", _fmt_float(aq.answer_f1), "answer_f1"),
+            ]
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    acq = result.answer_citation_quality
+    if acq:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Answer citation overlap</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="card-subtitle">Doc IDs cited in the answer via [Source N] labels vs expected doc_ids.</div>',
+            unsafe_allow_html=True,
+        )
+        _metric_row(
+            [
+                (
+                    "Citation doc_id P",
+                    _fmt_float(acq.citation_doc_id_precision),
+                    "citation_doc_id_precision",
+                ),
+                (
+                    "Citation doc_id R",
+                    _fmt_float(acq.citation_doc_id_recall),
+                    "citation_doc_id_recall",
+                ),
+                (
+                    "Citation doc_id F1",
+                    _fmt_float(acq.citation_doc_id_f1),
+                    "citation_doc_id_f1",
+                ),
+            ]
+        )
+        _metric_row(
+            [
+                (
+                    "Cited doc IDs (count)",
+                    str(acq.citation_doc_ids_count)
+                    if acq.citation_doc_ids_count is not None
+                    else "—",
+                    "citation_doc_ids_count",
+                ),
+                (
+                    "Overlap count",
+                    str(acq.citation_doc_id_overlap_count)
+                    if acq.citation_doc_id_overlap_count is not None
+                    else "—",
+                    "citation_doc_id_overlap_count",
+                ),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)

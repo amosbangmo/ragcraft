@@ -46,8 +46,8 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         st.write(preview)
 
     with section_card(
-        title="Answer quality",
-        subtitle="Judge scores and overlap with an expected answer when configured.",
+        title="LLM judge (semantic)",
+        subtitle="Model-assessed grounding, citation use, relevance, and hallucination signals.",
         min_height=0,
     ):
         c1, c2, c3 = st.columns(3)
@@ -59,24 +59,30 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
         with c2:
             render_metric_with_help(
+                label="Citation faithfulness",
+                value=_f(row.get("citation_faithfulness_score")),
+                metric_key="citation_faithfulness_score",
+            )
+        with c3:
+            render_metric_with_help(
                 label="Answer relevance",
                 value=_f(row.get("answer_relevance_score")),
                 metric_key="answer_relevance_score",
             )
-        with c3:
+        c4, c5, c6 = st.columns(3)
+        with c4:
             render_metric_with_help(
                 label="Hallucination score",
                 value=_f(row.get("hallucination_score")),
                 metric_key="hallucination_score",
             )
-        c4, c5 = st.columns(2)
-        with c4:
+        with c5:
             render_metric_with_help(
                 label="Has hallucination",
                 value=_f(row.get("has_hallucination")),
                 metric_key="has_hallucination",
             )
-        with c5:
+        with c6:
             render_metric_with_help(
                 label="Answer F1 (gold)",
                 value=_f(row.get("answer_f1")),
@@ -84,42 +90,76 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
 
     with section_card(
-        title="Prompt source quality",
-        subtitle="Prompt-source doc IDs vs gold expected doc IDs.",
+        title="Answer citation overlap (deterministic)",
+        subtitle="Doc IDs from [Source N] labels in the answer vs gold expected_doc_ids.",
+        min_height=0,
+    ):
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            render_metric_with_help(
+                label="Citation doc ID precision",
+                value=_f(row.get("citation_doc_id_precision")),
+                metric_key="citation_doc_id_precision",
+            )
+        with c2:
+            render_metric_with_help(
+                label="Citation doc ID recall",
+                value=_f(row.get("citation_doc_id_recall")),
+                metric_key="citation_doc_id_recall",
+            )
+        with c3:
+            render_metric_with_help(
+                label="Citation doc ID F1",
+                value=_f(row.get("citation_doc_id_f1")),
+                metric_key="citation_doc_id_f1",
+            )
+        c4, c5 = st.columns(2)
+        with c4:
+            render_metric_with_help(
+                label="Cited doc IDs (answer)",
+                value=_f(row.get("citation_doc_ids_count")),
+                metric_key="citation_doc_ids_count",
+            )
+        with c5:
+            render_metric_with_help(
+                label="Citation overlap count",
+                value=_f(row.get("citation_doc_id_overlap_count")),
+                metric_key="citation_doc_id_overlap_count",
+            )
+
+    with section_card(
+        title="Prompt selection overlap",
+        subtitle="Distinct doc IDs present in prompt sources vs gold expected_doc_ids.",
         min_height=0,
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
             render_metric_with_help(
                 label="Prompt doc ID precision",
-                value=_f(row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))),
+                value=_f(row.get("prompt_doc_id_precision")),
                 metric_key="prompt_doc_id_precision",
             )
         with c2:
             render_metric_with_help(
                 label="Prompt doc ID recall",
-                value=_f(row.get("prompt_doc_id_recall", row.get("citation_doc_id_recall"))),
+                value=_f(row.get("prompt_doc_id_recall")),
                 metric_key="prompt_doc_id_recall",
             )
         with c3:
             render_metric_with_help(
                 label="Prompt doc ID F1",
-                value=_f(row.get("prompt_doc_id_f1", row.get("citation_doc_id_f1"))),
+                value=_f(row.get("prompt_doc_id_f1")),
                 metric_key="prompt_doc_id_f1",
             )
         c4, c5 = st.columns(2)
         with c4:
             render_metric_with_help(
-                label="Cited doc IDs (count)",
-                value=_f(row.get("cited_doc_ids_count")),
-                metric_key="cited_doc_ids_count",
-            )
-        with c5:
-            render_metric_with_help(
                 label="Prompt doc ID overlap",
                 value=_f(row.get("prompt_doc_id_overlap_count")),
                 metric_key="prompt_doc_id_overlap_count",
             )
+        with c5:
+            st.caption("Prompt metrics use every asset in context, not only labels in the answer.")
 
     with section_card(
         title="Retrieval quality",

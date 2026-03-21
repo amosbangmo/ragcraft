@@ -9,8 +9,10 @@ CORRELATION_METRIC_KEYS: tuple[tuple[str, str], ...] = (
     ("confidence", "confidence"),
     ("answer_correctness", "answer_f1"),
     ("groundedness_score", "groundedness_score"),
+    ("citation_faithfulness_score", "citation_faithfulness_score"),
     ("prompt_doc_id_precision", "prompt_doc_id_precision"),
     ("prompt_doc_id_recall", "prompt_doc_id_recall"),
+    ("citation_doc_id_f1", "citation_doc_id_f1"),
     ("latency_ms", "latency_ms"),
 )
 

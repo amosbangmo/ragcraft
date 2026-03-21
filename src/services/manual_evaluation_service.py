@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.manual_evaluation_result import (
+    ManualEvaluationAnswerCitationQuality,
     ManualEvaluationAnswerQuality,
     ManualEvaluationExpectationComparison,
     ManualEvaluationPipelineSignals,
@@ -25,6 +26,7 @@ _GROUNDEDNESS_LOW = 0.5
 _ANSWER_RELEVANCE_LOW = 0.5
 _HALLUCINATION_SCORE_LOW = 0.5
 _PROMPT_DOC_ID_RECALL_LOW = 0.5
+_CITATION_DOC_ID_RECALL_LOW = 0.5
 _RECALL_AT_K_LOW = 0.5
 _SOURCE_RECALL_LOW = 0.5
 _CONFIDENCE_LOW = 0.45
@@ -76,6 +78,7 @@ def detect_manual_evaluation_issues(
     recall_at_k: float | None,
     source_recall: float | None,
     prompt_doc_id_recall: float | None,
+    citation_doc_id_recall: float | None,
     expected_doc_ids: list[str],
     expected_sources: list[str],
     expected_answer: str | None,
@@ -109,6 +112,11 @@ def detect_manual_evaluation_issues(
     if expected_doc_ids:
         if prompt_doc_id_recall is not None and prompt_doc_id_recall < _PROMPT_DOC_ID_RECALL_LOW:
             issues.append("Low prompt doc ID recall")
+        if (
+            citation_doc_id_recall is not None
+            and citation_doc_id_recall < _CITATION_DOC_ID_RECALL_LOW
+        ):
+            issues.append("Low answer citation recall (expected doc IDs)")
 
     if expected_answer and not answer_stripped:
         issues.append("Missing answer vs expected reference")
@@ -251,21 +259,15 @@ class ManualEvaluationService:
         reciprocal_rank_v = float(row.get("reciprocal_rank", 0.0)) if exp_docs else None
         average_precision_v = float(row.get("average_precision", 0.0)) if exp_docs else None
 
-        prompt_doc_p = (
-            float(row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision", 0.0)))
-            if exp_docs
-            else None
-        )
-        prompt_doc_r = (
-            float(row.get("prompt_doc_id_recall", row.get("citation_doc_id_recall", 0.0)))
-            if exp_docs
-            else None
-        )
-        prompt_doc_f1 = (
-            float(row.get("prompt_doc_id_f1", row.get("citation_doc_id_f1", 0.0)))
-            if exp_docs
-            else None
-        )
+        prompt_doc_p = float(row.get("prompt_doc_id_precision", 0.0)) if exp_docs else None
+        prompt_doc_r = float(row.get("prompt_doc_id_recall", 0.0)) if exp_docs else None
+        prompt_doc_f1 = float(row.get("prompt_doc_id_f1", 0.0)) if exp_docs else None
+
+        citation_doc_p = float(row.get("citation_doc_id_precision", 0.0)) if exp_docs else None
+        citation_doc_r = float(row.get("citation_doc_id_recall", 0.0)) if exp_docs else None
+        citation_doc_f1 = float(row.get("citation_doc_id_f1", 0.0)) if exp_docs else None
+        citation_overlap = int(row.get("citation_doc_id_overlap_count", 0))
+        citation_ids_n = int(row.get("citation_doc_ids_count", 0))
 
         answer_f1 = float(row.get("answer_f1", 0.0)) if exp_ans else None
 
@@ -275,10 +277,25 @@ class ManualEvaluationService:
         answer_quality = ManualEvaluationAnswerQuality(
             confidence=confidence,
             groundedness_score=groundedness if has_pipeline else None,
+            citation_faithfulness_score=(
+                float(row.get("citation_faithfulness_score", 0.0)) if has_pipeline else None
+            ),
             answer_relevance_score=answer_relevance if has_pipeline else None,
             hallucination_score=hallucination_score if has_pipeline else None,
             has_hallucination=has_hallucination if has_pipeline else None,
             answer_f1=answer_f1,
+        )
+
+        answer_citation_quality = (
+            ManualEvaluationAnswerCitationQuality(
+                citation_doc_id_precision=citation_doc_p,
+                citation_doc_id_recall=citation_doc_r,
+                citation_doc_id_f1=citation_doc_f1,
+                citation_doc_id_overlap_count=citation_overlap if has_pipeline else None,
+                citation_doc_ids_count=citation_ids_n if has_pipeline else None,
+            )
+            if has_pipeline
+            else None
         )
 
         prompt_source_quality = ManualEvaluationPromptSourceQuality(
@@ -317,6 +334,7 @@ class ManualEvaluationService:
             recall_at_k=recall_at_k_v,
             source_recall=source_recall_v,
             prompt_doc_id_recall=prompt_doc_r,
+            citation_doc_id_recall=citation_doc_r,
             expected_doc_ids=exp_docs,
             expected_sources=exp_src,
             expected_answer=exp_ans,
@@ -330,6 +348,7 @@ class ManualEvaluationService:
             prompt_sources=prompt_sources,
             raw_assets=raw_assets,
             answer_quality=answer_quality,
+            answer_citation_quality=answer_citation_quality,
             prompt_source_quality=prompt_source_quality,
             retrieval_quality=retrieval_quality,
             pipeline_signals=pipeline_signals,

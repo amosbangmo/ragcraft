@@ -8,10 +8,23 @@ from typing import Any
 class ManualEvaluationAnswerQuality:
     confidence: float
     groundedness_score: float | None
+    citation_faithfulness_score: float | None
     answer_relevance_score: float | None
     hallucination_score: float | None
     has_hallucination: bool | None
     answer_f1: float | None
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
+class ManualEvaluationAnswerCitationQuality:
+    citation_doc_id_precision: float | None
+    citation_doc_id_recall: float | None
+    citation_doc_id_f1: float | None
+    citation_doc_id_overlap_count: int | None
+    citation_doc_ids_count: int | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -78,6 +91,7 @@ class ManualEvaluationResult:
     prompt_sources: list[dict[str, Any]] = field(default_factory=list)
     raw_assets: list[dict[str, Any]] = field(default_factory=list)
     answer_quality: ManualEvaluationAnswerQuality | None = None
+    answer_citation_quality: ManualEvaluationAnswerCitationQuality | None = None
     prompt_source_quality: ManualEvaluationPromptSourceQuality | None = None
     retrieval_quality: ManualEvaluationRetrievalQuality | None = None
     pipeline_signals: ManualEvaluationPipelineSignals | None = None
@@ -93,6 +107,9 @@ class ManualEvaluationResult:
             "prompt_sources": list(self.prompt_sources),
             "raw_assets": list(self.raw_assets),
             "answer_quality": self.answer_quality.to_dict() if self.answer_quality else None,
+            "answer_citation_quality": self.answer_citation_quality.to_dict()
+            if self.answer_citation_quality
+            else None,
             "prompt_source_quality": self.prompt_source_quality.to_dict()
             if self.prompt_source_quality
             else None,

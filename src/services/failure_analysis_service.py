@@ -146,9 +146,8 @@ class FailureAnalysisService:
         answer_f1 = _coerce_float(row.get("answer_f1"))
 
         groundedness = _coerce_float(row.get("groundedness_score", row.get("groundedness")))
-        prompt_doc_id_prec = _coerce_float(
-            row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))
-        )
+        prompt_doc_id_prec = _coerce_float(row.get("prompt_doc_id_precision"))
+        citation_doc_id_rec = _coerce_float(row.get("citation_doc_id_recall"))
         if groundedness is not None and groundedness < self._q:
             labels.append("grounding_failure")
         elif (
@@ -156,6 +155,13 @@ class FailureAnalysisService:
             and exp_docs > 0
             and prompt_doc_id_prec is not None
             and prompt_doc_id_prec < self._q
+        ):
+            labels.append("grounding_failure")
+        elif (
+            exp_docs is not None
+            and exp_docs > 0
+            and citation_doc_id_rec is not None
+            and citation_doc_id_rec < self._q
         ):
             labels.append("grounding_failure")
 
@@ -229,9 +235,8 @@ class FailureAnalysisService:
                 row.get("answer_relevance_score", row.get("answer_relevance"))
             ),
             "confidence": _coerce_float(row.get("confidence")),
-            "prompt_doc_id_precision": _coerce_float(
-                row.get("prompt_doc_id_precision", row.get("citation_doc_id_precision"))
-            ),
+            "prompt_doc_id_precision": _coerce_float(row.get("prompt_doc_id_precision")),
+            "citation_doc_id_recall": _coerce_float(row.get("citation_doc_id_recall")),
             "context_uses_table": _coerce_bool(row.get("context_uses_table")),
             "context_uses_image": _coerce_bool(row.get("context_uses_image")),
         }

@@ -24,6 +24,7 @@ class LLMJudgeService:
         """Used when the LLM call fails or the response is unusable."""
         return LLMJudgeResult(
             groundedness_score=0.0,
+            citation_faithfulness_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=False,
@@ -35,6 +36,7 @@ class LLMJudgeService:
         """No assistant text: skip the LLM; align with prior per-metric stubs."""
         return LLMJudgeResult(
             groundedness_score=0.0,
+            citation_faithfulness_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=1.0,
             has_hallucination=False,
@@ -66,12 +68,13 @@ Each score must be a number in [0, 1].
 
 Metrics:
 - groundedness_score: Are factual claims in the answer supported by RETRIEVED CONTEXT only (paraphrases OK)? Ignore real-world truth beyond the context.
+- citation_faithfulness_score: Do inline source citations ([Source N]) align with the claims they support—only citing when the context backs the statement? 1.0 = citations used faithfully; 0.0 = mismatched or misleading citations.
 - answer_relevance_score: Does the answer address the USER QUESTION (coverage, focus, usefulness)? Do not score factual correctness against the real world.
 - hallucination_score: Higher = less hallucination / better supported by context. 1.0 = no unsupported substantive claims; 0.0 = fully unsupported vs context.
 - has_hallucination: true if ANY substantive claim is not supported by the provided context.
 - reason: short string explaining the scores (optional but preferred).
 
-Required keys: groundedness_score, answer_relevance_score, hallucination_score, has_hallucination, reason.
+Required keys: groundedness_score, citation_faithfulness_score, answer_relevance_score, hallucination_score, has_hallucination, reason.
 
 USER QUESTION:
 {q}
@@ -96,9 +99,10 @@ ASSISTANT ANSWER:
         if parsed is None:
             return self._failure_result()
 
-        g, r, h, flag, reason = parsed
+        g, cf, r, h, flag, reason = parsed
         return LLMJudgeResult(
             groundedness_score=round(g, 2),
+            citation_faithfulness_score=round(cf, 2),
             answer_relevance_score=round(r, 2),
             hallucination_score=round(h, 2),
             has_hallucination=flag,
@@ -115,7 +119,7 @@ ASSISTANT ANSWER:
             return text[: self._MAX_REF_JSON_CHARS] + "\n... (truncated)"
         return text
 
-    def _parse_response(self, text: str) -> tuple[float, float, float, bool, str | None] | None:
+    def _parse_response(self, text: str) -> tuple[float, float, float, float, bool, str | None] | None:
         cleaned = text.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
@@ -129,30 +133,34 @@ ASSISTANT ANSWER:
 
         if isinstance(data, dict):
             g = self._read_score(data, "groundedness_score", text)
+            cf = self._read_score(data, "citation_faithfulness_score", text)
             r = self._read_score(data, "answer_relevance_score", text)
             h = self._read_score(data, "hallucination_score", text)
-            if g is None and r is None and h is None:
+            if g is None and cf is None and r is None and h is None:
                 return None
             g = 0.0 if g is None else self._clamp01(g)
+            cf = g if cf is None else self._clamp01(cf)
             r = 0.0 if r is None else self._clamp01(r)
             h = 0.0 if h is None else self._clamp01(h)
             flag = self._read_bool(data, text, h)
             reason = self._read_reason(data)
-            return g, r, h, flag, reason
+            return g, cf, r, h, flag, reason
 
         g = self._regex_float(text, r'"groundedness_score"\s*:\s*' + self._FLOAT_RE)
+        cf = self._regex_float(text, r'"citation_faithfulness_score"\s*:\s*' + self._FLOAT_RE)
         r = self._regex_float(text, r'"answer_relevance_score"\s*:\s*' + self._FLOAT_RE)
         h = self._regex_float(text, r'"hallucination_score"\s*:\s*' + self._FLOAT_RE)
-        if g is None and r is None and h is None:
+        if g is None and cf is None and r is None and h is None:
             return None
         g = 0.0 if g is None else self._clamp01(g)
+        cf = g if cf is None else self._clamp01(cf)
         r = 0.0 if r is None else self._clamp01(r)
         h = 0.0 if h is None else self._clamp01(h)
         flag = self._regex_bool(text, r'"has_hallucination"\s*:\s*(true|false)')
         if flag is None:
             flag = h < 1.0
         reason = self._regex_reason(text)
-        return g, r, h, flag, reason
+        return g, cf, r, h, flag, reason
 
     def _read_score(self, data: dict[str, Any], key: str, fallback_text: str) -> float | None:
         raw = data.get(key)

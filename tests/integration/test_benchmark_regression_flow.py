@@ -78,6 +78,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         judge = LLMJudgeResult(
             groundedness_score=1.0,
+            citation_faithfulness_score=1.0,
             answer_relevance_score=1.0,
             hallucination_score=1.0,
             has_hallucination=False,
@@ -134,6 +135,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         judge = LLMJudgeResult(
             groundedness_score=0.0,
+            citation_faithfulness_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=True,

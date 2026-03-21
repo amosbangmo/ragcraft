@@ -84,10 +84,12 @@ def _render_dataset_overview(
                 summary, "hallucination_rate", "Hallucination rate", as_percent=True
             )
 
-        m4, m5 = st.columns(2)
+        m4, m5, m6 = st.columns(3)
         with m4:
             _summary_metric_cell(summary, "avg_answer_relevance", "Avg answer relevance")
         with m5:
+            _summary_metric_cell(summary, "avg_citation_doc_id_f1", "Avg citation doc ID F1")
+        with m6:
             _summary_metric_cell(summary, "avg_confidence", "Avg confidence")
 
 
@@ -109,7 +111,7 @@ def _render_dataset_evaluation_run_and_results(
     st.markdown("---")
     st.markdown("##### Run dataset evaluation")
     st.caption(
-        "Aggregated retrieval, gold answer F1, prompt doc ID overlap, and judge metrics over all gold QA entries."
+        "Aggregated retrieval, gold answer F1, prompt vs answer citation doc ID overlap, and judge metrics over all gold QA entries."
     )
 
     dataset_eval_col1, dataset_eval_col2 = st.columns(2)

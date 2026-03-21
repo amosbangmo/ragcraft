@@ -35,10 +35,12 @@ class BenchmarkRow:
     evolve incrementally without forcing a broad refactor across the UI.
 
     LLM-judge fields use canonical keys ``groundedness_score``,
-    ``answer_relevance_score``, ``hallucination_score`` (0–1 when configured), and
-    ``has_hallucination`` (boolean).
+    ``citation_faithfulness_score``, ``answer_relevance_score``,
+    ``hallucination_score`` (0–1 when configured), and ``has_hallucination`` (boolean).
     Prompt doc ID overlap metrics (``prompt_doc_id_*``) compare **prompt sources**
-    (assets in the prompt) to gold ``expected_doc_ids``, not parsed answer citations.
+    (assets in the prompt) to gold ``expected_doc_ids``.
+    Citation doc ID metrics (``citation_doc_id_*``, ``citation_doc_ids_count``) use
+    **parsed** ``[Source N]`` labels in the generated answer mapped via ``prompt_sources``.
     """
 
     entry_id: int
@@ -62,9 +64,9 @@ class BenchmarkSummary:
     the project move from dict-based evaluation to typed results without forcing
     every future metric to become a top-level dataclass field immediately.
 
-    Aggregate judge metrics include ``avg_groundedness``, ``avg_answer_relevance``,
-    ``avg_hallucination_score``, and ``hallucination_rate`` (fraction of rows with
-    ``has_hallucination`` true).
+    Aggregate judge metrics include ``avg_groundedness``, ``avg_citation_faithfulness``,
+    ``avg_answer_relevance``, ``avg_hallucination_score``, and ``hallucination_rate``
+    (fraction of rows with ``has_hallucination`` true).
     """
 
     data: dict[str, Any] = field(default_factory=dict)

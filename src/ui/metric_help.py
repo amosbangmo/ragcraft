@@ -80,6 +80,13 @@ METRIC_HELP: dict[str, str] = {
     "avg_groundedness": (
         "Mean groundedness over the run. Closer to 1 is better."
     ),
+    "citation_faithfulness_score": (
+        "Judge score: whether [Source N] citations align with the claims they support. "
+        "Closer to 1 is better."
+    ),
+    "avg_citation_faithfulness": (
+        "Mean citation faithfulness over the run. Closer to 1 is better."
+    ),
     "answer_relevance_score": (
         "Judge score: how well the answer addresses the question. Closer to 1 is better."
     ),
@@ -119,8 +126,33 @@ METRIC_HELP: dict[str, str] = {
     "avg_prompt_doc_id_f1": (
         "Mean prompt doc ID F1 (prompt sources). Closer to 1 is better."
     ),
-    "cited_doc_ids_count": (
-        "Number of distinct document IDs in prompt sources for this row."
+    "citation_doc_id_precision": (
+        "Precision of doc IDs **cited in the answer** (via [Source N]) vs expected doc IDs. "
+        "Higher is better."
+    ),
+    "avg_citation_doc_id_precision": (
+        "Mean answer-citation doc ID precision. Higher is better."
+    ),
+    "citation_doc_id_recall": (
+        "Recall of expected doc IDs among doc IDs cited in the answer. Higher is better."
+    ),
+    "avg_citation_doc_id_recall": (
+        "Mean answer-citation doc ID recall. Higher is better."
+    ),
+    "citation_doc_id_f1": (
+        "F1 between answer-cited and expected doc IDs. Closer to 1 is better."
+    ),
+    "avg_citation_doc_id_f1": (
+        "Mean answer-citation doc ID F1. Closer to 1 is better."
+    ),
+    "citation_doc_id_overlap_count": (
+        "Count of expected doc IDs that appear among answer citations for this row."
+    ),
+    "citation_doc_ids_count": (
+        "Distinct doc IDs cited in the answer (parsed from [Source N] labels mapped to prompt sources)."
+    ),
+    "citation_doc_id_hit_rate": (
+        "Share of entries with at least one expected doc ID cited in the answer. Higher is better."
     ),
     "prompt_doc_id_overlap_count": (
         "Count of expected doc IDs that also appear in prompt sources for this row."
