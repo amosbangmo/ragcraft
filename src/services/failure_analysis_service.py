@@ -5,6 +5,8 @@ from typing import Any
 # Ordered for stable UI / examples
 FAILURE_LABEL_ORDER: tuple[str, ...] = (
     "retrieval_failure",
+    "context_selection_failure",
+    "citation_failure",
     "grounding_failure",
     "hallucination",
     "low_relevance",
@@ -156,19 +158,23 @@ class FailureAnalysisService:
             and prompt_doc_id_prec is not None
             and prompt_doc_id_prec < self._q
         ):
-            labels.append("grounding_failure")
+            labels.append("context_selection_failure")
         elif (
             exp_docs is not None
             and exp_docs > 0
             and citation_doc_id_rec is not None
             and citation_doc_id_rec < self._q
         ):
-            labels.append("grounding_failure")
+            labels.append("citation_failure")
+
+        pipeline_failed = _coerce_bool(row.get("pipeline_failed")) is True
 
         # Judge convention: higher hallucination_score = *less* hallucination (better grounded in context).
         hall_score = _coerce_float(row.get("hallucination_score"))
         hall_flag = _coerce_bool(row.get("has_hallucination"))
-        if (hall_score is not None and hall_score < self._hall) or hall_flag is True:
+        if not pipeline_failed and (
+            (hall_score is not None and hall_score < self._hall) or hall_flag is True
+        ):
             labels.append("hallucination")
 
         rel = _coerce_float(row.get("answer_relevance_score", row.get("answer_relevance")))
@@ -198,7 +204,11 @@ class FailureAnalysisService:
         if ctx_table and has_gold and answer_f1 is not None and answer_f1 < self._q:
             labels.append("table_misuse")
 
-        if ctx_image and ((hall_score is not None and hall_score < self._hall) or hall_flag is True):
+        if (
+            ctx_image
+            and not pipeline_failed
+            and ((hall_score is not None and hall_score < self._hall) or hall_flag is True)
+        ):
             labels.append("image_hallucination")
 
         ordered = [lb for lb in FAILURE_LABEL_ORDER if lb in labels]

@@ -163,6 +163,8 @@ def _render_correlation_analysis(
 
 _FAILURE_TYPE_LABELS: dict[str, str] = {
     "retrieval_failure": "Retrieval miss",
+    "context_selection_failure": "Context selection (prompt doc IDs)",
+    "citation_failure": "Citation (answer doc IDs)",
     "grounding_failure": "Grounding / gold mismatch",
     "hallucination": "Hallucination signal",
     "low_relevance": "Low relevance",

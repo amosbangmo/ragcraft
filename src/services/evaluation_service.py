@@ -175,7 +175,8 @@ class EvaluationService:
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
                     "hallucination_score": 0.0,
-                    "has_hallucination": True,
+                    "has_hallucination": False,
+                    "pipeline_failed": True,
                     "groundedness_score": 0.0,
                     "citation_faithfulness_score": 0.0,
                     "answer_relevance_score": 0.0,
@@ -195,7 +196,7 @@ class EvaluationService:
                 citation_faithfulness_values.append(0.0)
                 answer_relevance_values.append(0.0)
                 hallucination_score_values.append(0.0)
-                hallucination_flags.append(True)
+                hallucination_flags.append(False)
                 answer_correctness_values.append(0.0)
                 latency_values.append(latency_ms)
                 continue

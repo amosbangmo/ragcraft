@@ -60,6 +60,55 @@ class TestFailureAnalysisService(unittest.TestCase):
         self.assertEqual(out["failed_row_count"], 0)
         self.assertEqual(out["row_failures"][0]["failure_labels"], [])
 
+    def test_context_selection_failure_low_prompt_doc_id_precision(self) -> None:
+        rows = [
+            {
+                "entry_id": 10,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 3,
+                "groundedness_score": 0.9,
+                "prompt_doc_id_precision": 0.2,
+                "citation_doc_id_recall": 0.9,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertIn("context_selection_failure", out["row_failures"][0]["failure_labels"])
+        self.assertNotIn("grounding_failure", out["row_failures"][0]["failure_labels"])
+
+    def test_citation_failure_low_citation_doc_id_recall(self) -> None:
+        rows = [
+            {
+                "entry_id": 11,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 3,
+                "groundedness_score": 0.9,
+                "prompt_doc_id_precision": 0.9,
+                "citation_doc_id_recall": 0.2,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertIn("citation_failure", out["row_failures"][0]["failure_labels"])
+        self.assertNotIn("grounding_failure", out["row_failures"][0]["failure_labels"])
+
+    def test_groundedness_still_grounding_failure_not_context_selection(self) -> None:
+        rows = [
+            {
+                "entry_id": 12,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 3,
+                "groundedness_score": 0.2,
+                "prompt_doc_id_precision": 0.2,
+                "citation_doc_id_recall": 0.2,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertIn("grounding_failure", out["row_failures"][0]["failure_labels"])
+        self.assertNotIn("context_selection_failure", out["row_failures"][0]["failure_labels"])
+        self.assertNotIn("citation_failure", out["row_failures"][0]["failure_labels"])
+
     def test_retrieval_mode_none(self) -> None:
         rows = [
             {
@@ -85,6 +134,38 @@ class TestFailureAnalysisService(unittest.TestCase):
         ]
         out = FailureAnalysisService().analyze(rows)
         self.assertIn("table_misuse", out["row_failures"][0]["failure_labels"])
+
+    def test_pipeline_failed_skips_hallucination_rules(self) -> None:
+        """Pipeline failure rows use placeholder scores; do not count as hallucination."""
+        rows = [
+            {
+                "entry_id": 8,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 0,
+                "pipeline_failed": True,
+                "hallucination_score": 0.0,
+                "has_hallucination": False,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertNotIn("hallucination", out["row_failures"][0]["failure_labels"])
+
+    def test_pipeline_failed_skips_image_hallucination(self) -> None:
+        rows = [
+            {
+                "entry_id": 9,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "expected_doc_ids_count": 0,
+                "context_uses_image": True,
+                "pipeline_failed": True,
+                "hallucination_score": 0.0,
+                "has_hallucination": False,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertNotIn("image_hallucination", out["row_failures"][0]["failure_labels"])
 
     def test_image_hallucination_when_image_context_and_hallucination(self) -> None:
         rows = [
