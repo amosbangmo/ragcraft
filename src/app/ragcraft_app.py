@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from src.infrastructure.persistence.db import init_app_db
+from src.composition import BackendComposition, build_backend_composition
 from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
 from src.application.evaluation.dtos import GenerateQaDatasetCommand
@@ -18,22 +18,8 @@ from src.application.ingestion.use_cases.replace_document_assets import (
     replace_document_assets_for_reingest,
 )
 from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
-from src.auth.auth_service import AuthService
-from src.services.project_service import ProjectService
-from src.services.ingestion_service import IngestionService
-from src.services.vectorstore_service import VectorStoreService
-from src.services.evaluation_service import EvaluationService
-from src.services.llm_judge_service import LLMJudgeService
-from src.services.chat_service import ChatService
-from src.services.query_log_service import QueryLogService
-from src.services.project_settings_service import ProjectSettingsService
 from src.services.rag_service import RAGService
-from src.services.retrieval_settings_service import RetrievalSettingsService
-from src.services.docstore_service import DocStoreService
-from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
-from src.services.qa_dataset_service import QADatasetService
-from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.application.evaluation.benchmark_export_dtos import (
     BenchmarkExportArtifacts,
     BuildBenchmarkExportCommand,
@@ -55,50 +41,36 @@ from src.core.chain_state import (
 
 
 class RAGCraftApp:
-    def __init__(self):
-        init_app_db()
+    """
+    Streamlit-oriented façade over :class:`~src.composition.backend_composition.BackendComposition`.
 
-        self.auth_service = AuthService()
-        self.project_service = ProjectService()
-        self.ingestion_service = IngestionService()
-        self.vectorstore_service = VectorStoreService()
-        self.evaluation_service = EvaluationService(llm_judge_service=LLMJudgeService())
-        self.chat_service = ChatService()
-        self.docstore_service = DocStoreService()
-        self.reranking_service = RerankingService()
-        self.qa_dataset_service = QADatasetService()
-        self.qa_dataset_generation_service = QADatasetGenerationService(
-            docstore_service=self.docstore_service,
-            project_service=self.project_service,
-        )
-        self.project_settings_service = ProjectSettingsService()
+    Pass ``backend`` to share a pre-built graph (e.g. FastAPI process singleton); otherwise a
+    fresh composition is created (typical Streamlit session).
+    """
 
-        self._rag_service = None
-        self._retrieval_comparison_service = None
+    def __init__(self, backend: BackendComposition | None = None) -> None:
+        self._backend = backend or build_backend_composition()
 
-    @property
-    def rag_service(self):
-        if self._rag_service is None:
-            self._rag_service = RAGService(
-                vectorstore_service=self.vectorstore_service,
-                evaluation_service=self.evaluation_service,
-                docstore_service=self.docstore_service,
-                reranking_service=self.reranking_service,
-                query_log_service=QueryLogService(),
-                retrieval_settings_service=RetrievalSettingsService(
-                    project_settings_service=self.project_settings_service,
-                ),
-            )
-
-        return self._rag_service
+        self.auth_service = self._backend.auth_service
+        self.project_service = self._backend.project_service
+        self.ingestion_service = self._backend.ingestion_service
+        self.vectorstore_service = self._backend.vectorstore_service
+        self.evaluation_service = self._backend.evaluation_service
+        self.chat_service = self._backend.chat_service
+        self.docstore_service = self._backend.docstore_service
+        self.reranking_service = self._backend.reranking_service
+        self.qa_dataset_service = self._backend.qa_dataset_service
+        self.qa_dataset_generation_service = self._backend.qa_dataset_generation_service
+        self.project_settings_service = self._backend.project_settings_service
+        self.query_log_service = self._backend.query_log_service
 
     @property
-    def retrieval_comparison_service(self):
-        if self._retrieval_comparison_service is None:
-            self._retrieval_comparison_service = RetrievalComparisonService(
-                rag_service=self.rag_service,
-            )
-        return self._retrieval_comparison_service
+    def rag_service(self) -> RAGService:
+        return self._backend.rag_service
+
+    @property
+    def retrieval_comparison_service(self) -> RetrievalComparisonService:
+        return self._backend.retrieval_comparison_service
 
     def get_current_user_record(self):
         return self.auth_service.get_current_user_record()

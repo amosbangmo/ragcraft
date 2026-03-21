@@ -1,9 +1,12 @@
 """
 FastAPI dependency providers.
 
-Composition root: a single RAGCraft app instance (same graph as Streamlit).
-Use-case class imports are deferred inside getters so ``import apps.api.dependencies`` does not
-load FAISS / LangChain (keeps ``/health`` importable in minimal environments).
+Wiring uses :func:`get_backend_composition` (single process-wide graph) and
+:class:`~src.app.ragcraft_app.RAGCraftApp` as the UI façade over that graph — same services as
+Streamlit, shared ``QueryLogService`` and lazy ``RAGService``.
+
+Use-case imports stay deferred inside getters where needed so ``import apps.api.dependencies`` does
+not load FAISS / LangChain (keeps ``/health`` importable in minimal environments).
 """
 
 from __future__ import annotations
@@ -17,10 +20,17 @@ from src.services.project_service import ProjectService
 
 
 @lru_cache(maxsize=1)
+def get_backend_composition() -> Any:
+    from src.composition import build_backend_composition
+
+    return build_backend_composition()
+
+
+@lru_cache(maxsize=1)
 def get_ragcraft_app() -> Any:
     from src.app.ragcraft_app import RAGCraftApp
 
-    return RAGCraftApp()
+    return RAGCraftApp(backend=get_backend_composition())
 
 
 def get_project_service(
@@ -187,7 +197,7 @@ def get_list_retrieval_query_logs_use_case(
         ListRetrievalQueryLogsUseCase,
     )
 
-    return ListRetrievalQueryLogsUseCase(query_log_service=app.rag_service.query_log_service)
+    return ListRetrievalQueryLogsUseCase(query_log_service=app.query_log_service)
 
 
 def get_ingest_uploaded_file_use_case(
