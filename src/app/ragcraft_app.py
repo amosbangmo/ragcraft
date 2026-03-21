@@ -411,9 +411,20 @@ class RAGCraftApp:
         chat_history=None,
         *,
         filters: RetrievalFilters | None = None,
+        retrieval_settings: dict | None = None,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
     ):
         project = self.get_project(user_id, project_id)
-        return self.rag_service.ask(project, question, chat_history, filters=filters)
+        return self.rag_service.ask(
+            project,
+            question,
+            chat_history,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )
 
     def evaluate_manual_question(
         self,
@@ -445,6 +456,7 @@ class RAGCraftApp:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
+        retrieval_settings: dict | None = None,
     ):
         project = self.get_project(user_id, project_id)
         return self.rag_service.inspect_pipeline(
@@ -454,6 +466,30 @@ class RAGCraftApp:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             filters=filters,
+            retrieval_settings=retrieval_settings,
+        )
+
+    def search_project_summaries(
+        self,
+        user_id: str,
+        project_id: str,
+        query: str,
+        chat_history=None,
+        *,
+        filters: RetrievalFilters | None = None,
+        retrieval_settings: dict | None = None,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+    ):
+        project = self.get_project(user_id, project_id)
+        return self.rag_service.preview_summary_recall(
+            project,
+            query,
+            chat_history,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
 
     def compare_retrieval_modes(

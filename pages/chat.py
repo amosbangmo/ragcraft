@@ -15,6 +15,10 @@ from src.ui.request_runner import (
     run_request_action,
 )
 from src.ui.confidence_display import confidence_band
+from src.ui.retrieval_settings_panel import (
+    render_retrieval_settings_panel,
+    retrieval_settings_to_request_dict,
+)
 from src.ui.source_citations import render_source_citations
 
 
@@ -99,6 +103,8 @@ with col1:
 with col2:
     st.metric("Documents", len(documents))
 
+retrieval_settings = render_retrieval_settings_panel(title="Retrieval settings", expanded=False)
+
 app.chat_service.init(project.project_id)
 
 messages = app.chat_service.get_messages()
@@ -125,6 +131,9 @@ with st.chat_message("assistant"):
                 project_id=project_id,
                 question=question,
                 chat_history=chat_history,
+                retrieval_settings=retrieval_settings_to_request_dict(retrieval_settings),
+                enable_query_rewrite_override=retrieval_settings.enable_query_rewrite,
+                enable_hybrid_retrieval_override=retrieval_settings.enable_hybrid_retrieval,
             )
 
         if response is None:

@@ -351,22 +351,17 @@ class RAGService:
             "recalled_summary_docs": recalled_summary_docs,
         }
 
-    def _run_pipeline(
+    def _summary_recall_stage(
         self,
         project: Project,
         question: str,
-        chat_history=None,
+        chat_history: list[str],
         *,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-        defer_query_log: bool = False,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
-    ) -> dict | None:
-        pipeline_started = perf_counter()
-        if chat_history is None:
-            chat_history = []
-
+    ) -> dict[str, Any]:
         rss = self.retrieval_settings_service
         settings = rss.merge(rss.get_default(), retrieval_settings)
         if enable_query_rewrite_override is not None:
@@ -429,6 +424,100 @@ class RAGService:
             similarity_search_k=similarity_search_k,
         )
         retrieval_ms = (perf_counter() - t0) * 1000.0
+
+        return {
+            "settings": settings,
+            "rewritten_question": rewritten_question,
+            "query_rewrite_ms": query_rewrite_ms,
+            "query_intent": query_intent,
+            "table_aware_qa_enabled": table_aware_qa_enabled,
+            "use_adaptive_retrieval": use_adaptive_retrieval,
+            "strategy": strategy,
+            "enable_hybrid_retrieval": enable_hybrid_retrieval,
+            "enable_query_rewrite": enable_query_rewrite,
+            "filters_for_retrieval": filters_for_retrieval,
+            "retrieval_payload": retrieval_payload,
+            "retrieval_ms": retrieval_ms,
+        }
+
+    def preview_summary_recall(
+        self,
+        project: Project,
+        question: str,
+        chat_history=None,
+        *,
+        filters: RetrievalFilters | None = None,
+        retrieval_settings: dict[str, Any] | None = None,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+    ) -> dict | None:
+        """
+        Run query rewrite (if enabled) and summary recall only — for Search UI parity with chat.
+        """
+        if chat_history is None:
+            chat_history = []
+
+        bundle = self._summary_recall_stage(
+            project,
+            question,
+            chat_history,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+        )
+        recalled = bundle["retrieval_payload"]["recalled_summary_docs"]
+        if not recalled:
+            return None
+        return {
+            "rewritten_question": bundle["rewritten_question"],
+            "recalled_summary_docs": recalled,
+            "vector_summary_docs": bundle["retrieval_payload"]["vector_summary_docs"],
+            "bm25_summary_docs": bundle["retrieval_payload"]["bm25_summary_docs"],
+            "retrieval_mode": "faiss+bm25" if bundle["enable_hybrid_retrieval"] else "faiss",
+            "query_rewrite_enabled": bundle["enable_query_rewrite"],
+            "hybrid_retrieval_enabled": bundle["enable_hybrid_retrieval"],
+            "use_adaptive_retrieval": bundle["use_adaptive_retrieval"],
+        }
+
+    def _run_pipeline(
+        self,
+        project: Project,
+        question: str,
+        chat_history=None,
+        *,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
+        defer_query_log: bool = False,
+        filters: RetrievalFilters | None = None,
+        retrieval_settings: dict[str, Any] | None = None,
+    ) -> dict | None:
+        pipeline_started = perf_counter()
+        if chat_history is None:
+            chat_history = []
+
+        bundle = self._summary_recall_stage(
+            project,
+            question,
+            chat_history,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+        )
+
+        settings = bundle["settings"]
+        query_rewrite_ms = bundle["query_rewrite_ms"]
+        query_intent = bundle["query_intent"]
+        table_aware_qa_enabled = bundle["table_aware_qa_enabled"]
+        use_adaptive_retrieval = bundle["use_adaptive_retrieval"]
+        strategy = bundle["strategy"]
+        enable_hybrid_retrieval = bundle["enable_hybrid_retrieval"]
+        filters_for_retrieval = bundle["filters_for_retrieval"]
+        retrieval_payload = bundle["retrieval_payload"]
+        retrieval_ms = bundle["retrieval_ms"]
+        rewritten_question = bundle["rewritten_question"]
+        enable_query_rewrite = bundle["enable_query_rewrite"]
 
         vector_summary_docs = retrieval_payload["vector_summary_docs"]
         bm25_summary_docs = retrieval_payload["bm25_summary_docs"]
@@ -678,6 +767,8 @@ class RAGService:
         *,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
     ) -> RAGResponse | None:
         ask_started = perf_counter()
         defer_log = self.query_log_service is not None
@@ -688,6 +779,8 @@ class RAGService:
             defer_query_log=defer_log,
             filters=filters,
             retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
 
         if pipeline is None:

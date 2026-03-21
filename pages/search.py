@@ -2,16 +2,16 @@ import streamlit as st
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
-from src.domain.retrieval_filters import (
-    RetrievalFilters,
-    filter_summary_documents_by_filters,
-    vector_search_fetch_k,
-)
+from src.domain.retrieval_filters import RetrievalFilters
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
+from src.ui.retrieval_settings_panel import (
+    render_retrieval_settings_panel,
+    retrieval_settings_to_request_dict,
+)
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
-from src.core.exceptions import VectorStoreError
+from src.core.exceptions import DocStoreError, VectorStoreError
 
 
 st.set_page_config(
@@ -40,9 +40,9 @@ if not project_id:
 
 project = app.get_project(user_id, project_id)
 
-query = st.text_input("Search query", placeholder="Type a semantic query...")
+retrieval_settings = render_retrieval_settings_panel(title="Retrieval settings", expanded=False)
 
-result_k = 5
+query = st.text_input("Search query", placeholder="Type a semantic query...")
 
 with st.expander("Metadata filters (optional)", expanded=False):
     use_filters = st.toggle("Apply metadata filters", value=False)
@@ -79,18 +79,34 @@ def _search_filters() -> RetrievalFilters | None:
 if query:
     try:
         filters = _search_filters()
-        fetch_k = vector_search_fetch_k(base_k=result_k, filters=filters)
         with st.spinner("Searching summaries..."):
-            docs = app.vectorstore_service.similarity_search(project, query, k=fetch_k)
-        if filters is not None:
-            docs = filter_summary_documents_by_filters(docs, filters)[:result_k]
+            preview = app.search_project_summaries(
+                user_id=user_id,
+                project_id=project_id,
+                query=query,
+                filters=filters,
+                retrieval_settings=retrieval_settings_to_request_dict(retrieval_settings),
+                enable_query_rewrite_override=retrieval_settings.enable_query_rewrite,
+                enable_hybrid_retrieval_override=retrieval_settings.enable_hybrid_retrieval,
+            )
 
-        if not docs:
+        if preview is None:
             st.info("No summaries found.")
             st.stop()
 
+        docs = preview["recalled_summary_docs"]
+
+        st.caption(
+            f"Mode: **{preview['retrieval_mode']}** · "
+            f"Rewrite: **{'on' if preview['query_rewrite_enabled'] else 'off'}** · "
+            f"Hybrid: **{'on' if preview['hybrid_retrieval_enabled'] else 'off'}** · "
+            f"Adaptive: **{'on' if preview['use_adaptive_retrieval'] else 'off'}**"
+        )
+        if preview.get("rewritten_question") and preview["rewritten_question"].strip() != query.strip():
+            st.caption(f"Retrieval query: {preview['rewritten_question']}")
+
         st.metric("Retrieved summaries", len(docs))
-        st.markdown("### Retrieved summaries from FAISS")
+        st.markdown("### Retrieved summaries")
 
         for doc in docs:
             file_name = doc.metadata.get("file_name", "unknown")
@@ -108,5 +124,7 @@ if query:
             )
     except VectorStoreError as exc:
         st.error(get_user_error_message(exc, "Unable to query the FAISS index for this search."))
+    except DocStoreError as exc:
+        st.error(get_user_error_message(exc, "Unable to run lexical retrieval for this search."))
     except Exception as exc:
         st.error(get_user_error_message(exc, f"Unexpected error while searching: {exc}"))
