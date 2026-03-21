@@ -149,7 +149,7 @@ class TestRAGService(unittest.TestCase):
             Document(page_content="d", metadata={}),
         ]
 
-        result = service._deduplicate_doc_ids(docs)
+        result = service.pipeline_assembly_service.deduplicate_doc_ids(docs)
 
         self.assertEqual(result, ["d1", "d2"])
 
@@ -308,9 +308,21 @@ class TestRAGService(unittest.TestCase):
                     "recalled_summary_docs": recalled_summary_docs,
                 },
             ),
-            patch.object(service.source_citation_service, "build_citations", return_value=citations),
-            patch.object(service.prompt_builder_service, "build_raw_context", return_value="ctx"),
-            patch.object(service.prompt_builder_service, "build_prompt", return_value="prompt"),
+            patch.object(
+                service.pipeline_assembly_service.source_citation_service,
+                "build_citations",
+                return_value=citations,
+            ),
+            patch.object(
+                service.pipeline_assembly_service.prompt_builder_service,
+                "build_raw_context",
+                return_value="ctx",
+            ),
+            patch.object(
+                service.pipeline_assembly_service.prompt_builder_service,
+                "build_prompt",
+                return_value="prompt",
+            ),
         ):
             docstore_service.get_assets_by_doc_ids.return_value = raw_assets
             docstore_service.list_assets_for_source_file.return_value = raw_assets
