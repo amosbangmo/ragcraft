@@ -31,6 +31,9 @@ class BenchmarkRow:
 
     The ``data`` payload intentionally stays flexible so the evaluation layer can
     evolve incrementally without forcing a broad refactor across the UI.
+
+    Common LLM-judge fields include ``groundedness`` and ``citation_faithfulness``
+    (each 0–1 when the corresponding service is configured).
     """
 
     entry_id: int
@@ -53,6 +56,9 @@ class BenchmarkSummary:
     As with ``BenchmarkRow``, the payload remains flexible on purpose. This lets
     the project move from dict-based evaluation to typed results without forcing
     every future metric to become a top-level dataclass field immediately.
+
+    Aggregate judge metrics include ``avg_groundedness`` and
+    ``avg_citation_faithfulness`` (means over evaluated rows).
     """
 
     data: dict[str, Any] = field(default_factory=dict)

@@ -8,10 +8,15 @@ from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, Benchmark
 
 
 class EvaluationService:
-    def __init__(self, groundedness_service: object | None = None):
-        # Optional LLM-judge implementation (e.g. ``GroundednessService``); kept untyped
-        # here so importing ``EvaluationService`` does not pull LLM / OpenAI dependencies.
+    def __init__(
+        self,
+        groundedness_service: object | None = None,
+        citation_faithfulness_service: object | None = None,
+    ):
+        # Optional LLM-judge implementations; kept untyped so importing ``EvaluationService``
+        # does not pull LLM / OpenAI dependencies.
         self._groundedness_service = groundedness_service
+        self._citation_faithfulness_service = citation_faithfulness_service
 
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
@@ -73,6 +78,7 @@ class EvaluationService:
         citation_source_f1_values: list[float] = []
 
         groundedness_values: list[float] = []
+        citation_faithfulness_values: list[float] = []
 
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
@@ -137,6 +143,7 @@ class EvaluationService:
                     "query_rewrite_enabled": False,
                     "hybrid_retrieval_enabled": False,
                     "groundedness": 0.0,
+                    "citation_faithfulness": 0.0,
                 }
                 rows.append(
                     BenchmarkRow(
@@ -146,6 +153,7 @@ class EvaluationService:
                     )
                 )
                 groundedness_values.append(0.0)
+                citation_faithfulness_values.append(0.0)
                 latency_values.append(latency_ms)
                 continue
 
@@ -288,6 +296,20 @@ class EvaluationService:
                 groundedness = 0.0
             groundedness_values.append(groundedness)
 
+            refs_for_judge: list[dict] = []
+            if isinstance(source_references, list):
+                refs_for_judge = [r for r in source_references if isinstance(r, dict)]
+            if self._citation_faithfulness_service is not None and answer:
+                citation_faithfulness = self._citation_faithfulness_service.compute_citation_faithfulness(
+                    question=entry.question,
+                    answer=answer,
+                    source_references=refs_for_judge,
+                    raw_context=raw_context,
+                )
+            else:
+                citation_faithfulness = 0.0
+            citation_faithfulness_values.append(citation_faithfulness)
+
             row_payload = {
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
@@ -321,6 +343,7 @@ class EvaluationService:
                 "query_rewrite_enabled": bool(pipeline.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),
                 "groundedness": round(groundedness, 2),
+                "citation_faithfulness": round(citation_faithfulness, 2),
             }
             rows.append(
                 BenchmarkRow(
@@ -387,6 +410,9 @@ class EvaluationService:
             else 0.0,
             "avg_groundedness": round(float(np.mean(groundedness_values)), 2)
             if groundedness_values
+            else 0.0,
+            "avg_citation_faithfulness": round(float(np.mean(citation_faithfulness_values)), 2)
+            if citation_faithfulness_values
             else 0.0,
         }
 

@@ -63,6 +63,18 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         self.assertEqual(len(violations), 1)
         self.assertIn("avg_groundedness", violations[0])
 
+    def test_citation_faithfulness_threshold_enforced_when_set(self):
+        result = make_benchmark_result(
+            summary_overrides={
+                "successful_queries": 1,
+                "avg_citation_faithfulness": 0.2,
+            }
+        )
+        thresholds = BenchmarkRegressionThresholds(min_avg_citation_faithfulness=0.5)
+        violations = collect_benchmark_regression_violations(result, thresholds)
+        self.assertEqual(len(violations), 1)
+        self.assertIn("avg_citation_faithfulness", violations[0])
+
     def test_unset_thresholds_are_not_enforced(self):
         result = make_benchmark_result(
             summary_overrides={

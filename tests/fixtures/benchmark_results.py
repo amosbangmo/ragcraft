@@ -38,6 +38,7 @@ _DEFAULT_SUMMARY: dict[str, Any] = {
     "citation_doc_id_hit_rate": 1.0,
     "citation_source_hit_rate": 1.0,
     "avg_groundedness": 1.0,
+    "avg_citation_faithfulness": 1.0,
 }
 
 
