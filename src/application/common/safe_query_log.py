@@ -3,11 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from src.application.common.query_log_payload import QueryLogIngressPayload
-from src.services.query_log_service import QueryLogService
 
 
 def log_query_safely(
-    query_log_service: QueryLogService | None,
+    query_log_service: Any,
     payload: QueryLogIngressPayload | dict[str, Any],
 ) -> None:
     if query_log_service is None:

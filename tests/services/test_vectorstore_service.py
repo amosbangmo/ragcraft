@@ -21,9 +21,9 @@ if "langchain_core.documents" not in sys.modules:
     sys.modules["langchain_core"] = langchain_core_module
     sys.modules["langchain_core.documents"] = documents_module
 
-if "src.infrastructure.vectorstore.faiss_store" not in sys.modules:
+if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     # Replace FAISS helpers with no-op functions to keep tests unit-level.
-    faiss_store_module = types.ModuleType("src.infrastructure.vectorstore.faiss_store")
+    faiss_store_module = types.ModuleType("src.infrastructure.vectorstores.faiss.vector_store")
 
     def _noop(*args, **kwargs):
         return None
@@ -32,7 +32,7 @@ if "src.infrastructure.vectorstore.faiss_store" not in sys.modules:
     faiss_store_module.save_vector_store = _noop
     faiss_store_module.create_or_update_vector_store = _noop
     faiss_store_module.delete_documents_from_vector_store = _noop
-    sys.modules["src.infrastructure.vectorstore.faiss_store"] = faiss_store_module
+    sys.modules["src.infrastructure.vectorstores.faiss.vector_store"] = faiss_store_module
 
 from langchain_core.documents import Document
 from src.core.exceptions import VectorStoreError

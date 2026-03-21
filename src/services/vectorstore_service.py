@@ -3,7 +3,7 @@ import time
 from langchain_core.documents import Document
 
 from src.domain.project import Project
-from src.infrastructure.vectorstore.faiss_store import (
+from src.infrastructure.vectorstores.faiss.vector_store import (
     load_vector_store,
     save_vector_store,
     create_or_update_vector_store,

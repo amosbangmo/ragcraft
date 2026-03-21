@@ -16,6 +16,7 @@ _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "src.services.qa_dataset_generation_service",
     "src.services.qa_dataset_service",
     "src.infrastructure.evaluation.qa_dataset_repository",
+    "src.infrastructure.persistence.sqlite.qa_dataset_repository",
 )
 
 RAGCraftApp = None  # type: ignore[misc, assignment]

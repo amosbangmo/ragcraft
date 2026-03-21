@@ -6,7 +6,7 @@ from pathlib import Path
 from src.application.common.query_log_payload import QueryLogIngressPayload
 from src.domain.query_intent import QueryIntent
 from src.infrastructure.logging.query_log_repository import QueryLogRepository, QueryLogStore
-from src.infrastructure.logging.sqlite_query_log_repository import SQLiteQueryLogRepository
+from src.infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
 
 
 def parse_query_log_timestamp(entry: dict) -> datetime | None:

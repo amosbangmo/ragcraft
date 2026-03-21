@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.infrastructure.evaluation.qa_dataset_repository import QADatasetRepository
+from src.infrastructure.persistence.sqlite.qa_dataset_repository import SQLiteQADatasetRepository as QADatasetRepository
 from src.infrastructure.persistence.db import init_app_db
 
 

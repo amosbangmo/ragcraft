@@ -1,5 +1,5 @@
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.infrastructure.evaluation.qa_dataset_repository import QADatasetRepository
+from src.infrastructure.persistence.sqlite.qa_dataset_repository import QADatasetRepository
 
 
 class QADatasetService:
