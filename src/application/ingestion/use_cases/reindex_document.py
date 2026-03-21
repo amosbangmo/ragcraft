@@ -6,7 +6,11 @@ from src.services.docstore_service import DocStoreService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
 
-from .dtos import IngestDocumentResult, IngestFilePathCommand, ReindexDocumentCommand
+from src.application.ingestion.dtos import (
+    IngestDocumentResult,
+    IngestFilePathCommand,
+    ReindexDocumentCommand,
+)
 from .ingest_common import resolve_project_file_path
 from .ingest_file_path import IngestFilePathUseCase
 from .replace_document_assets import replace_document_assets_for_reingest

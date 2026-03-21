@@ -6,7 +6,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
 
-from .dtos import IngestDocumentResult, IngestFilePathCommand
+from src.application.ingestion.dtos import IngestDocumentResult, IngestFilePathCommand
 from .ingest_common import (
     default_empty_replacement_info,
     finalize_ingestion_pipeline,

@@ -53,3 +53,11 @@ def rag_response_to_api_dict(response: RAGResponse) -> dict[str, Any]:
         "confidence": float(response.confidence),
         "latency": jsonify_value(response.latency) if response.latency is not None else None,
     }
+
+
+def ingest_document_result_to_api_dict(result: Any) -> dict[str, Any]:
+    return {
+        "raw_assets": jsonify_value(result.raw_assets),
+        "replacement_info": jsonify_value(result.replacement_info),
+        "diagnostics": result.diagnostics.to_dict(),
+    }

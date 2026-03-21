@@ -9,7 +9,7 @@ from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaD
 from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
-from src.application.ingestion.use_cases.dtos import DeleteDocumentCommand, ReindexDocumentCommand
+from src.application.ingestion.dtos import DeleteDocumentCommand, ReindexDocumentCommand
 from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
 from src.application.ingestion.use_cases.replace_document_assets import (
     replace_document_assets_for_reingest,

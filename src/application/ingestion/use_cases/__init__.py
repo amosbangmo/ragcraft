@@ -1,5 +1,5 @@
 from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
-from src.application.ingestion.use_cases.dtos import (
+from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
     DeleteDocumentResult,
     IngestDocumentResult,

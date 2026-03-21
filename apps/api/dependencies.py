@@ -11,7 +11,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Annotated, Any
 
-from fastapi import Depends
+from fastapi import Depends, Header, HTTPException
 
 from src.services.project_service import ProjectService
 
@@ -27,6 +27,52 @@ def get_project_service(
     app: Annotated[Any, Depends(get_ragcraft_app)],
 ) -> ProjectService:
     return app.project_service
+
+
+def get_request_user_id(
+    x_user_id: Annotated[
+        str | None,
+        Header(
+            alias="X-User-Id",
+            description=(
+                "Required workspace user id. Extension point: replace with a verified principal "
+                "from OAuth/JWT without changing route paths."
+            ),
+        ),
+    ] = None,
+) -> str:
+    if x_user_id is None or not str(x_user_id).strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Missing or empty X-User-Id header.",
+        )
+    return str(x_user_id).strip()
+
+
+def get_list_projects_use_case(
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+) -> Any:
+    from src.application.projects.use_cases.list_projects import ListProjectsUseCase
+
+    return ListProjectsUseCase(project_service=project_service)
+
+
+def get_create_project_use_case(
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+) -> Any:
+    from src.application.projects.use_cases.create_project import CreateProjectUseCase
+
+    return CreateProjectUseCase(project_service=project_service)
+
+
+def get_list_project_documents_use_case(
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+) -> Any:
+    from src.application.projects.use_cases.list_project_documents import (
+        ListProjectDocumentsUseCase,
+    )
+
+    return ListProjectDocumentsUseCase(project_service=project_service)
 
 
 def get_rag_service(app: Annotated[Any, Depends(get_ragcraft_app)]) -> Any:

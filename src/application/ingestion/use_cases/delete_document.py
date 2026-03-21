@@ -5,7 +5,7 @@ from collections.abc import Callable
 from src.services.docstore_service import DocStoreService
 from src.services.vectorstore_service import VectorStoreService
 
-from .dtos import DeleteDocumentCommand, DeleteDocumentResult
+from src.application.ingestion.dtos import DeleteDocumentCommand, DeleteDocumentResult
 from .ingest_common import resolve_project_file_path
 
 

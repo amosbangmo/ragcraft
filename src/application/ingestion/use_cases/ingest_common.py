@@ -12,7 +12,7 @@ from src.domain.project import Project
 from src.services.docstore_service import DocStoreService
 from src.services.vectorstore_service import VectorStoreService
 
-from .dtos import IngestDocumentResult
+from src.application.ingestion.dtos import IngestDocumentResult
 
 
 def finalize_ingestion_pipeline(

@@ -7,7 +7,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.ingestion_service import IngestionService
 from src.services.vectorstore_service import VectorStoreService
 
-from .dtos import IngestDocumentResult
+from src.application.ingestion.dtos import IngestDocumentResult
 from .ingest_common import finalize_ingestion_pipeline
 from .replace_document_assets import replace_document_assets_for_reingest
 

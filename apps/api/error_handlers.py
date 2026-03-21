@@ -9,6 +9,16 @@ from src.core.exceptions import DocStoreError, LLMServiceError, RAGCraftError, V
 
 
 def register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(FileNotFoundError)
+    async def _file_not_found(request: Request, exc: FileNotFoundError) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "detail": str(exc) or "Resource not found.",
+                "error_type": "FileNotFoundError",
+            },
+        )
+
     @app.exception_handler(RAGCraftError)
     async def _ragcraft_error(request: Request, exc: RAGCraftError) -> JSONResponse:
         status_code = 503

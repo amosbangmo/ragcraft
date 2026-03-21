@@ -9,13 +9,29 @@ from apps.api.schemas.chat import (
     PreviewSummaryRecallResponse,
     RetrievalFiltersPayload,
 )
+from apps.api.schemas.projects import (
+    CreateProjectRequest,
+    CreateProjectResponse,
+    DeleteDocumentResponse,
+    IngestDocumentResponse,
+    IngestionDiagnosticsPayload,
+    ProjectDocumentsResponse,
+    ProjectListResponse,
+)
 
 __all__ = [
     "ChatAskRequest",
     "ChatAskResponse",
+    "CreateProjectRequest",
+    "CreateProjectResponse",
+    "DeleteDocumentResponse",
+    "IngestDocumentResponse",
+    "IngestionDiagnosticsPayload",
     "PipelineInspectRequest",
     "PipelineInspectResponse",
     "PreviewSummaryRecallRequest",
     "PreviewSummaryRecallResponse",
+    "ProjectDocumentsResponse",
+    "ProjectListResponse",
     "RetrievalFiltersPayload",
 ]

@@ -3,6 +3,7 @@ streamlit
 # HTTP API (optional; Streamlit remains the default UI)
 fastapi
 uvicorn[standard]
+python-multipart
 
 # RAG core
 langchain
