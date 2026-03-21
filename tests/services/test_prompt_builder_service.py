@@ -18,6 +18,7 @@ class TestPromptBuilderService(unittest.TestCase):
             raw_context="ctx",
         )
         self.assertNotIn("Table-focused question", p)
+        self.assertNotIn("grouped by document layout", p)
 
     def test_table_instruction_injected_when_provided(self) -> None:
         p = self.svc.build_prompt(
@@ -149,6 +150,64 @@ class TestPromptBuilderService(unittest.TestCase):
         self.assertIn("Fig A", block)
         self.assertIn("Image retrieval summary:", block)
         self.assertIn("Summary only.", block)
+
+    def test_grouped_raw_context_has_headers_and_type_tags(self) -> None:
+        t = {
+            "content_type": "text",
+            "doc_id": "t1",
+            "source_file": "f.pdf",
+            "raw_content": "hello",
+            "metadata": {"page_number": 2, "chunk_title": "Intro"},
+        }
+        tb = {
+            "content_type": "table",
+            "doc_id": "tb1",
+            "source_file": "f.pdf",
+            "raw_content": "<table></table>",
+            "summary": "s",
+            "metadata": {"table_text": ""},
+        }
+        c1 = SourceCitation(
+            source_number=1,
+            doc_id="t1",
+            source_file="f.pdf",
+            content_type="text",
+            page_label=None,
+            locator_label=None,
+            display_label="Source 1",
+            prompt_label="[Source 1]",
+            metadata={},
+        )
+        c2 = SourceCitation(
+            source_number=2,
+            doc_id="tb1",
+            source_file="f.pdf",
+            content_type="table",
+            page_label=None,
+            locator_label=None,
+            display_label="Source 2",
+            prompt_label="[Source 2]",
+            metadata={},
+        )
+        ctx = self.svc.build_raw_context(
+            raw_assets=[t, tb],
+            citations=[c1, c2],
+            asset_groups=[[t, tb]],
+        )
+        self.assertIn("=== ", ctx)
+        self.assertIn("Page 2", ctx)
+        self.assertIn("[Text]", ctx)
+        self.assertIn("[Table]", ctx)
+        self.assertIn("Related assets", ctx)
+
+    def test_layout_aware_prompt_adds_instructions(self) -> None:
+        p = self.svc.build_prompt(
+            question="Q?",
+            chat_history=[],
+            raw_context="=== Page 1 ===\n…",
+            layout_aware=True,
+        )
+        self.assertIn("grouped by document layout", p)
 
 
 if __name__ == "__main__":

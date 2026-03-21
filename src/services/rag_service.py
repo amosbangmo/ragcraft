@@ -20,6 +20,7 @@ from src.services.contextual_compression_service import ContextualCompressionSer
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
+from src.services.layout_context_service import LayoutContextService
 from src.services.prompt_builder_service import PromptBuilderService
 from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
@@ -79,6 +80,7 @@ class RAGService:
         self.contextual_compression_service = ContextualCompressionService()
         self.query_log_service = query_log_service
         self.section_retrieval_service = SectionRetrievalService()
+        self.layout_context_service = LayoutContextService()
 
     @staticmethod
     def _latency_fields_for_query_log(latency: PipelineLatency) -> dict:
@@ -475,10 +477,18 @@ class RAGService:
         image_ctx_by_id, image_context_enriched = (
             self.prompt_builder_service.prepare_image_contexts(prompt_context_assets)
         )
+        grouped_assets = self.layout_context_service.group_assets(prompt_context_assets)
+        layout_groups_ok = self.layout_context_service.validate_groups(
+            prompt_context_assets,
+            grouped_assets,
+        )
+        asset_groups = grouped_assets if layout_groups_ok else None
+
         raw_context = self.prompt_builder_service.build_raw_context(
             raw_assets=prompt_context_assets,
             citations=citation_objects,
             image_context_by_doc_id=image_ctx_by_id,
+            asset_groups=asset_groups,
         )
         prompt = self.prompt_builder_service.build_prompt(
             question=question,
@@ -489,6 +499,7 @@ class RAGService:
                 if table_aware_qa_enabled
                 else None
             ),
+            layout_aware=bool(asset_groups),
         )
         prompt_build_ms = (perf_counter() - t0) * 1000.0
 

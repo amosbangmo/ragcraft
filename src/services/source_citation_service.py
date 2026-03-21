@@ -12,15 +12,19 @@ class SourceCitationService:
             doc_id = asset.get("doc_id", "")
 
             page_label = self._build_page_label(metadata)
+            section_label = self._build_section_label(metadata)
             locator_label = self._build_locator_label(content_type, metadata)
             display_label = self._build_display_label(
                 source_number=index,
                 source_file=source_file,
+                section_label=section_label,
                 page_label=page_label,
                 locator_label=locator_label,
             )
             prompt_label = self._build_prompt_label(
                 source_number=index,
+                section_label=section_label,
+                page_label=page_label,
                 locator_label=locator_label,
             )
 
@@ -58,6 +62,16 @@ class SourceCitationService:
 
         return None
 
+    def _build_section_label(self, metadata: dict) -> str | None:
+        for key in ("chunk_title", "section_title"):
+            raw = metadata.get(key)
+            if raw is None:
+                continue
+            s = str(raw).strip()
+            if s:
+                return s[:160] if len(s) > 160 else s
+        return None
+
     def _build_locator_label(self, content_type: str, metadata: dict) -> str | None:
         if content_type == "text":
             start_idx = metadata.get("start_element_index")
@@ -89,10 +103,14 @@ class SourceCitationService:
         *,
         source_number: int,
         source_file: str,
+        section_label: str | None,
         page_label: str | None,
         locator_label: str | None,
     ) -> str:
         parts = [f"Source {source_number}", source_file]
+
+        if section_label:
+            parts.append(section_label)
 
         if locator_label:
             parts.append(locator_label)
@@ -106,9 +124,17 @@ class SourceCitationService:
         self,
         *,
         source_number: int,
+        section_label: str | None,
+        page_label: str | None,
         locator_label: str | None,
     ) -> str:
         parts = [f"[Source {source_number}]"]
+
+        if section_label:
+            parts.append(f"[Section: {section_label}]")
+
+        if page_label:
+            parts.append(f"[{page_label}]")
 
         if locator_label:
             parts.append(f"[{locator_label}]")

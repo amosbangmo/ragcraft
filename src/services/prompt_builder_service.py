@@ -1,5 +1,6 @@
 from src.domain.source_citation import SourceCitation
 from src.services.image_context_service import ImageContextService
+from src.services.layout_context_service import describe_layout_group
 
 
 _MAX_STRUCTURED_TABLE_ROWS = 14
@@ -42,27 +43,56 @@ class PromptBuilderService:
                 any_enriched = True
         return by_id, any_enriched
 
+    def _layout_type_label(self, content_type: str) -> str:
+        if content_type == "text":
+            return "Text"
+        if content_type == "table":
+            return "Table"
+        if content_type == "image":
+            return "Image"
+        return content_type[:1].upper() + content_type[1:] if content_type else "Asset"
+
     def build_raw_context(
         self,
         *,
         raw_assets: list[dict],
         citations: list[SourceCitation],
         image_context_by_doc_id: dict[str, dict] | None = None,
+        asset_groups: list[list[dict]] | None = None,
     ) -> str:
         """``raw_assets`` may be context-compressed upstream before this call."""
         if image_context_by_doc_id is None:
             image_context_by_doc_id, _ = self.prepare_image_contexts(raw_assets)
-        blocks = [
-            self._format_raw_asset_for_prompt(
-                asset=asset,
-                citation=citation,
-                image_context=image_context_by_doc_id.get(str(asset.get("doc_id")))
+        citation_by_id = {
+            id(asset): citation for asset, citation in zip(raw_assets, citations, strict=True)
+        }
+
+        def format_one(asset: dict, *, layout_mode: bool) -> str:
+            cit = citation_by_id[id(asset)]
+            img_ctx = (
+                image_context_by_doc_id.get(str(asset.get("doc_id")))
                 if asset.get("content_type") == "image" and asset.get("doc_id")
-                else None,
+                else None
             )
-            for asset, citation in zip(raw_assets, citations)
-        ]
-        return "\n\n".join(blocks)
+            body = self._format_raw_asset_for_prompt(
+                asset=asset,
+                citation=cit,
+                image_context=img_ctx,
+            )
+            if layout_mode:
+                tag = self._layout_type_label(str(asset.get("content_type") or "unknown"))
+                return f"[{tag}]\n{body}"
+            return body
+
+        if not asset_groups:
+            return "\n\n".join(format_one(a, layout_mode=False) for a in raw_assets)
+
+        parts: list[str] = []
+        for group in asset_groups:
+            header = describe_layout_group(group)
+            inner = "\n\n".join(format_one(a, layout_mode=True) for a in group)
+            parts.append(f"=== {header} ===\nRelated assets (same area of the document; use order and proximity):\n\n{inner}")
+        return "\n\n".join(parts)
 
     def build_prompt(
         self,
@@ -71,12 +101,20 @@ class PromptBuilderService:
         chat_history: list[str],
         raw_context: str,
         table_aware_instruction: str | None = None,
+        layout_aware: bool = False,
     ) -> str:
         history_text = "\n".join(chat_history) if chat_history else "No prior chat history."
 
         table_block = ""
         if table_aware_instruction and table_aware_instruction.strip():
             table_block = f"\n{table_aware_instruction.strip()}\n"
+
+        layout_block = ""
+        if layout_aware:
+            layout_block = """
+- Context is grouped by document layout (page / section / proximity). Assets under the same heading are neighbors in the source—use relationships between them.
+- Use nearby text to interpret tables and images; use tables/images to ground narrative text in the same group.
+"""
 
         return f"""
 You are an AI assistant answering questions using only the provided raw multimodal context.
@@ -108,7 +146,7 @@ Instructions:
 - For image assets, rely only on metadata, contextual text blocks, and the image retrieval summary; you cannot see pixels—do not invent visual details.
 - When citing image evidence, say so explicitly (e.g. "per image metadata / surrounding text / retrieval summary for [Source N]").
 - For table assets, when a structured table excerpt is provided, read values from it first for comparisons, rankings, and numeric facts; cross-check the raw table if needed.
-- Never invent document content that is not explicitly present in the raw context.
+- Never invent document content that is not explicitly present in the raw context.{layout_block}
 """.strip()
 
     def _truncate_cell(self, value: object, max_chars: int = _MAX_STRUCTURED_CELL_CHARS) -> str:
