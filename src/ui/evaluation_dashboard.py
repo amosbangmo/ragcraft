@@ -723,7 +723,7 @@ def render_evaluation_dashboard(
         subtitle="Aggregated deterministic metrics over the gold QA dataset.",
         min_height=0,
     ):
-        r1, r2, r3, r4 = st.columns(4)
+        r1, r2, r3, r4, r5 = st.columns(5)
         with r1:
             _summary_metric(summary, "avg_recall_at_k", "Avg Recall@K")
         with r2:
@@ -732,6 +732,8 @@ def render_evaluation_dashboard(
             _summary_metric(summary, "mrr", "MRR")
         with r4:
             _summary_metric(summary, "map", "MAP")
+        with r5:
+            _summary_metric(summary, "hit_at_k", "Hit@K")
 
     with section_card(
         title="Answer pipeline performance",

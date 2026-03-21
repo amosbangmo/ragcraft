@@ -185,9 +185,9 @@ METRIC_HELP: dict[str, str] = {
     "selected_source_count": (
         "How many distinct sources were selected for the prompt for this run."
     ),
-    "doc_id_hit_rate": (
-        "Share of entries where at least one expected doc ID was retrieved. "
-        "Higher is better."
+    "hit_at_k": (
+        "Whether at least one relevant document appears in the top-K results. "
+        "Averaged over queries. Closer to 1 is better."
     ),
     "source_hit_rate": (
         "Share of entries where at least one expected source was hit. "

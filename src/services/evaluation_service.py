@@ -407,7 +407,7 @@ class EvaluationService:
             "map": round(float(np.mean(average_precision_values)), 2) if average_precision_values else 0.0,
             "avg_confidence": round(float(np.mean(confidence_values)), 2) if confidence_values else 0.0,
             "avg_latency_ms": round(float(np.mean(latency_values)), 1) if latency_values else 0.0,
-            "doc_id_hit_rate": round(doc_id_hits / entries_with_expected_doc_ids, 2)
+            "hit_at_k": round(doc_id_hits / entries_with_expected_doc_ids, 2)
             if entries_with_expected_doc_ids
             else 0.0,
             "source_hit_rate": round(source_hits / entries_with_expected_sources, 2)

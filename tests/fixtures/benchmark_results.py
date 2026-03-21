@@ -23,7 +23,7 @@ _DEFAULT_SUMMARY: dict[str, Any] = {
     "map": 1.0,
     "avg_confidence": 0.9,
     "avg_latency_ms": 12.0,
-    "doc_id_hit_rate": 1.0,
+    "hit_at_k": 1.0,
     "source_hit_rate": 1.0,
     "answer_exact_match_rate": 1.0,
     "avg_answer_precision": 1.0,
