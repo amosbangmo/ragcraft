@@ -30,6 +30,13 @@ def _f(value: object) -> str:
     return str(value)
 
 
+def _fmt_llm_judge_metric(row: dict, key: str) -> str:
+    """Judge metrics are unavailable when ``judge_failed``; never show stub numerics."""
+    if row.get("judge_failed"):
+        return "—"
+    return _f(row.get(key))
+
+
 def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bool = True) -> None:
     """One benchmark dataset row, grouped like the manual evaluation layout."""
     inject_section_card_styles()
@@ -37,7 +44,18 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     st.markdown(f"**Dataset entry** #{row.get('entry_id', '—')}")
     st.write(q)
     if row.get("pipeline_failed"):
-        st.warning("⚠️ **Pipeline failed** — the answer pipeline did not complete; treat scores as N/A (shown as —).")
+        st.warning(
+            "⚠️ **Pipeline failed** — the answer pipeline did not complete; retrieval and judge metrics "
+            "for this row are not meaningful (shown as — where applicable)."
+        )
+    elif row.get("judge_failed"):
+        st.info(
+            "LLM judge failed for this row; judge-based scores are unavailable. "
+            "Retrieval, citation overlap, and gold F1 / semantic similarity may still apply."
+        )
+        jr = row.get("judge_failure_reason")
+        if isinstance(jr, str) and jr.strip():
+            st.caption(f"Judge failure detail: `{jr.strip()}`")
 
     with section_card(
         title="Answer",
@@ -52,44 +70,49 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         subtitle="Model-assessed grounding, citation use, relevance, and hallucination signals.",
         min_height=0,
     ):
+        if row.get("judge_failed"):
+            st.caption(
+                "Judge metrics below show — because the judge call did not return usable scores for this row."
+            )
         c1, c2, c3 = st.columns(3)
         with c1:
             render_metric_with_help(
                 label="Groundedness",
-                value=_f(row.get("groundedness_score")),
+                value=_fmt_llm_judge_metric(row, "groundedness_score"),
                 metric_key="groundedness_score",
             )
         with c2:
             render_metric_with_help(
                 label="Citation faithfulness",
-                value=_f(row.get("citation_faithfulness_score")),
+                value=_fmt_llm_judge_metric(row, "citation_faithfulness_score"),
                 metric_key="citation_faithfulness_score",
             )
         with c3:
             render_metric_with_help(
                 label="Answer relevance",
-                value=_f(row.get("answer_relevance_score")),
+                value=_fmt_llm_judge_metric(row, "answer_relevance_score"),
                 metric_key="answer_relevance_score",
             )
         c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
                 label="Answer correctness",
-                value=_f(row.get("answer_correctness_score")),
+                value=_fmt_llm_judge_metric(row, "answer_correctness_score"),
                 metric_key="answer_correctness_score",
             )
         with c5:
             render_metric_with_help(
                 label="Hallucination score",
-                value=_f(row.get("hallucination_score")),
+                value=_fmt_llm_judge_metric(row, "hallucination_score"),
                 metric_key="hallucination_score",
             )
         with c6:
             render_metric_with_help(
                 label="Has hallucination",
-                value=_f(row.get("has_hallucination")),
+                value=_fmt_llm_judge_metric(row, "has_hallucination"),
                 metric_key="has_hallucination",
             )
+        st.caption("Gold overlap (deterministic, not from the judge)")
         c7, c8, _ = st.columns(3)
         with c7:
             render_metric_with_help(
@@ -312,13 +335,15 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         min_height=0,
     ):
         flags: list[str] = []
-        if row.get("has_hallucination"):
+        if row.get("judge_failed") and not row.get("pipeline_failed"):
+            flags.append("LLM judge unavailable — see failure analysis “judge failure” if present")
+        if not row.get("judge_failed") and row.get("has_hallucination"):
             flags.append("Hallucination flagged by judge")
         g = row.get("groundedness_score")
-        if isinstance(g, (int, float)) and g < 0.5:
+        if not row.get("judge_failed") and isinstance(g, (int, float)) and g < 0.5:
             flags.append("Low groundedness")
         ar = row.get("answer_relevance_score")
-        if isinstance(ar, (int, float)) and ar < 0.5:
+        if not row.get("judge_failed") and isinstance(ar, (int, float)) and ar < 0.5:
             flags.append("Low answer relevance")
         dr = row.get("recall_at_k")
         exp_n = row.get("expected_doc_ids_count") or 0

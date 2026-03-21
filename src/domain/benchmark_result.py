@@ -45,7 +45,8 @@ class BenchmarkRow:
     Citation doc ID metrics (``citation_doc_id_*``, ``citation_doc_ids_count``) use
     **parsed** ``[Source N]`` labels in the generated answer mapped via ``prompt_sources``.
     ``judge_failed`` is true when the LLM judge used a failure fallback (not when the pipeline
-    failed before judging).
+    failed before judging). When true, judge numeric fields are ``None`` and ``judge_failure_reason``
+    explains the failure (often the sentinel ``judge_failure`` from the judge service).
     """
 
     entry_id: int

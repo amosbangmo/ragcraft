@@ -60,6 +60,50 @@ def _rate(numerator: int, denominator: int) -> float | None:
     return round(float(numerator) / float(denominator), 2)
 
 
+def _judge_row_fields(
+    judge_result: object,
+    *,
+    judge_failed: bool,
+    has_expected_answer: bool,
+) -> dict[str, object]:
+    """
+    Build per-row judge keys. When ``judge_failed``, all judge metrics are ``None`` so clients never
+    show numeric placeholders from the judge failure stub (:meth:`LLMJudgeService._failure_result`).
+    """
+    if judge_failed:
+        raw_reason = getattr(judge_result, "reason", None)
+        reason = (
+            raw_reason
+            if isinstance(raw_reason, str) and raw_reason.strip()
+            else JUDGE_FAILURE_REASON
+        )
+        return {
+            "groundedness_score": None,
+            "citation_faithfulness_score": None,
+            "answer_relevance_score": None,
+            "hallucination_score": None,
+            "has_hallucination": None,
+            "answer_correctness_score": None,
+            "judge_failure_reason": reason,
+        }
+    ac_row = (
+        _r2(float(getattr(judge_result, "answer_correctness_score", 0.0)))
+        if has_expected_answer
+        else None
+    )
+    return {
+        "groundedness_score": _r2(getattr(judge_result, "groundedness_score", None)),
+        "citation_faithfulness_score": _r2(
+            getattr(judge_result, "citation_faithfulness_score", None)
+        ),
+        "answer_relevance_score": _r2(getattr(judge_result, "answer_relevance_score", None)),
+        "hallucination_score": _r2(getattr(judge_result, "hallucination_score", None)),
+        "has_hallucination": bool(getattr(judge_result, "has_hallucination", False)),
+        "answer_correctness_score": ac_row,
+        "judge_failure_reason": None,
+    }
+
+
 class EvaluationService:
     def __init__(
         self,
@@ -216,6 +260,7 @@ class EvaluationService:
                     "has_hallucination": False,
                     "pipeline_failed": True,
                     "judge_failed": False,
+                    "judge_failure_reason": None,
                     "groundedness_score": None,
                     "citation_faithfulness_score": None,
                     "answer_relevance_score": None,
@@ -411,10 +456,14 @@ class EvaluationService:
                     answer_correctness_values.append(
                         float(getattr(judge_result, "answer_correctness_score", 0.0))
                     )
-            ac_row = (
-                _r2(float(getattr(judge_result, "answer_correctness_score", 0.0)))
-                if has_expected_answer
-                else None
+
+            # Judge summary metrics (avg_*, hallucination_rate) are filled only from rows where
+            # ``judge_failed`` is false — see appends to *groundedness_values* etc. above.
+            # ``pipeline_failure_rate`` counts rows with ``pipeline_failed`` only.
+            judge_fields = _judge_row_fields(
+                judge_result,
+                judge_failed=judge_failed,
+                has_expected_answer=has_expected_answer,
             )
 
             row_payload = {
@@ -452,14 +501,9 @@ class EvaluationService:
                 "retrieval_mode": pl.get("retrieval_mode", "unknown"),
                 "query_rewrite_enabled": bool(pl.get("query_rewrite_enabled", False)),
                 "hybrid_retrieval_enabled": bool(pl.get("hybrid_retrieval_enabled", False)),
-                "hallucination_score": _r2(hallucination_score),
-                "has_hallucination": bool(has_hallucination),
                 "pipeline_failed": False,
                 "judge_failed": judge_failed,
-                "groundedness_score": _r2(judge_result.groundedness_score),
-                "citation_faithfulness_score": _r2(judge_result.citation_faithfulness_score),
-                "answer_relevance_score": _r2(judge_result.answer_relevance_score),
-                "answer_correctness_score": ac_row,
+                **judge_fields,
                 **modality_row_fields_from_pipeline(pl),
             }
             rows.append(
@@ -497,11 +541,13 @@ class EvaluationService:
             "avg_citation_doc_id_recall": _mean_round(citation_doc_id_recall_values, 2),
             "avg_citation_doc_id_f1": _mean_round(citation_doc_id_f1_values, 2),
             "citation_doc_id_hit_rate": _rate(citation_doc_id_hits, entries_with_expected_doc_ids),
+            # LLM-judge aggregates: means use only rows where the judge succeeded (``judge_failed`` false).
             "avg_groundedness_score": _mean_round(groundedness_values, 2),
             "avg_citation_faithfulness_score": _mean_round(citation_faithfulness_values, 2),
             "avg_answer_relevance_score": _mean_round(answer_relevance_values, 2),
             "avg_answer_correctness": _mean_round(answer_correctness_values, 2),
             "avg_hallucination_score": _mean_round(hallucination_score_values, 2),
+            # Share of judge-valid rows with ``has_hallucination`` true (excludes ``judge_failed`` rows).
             "hallucination_rate": (
                 round(
                     sum(1 for flag in hallucination_flags if flag) / len(hallucination_flags),

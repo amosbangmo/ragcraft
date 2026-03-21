@@ -33,6 +33,28 @@ class TestExplainabilityService(unittest.TestCase):
         )
         self.assertEqual(out["explanations"], [])
 
+    def test_judge_failed_skips_judge_metrics_but_keeps_retrieval(self) -> None:
+        out = ExplainabilityService().build_explanation(
+            {
+                "judge_failed": True,
+                "judge_failure_reason": "judge_failure",
+                "recall_at_k": 0.2,
+                "has_hallucination": True,
+                "groundedness_score": 0.0,
+                "answer_relevance_score": 0.0,
+            }
+        )
+        expl = " ".join(out["explanations"]).lower()
+        self.assertIn("judge", expl)
+        self.assertTrue(any("recall" in e.lower() for e in out["explanations"]))
+        self.assertFalse(any("hallucinat" in e.lower() for e in out["explanations"]))
+
+    def test_judge_failed_custom_reason_appended(self) -> None:
+        out = ExplainabilityService().build_explanation(
+            {"judge_failed": True, "judge_failure_reason": "provider timeout"}
+        )
+        self.assertTrue(any("timeout" in e.lower() for e in out["explanations"]))
+
 
 if __name__ == "__main__":
     unittest.main()

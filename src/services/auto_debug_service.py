@@ -87,4 +87,12 @@ class AutoDebugService:
                     "Answers do not properly cite sources. Improve prompt formatting or enforce citations.",
                 )
 
+            jf = int(counts.get("judge_failure", 0) or 0)
+            if jf > 0:
+                add(
+                    "LLM judge call failures",
+                    f"{jf} row(s) could not be scored by the judge. Retry evaluation, verify judge model settings, "
+                    "and inspect API responses — do not treat these rows as grounding or hallucination regressions.",
+                )
+
         return suggestions

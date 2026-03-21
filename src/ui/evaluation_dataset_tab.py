@@ -123,6 +123,10 @@ def _render_dataset_overview(
         )
     else:
         st.markdown("##### Latest benchmark (summary)")
+        st.caption(
+            "Judge averages and hallucination rate use only rows where the LLM judge succeeded; "
+            "judge-failed entries are excluded from those aggregates."
+        )
         m1, m2, m3 = st.columns(3)
         with m1:
             _summary_metric_cell(summary, "avg_groundedness_score", "Avg groundedness")

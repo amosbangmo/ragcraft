@@ -144,7 +144,8 @@ METRIC_HELP: dict[str, str] = {
         "Measures mean answer_correctness_score over evaluated rows. "
         "Range: 0–1. "
         "Run-level judge view of correctness vs question and context. "
-        "Higher is better."
+        "Higher is better. "
+        "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "ndcg_at_k": (
         "Measures ranking quality: how well relevant documents are ordered in the retrieved list. "
@@ -168,7 +169,8 @@ METRIC_HELP: dict[str, str] = {
         "Measures mean groundedness_score over the run. "
         "Range: 0–1. "
         "Aggregates evidence-grounding as judged. "
-        "Higher is better."
+        "Higher is better. "
+        "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "citation_faithfulness_score": (
         "Measures LLM judge score for whether [Source N] citations align with the claims they support. "
@@ -180,7 +182,8 @@ METRIC_HELP: dict[str, str] = {
         "Measures mean citation_faithfulness_score over the run. "
         "Range: 0–1. "
         "Run-level citation alignment quality. "
-        "Higher is better."
+        "Higher is better. "
+        "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "answer_relevance_score": (
         "Measures LLM judge score for how well the answer addresses the question. "
@@ -192,7 +195,8 @@ METRIC_HELP: dict[str, str] = {
         "Measures mean answer_relevance_score over the run. "
         "Range: 0–1. "
         "Run-level on-topic quality from the judge. "
-        "Higher is better."
+        "Higher is better. "
+        "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "hallucination_score": (
         "Measures LLM judge signal for factual support from context. "
@@ -204,12 +208,13 @@ METRIC_HELP: dict[str, str] = {
         "Measures mean hallucination judge signal across rows. "
         "Range: 0–1. "
         "Same direction as per-row hallucination_score: higher implies less hallucination risk. "
-        "Higher is better; compare only with the same judge configuration."
+        "Higher is better; compare only with the same judge configuration. "
+        "Excludes rows where the LLM judge failed (judge_failed)."
     ),
     "hallucination_rate": (
-        "Measures the fraction of rows flagged as likely hallucinating (has_hallucination). "
+        "Measures the fraction of judge-valid rows flagged as likely hallucinating (has_hallucination). "
         "Range: 0–1 (often shown as a percentage in the UI). "
-        "Prevalence of binary judge flags in the run or filtered slice. "
+        "Excludes rows where the LLM judge failed (judge_failed). "
         "Lower is better."
     ),
     "has_hallucination": (

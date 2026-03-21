@@ -317,7 +317,10 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
         r0, r1 = result.rows[0].data, result.rows[1].data
         self.assertTrue(r0.get("judge_failed"))
         self.assertFalse(r1.get("judge_failed"))
-        self.assertEqual(r0.get("groundedness_score"), 0.0)
+        self.assertIsNone(r0.get("groundedness_score"))
+        self.assertIsNone(r0.get("hallucination_score"))
+        self.assertIsNone(r0.get("has_hallucination"))
+        self.assertEqual(r0.get("judge_failure_reason"), "judge_failure")
         summ = result.summary.data
         self.assertEqual(summ.get("avg_groundedness_score"), 0.8)
         self.assertEqual(summ.get("avg_hallucination_score"), 0.9)

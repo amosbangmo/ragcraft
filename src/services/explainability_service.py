@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.services.llm_judge_service import JUDGE_FAILURE_REASON
+
 
 def _is_score(value: object) -> bool:
     """True for numeric scores; excludes bool (subclass of int in Python)."""
@@ -25,6 +27,22 @@ class ExplainabilityService:
             )
             return {"explanations": explanations, "suggestions": suggestions}
 
+        judge_failed = row.get("judge_failed") is True
+        if judge_failed:
+            explanations.append(
+                "LLM judge failed for this row; judge-based scores are unavailable."
+            )
+            jr = row.get("judge_failure_reason")
+            if (
+                isinstance(jr, str)
+                and jr.strip()
+                and jr.strip() != JUDGE_FAILURE_REASON
+            ):
+                explanations.append(f"Judge failure reason: {jr.strip()}.")
+            suggestions.append(
+                "Retry evaluation after checking judge model configuration, connectivity, and provider responses."
+            )
+
         recall = row.get("recall_at_k")
         groundedness = row.get("groundedness_score")
         relevance = row.get("answer_relevance_score")
@@ -46,17 +64,18 @@ class ExplainabilityService:
             explanations.append("Answer does not cite expected sources.")
             suggestions.append("Improve citation grounding or prompt instructions.")
 
-        if _is_score(groundedness) and float(groundedness) < 0.5:
-            explanations.append("Answer is weakly grounded in retrieved context.")
-            suggestions.append("Ensure retrieved context is actually used in generation.")
+        if not judge_failed:
+            if _is_score(groundedness) and float(groundedness) < 0.5:
+                explanations.append("Answer is weakly grounded in retrieved context.")
+                suggestions.append("Ensure retrieved context is actually used in generation.")
 
-        if _is_score(relevance) and float(relevance) < 0.5:
-            explanations.append("Answer does not properly address the question.")
-            suggestions.append("Improve prompt instructions or query understanding.")
+            if _is_score(relevance) and float(relevance) < 0.5:
+                explanations.append("Answer does not properly address the question.")
+                suggestions.append("Improve prompt instructions or query understanding.")
 
-        if bool(hallucination):
-            explanations.append("Answer likely contains hallucinated content.")
-            suggestions.append("Increase grounding constraints or reduce generation temperature.")
+            if bool(hallucination):
+                explanations.append("Answer likely contains hallucinated content.")
+                suggestions.append("Increase grounding constraints or reduce generation temperature.")
 
         if (
             _is_score(confidence)

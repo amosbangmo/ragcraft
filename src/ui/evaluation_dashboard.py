@@ -51,6 +51,8 @@ def _coerce_hallucination_flag(value: object) -> bool:
 
 
 def _row_hallucination_flag(row: dict) -> bool:
+    if row.get("judge_failed"):
+        return False
     return _coerce_hallucination_flag(row.get("has_hallucination"))
 
 
@@ -165,6 +167,7 @@ _FAILURE_TYPE_LABELS: dict[str, str] = {
     "retrieval_failure": "Retrieval miss",
     "context_selection_failure": "Context selection (prompt doc IDs)",
     "citation_failure": "Citation (answer doc IDs)",
+    "judge_failure": "LLM judge failure",
     "grounding_failure": "Grounding / gold mismatch",
     "hallucination": "Hallucination signal",
     "low_relevance": "Low relevance",
@@ -641,29 +644,38 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("No trend columns available.")
 
         st.markdown("##### Hallucination signal")
+        st.caption("Counts below use judge-valid rows only (judge-failed rows are excluded).")
         if "has_hallucination" in df.columns:
-            hall_mask = df["has_hallucination"].map(_coerce_hallucination_flag)
-            n_flagged = int(hall_mask.sum())
-            n_total = len(df)
-            ratio = (n_flagged / n_total) if n_total else 0.0
-            m1, m2 = st.columns(2)
-            with m1:
-                render_metric_with_help(
-                    label="Flagged rows",
-                    value=n_flagged,
-                    metric_key="hallucination_flagged_rows",
-                )
-            with m2:
-                render_metric_with_help(
-                    label="Flagged share",
-                    value=f"{ratio * 100:.1f}%",
-                    metric_key="hallucination_flagged_share",
-                )
-            counts = pd.Series(
-                {"Not flagged": int((~hall_mask).sum()), "Flagged": n_flagged},
-                name="rows",
+            hall_df = (
+                df
+                if "judge_failed" not in df.columns
+                else df[df["judge_failed"].ne(True)].reset_index(drop=True)
             )
-            st.bar_chart(counts.to_frame())
+            if hall_df.empty:
+                st.caption("No judge-valid rows in this filtered slice.")
+            else:
+                hall_mask = hall_df["has_hallucination"].map(_coerce_hallucination_flag)
+                n_flagged = int(hall_mask.sum())
+                n_total = len(hall_df)
+                ratio = (n_flagged / n_total) if n_total else 0.0
+                m1, m2 = st.columns(2)
+                with m1:
+                    render_metric_with_help(
+                        label="Flagged rows",
+                        value=n_flagged,
+                        metric_key="hallucination_flagged_rows",
+                    )
+                with m2:
+                    render_metric_with_help(
+                        label="Flagged share",
+                        value=f"{ratio * 100:.1f}%",
+                        metric_key="hallucination_flagged_share",
+                    )
+                counts = pd.Series(
+                    {"Not flagged": int((~hall_mask).sum()), "Flagged": n_flagged},
+                    name="rows",
+                )
+                st.bar_chart(counts.to_frame())
         else:
             st.caption("No has_hallucination column in results.")
 
@@ -737,7 +749,7 @@ def _render_health_overview(
         st.metric(
             "Hallucination flag rate",
             f"{hr * 100:.1f}%" if hr is not None else "—",
-            help="Share of rows where the judge set has_hallucination (same as summary).",
+            help="Share of judge-valid rows where has_hallucination is true (excludes judge-failed rows; same as summary).",
         )
     with h2:
         st.metric(
@@ -942,6 +954,10 @@ def render_evaluation_dashboard(
         subtitle="Model-assessed grounding, citation use, relevance, correctness, and hallucination signals (0–1 scores where configured).",
         min_height=0,
     ):
+        st.caption(
+            "Summary averages and hallucination rate include only rows where the judge succeeded "
+            "(rows with judge failures are excluded from these aggregates)."
+        )
         if not has_exp_answers:
             st.caption("Avg answer correctness is N/A without gold answers; other judge scores still reflect this run.")
         j1, j2, j3 = st.columns(3)
@@ -967,6 +983,9 @@ def render_evaluation_dashboard(
         subtitle="One row per dataset question with retrieval metrics and judge scores.",
         min_height=0,
     ):
+        st.caption(
+            "Judge metric cells are empty (not zero) when the judge failed for that entry; use the Entries detail view for banners and context."
+        )
         if not rows:
             st.caption("Run evaluation to see per-entry rows.")
         else:
@@ -985,6 +1004,9 @@ def render_evaluation_dashboard(
         min_height=0,
         danger=bool(hallucination_rows),
     ):
+        st.caption(
+            "Only rows with successful judge scoring appear here; judge-failed rows are never listed as hallucinations."
+        )
         if not rows:
             st.caption("No rows to inspect.")
         elif not hallucination_rows:
