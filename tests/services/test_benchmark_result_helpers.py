@@ -62,6 +62,7 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
             failures=failures,
             multimodal_metrics=multimodal_metrics,
             auto_debug=auto_debug,
+            run_id="abc123runid",
         )
         restored = BenchmarkResult.from_plain_dict(original.to_dict())
         self.assertEqual(restored.summary.data, original.summary.data)
@@ -74,6 +75,7 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
         self.assertEqual(restored.failures, failures)
         self.assertEqual(restored.multimodal_metrics, multimodal_metrics)
         self.assertEqual(restored.auto_debug, auto_debug)
+        self.assertEqual(restored.run_id, "abc123runid")
 
     def test_coerce_benchmark_result_accepts_instance_and_dict(self):
         result = make_benchmark_result()

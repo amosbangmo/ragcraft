@@ -133,6 +133,8 @@ class BenchmarkReportService:
             payload["multimodal_metrics"] = dict(result.multimodal_metrics)
         if result.auto_debug is not None:
             payload["auto_debug"] = [dict(item) for item in result.auto_debug]
+        if result.run_id is not None:
+            payload["run_id"] = result.run_id
         text = json.dumps(payload, indent=2, ensure_ascii=False, default=_json_default)
         return text.encode("utf-8")
 

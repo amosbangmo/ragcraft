@@ -97,6 +97,7 @@ class BenchmarkResult:
     :class:`~src.services.failure_analysis_service.FailureAnalysisService` (counts, examples, etc.).
     Optional ``multimodal_metrics`` holds aggregates from modality-aware evaluation (usage rates, conditional scores).
     Optional ``auto_debug`` holds system-level suggestion cards from :class:`~src.services.auto_debug_service.AutoDebugService`.
+    Optional ``run_id`` identifies this benchmark run for comparison and history (e.g. short UUID).
     """
 
     summary: BenchmarkSummary
@@ -105,6 +106,7 @@ class BenchmarkResult:
     failures: dict[str, Any] | None = None
     multimodal_metrics: dict[str, Any] | None = None
     auto_debug: list[dict[str, str]] | None = None
+    run_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -119,6 +121,8 @@ class BenchmarkResult:
             out["multimodal_metrics"] = dict(self.multimodal_metrics)
         if self.auto_debug is not None:
             out["auto_debug"] = [dict(item) for item in self.auto_debug]
+        if self.run_id is not None:
+            out["run_id"] = self.run_id
         return out
 
     @classmethod
@@ -167,6 +171,8 @@ class BenchmarkResult:
                 if isinstance(t, str) and isinstance(d, str):
                     parsed.append({"title": t, "description": d})
             auto_debug = parsed
+        rid_raw = payload.get("run_id")
+        run_id: str | None = rid_raw if isinstance(rid_raw, str) and rid_raw.strip() else None
         return cls(
             summary=summary,
             rows=rows,
@@ -174,6 +180,7 @@ class BenchmarkResult:
             failures=failures,
             multimodal_metrics=multimodal_metrics,
             auto_debug=auto_debug,
+            run_id=run_id,
         )
 
 

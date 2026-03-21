@@ -753,6 +753,49 @@ def _render_health_overview(
         )
 
 
+def _render_benchmark_comparison(
+    comparison: list[dict[str, Any]] | None,
+    failure_comparison: list[dict[str, Any]] | None,
+) -> None:
+    if comparison is None and failure_comparison is None:
+        return
+    with section_card(
+        title="Benchmark comparison (A vs B)",
+        subtitle="Metric deltas (B − A) and failure-count deltas from selected session history.",
+        min_height=0,
+    ):
+        st.caption(
+            "Positive deltas usually mean higher scores in B (better), except latency where higher may mean slower."
+        )
+        if comparison is not None:
+            df = pd.DataFrame(comparison)
+            if df.empty:
+                st.caption("No overlapping numeric metrics between the two summaries.")
+            else:
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                critical = df[df["direction"] == "critical_regression"]
+                if not critical.empty:
+                    for _, row in critical.iterrows():
+                        st.error(
+                            f"Critical regression: **{row['metric']}** dropped by {abs(float(row['delta'])):.4f}."
+                        )
+                improved = df[df["direction"] == "improved"]
+                regressed = df[df["direction"] == "regressed"]
+                if not improved.empty:
+                    st.markdown("**Improvements (sample)**")
+                    for _, row in improved.head(5).iterrows():
+                        st.caption(f"{row['metric']}: +{row['delta']}")
+                if not regressed.empty:
+                    st.markdown("**Regressions (sample)**")
+                    for _, row in regressed.head(5).iterrows():
+                        st.caption(f"{row['metric']}: {row['delta']}")
+        if failure_comparison is not None:
+            fdf = pd.DataFrame(failure_comparison)
+            if not fdf.empty:
+                st.markdown("**Failure label counts (B − A)**")
+                st.dataframe(fdf, use_container_width=True, hide_index=True)
+
+
 def _render_auto_debug(auto_debug: list[dict[str, str]] | None) -> None:
     if not auto_debug:
         return
@@ -780,11 +823,16 @@ def render_evaluation_dashboard(
     failures: dict[str, Any] | None = None,
     multimodal_metrics: dict[str, Any] | None = None,
     auto_debug: list[dict[str, str]] | None = None,
+    comparison: list[dict[str, Any]] | None = None,
+    failure_comparison: list[dict[str, Any]] | None = None,
 ) -> None:
     inject_section_card_styles()
 
+    _render_benchmark_comparison(comparison, failure_comparison)
+
     if not summary and not rows:
-        st.info("Run evaluation to see results.")
+        if comparison is None and failure_comparison is None:
+            st.info("Run evaluation to see results.")
         return
 
     _render_auto_debug(auto_debug)

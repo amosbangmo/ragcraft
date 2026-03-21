@@ -27,6 +27,7 @@ DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
 
 _EVAL_PAGE_LAST_PROJECT_KEY = "_eval_page_last_project_id"
+BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY = "benchmark_run_history_by_project"
 
 
 def _evaluation_widget_key_suffix(project_id: str) -> str:
@@ -52,6 +53,7 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
             st.session_state.pop(k, None)
         st.session_state.pop("qa_dataset_success_message", None)
         st.session_state.pop("qa_dataset_error_message", None)
+        st.session_state.pop(BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY, None)
         for k in list(st.session_state.keys()):
             if k.startswith(
                 ("dataset_eval_metrics_", "delete_qa_entry_dataset_")

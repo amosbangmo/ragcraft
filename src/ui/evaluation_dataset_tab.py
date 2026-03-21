@@ -4,8 +4,10 @@ Dataset evaluation tab: benchmark the gold QA dataset with Overview / Entries su
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Any, cast
+import uuid
 
 import streamlit as st
 
@@ -13,12 +15,59 @@ from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
+from src.services.benchmark_comparison_service import BenchmarkComparisonService
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
+
+BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY = "benchmark_run_history_by_project"
+_BENCHMARK_HISTORY_CAP = 20
+
+
+def _benchmark_history_for_project(project_id: str) -> list[dict[str, Any]]:
+    root = st.session_state.get(BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY)
+    if not isinstance(root, dict):
+        return []
+    hist = root.get(project_id)
+    return hist if isinstance(hist, list) else []
+
+
+def _append_benchmark_to_history(*, project_id: str, result: BenchmarkResult, generated_at: object) -> None:
+    root = st.session_state.setdefault(BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY, {})
+    if not isinstance(root, dict):
+        root = {}
+        st.session_state[BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY] = root
+    hist = root.setdefault(project_id, [])
+    if not isinstance(hist, list):
+        hist = []
+        root[project_id] = hist
+    rid = (result.run_id or "")[:12]
+    if isinstance(generated_at, datetime):
+        tlabel = generated_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    else:
+        tlabel = str(generated_at)[:32] if generated_at else ""
+    label = f"{tlabel} · {rid}" if rid else (tlabel or f"run {len(hist) + 1}")
+    hist.append(
+        {
+            "run_id": result.run_id or "",
+            "label": label,
+            "summary": dict(result.summary.data),
+            "failures": dict(result.failures) if result.failures else None,
+        }
+    )
+    while len(hist) > _BENCHMARK_HISTORY_CAP:
+        hist.pop(0)
+
+
+def _run_label(entry: dict[str, Any], index: int) -> str:
+    lab = entry.get("label")
+    rid = entry.get("run_id") or ""
+    short = f"{rid[:8]}…" if len(rid) > 8 else rid
+    base = lab if isinstance(lab, str) else f"Run {index + 1}"
+    return f"{base} ({short})" if short else base
 
 
 def _coerce_float(value: object) -> float | None:
@@ -132,13 +181,18 @@ def _render_dataset_evaluation_run_and_results(
         )
 
     def _run_dataset_evaluation():
+        raw_result = app.evaluate_gold_qa_dataset(
+            user_id=user_id,
+            project_id=project_id,
+            enable_query_rewrite=dataset_enable_query_rewrite,
+            enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
+        )
+        if isinstance(raw_result, BenchmarkResult):
+            result = replace(raw_result, run_id=uuid.uuid4().hex[:12])
+        else:
+            result = raw_result
         return {
-            "result": app.evaluate_gold_qa_dataset(
-                user_id=user_id,
-                project_id=project_id,
-                enable_query_rewrite=dataset_enable_query_rewrite,
-                enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
-            ),
+            "result": result,
             "enable_query_rewrite": dataset_enable_query_rewrite,
             "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
             "generated_at": datetime.now(timezone.utc),
@@ -182,6 +236,13 @@ def _render_dataset_evaluation_run_and_results(
     def _on_dataset_eval_success(payload: Any) -> None:
         if isinstance(payload, dict) and "result" in payload and "error" not in payload:
             st.success("Dataset evaluation completed. Structured results appear below.")
+            done = coerce_benchmark_result(payload.get("result"))
+            if done is not None:
+                _append_benchmark_to_history(
+                    project_id=project_id,
+                    result=done,
+                    generated_at=payload.get("generated_at"),
+                )
 
     render_result_payload(
         result_key=dataset_evaluation_result_key,
@@ -190,16 +251,64 @@ def _render_dataset_evaluation_run_and_results(
 
     st.markdown("---")
     st.markdown("##### Structured results")
-    if not summary and not rows:
+
+    comparison_rows: list[dict[str, Any]] | None = None
+    failure_comparison_rows: list[dict[str, Any]] | None = None
+    hist = _benchmark_history_for_project(project_id)
+    if len(hist) >= 2:
+        rev = list(reversed(hist))
+        cmp_svc = BenchmarkComparisonService()
+        c1, c2 = st.columns(2)
+        with c1:
+            ia = st.selectbox(
+                "Baseline run (A)",
+                options=list(range(len(rev))),
+                index=len(rev) - 1,
+                format_func=lambda i: _run_label(rev[i], i),
+                key=f"dataset_benchmark_cmp_a_{wk}",
+            )
+        with c2:
+            ib = st.selectbox(
+                "Comparison run (B)",
+                options=list(range(len(rev))),
+                index=0,
+                format_func=lambda i: _run_label(rev[i], i),
+                key=f"dataset_benchmark_cmp_b_{wk}",
+            )
+        if ia != ib:
+            sa = rev[ia].get("summary")
+            sb = rev[ib].get("summary")
+            if isinstance(sa, dict) and isinstance(sb, dict):
+                comparison_rows = cmp_svc.compare(sa, sb)
+            fa = rev[ia].get("failures")
+            fb = rev[ib].get("failures")
+            failure_comparison_rows = cmp_svc.compare_failure_counts(
+                fa if isinstance(fa, dict) else None,
+                fb if isinstance(fb, dict) else None,
+            )
+        else:
+            st.caption("Choose two different runs to compare A vs B.")
+    elif len(hist) == 1:
+        st.caption("Run dataset evaluation again to build history for A/B comparison.")
+
+    if (
+        not summary
+        and not rows
+        and comparison_rows is None
+        and failure_comparison_rows is None
+    ):
         st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
     else:
         render_evaluation_dashboard(
-            summary,
-            rows,
+            summary or {},
+            rows or [],
             widget_key_prefix=f"dataset_eval_metrics_{wk}",
             correlations=correlations,
             failures=failures,
             multimodal_metrics=multimodal_metrics,
+            auto_debug=auto_debug,
+            comparison=comparison_rows,
+            failure_comparison=failure_comparison_rows,
         )
 
 
