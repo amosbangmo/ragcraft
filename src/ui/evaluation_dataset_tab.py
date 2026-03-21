@@ -90,6 +90,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
     app = cast(RAGCraftApp, payload["app"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
+    wk = str(payload["widget_key_suffix"])
     entries = cast(list[QADatasetEntry], payload["entries"])
     dataset_evaluation_request_key = str(payload["dataset_evaluation_request_key"])
     dataset_evaluation_result_key = str(payload["dataset_evaluation_result_key"])
@@ -159,7 +160,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
 
                     if st.button(
                         "Delete entry",
-                        key=f"delete_qa_entry_dataset_{entry.id}",
+                        key=f"delete_qa_entry_dataset_{wk}_{entry.id}",
                         use_container_width=True,
                     ):
                         try:
@@ -188,12 +189,14 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                 "Enable query rewrite for dataset evaluation",
                 value=True,
                 help="Apply the same retrieval rewrite stage to every dataset question.",
+                key=f"eval_ds_query_rewrite_{wk}",
             )
         with dataset_eval_col2:
             dataset_enable_hybrid_retrieval = st.toggle(
                 "Enable hybrid retrieval for dataset evaluation",
                 value=True,
                 help="Combine FAISS and BM25 during dataset evaluation.",
+                key=f"eval_ds_hybrid_{wk}",
             )
 
         def _run_dataset_evaluation():
@@ -228,6 +231,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             "Run dataset evaluation",
             use_container_width=True,
             disabled=is_request_running(dataset_evaluation_request_key),
+            key=f"eval_ds_run_benchmark_{wk}",
         )
 
         if dataset_run_clicked and not entries:
@@ -257,4 +261,8 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
         if not summary and not rows:
             st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
         else:
-            render_evaluation_dashboard(summary, rows, widget_key_prefix="dataset_eval_metrics")
+            render_evaluation_dashboard(
+                summary,
+                rows,
+                widget_key_prefix=f"dataset_eval_metrics_{wk}",
+            )

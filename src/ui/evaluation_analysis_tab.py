@@ -17,6 +17,7 @@ from src.ui.raw_assets import render_raw_assets
 def render_evaluation_analysis_tab(payload: dict[str, Any]) -> None:
     reports_export = payload.get("reports_export")
     manual_result = payload.get("manual_result")
+    wk = str(payload.get("widget_key_suffix") or "default")
     summary = cast(dict[str, Any], payload.get("summary") or {})
     rows = cast(list[dict[str, Any]], payload.get("rows") or [])
 
@@ -30,7 +31,11 @@ def render_evaluation_analysis_tab(payload: dict[str, Any]) -> None:
     st.markdown("---")
     st.markdown("### Advanced evaluation dashboard")
     if summary or rows:
-        render_evaluation_dashboard(summary, rows, widget_key_prefix="analysis_eval_dashboard")
+        render_evaluation_dashboard(
+            summary,
+            rows,
+            widget_key_prefix=f"analysis_eval_dashboard_{wk}",
+        )
         with st.expander("Benchmark summary JSON", expanded=False):
             st.json(summary)
     else:

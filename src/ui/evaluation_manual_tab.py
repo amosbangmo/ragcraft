@@ -15,8 +15,6 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manua
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
-_MANUAL_QUESTION_KEY = "manual_eval_question"
-
 
 def parse_evaluation_csv_list(raw_value: str) -> list[str]:
     if not raw_value.strip():
@@ -39,8 +37,10 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
     app = cast(RAGCraftApp, payload["app"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
+    wk = str(payload["widget_key_suffix"])
     evaluation_request_key = str(payload["evaluation_request_key"])
     evaluation_result_key = str(payload["evaluation_result_key"])
+    q_key = f"manual_eval_question_{wk}"
 
     st.caption(
         "Inspect one question interactively: run the pipeline, then review answer quality, citations, "
@@ -57,7 +57,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
     st.text_input(
         "Evaluation question",
         placeholder="Enter a test question...",
-        key=_MANUAL_QUESTION_KEY,
+        key=q_key,
     )
 
     st.markdown("##### Optional expectations (for this run only)")
@@ -69,24 +69,24 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         "Expected answer (optional)",
         placeholder="Reference answer for token overlap and exact-match metrics.",
         height=100,
-        key="manual_eval_expected_answer",
+        key=f"manual_eval_expected_answer_{wk}",
     )
     col_me1, col_me2 = st.columns(2)
     with col_me1:
         manual_expected_doc_ids = st.text_input(
             "Expected doc_ids (optional, comma-separated)",
             placeholder="doc_1, doc_2",
-            key="manual_eval_expected_doc_ids",
+            key=f"manual_eval_expected_doc_ids_{wk}",
         )
     with col_me2:
         manual_expected_sources = st.text_input(
             "Expected source files (optional, comma-separated)",
             placeholder="report.pdf, notes.txt",
-            key="manual_eval_expected_sources",
+            key=f"manual_eval_expected_sources_{wk}",
         )
 
     def _current_question() -> str:
-        return str(st.session_state.get(_MANUAL_QUESTION_KEY) or "")
+        return str(st.session_state.get(q_key) or "")
 
     def _run_evaluation():
         return app.evaluate_manual_question(
@@ -113,6 +113,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         "Run evaluation",
         use_container_width=True,
         disabled=is_request_running(evaluation_request_key),
+        key=f"manual_eval_run_{wk}",
     )
 
     q_stripped = _current_question().strip()

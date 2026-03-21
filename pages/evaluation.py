@@ -27,6 +27,40 @@ DATASET_GENERATION_RESULT_KEY = "dataset_generation_result_payload"
 DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
 
+_EVAL_PAGE_LAST_PROJECT_KEY = "_eval_page_last_project_id"
+
+
+def _evaluation_widget_key_suffix(project_id: str) -> str:
+    return "".join(c if c.isalnum() else "_" for c in project_id)[:80]
+
+
+def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
+    """
+    When "Project for evaluation" changes, drop cached runs and dashboard widget state
+    so each tab reflects the newly selected project.
+    """
+    suffix = _evaluation_widget_key_suffix(project_id)
+    last = st.session_state.get(_EVAL_PAGE_LAST_PROJECT_KEY)
+    if last is not None and last != project_id:
+        for k in (
+            EVALUATION_REQUEST_KEY,
+            EVALUATION_RESULT_KEY,
+            DATASET_GENERATION_REQUEST_KEY,
+            DATASET_GENERATION_RESULT_KEY,
+            DATASET_EVALUATION_REQUEST_KEY,
+            DATASET_EVALUATION_RESULT_KEY,
+        ):
+            st.session_state.pop(k, None)
+        st.session_state.pop("qa_dataset_success_message", None)
+        st.session_state.pop("qa_dataset_error_message", None)
+        for k in list(st.session_state.keys()):
+            if k.startswith(
+                ("dataset_eval_metrics_", "analysis_eval_dashboard_", "delete_qa_entry_dataset_")
+            ):
+                st.session_state.pop(k, None)
+    st.session_state[_EVAL_PAGE_LAST_PROJECT_KEY] = project_id
+    return suffix
+
 
 def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None:
     raw = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
@@ -52,6 +86,8 @@ project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()
+
+eval_widget_suffix = _reset_evaluation_context_if_project_changed(project_id)
 
 project_documents = app.list_project_documents(user_id, project_id)
 
@@ -94,6 +130,7 @@ render_evaluation_tabs(
         "app": app,
         "user_id": user_id,
         "project_id": project_id,
+        "widget_key_suffix": eval_widget_suffix,
         "evaluation_request_key": EVALUATION_REQUEST_KEY,
         "evaluation_result_key": EVALUATION_RESULT_KEY,
     },
@@ -101,6 +138,7 @@ render_evaluation_tabs(
         "app": app,
         "user_id": user_id,
         "project_id": project_id,
+        "widget_key_suffix": eval_widget_suffix,
         "entries": entries,
         "dataset_evaluation_request_key": DATASET_EVALUATION_REQUEST_KEY,
         "dataset_evaluation_result_key": DATASET_EVALUATION_RESULT_KEY,
@@ -111,6 +149,7 @@ render_evaluation_tabs(
         "app": app,
         "user_id": user_id,
         "project_id": project_id,
+        "widget_key_suffix": eval_widget_suffix,
         "project_documents": project_documents,
         "dataset_generation_request_key": DATASET_GENERATION_REQUEST_KEY,
         "dataset_generation_result_key": DATASET_GENERATION_RESULT_KEY,
@@ -121,5 +160,6 @@ render_evaluation_tabs(
         "manual_result": manual_for_tabs,
         "summary": summary,
         "rows": rows,
+        "widget_key_suffix": eval_widget_suffix,
     },
 )

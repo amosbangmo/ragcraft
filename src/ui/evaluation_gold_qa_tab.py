@@ -64,6 +64,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
     app = cast(RAGCraftApp, payload["app"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
+    wk = str(payload["widget_key_suffix"])
     project_documents = cast(list[str], payload["project_documents"])
     dataset_generation_request_key = str(payload["dataset_generation_request_key"])
     dataset_generation_result_key = str(payload["dataset_generation_result_key"])
@@ -88,6 +89,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
                 max_value=20,
                 value=5,
                 step=1,
+                key=f"eval_gold_numq_{wk}",
             )
         with generation_col2:
             generation_selected_files = st.multiselect(
@@ -95,6 +97,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
                 options=project_documents,
                 default=[],
                 help="Leave empty to use all project documents.",
+                key=f"eval_gold_source_files_{wk}",
             )
 
         generation_mode = st.radio(
@@ -111,6 +114,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
                 "Replace dataset: delete all existing entries before inserting new ones. "
                 "Append with dedup: keep existing entries and skip generated questions already present."
             ),
+            key=f"eval_gold_gen_mode_{wk}",
         )
 
         def _run_dataset_generation():
@@ -137,6 +141,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
             "Generate QA dataset entries",
             use_container_width=True,
             disabled=is_request_running(dataset_generation_request_key),
+            key=f"eval_gold_generate_{wk}",
         )
 
         if generate_clicked and not project_documents:
@@ -161,7 +166,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
         st.markdown("##### Add an entry manually")
         st.caption("Capture a question and optional gold answer, doc IDs, and source filenames.")
 
-        with st.form("qa_dataset_create_form", clear_on_submit=True):
+        with st.form(f"qa_dataset_create_form_{wk}", clear_on_submit=True):
             dataset_question = st.text_area(
                 "Dataset question",
                 placeholder="e.g. What is the main objective of the report?",
