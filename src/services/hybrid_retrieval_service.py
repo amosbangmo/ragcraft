@@ -3,6 +3,8 @@ import re
 from langchain_core.documents import Document
 from rank_bm25 import BM25Okapi
 
+from src.domain.retrieval_filters import RetrievalFilters, filter_raw_assets_by_filters
+
 
 class HybridRetrievalService:
     """
@@ -39,15 +41,20 @@ class HybridRetrievalService:
         query: str,
         assets: list[dict],
         k: int,
+        filters: RetrievalFilters | None = None,
     ) -> list[Document]:
         normalized_query = (query or "").strip()
         if not normalized_query or not assets or k <= 0:
             return []
 
+        scoped_assets = filter_raw_assets_by_filters(assets, filters)
+        if not scoped_assets:
+            return []
+
         prepared_candidates: list[dict] = []
         corpus_tokens: list[list[str]] = []
 
-        for asset in assets:
+        for asset in scoped_assets:
             candidate_text = self._build_lexical_candidate_text(asset)
             tokens = self._tokenize(candidate_text)
 
@@ -97,6 +104,15 @@ class HybridRetrievalService:
                 "retrieval_score": float(normalized_score),
                 "retrieval_mode": "bm25",
             }
+            doc_id = asset.get("doc_id")
+            if doc_id:
+                metadata.setdefault("doc_id", doc_id)
+            source_file = asset.get("source_file")
+            if source_file:
+                metadata.setdefault("source_file", source_file)
+            content_type = asset.get("content_type")
+            if content_type:
+                metadata.setdefault("content_type", content_type)
 
             summary = (asset.get("summary", "") or "").strip()
             fallback_text = candidate["candidate_text"][:1500]

@@ -7,6 +7,11 @@ from src.core.exceptions import LLMServiceError
 from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
+from src.domain.retrieval_filters import (
+    RetrievalFilters,
+    filter_summary_documents_by_filters,
+    vector_search_fetch_k,
+)
 from src.domain.source_citation import SourceCitation
 from src.services.confidence_service import ConfidenceService
 from src.services.docstore_service import DocStoreService
@@ -211,12 +216,20 @@ class RAGService:
         project: Project,
         retrieval_query: str,
         enable_hybrid_retrieval: bool,
+        filters: RetrievalFilters | None = None,
     ) -> dict:
+        k_vec = self.config.similarity_search_k
+        fetch_k = vector_search_fetch_k(base_k=k_vec, filters=filters)
         vector_summary_docs = self.vectorstore_service.similarity_search(
             project,
             retrieval_query,
-            k=self.config.similarity_search_k,
+            k=fetch_k,
         )
+        if filters is not None and not filters.is_empty():
+            vector_summary_docs = filter_summary_documents_by_filters(
+                vector_summary_docs,
+                filters,
+            )[:k_vec]
 
         bm25_summary_docs: list[Document] = []
 
@@ -230,6 +243,7 @@ class RAGService:
                 query=retrieval_query,
                 assets=project_assets,
                 k=self.config.bm25_search_k,
+                filters=filters,
             )
 
         merged_limit = self.config.similarity_search_k
@@ -257,6 +271,7 @@ class RAGService:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
         defer_query_log: bool = False,
+        filters: RetrievalFilters | None = None,
     ) -> dict | None:
         pipeline_started = perf_counter()
         if chat_history is None:
@@ -286,6 +301,7 @@ class RAGService:
             project=project,
             retrieval_query=rewritten_question,
             enable_hybrid_retrieval=enable_hybrid_retrieval,
+            filters=filters,
         )
         retrieval_ms = (perf_counter() - t0) * 1000.0
 
@@ -360,6 +376,11 @@ class RAGService:
             "retrieval_mode": retrieval_mode,
             "query_rewrite_enabled": enable_query_rewrite,
             "hybrid_retrieval_enabled": enable_hybrid_retrieval,
+            "retrieval_filters": (
+                filters.to_dict()
+                if filters is not None and not filters.is_empty()
+                else None
+            ),
             "vector_summary_docs": vector_summary_docs,
             "bm25_summary_docs": bm25_summary_docs,
             "recalled_summary_docs": recalled_summary_docs,
@@ -403,6 +424,7 @@ class RAGService:
         *,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
+        filters: RetrievalFilters | None = None,
     ) -> dict | None:
         return self._run_pipeline(
             project,
@@ -411,6 +433,7 @@ class RAGService:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             defer_query_log=True,
+            filters=filters,
         )
 
     def generate_answer_from_pipeline(self, *, project: Project, pipeline: dict) -> str:
@@ -430,7 +453,14 @@ class RAGService:
 
         return getattr(response, "content", str(response)).strip()
 
-    def ask(self, project: Project, question: str, chat_history=None) -> RAGResponse | None:
+    def ask(
+        self,
+        project: Project,
+        question: str,
+        chat_history=None,
+        *,
+        filters: RetrievalFilters | None = None,
+    ) -> RAGResponse | None:
         ask_started = perf_counter()
         defer_log = self.query_log_service is not None
         pipeline = self._run_pipeline(
@@ -438,6 +468,7 @@ class RAGService:
             question,
             chat_history,
             defer_query_log=defer_log,
+            filters=filters,
         )
 
         if pipeline is None:

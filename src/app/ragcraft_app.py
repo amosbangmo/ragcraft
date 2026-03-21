@@ -22,6 +22,7 @@ from src.services.qa_dataset_generation_service import QADatasetGenerationServic
 from src.services.benchmark_report_service import BenchmarkExportArtifacts, BenchmarkReportService
 from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
+from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
@@ -402,9 +403,17 @@ class RAGCraftApp:
         )
         return payload
 
-    def ask_question(self, user_id: str, project_id: str, question: str, chat_history=None):
+    def ask_question(
+        self,
+        user_id: str,
+        project_id: str,
+        question: str,
+        chat_history=None,
+        *,
+        filters: RetrievalFilters | None = None,
+    ):
         project = self.get_project(user_id, project_id)
-        return self.rag_service.ask(project, question, chat_history)
+        return self.rag_service.ask(project, question, chat_history, filters=filters)
 
     def evaluate_manual_question(
         self,
@@ -435,6 +444,7 @@ class RAGCraftApp:
         *,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
+        filters: RetrievalFilters | None = None,
     ):
         project = self.get_project(user_id, project_id)
         return self.rag_service.inspect_pipeline(
@@ -443,6 +453,7 @@ class RAGCraftApp:
             chat_history,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            filters=filters,
         )
 
     def compare_retrieval_modes(

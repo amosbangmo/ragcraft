@@ -55,7 +55,7 @@ if "src.services.hybrid_retrieval_service" not in sys.modules:
         def __init__(self, *, k1=1.5, b=0.75, epsilon=0.25):
             pass
 
-        def lexical_search(self, *, query: str, assets: list[dict], k: int):
+        def lexical_search(self, *, query: str, assets: list[dict], k: int, filters=None):
             return []
 
     hybrid_module.HybridRetrievalService = HybridRetrievalService

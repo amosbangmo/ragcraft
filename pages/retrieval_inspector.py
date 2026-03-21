@@ -4,6 +4,7 @@ import streamlit as st
 
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
+from src.domain.retrieval_filters import RetrievalFilters
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
@@ -267,6 +268,62 @@ if chat_history_mode:
     chat_history = app.chat_service.get_messages()
     chat_history = [f"{msg['role']}: {msg['content']}" for msg in chat_history[-6:]]
 
+with st.expander("Advanced metadata filters (optional)", expanded=False):
+    use_metadata_filters = st.toggle(
+        "Restrict retrieval by metadata",
+        value=False,
+        help="Narrows FAISS over-fetch and BM25 corpus to matching assets. Main chat is unchanged.",
+    )
+    project_doc_names = app.list_project_documents(user_id, project_id)
+    filter_sources = st.multiselect(
+        "Source files",
+        options=project_doc_names,
+        default=[],
+        help="When set, only chunks from these uploaded files are eligible for retrieval.",
+    )
+    filter_content_types = st.multiselect(
+        "Content types",
+        options=["text", "table", "image"],
+        default=[],
+    )
+    fcol_a, fcol_b = st.columns(2)
+    with fcol_a:
+        filter_page_start = st.number_input(
+            "Page range start (0 = ignore)",
+            min_value=0,
+            value=0,
+            step=1,
+        )
+    with fcol_b:
+        filter_page_end = st.number_input(
+            "Page range end (0 = ignore)",
+            min_value=0,
+            value=0,
+            step=1,
+        )
+
+
+def _optional_retrieval_filters() -> RetrievalFilters | None:
+    if not use_metadata_filters:
+        return None
+    ps = int(filter_page_start) if int(filter_page_start) > 0 else None
+    pe = int(filter_page_end) if int(filter_page_end) > 0 else None
+    if (ps is None) != (pe is None):
+        st.warning("Set both page start and end, or leave both at 0, to filter by page range.")
+        ps, pe = None, None
+    elif ps is not None and pe is not None and ps > pe:
+        st.warning("Page range start cannot be greater than end.")
+        ps, pe = None, None
+    f = RetrievalFilters(
+        source_files=list(filter_sources),
+        content_types=list(filter_content_types),
+        page_start=ps,
+        page_end=pe,
+    )
+    if f.is_empty():
+        return None
+    return f
+
 
 def _run_inspection():
     return app.inspect_retrieval(
@@ -276,6 +333,7 @@ def _run_inspection():
         chat_history=chat_history,
         enable_query_rewrite_override=enable_query_rewrite,
         enable_hybrid_retrieval_override=enable_hybrid_retrieval,
+        filters=_optional_retrieval_filters(),
     )
 
 
@@ -411,6 +469,7 @@ def _render_inspection_result(pipeline):
             "retrieval_mode": pipeline["retrieval_mode"],
             "query_rewrite_enabled": pipeline["query_rewrite_enabled"],
             "hybrid_retrieval_enabled": pipeline["hybrid_retrieval_enabled"],
+            "retrieval_filters": pipeline.get("retrieval_filters"),
             "recalled_doc_ids": pipeline["recalled_doc_ids"],
             "selected_doc_ids": pipeline["selected_doc_ids"],
             "confidence": pipeline["confidence"],

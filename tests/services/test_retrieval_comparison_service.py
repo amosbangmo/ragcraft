@@ -16,6 +16,7 @@ class _FakeRAGService:
         *,
         enable_query_rewrite_override=None,
         enable_hybrid_retrieval_override=None,
+        filters=None,
     ):
         return self.pipelines.get((question, bool(enable_hybrid_retrieval_override)))
 
