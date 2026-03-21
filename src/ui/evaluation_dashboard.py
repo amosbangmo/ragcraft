@@ -4,6 +4,7 @@ Unified benchmark dashboard: retrieval metrics, LLM-judge scores, per-row table,
 
 from __future__ import annotations
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -56,6 +57,11 @@ def _row_answer_text(row: dict) -> str | None:
     return None
 
 
+# Cap fractional tick labels at 2 decimal places on float axes (d3-format).
+_FLOAT_AXIS_2DP = alt.Axis(format=".2f")
+_INT_AXIS = alt.Axis(format="d")
+
+
 def _numeric_series(df: pd.DataFrame, *candidates: str) -> pd.Series | None:
     for col in candidates:
         if col not in df.columns:
@@ -78,8 +84,16 @@ def _histogram_bar_chart(label: str, series: pd.Series | None) -> None:
     n_bins = int(min(12, max(5, round(len(s) ** 0.5))))
     counts, edges = np.histogram(s.astype(float), bins=n_bins)
     mids = (edges[:-1] + edges[1:]) / 2.0
-    chart_df = pd.DataFrame({"count": counts.astype(int)}, index=mids)
-    st.bar_chart(chart_df)
+    chart_df = pd.DataFrame({"bin_mid": mids, "count": counts.astype(int)})
+    chart = (
+        alt.Chart(chart_df)
+        .mark_bar()
+        .encode(
+            x=alt.X("bin_mid:Q", title="Value", axis=_FLOAT_AXIS_2DP),
+            y=alt.Y("count:Q", title="Count", axis=_INT_AXIS),
+        )
+    )
+    st.altair_chart(chart, use_container_width=True)
 
 
 def _render_advanced_analytics(rows: list[dict]) -> None:
@@ -177,7 +191,20 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
         if trend_parts:
             trend_df = pd.DataFrame(trend_parts)
             trend_df.index = range(len(trend_df))
-            st.line_chart(trend_df)
+            tdf = trend_df.reset_index().rename(columns={"index": "query_index"})
+            long_df = tdf.melt(
+                id_vars="query_index", var_name="metric", value_name="value"
+            )
+            trend_chart = (
+                alt.Chart(long_df)
+                .mark_line()
+                .encode(
+                    x=alt.X("query_index:Q", title="Query index", axis=_INT_AXIS),
+                    y=alt.Y("value:Q", title="Score", axis=_FLOAT_AXIS_2DP),
+                    color=alt.Color("metric:N"),
+                )
+            )
+            st.altair_chart(trend_chart, use_container_width=True)
         else:
             st.caption("No trend columns available.")
 
@@ -207,7 +234,15 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
             scatter = pd.DataFrame({"confidence": c2, "groundedness_score": g2}).dropna()
             if len(scatter) >= 1:
                 st.caption("Confidence vs groundedness")
-                st.scatter_chart(scatter, x="confidence", y="groundedness_score")
+                sc_chart = (
+                    alt.Chart(scatter)
+                    .mark_circle()
+                    .encode(
+                        x=alt.X("confidence:Q", axis=_FLOAT_AXIS_2DP),
+                        y=alt.Y("groundedness_score:Q", axis=_FLOAT_AXIS_2DP),
+                    )
+                )
+                st.altair_chart(sc_chart, use_container_width=True)
             else:
                 st.caption("Not enough paired confidence / groundedness points.")
         else:
@@ -221,11 +256,21 @@ def _render_advanced_analytics(rows: list[dict]) -> None:
             ).dropna()
             if len(scatter2) >= 1:
                 st.caption("Answer relevance vs citation faithfulness")
-                st.scatter_chart(
-                    scatter2,
-                    x="citation_faithfulness_score",
-                    y="answer_relevance_score",
+                sc2_chart = (
+                    alt.Chart(scatter2)
+                    .mark_circle()
+                    .encode(
+                        x=alt.X(
+                            "citation_faithfulness_score:Q",
+                            axis=_FLOAT_AXIS_2DP,
+                        ),
+                        y=alt.Y(
+                            "answer_relevance_score:Q",
+                            axis=_FLOAT_AXIS_2DP,
+                        ),
+                    )
                 )
+                st.altair_chart(sc2_chart, use_container_width=True)
             else:
                 st.caption("Not enough paired relevance / faithfulness points.")
         else:
