@@ -3,10 +3,11 @@ import streamlit as st
 from typing import Any, cast
 
 from src.app.ragcraft_app import RAGCraftApp
-from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
+from src.domain.benchmark_result import BenchmarkResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.evaluation_tabs import render_evaluation_tabs
+from src.ui.request_runner import read_dataset_evaluation_session_payload
 from src.auth.guards import require_authentication
 
 
@@ -65,13 +66,11 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
 
 def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None:
     raw = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
-    if raw is None or not isinstance(raw, dict) or "error" in raw:
+    parsed = read_dataset_evaluation_session_payload(raw)
+    if parsed is None or not isinstance(raw, dict):
         return None
-    result = raw.get("result")
-    coerced = coerce_benchmark_result(result)
-    if coerced is None:
-        return None
-    return raw, coerced
+    bench, _meta = parsed
+    return raw, bench
 
 
 header = render_page_header(

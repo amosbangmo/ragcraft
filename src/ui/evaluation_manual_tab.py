@@ -15,7 +15,13 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manua
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.raw_assets import render_raw_assets
-from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
+from src.ui.request_runner import (
+    get_session_payload,
+    is_request_running,
+    is_runner_error_payload,
+    render_result_payload,
+    run_request_action,
+)
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
@@ -143,7 +149,9 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         on_success=_on_success,
     )
 
-    manual_raw = st.session_state.get(evaluation_result_key)
+    manual_raw = get_session_payload(evaluation_result_key)
+    if is_runner_error_payload(manual_raw) or manual_raw is None:
+        return
     if is_manual_evaluation_result_like(manual_raw):
         manual = cast(ManualEvaluationResult, manual_raw)
         st.markdown("---")

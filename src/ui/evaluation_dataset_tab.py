@@ -25,7 +25,12 @@ from src.ui.evaluation_history_labels import (
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
 from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
 from src.ui.metric_help import render_metric_with_help
-from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
+from src.ui.request_runner import (
+    is_request_running,
+    read_dataset_evaluation_session_payload,
+    render_result_payload,
+    run_request_action,
+)
 
 BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY = "benchmark_run_history_by_project"
 _BENCHMARK_HISTORY_CAP = 20
@@ -354,19 +359,17 @@ def _resolve_benchmark_export_artifacts(
     ``st.session_state`` after a run and avoids stale or missing precomputed exports.
     """
     raw = st.session_state.get(dataset_evaluation_result_key)
-    if isinstance(raw, dict) and raw.get("error"):
-        return None
-
+    parsed = read_dataset_evaluation_session_payload(raw)
     result: BenchmarkResult | None = None
     enable_query_rewrite = False
     enable_hybrid_retrieval = False
     generated_at: object | None = None
 
-    if isinstance(raw, dict) and "result" in raw:
-        result = coerce_benchmark_result(raw.get("result"))
-        enable_query_rewrite = bool(raw.get("enable_query_rewrite"))
-        enable_hybrid_retrieval = bool(raw.get("enable_hybrid_retrieval"))
-        generated_at = raw.get("generated_at")
+    if parsed is not None:
+        result, meta = parsed
+        enable_query_rewrite = bool(meta.get("enable_query_rewrite"))
+        enable_hybrid_retrieval = bool(meta.get("enable_hybrid_retrieval"))
+        generated_at = meta.get("generated_at")
 
     if result is None and (summary or rows):
         try:

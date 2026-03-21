@@ -3,10 +3,12 @@ import base64
 import streamlit as st
 
 from src.ui.request_runner import (
-    is_request_running,
-    run_request_action,
-    render_result_payload,
+    RUNNER_ERROR_KEY,
     clear_result_payload,
+    is_request_running,
+    is_runner_error_payload,
+    render_result_payload,
+    run_request_action,
 )
 
 
@@ -311,8 +313,11 @@ def confirm_reindex_document_dialog(
     )
 
     result_payload = st.session_state.get(result_key)
-    if isinstance(result_payload, dict) and "error" in result_payload:
-        st.session_state[error_message_key] = result_payload["error"]
+    if is_runner_error_payload(result_payload):
+        raw_err = result_payload.get(RUNNER_ERROR_KEY)
+        st.session_state[error_message_key] = (
+            raw_err if isinstance(raw_err, str) else str(raw_err)
+        )
         clear_result_payload(result_key)
         clear_document_reindexing()
         clear_pending_reindex_dialog()

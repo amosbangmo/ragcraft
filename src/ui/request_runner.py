@@ -1,15 +1,61 @@
+from __future__ import annotations
+
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import streamlit as st
+
+if TYPE_CHECKING:
+    from src.domain.benchmark_result import BenchmarkResult
+
+# Session payload convention: failures from ``run_request_action`` use this key.
+# Success payloads must not use a top-level key with this name.
+RUNNER_ERROR_KEY = "error"
 
 
 def is_request_running(request_key: str) -> bool:
     return bool(st.session_state.get(request_key, False))
 
 
+def is_runner_error_payload(payload: Any) -> bool:
+    """True when ``payload`` is the standard runner error envelope ``{error: ...}``."""
+    return isinstance(payload, dict) and RUNNER_ERROR_KEY in payload
+
+
+def get_session_payload(result_key: str) -> Any:
+    """Read a runner result (success value, error dict, or None) from session_state."""
+    return st.session_state.get(result_key)
+
+
 def clear_result_payload(result_key: str) -> None:
     st.session_state.pop(result_key, None)
+
+
+def read_dataset_evaluation_session_payload(
+    raw: Any,
+) -> tuple[BenchmarkResult, dict[str, Any]] | None:
+    """
+    Parse a completed **dataset evaluation** result stored by ``run_request_action``.
+
+    Returns ``(BenchmarkResult, meta)`` when ``raw`` is a success dict with a coercible
+    ``result`` field; otherwise None. ``meta`` includes ``enable_query_rewrite``,
+    ``enable_hybrid_retrieval``, and ``generated_at`` when present on the payload.
+    """
+    from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
+
+    if raw is None or is_runner_error_payload(raw):
+        return None
+    if not isinstance(raw, dict) or "result" not in raw:
+        return None
+    coerced = coerce_benchmark_result(raw.get("result"))
+    if coerced is None:
+        return None
+    meta: dict[str, Any] = {
+        "enable_query_rewrite": bool(raw.get("enable_query_rewrite")),
+        "enable_hybrid_retrieval": bool(raw.get("enable_hybrid_retrieval")),
+        "generated_at": raw.get("generated_at"),
+    }
+    return coerced, meta
 
 
 def _start_request(request_key: str) -> None:
@@ -30,6 +76,10 @@ def _finish_request(request_key: str) -> None:
     st.rerun()
 
 
+def _store_runner_error(result_key: str, message: str) -> None:
+    st.session_state[result_key] = {RUNNER_ERROR_KEY: message}
+
+
 def run_request_action(
     *,
     request_key: str,
@@ -43,14 +93,18 @@ def run_request_action(
     """
     Reusable request runner for Streamlit pages and dialogs.
 
-    Flow:
-    - user triggers an action
-    - running state is set to True
-    - page reruns so the button is rendered disabled
-    - action is executed inside a spinner
-    - result (or mapped error) is stored in session_state
-    - running state is reset
-    - page reruns so the UI becomes interactive again
+    State machine (per user click):
+
+    1. **Idle** — ``request_key`` is false; ``result_key`` may hold the last outcome.
+    2. **Armed** — User clicks: ``result_key`` is cleared to ``None``, ``request_key``
+       becomes true, then ``st.rerun()`` so widgets redraw with the button disabled.
+    3. **Executing** — On the next run, while ``request_key`` is true, ``action`` runs
+       inside a spinner; the return value or a mapped error is written to ``result_key``.
+    4. **Settled** — ``request_key`` is reset to false and the app reruns so the UI is
+       interactive again and ``render_result_payload`` can display the outcome.
+
+    Callers should pass ``trigger`` only when the primary control fired and ``can_run``
+    reflects input validation, so idle reruns do not re-enter the executing phase.
     """
 
     if trigger:
@@ -68,9 +122,13 @@ def run_request_action(
             st.session_state[result_key] = result
 
         except Exception as exc:
-            st.session_state[result_key] = {
-                "error": error_mapper(exc),
-            }
+            try:
+                mapped = error_mapper(exc)
+            except Exception:
+                mapped = str(exc)
+            if not isinstance(mapped, str):
+                mapped = str(mapped)
+            _store_runner_error(result_key, mapped)
         finally:
             _finish_request(request_key)
 
@@ -80,13 +138,14 @@ def render_result_payload(
     result_key: str,
     on_success: Callable[[Any], None],
 ) -> None:
-    payload = st.session_state.get(result_key)
+    payload = get_session_payload(result_key)
 
     if payload is None:
         return
 
-    if isinstance(payload, dict) and "error" in payload:
-        st.error(payload["error"])
+    if is_runner_error_payload(payload):
+        raw_msg = payload.get(RUNNER_ERROR_KEY)
+        st.error(raw_msg if isinstance(raw_msg, str) else str(raw_msg))
         return
 
     on_success(payload)
