@@ -56,9 +56,10 @@ class TableQAService:
 
     def build_table_prompt_hint(self) -> str:
         return (
-            "Table-focused question: read tabular values carefully from the raw table blocks "
-            "(headers, rows, and columns). Compare rows or columns when the question asks for "
-            "comparison, ranking, highest/lowest, totals, averages, or percentages. "
+            "Table-focused question: use each asset's structured table excerpt when present "
+            "(clear headers and rows); fall back to raw HTML or table text if needed. "
+            "Compare rows or columns carefully when the question asks for comparison, ranking, "
+            "highest/lowest, totals, averages, or percentages. "
             "Do not invent numbers or cells that are not clearly present in the provided table context; "
             "if the context is insufficient, say so. When your evidence is from a table asset, say so explicitly "
             "and cite using the given labels."

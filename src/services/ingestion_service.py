@@ -14,6 +14,7 @@ from src.domain.project import Project
 from src.infrastructure.ingestion.loader import save_uploaded_file
 from src.infrastructure.ingestion.unstructured_extractor import extract_elements
 from src.infrastructure.ingestion.summarizer import ElementSummarizer
+from src.services.table_parsing_service import TableParsingService
 
 
 def _is_ocr_dependency_error(exc: Exception) -> bool:
@@ -24,6 +25,7 @@ def _is_ocr_dependency_error(exc: Exception) -> bool:
 class IngestionService:
     def __init__(self):
         self.summarizer = ElementSummarizer()
+        self.table_parser = TableParsingService()
         self.config = INGESTION_CONFIG
 
     def ingest_uploaded_file(
@@ -122,6 +124,14 @@ class IngestionService:
                 "content_type": content_type,
                 **element_metadata,
             }
+
+            if content_type == "table":
+                try:
+                    parsed_table = self.table_parser.parse(raw_content)
+                except Exception:
+                    parsed_table = {"headers": [], "rows": []}
+                if (parsed_table.get("rows") or parsed_table.get("headers")):
+                    metadata["structured_table"] = parsed_table
 
             summary_documents.append(
                 Document(

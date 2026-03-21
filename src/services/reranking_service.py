@@ -124,6 +124,13 @@ class RerankingService:
             if s:
                 parts.append(s)
 
+        structured = metadata.get("structured_table") or {}
+        headers = structured.get("headers") or []
+        if headers:
+            hdr_text = " ".join(str(h).strip() for h in headers if str(h).strip())
+            if hdr_text:
+                parts.append(hdr_text)
+
         image_title = metadata.get("image_title")
         if image_title is not None:
             s = str(image_title).strip()

@@ -32,6 +32,20 @@ class TestRerankingService(unittest.TestCase):
             out = svc.rerank("query", assets, 2, prefer_tables=False, table_boost=0.5)
         self.assertEqual(out[0].get("content_type"), "text")
 
+    def test_structured_table_headers_in_candidate_text(self) -> None:
+        svc = RerankingService()
+        asset = {
+            "doc_id": "t1",
+            "content_type": "table",
+            "raw_content": "<table></table>",
+            "metadata": {
+                "structured_table": {"headers": ["Revenue", "Year"], "rows": []},
+            },
+        }
+        text = svc._build_candidate_text(asset)
+        self.assertIn("Revenue", text)
+        self.assertIn("Year", text)
+
 
 if __name__ == "__main__":
     unittest.main()

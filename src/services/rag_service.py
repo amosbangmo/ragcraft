@@ -38,9 +38,11 @@ class RAGService:
     2. hybrid recall retrieval (FAISS + BM25 summaries)
     3. raw asset rehydration from SQLite using doc_id
     4. optional section-aware expansion of the rerank pool (same file / section / neighbors)
-    5. strict reranking over the expanded raw assets
+    5. strict reranking over the expanded raw assets (table column headers from structured_table
+       are included in reranker text when present)
     6. optional contextual compression of reranked assets for the prompt
-    7. final prompt built from the compressed (or original) top assets
+    7. final prompt built from the compressed (or original) top assets, including structured
+       table excerpts from asset metadata when ingestion populated them
     """
 
     def __init__(

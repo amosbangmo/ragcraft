@@ -1,6 +1,10 @@
 from src.domain.source_citation import SourceCitation
 
 
+_MAX_STRUCTURED_TABLE_ROWS = 14
+_MAX_STRUCTURED_CELL_CHARS = 88
+
+
 class PromptBuilderService:
     def __init__(
         self,
@@ -10,6 +14,7 @@ class PromptBuilderService:
     ):
         self.max_text_chars_per_asset = max_text_chars_per_asset
         self.max_table_chars_per_asset = max_table_chars_per_asset
+        self._max_structured_block_chars = min(2800, max(400, max_table_chars_per_asset))
 
     def build_raw_context(
         self,
@@ -66,8 +71,78 @@ Instructions:
   - [Source 3][Figure: Attention map]
 - When useful, mention whether the evidence came from text, table, or image assets.
 - For image assets, rely only on their provided metadata and image retrieval summary; do not invent unseen visual details.
+- For table assets, when a structured table excerpt is provided, read values from it first for comparisons, rankings, and numeric facts; cross-check the raw table if needed.
 - Never invent document content that is not explicitly present in the raw context.
 """.strip()
+
+    def _truncate_cell(self, value: object, max_chars: int = _MAX_STRUCTURED_CELL_CHARS) -> str:
+        s = " ".join(str(value or "").split())
+        if len(s) <= max_chars:
+            return s
+        return s[: max_chars - 1] + "…"
+
+    def _format_structured_table_excerpt(self, structured: dict) -> str:
+        headers = list(structured.get("headers") or [])
+        rows = list(structured.get("rows") or [])
+        if not headers and not rows:
+            return ""
+
+        budget = self._max_structured_block_chars
+        lines: list[str] = []
+        used = 0
+
+        def consume(line: str) -> bool:
+            nonlocal used
+            need = len(line) + (1 if lines else 0)
+            if used + need > budget:
+                return False
+            lines.append(line)
+            used += need
+            return True
+
+        intro = (
+            "Use this structured excerpt for comparisons, min/max, rankings, and exact numeric values. "
+            "If a cell is unclear, fall back to the raw HTML/text below."
+        )
+        if not consume(intro):
+            return ""
+
+        ncol = max(len(headers), max((len(r) for r in rows), default=0))
+        two_col_kv = (
+            ncol == 2
+            and rows
+            and all(len(r) >= 2 for r in rows[:_MAX_STRUCTURED_TABLE_ROWS])
+        )
+
+        if headers:
+            hdr_line = "Column headers: " + " | ".join(
+                self._truncate_cell(h) for h in headers
+            )
+            consume(hdr_line)
+
+        if two_col_kv:
+            consume("Two-column layout (treat as attribute → value when applicable):")
+            for row in rows[:_MAX_STRUCTURED_TABLE_ROWS]:
+                left, right = row[0], row[1]
+                row_line = f"  {self._truncate_cell(left)} → {self._truncate_cell(right)}"
+                if not consume(row_line):
+                    break
+        else:
+            consume("Data rows (pipe-separated cells, aligned to headers left-to-right):")
+            for row in rows[:_MAX_STRUCTURED_TABLE_ROWS]:
+                cells = list(row)
+                while len(cells) < ncol:
+                    cells.append("")
+                if ncol:
+                    cells = cells[:ncol]
+                row_line = "  " + " | ".join(self._truncate_cell(c) for c in cells)
+                if not consume(row_line):
+                    break
+
+        if len(rows) > _MAX_STRUCTURED_TABLE_ROWS:
+            consume(f"… ({len(rows) - _MAX_STRUCTURED_TABLE_ROWS} additional rows omitted)")
+
+        return "\n".join(lines)
 
     def _format_raw_asset_for_prompt(self, *, asset: dict, citation: SourceCitation) -> str:
         content_type = asset.get("content_type", "unknown")
@@ -94,17 +169,40 @@ Raw text:
         if content_type == "table":
             table_title = metadata.get("table_title")
             table_text = metadata.get("table_text") or ""
+            structured = metadata.get("structured_table") or {}
+            has_structured = bool(structured.get("rows") or structured.get("headers"))
+            excerpt = (
+                self._format_structured_table_excerpt(structured)
+                if has_structured
+                else ""
+            ).strip()
+            meta_for_prompt = {
+                k: v for k, v in (metadata or {}).items() if k != "structured_table"
+            }
+            if excerpt:
+                meta_for_prompt["structured_table"] = "(see Structured table excerpt below)"
+
+            structured_block = ""
+            if excerpt:
+                structured_block = f"""
+Structured table excerpt:
+{excerpt}
+
+Structured reasoning notes:
+- Compare values within the same column or row only when the headers make that meaningful.
+- For min, max, ranking, or totals, derive answers only from values shown in the excerpt or raw table; do not extrapolate missing cells.
+"""
 
             return f"""Asset {citation.source_number}
 Citation: {citation_label}
 Type: table
 Doc ID: {doc_id}
 Source file: {source_file}
-Metadata: {metadata}
+Metadata: {meta_for_prompt}
 
 Table title:
 {table_title}
-
+{structured_block}
 Raw table HTML:
 {raw_content[: self.max_table_chars_per_asset]}
 
