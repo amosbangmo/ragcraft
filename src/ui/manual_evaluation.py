@@ -38,11 +38,11 @@ def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
     aq = result.answer_quality
     if aq and aq.groundedness_score is not None:
         st.caption(
-            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — open the **Questions** tab "
-            "for citations, retrieval metrics, and expected vs retrieved."
+            f"Groundedness **{_fmt_float(aq.groundedness_score)}** — scroll this tab for citations, "
+            "retrieval metrics, and expected vs retrieved."
         )
     else:
-        st.caption("Open the **Questions** tab for structured quality, citations, and retrieval signals.")
+        st.caption("Scroll this tab for structured quality, citations, and retrieval signals.")
 
 
 def render_manual_evaluation_result(

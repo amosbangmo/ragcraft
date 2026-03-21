@@ -1,6 +1,5 @@
 import streamlit as st
 
-from datetime import datetime, timezone
 from typing import Any, cast
 
 from src.app.ragcraft_app import RAGCraftApp
@@ -8,19 +7,8 @@ from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
-from src.ui.request_runner import (
-    is_request_running,
-    run_request_action,
-    render_result_payload,
-)
 from src.ui.evaluation_tabs import render_evaluation_tabs
 from src.auth.guards import require_authentication
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import (
-    LLMServiceError,
-    VectorStoreError,
-    DocStoreError,
-)
 
 
 st.set_page_config(
@@ -40,23 +28,6 @@ DATASET_EVALUATION_REQUEST_KEY = "dataset_evaluation_request_running"
 DATASET_EVALUATION_RESULT_KEY = "dataset_evaluation_result_payload"
 
 
-def _parse_csv_list(raw_value: str) -> list[str]:
-    if not raw_value.strip():
-        return []
-
-    values: list[str] = []
-    seen: set[str] = set()
-
-    for part in raw_value.split(","):
-        cleaned = part.strip()
-        if not cleaned or cleaned in seen:
-            continue
-        seen.add(cleaned)
-        values.append(cleaned)
-
-    return values
-
-
 def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None:
     raw = st.session_state.get(DATASET_EVALUATION_RESULT_KEY)
     if raw is None or not isinstance(raw, dict) or "error" in raw:
@@ -65,11 +36,6 @@ def _session_benchmark_bundle() -> tuple[dict[str, Any], BenchmarkResult] | None
     if not isinstance(result, BenchmarkResult):
         return None
     return raw, result
-
-
-def _noop_payload(_payload: Any) -> None:
-    """Results are surfaced via tab renderers on each rerun."""
-    return
 
 
 header = render_page_header(
@@ -94,428 +60,15 @@ if "qa_dataset_success_message" in st.session_state:
 if "qa_dataset_error_message" in st.session_state:
     st.error(st.session_state.pop("qa_dataset_error_message"))
 
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="card-title">Manual evaluation</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="card-subtitle">Run a single question with optional gold expectations and inspect structured quality signals, citations, and raw evidence.</div>',
-    unsafe_allow_html=True,
-)
-
-question = st.text_input("Evaluation question", placeholder="Enter a test question...")
-
-st.markdown("##### Optional expectations (for this run only)")
-st.caption(
-    "These values are not saved to the gold QA dataset. Use them to score retrieval, citations, and answer overlap locally."
-)
-manual_expected_answer = st.text_area(
-    "Expected answer (optional)",
-    placeholder="Reference answer for token overlap and exact-match metrics.",
-    height=100,
-    key="manual_eval_expected_answer",
-)
-col_me1, col_me2 = st.columns(2)
-with col_me1:
-    manual_expected_doc_ids = st.text_input(
-        "Expected doc_ids (optional, comma-separated)",
-        placeholder="doc_1, doc_2",
-        key="manual_eval_expected_doc_ids",
-    )
-with col_me2:
-    manual_expected_sources = st.text_input(
-        "Expected source files (optional, comma-separated)",
-        placeholder="report.pdf, notes.txt",
-        key="manual_eval_expected_sources",
-    )
-
-
-def _run_evaluation():
-    return app.evaluate_manual_question(
-        user_id=user_id,
-        project_id=project_id,
-        question=question,
-        expected_answer=manual_expected_answer.strip() or None,
-        expected_doc_ids=_parse_csv_list(manual_expected_doc_ids),
-        expected_sources=_parse_csv_list(manual_expected_sources),
-    )
-
-
-def _map_evaluation_error(exc: Exception) -> str:
-    if isinstance(exc, VectorStoreError):
-        return get_user_error_message(exc, "Unable to query the FAISS index for this evaluation.")
-    if isinstance(exc, DocStoreError):
-        return get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite.")
-    if isinstance(exc, LLMServiceError):
-        return get_user_error_message(exc, "The language model failed while generating the evaluation answer.")
-    return get_user_error_message(exc, f"Unexpected error while running evaluation: {exc}")
-
-
-run_clicked = st.button(
-    "Run evaluation",
-    use_container_width=True,
-    disabled=is_request_running(EVALUATION_REQUEST_KEY),
-)
-
-if run_clicked and not question.strip():
-    st.warning("Please enter an evaluation question.")
-else:
-    run_request_action(
-        request_key=EVALUATION_REQUEST_KEY,
-        result_key=EVALUATION_RESULT_KEY,
-        trigger=run_clicked,
-        can_run=bool(question.strip()),
-        action=_run_evaluation,
-        spinner_text="Running evaluation...",
-        error_mapper=_map_evaluation_error,
-    )
-
-render_result_payload(
-    result_key=EVALUATION_RESULT_KEY,
-    on_success=_noop_payload,
-)
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="card-title">Gold QA dataset</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="card-subtitle">Add project-specific benchmark questions manually or generate them automatically from indexed assets.</div>',
-    unsafe_allow_html=True,
-)
-
-st.markdown("### Generate entries automatically")
-
-generation_col1, generation_col2 = st.columns(2)
-with generation_col1:
-    generation_num_questions = st.number_input(
-        "Number of questions to generate",
-        min_value=1,
-        max_value=20,
-        value=5,
-        step=1,
-    )
-
-with generation_col2:
-    generation_selected_files = st.multiselect(
-        "Restrict generation to selected source files (optional)",
-        options=project_documents,
-        default=[],
-        help="Leave empty to use all project documents.",
-    )
-
-generation_mode = st.radio(
-    "Generation mode",
-    options=["append", "replace", "append_dedup"],
-    format_func=lambda mode: {
-        "append": "Append",
-        "replace": "Replace dataset",
-        "append_dedup": "Append with dedup",
-    }[mode],
-    horizontal=True,
-    help=(
-        "Append: keep existing entries and add new ones. "
-        "Replace dataset: delete all existing entries before inserting new ones. "
-        "Append with dedup: keep existing entries and skip generated questions already present."
-    ),
-)
-
-
-def _run_dataset_generation():
-    return app.generate_qa_dataset_entries(
-        user_id=user_id,
-        project_id=project_id,
-        num_questions=int(generation_num_questions),
-        source_files=generation_selected_files or None,
-        generation_mode=generation_mode,
-    )
-
-
-def _map_dataset_generation_error(exc: Exception) -> str:
-    if isinstance(exc, DocStoreError):
-        return get_user_error_message(exc, "Unable to inspect indexed assets while generating QA entries.")
-    if isinstance(exc, LLMServiceError):
-        return get_user_error_message(exc, "The language model failed while generating QA dataset entries.")
-    return get_user_error_message(exc, f"Unexpected error while generating QA dataset entries: {exc}")
-
-
-def _render_dataset_generation_result(payload: dict):
-    created_entries = payload["created_entries"]
-    skipped_duplicates = payload["skipped_duplicates"]
-    deleted_existing_entries = payload["deleted_existing_entries"]
-    mode = payload["generation_mode"]
-
-    if mode == "replace":
-        st.success(
-            f"Dataset replaced successfully: {deleted_existing_entries} existing entr"
-            f"{'y' if deleted_existing_entries == 1 else 'ies'} removed and "
-            f"{len(created_entries)} new entr{'y' if len(created_entries) == 1 else 'ies'} created."
-        )
-    elif mode == "append_dedup":
-        st.success(
-            f"{len(created_entries)} entr{'y' if len(created_entries) == 1 else 'ies'} created. "
-            f"{len(skipped_duplicates)} duplicate question"
-            f"{'' if len(skipped_duplicates) == 1 else 's'} skipped."
-        )
-    else:
-        st.success(
-            f"{len(created_entries)} QA dataset entr{'y' if len(created_entries) == 1 else 'ies'} created."
-        )
-
-    if skipped_duplicates:
-        st.markdown("#### Skipped duplicate questions")
-        for question in skipped_duplicates:
-            st.markdown(f"- {question}")
-
-    if created_entries:
-        st.markdown("#### Created entries")
-        for entry in created_entries:
-            with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
-                if entry.expected_answer:
-                    st.markdown("**Expected answer**")
-                    st.write(entry.expected_answer)
-
-                if entry.expected_doc_ids:
-                    st.markdown("**Expected doc_ids**")
-                    st.code("\n".join(entry.expected_doc_ids), language="text")
-
-                if entry.expected_sources:
-                    st.markdown("**Expected source files**")
-                    st.code("\n".join(entry.expected_sources), language="text")
-
-
-generate_clicked = st.button(
-    "Generate QA dataset entries",
-    use_container_width=True,
-    disabled=is_request_running(DATASET_GENERATION_REQUEST_KEY),
-)
-
-if generate_clicked and not project_documents:
-    st.warning("Please ingest documents before generating QA dataset entries.")
-else:
-    run_request_action(
-        request_key=DATASET_GENERATION_REQUEST_KEY,
-        result_key=DATASET_GENERATION_RESULT_KEY,
-        trigger=generate_clicked,
-        can_run=bool(project_documents),
-        action=_run_dataset_generation,
-        spinner_text="Generating QA dataset entries from project assets...",
-        error_mapper=_map_dataset_generation_error,
-    )
-
-render_result_payload(
-    result_key=DATASET_GENERATION_RESULT_KEY,
-    on_success=_render_dataset_generation_result,
-)
-
-st.markdown("---")
-st.markdown("### Add an entry manually")
-
-with st.form("qa_dataset_create_form", clear_on_submit=True):
-    dataset_question = st.text_area(
-        "Dataset question",
-        placeholder="e.g. What is the main objective of the report?",
-        height=110,
-    )
-
-    dataset_expected_answer = st.text_area(
-        "Expected answer (optional)",
-        placeholder="Reference answer used later for evaluation and LLM-as-a-judge scoring.",
-        height=120,
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        dataset_expected_doc_ids = st.text_input(
-            "Expected doc_ids (optional, comma-separated)",
-            placeholder="doc_1, doc_2",
-        )
-
-    with col2:
-        dataset_expected_sources = st.text_input(
-            "Expected source files (optional, comma-separated)",
-            placeholder="report.pdf, appendix.pdf",
-        )
-
-    add_entry_clicked = st.form_submit_button(
-        "Add QA entry",
-        use_container_width=True,
-    )
-
-if add_entry_clicked:
-    try:
-        entry = app.create_qa_dataset_entry(
-            user_id=user_id,
-            project_id=project_id,
-            question=dataset_question,
-            expected_answer=dataset_expected_answer or None,
-            expected_doc_ids=_parse_csv_list(dataset_expected_doc_ids),
-            expected_sources=_parse_csv_list(dataset_expected_sources),
-        )
-        st.session_state["qa_dataset_success_message"] = (
-            f"QA entry #{entry.id} added to project dataset."
-        )
-        st.rerun()
-    except Exception as exc:
-        st.session_state["qa_dataset_error_message"] = get_user_error_message(
-            exc,
-            f"Unable to add QA dataset entry: {exc}",
-        )
-        st.rerun()
-
 entries = app.list_qa_dataset_entries(
     user_id=user_id,
     project_id=project_id,
 )
 
-m1, m2 = st.columns(2)
-with m1:
-    st.metric("Dataset entries", len(entries))
-with m2:
-    st.metric("Current project", project_id)
-
-if not entries:
-    st.info("No gold QA entries yet for this project.")
-else:
-    st.markdown("### Existing dataset entries")
-
-    for entry in entries:
-        with st.expander(f"#{entry.id} — {entry.question}", expanded=False):
-            st.markdown("**Question**")
-            st.write(entry.question)
-
-            if entry.expected_answer:
-                st.markdown("**Expected answer**")
-                st.write(entry.expected_answer)
-            else:
-                st.caption("No expected answer provided.")
-
-            doc_ids = entry.expected_doc_ids or []
-            sources = entry.expected_sources or []
-
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown("**Expected doc_ids**")
-                if doc_ids:
-                    st.code("\n".join(doc_ids), language="text")
-                else:
-                    st.caption("No expected doc_ids.")
-
-            with c2:
-                st.markdown("**Expected source files**")
-                if sources:
-                    st.code("\n".join(sources), language="text")
-                else:
-                    st.caption("No expected source files.")
-
-            if entry.created_at:
-                st.caption(f"Created: {entry.created_at}")
-            if entry.updated_at:
-                st.caption(f"Updated: {entry.updated_at}")
-
-            if st.button(
-                "Delete entry",
-                key=f"delete_qa_entry_{entry.id}",
-                use_container_width=True,
-            ):
-                try:
-                    app.delete_qa_dataset_entry(
-                        entry_id=entry.id,
-                        user_id=user_id,
-                        project_id=project_id,
-                    )
-                    st.session_state["qa_dataset_success_message"] = (
-                        f"QA entry #{entry.id} deleted."
-                    )
-                except Exception as exc:
-                    st.session_state["qa_dataset_error_message"] = get_user_error_message(
-                        exc,
-                        f"Unable to delete QA dataset entry #{entry.id}: {exc}",
-                    )
-                st.rerun()
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
-st.markdown('<div class="card-title">Dataset retrieval metrics</div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="card-subtitle">Run project-level retrieval evaluation over the gold QA dataset and inspect aggregated metrics.</div>',
-    unsafe_allow_html=True,
-)
-
-dataset_eval_col1, dataset_eval_col2 = st.columns(2)
-
-with dataset_eval_col1:
-    dataset_enable_query_rewrite = st.toggle(
-        "Enable query rewrite for dataset evaluation",
-        value=True,
-        help="Apply the same retrieval rewrite stage to every dataset question.",
-    )
-
-with dataset_eval_col2:
-    dataset_enable_hybrid_retrieval = st.toggle(
-        "Enable hybrid retrieval for dataset evaluation",
-        value=True,
-        help="Combine FAISS and BM25 during dataset evaluation.",
-    )
-
-
-def _run_dataset_evaluation():
-    return {
-        "result": app.evaluate_gold_qa_dataset(
-            user_id=user_id,
-            project_id=project_id,
-            enable_query_rewrite=dataset_enable_query_rewrite,
-            enable_hybrid_retrieval=dataset_enable_hybrid_retrieval,
-        ),
-        "enable_query_rewrite": dataset_enable_query_rewrite,
-        "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
-        "generated_at": datetime.now(timezone.utc),
-    }
-
-
-def _map_dataset_evaluation_error(exc: Exception) -> str:
-    if isinstance(exc, VectorStoreError):
-        return get_user_error_message(exc, "Unable to query the FAISS index for dataset evaluation.")
-    if isinstance(exc, DocStoreError):
-        return get_user_error_message(exc, "Unable to inspect supporting assets from SQLite during dataset evaluation.")
-    if isinstance(exc, LLMServiceError):
-        return get_user_error_message(exc, "The language model failed while preparing a retrieval pipeline during dataset evaluation.")
-    return get_user_error_message(exc, f"Unexpected error while running dataset evaluation: {exc}")
-
-
-dataset_run_clicked = st.button(
-    "Run dataset evaluation",
-    use_container_width=True,
-    disabled=is_request_running(DATASET_EVALUATION_REQUEST_KEY),
-)
-
-if dataset_run_clicked and not entries:
-    st.warning("Please add at least one gold QA dataset entry before running dataset evaluation.")
-else:
-    run_request_action(
-        request_key=DATASET_EVALUATION_REQUEST_KEY,
-        result_key=DATASET_EVALUATION_RESULT_KEY,
-        trigger=dataset_run_clicked,
-        can_run=bool(entries),
-        action=_run_dataset_evaluation,
-        spinner_text="Running dataset retrieval metrics...",
-        error_mapper=_map_dataset_evaluation_error,
-    )
-
-render_result_payload(
-    result_key=DATASET_EVALUATION_RESULT_KEY,
-    on_success=_noop_payload,
-)
-
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("---")
-st.markdown("### Analysis")
-
 manual_for_tabs: ManualEvaluationResult | None = None
-manual_payload = st.session_state.get(EVALUATION_RESULT_KEY)
-if isinstance(manual_payload, ManualEvaluationResult):
-    manual_for_tabs = manual_payload
+manual_payload_raw = st.session_state.get(EVALUATION_RESULT_KEY)
+if isinstance(manual_payload_raw, ManualEvaluationResult):
+    manual_for_tabs = manual_payload_raw
 
 bundle = _session_benchmark_bundle()
 summary: dict[str, Any] = {}
@@ -535,46 +88,37 @@ if bundle is not None:
         generated_at=payload_dict.get("generated_at"),
     )
 
-available_questions: list[dict[str, Any]] = []
-if manual_for_tabs is not None:
-    mq = (manual_for_tabs.question or "").strip()
-    preview = mq[:72] + ("…" if len(mq) > 72 else "") if mq else "Manual evaluation"
-    available_questions.append(
-        {
-            "id": "manual",
-            "label": f"Manual — {preview}",
-            "kind": "manual",
-            "manual_result": manual_for_tabs,
-        }
-    )
-for row in rows:
-    qtext = row.get("question") or ""
-    qprev = qtext[:80] + ("…" if len(qtext) > 80 else "")
-    eid = row.get("entry_id", "—")
-    available_questions.append(
-        {
-            "id": f"bench_{eid}",
-            "label": f"#{eid} — {qprev}",
-            "kind": "benchmark",
-            "row": row,
-        }
-    )
-
 render_evaluation_tabs(
-    overview_payload={
+    manual_payload={
+        "app": app,
+        "user_id": user_id,
+        "project_id": project_id,
+        "evaluation_request_key": EVALUATION_REQUEST_KEY,
+        "evaluation_result_key": EVALUATION_RESULT_KEY,
+    },
+    dataset_payload={
+        "app": app,
+        "user_id": user_id,
+        "project_id": project_id,
+        "entries": entries,
+        "dataset_evaluation_request_key": DATASET_EVALUATION_REQUEST_KEY,
+        "dataset_evaluation_result_key": DATASET_EVALUATION_RESULT_KEY,
         "summary": summary,
         "rows": rows,
+    },
+    gold_qa_payload={
+        "app": app,
+        "user_id": user_id,
+        "project_id": project_id,
+        "project_documents": project_documents,
+        "dataset_generation_request_key": DATASET_GENERATION_REQUEST_KEY,
+        "dataset_generation_result_key": DATASET_GENERATION_RESULT_KEY,
+        "entry_count": len(entries),
+    },
+    analysis_payload={
+        "reports_export": reports_export,
         "manual_result": manual_for_tabs,
-    },
-    question_payload={
-        "available_questions": available_questions,
-        "selected_question_payload": None,
-    },
-    debug_payload={
-        "benchmark_result": bench_for_tabs,
-        "manual_result": manual_for_tabs,
-    },
-    reports_payload={
-        "export": reports_export,
+        "summary": summary,
+        "rows": rows,
     },
 )

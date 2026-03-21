@@ -8,34 +8,27 @@ from typing import Any
 
 import streamlit as st
 
-from src.ui.evaluation_debug_tab import render_evaluation_debug_tab
-from src.ui.evaluation_overview_tab import render_evaluation_overview_tab
-from src.ui.evaluation_questions_tab import render_evaluation_questions_tab
-from src.ui.evaluation_reports_tab import render_evaluation_reports_tab
+from src.ui.evaluation_analysis_tab import render_evaluation_analysis_tab
+from src.ui.evaluation_dataset_tab import render_evaluation_dataset_tab
+from src.ui.evaluation_gold_qa_tab import render_evaluation_gold_qa_tab
+from src.ui.evaluation_manual_tab import render_evaluation_manual_tab
 
 
 def render_evaluation_tabs(
     *,
-    overview_payload: dict[str, Any],
-    question_payload: dict[str, Any],
-    debug_payload: dict[str, Any],
-    reports_payload: dict[str, Any],
+    manual_payload: dict[str, Any],
+    dataset_payload: dict[str, Any],
+    gold_qa_payload: dict[str, Any],
+    analysis_payload: dict[str, Any],
 ) -> None:
-    tab_overview, tab_questions, tab_debug, tab_reports = st.tabs(
-        ["Overview", "Questions", "Debug", "Reports"]
+    tab_manual, tab_dataset, tab_gold, tab_analysis = st.tabs(
+        ["Manual evaluation", "Dataset evaluation", "Gold QA dataset", "Analysis"]
     )
-    with tab_overview:
-        render_evaluation_overview_tab(
-            summary=overview_payload.get("summary") or {},
-            rows=overview_payload.get("rows") or [],
-            manual_result=overview_payload.get("manual_result"),
-        )
-    with tab_questions:
-        render_evaluation_questions_tab(
-            available_questions=question_payload.get("available_questions") or [],
-            selected_question_payload=question_payload.get("selected_question_payload"),
-        )
-    with tab_debug:
-        render_evaluation_debug_tab(debug_payload)
-    with tab_reports:
-        render_evaluation_reports_tab(reports_payload)
+    with tab_manual:
+        render_evaluation_manual_tab(manual_payload)
+    with tab_dataset:
+        render_evaluation_dataset_tab(dataset_payload)
+    with tab_gold:
+        render_evaluation_gold_qa_tab(gold_qa_payload)
+    with tab_analysis:
+        render_evaluation_analysis_tab(analysis_payload)
