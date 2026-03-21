@@ -129,10 +129,10 @@ def render_manual_evaluation_result(
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-    cq = result.citation_quality
+    cq = result.prompt_source_quality
     if cq:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">Citation quality</div>', unsafe_allow_html=True)
+        st.markdown('<div class="card-title">Prompt source quality</div>', unsafe_allow_html=True)
         st.markdown(
             '<div class="card-subtitle">Overlap between prompt sources and expected doc_ids / sources when provided.</div>',
             unsafe_allow_html=True,
@@ -140,47 +140,47 @@ def render_manual_evaluation_result(
         _metric_row(
             [
                 (
-                    "Citation doc_id P",
-                    _fmt_float(cq.citation_doc_id_precision),
-                    "citation_doc_id_precision",
+                    "Prompt doc_id P",
+                    _fmt_float(cq.prompt_doc_id_precision),
+                    "prompt_doc_id_precision",
                 ),
                 (
-                    "Citation doc_id R",
-                    _fmt_float(cq.citation_doc_id_recall),
-                    "citation_doc_id_recall",
+                    "Prompt doc_id R",
+                    _fmt_float(cq.prompt_doc_id_recall),
+                    "prompt_doc_id_recall",
                 ),
                 (
-                    "Citation doc_id F1",
-                    _fmt_float(cq.citation_doc_id_f1),
-                    "citation_doc_id_f1",
-                ),
-            ]
-        )
-        _metric_row(
-            [
-                (
-                    "Citation source P",
-                    _fmt_float(cq.citation_source_precision),
-                    "citation_source_precision",
-                ),
-                (
-                    "Citation source R",
-                    _fmt_float(cq.citation_source_recall),
-                    "citation_source_recall",
-                ),
-                (
-                    "Citation source F1",
-                    _fmt_float(cq.citation_source_f1),
-                    "citation_source_f1",
+                    "Prompt doc_id F1",
+                    _fmt_float(cq.prompt_doc_id_f1),
+                    "prompt_doc_id_f1",
                 ),
             ]
         )
         _metric_row(
             [
                 (
-                    "Citation faithfulness",
-                    _fmt_float(cq.citation_faithfulness_score),
-                    "citation_faithfulness_score",
+                    "Prompt source P",
+                    _fmt_float(cq.prompt_source_precision),
+                    "prompt_source_precision",
+                ),
+                (
+                    "Prompt source R",
+                    _fmt_float(cq.prompt_source_recall),
+                    "prompt_source_recall",
+                ),
+                (
+                    "Prompt source F1",
+                    _fmt_float(cq.prompt_source_f1),
+                    "prompt_source_f1",
+                ),
+            ]
+        )
+        _metric_row(
+            [
+                (
+                    "Prompt source alignment",
+                    _fmt_float(cq.prompt_source_alignment_score),
+                    "prompt_source_alignment_score",
                 ),
             ]
         )

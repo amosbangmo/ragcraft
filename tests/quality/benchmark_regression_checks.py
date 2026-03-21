@@ -52,9 +52,9 @@ class BenchmarkRegressionThresholds:
 
     min_avg_doc_id_recall: float | None = None
     min_avg_answer_f1: float | None = None
-    min_avg_citation_source_f1: float | None = None
+    min_avg_prompt_source_f1: float | None = None
     min_avg_groundedness: float | None = None
-    min_avg_citation_faithfulness: float | None = None
+    min_avg_prompt_source_alignment: float | None = None
     min_avg_answer_relevance: float | None = None
     min_successful_queries: int | None = None
 
@@ -90,12 +90,12 @@ def collect_benchmark_regression_violations(
                 f"{actual} < minimum {thresholds.min_avg_answer_f1}"
             )
 
-    if thresholds.min_avg_citation_source_f1 is not None:
-        actual = _summary_float(summary, "avg_citation_source_f1")
-        if actual < thresholds.min_avg_citation_source_f1:
+    if thresholds.min_avg_prompt_source_f1 is not None:
+        actual = _summary_float(summary, "avg_prompt_source_f1")
+        if actual < thresholds.min_avg_prompt_source_f1:
             violations.append(
-                "avg_citation_source_f1 "
-                f"{actual} < minimum {thresholds.min_avg_citation_source_f1}"
+                "avg_prompt_source_f1 "
+                f"{actual} < minimum {thresholds.min_avg_prompt_source_f1}"
             )
 
     if thresholds.min_avg_groundedness is not None:
@@ -106,12 +106,12 @@ def collect_benchmark_regression_violations(
                 f"{actual} < minimum {thresholds.min_avg_groundedness}"
             )
 
-    if thresholds.min_avg_citation_faithfulness is not None:
-        actual = _summary_float(summary, "avg_citation_faithfulness")
-        if actual < thresholds.min_avg_citation_faithfulness:
+    if thresholds.min_avg_prompt_source_alignment is not None:
+        actual = _summary_float(summary, "avg_prompt_source_alignment")
+        if actual < thresholds.min_avg_prompt_source_alignment:
             violations.append(
-                "avg_citation_faithfulness "
-                f"{actual} < minimum {thresholds.min_avg_citation_faithfulness}"
+                "avg_prompt_source_alignment "
+                f"{actual} < minimum {thresholds.min_avg_prompt_source_alignment}"
             )
 
     if thresholds.min_avg_answer_relevance is not None:

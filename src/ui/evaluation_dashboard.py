@@ -574,8 +574,10 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             )
         with h2:
             _histogram_bar_chart(
-                "Citation faithfulness",
-                _numeric_series(df, "citation_faithfulness_score", "citation_faithfulness"),
+                "Prompt source alignment",
+                _numeric_series(
+                    df, "prompt_source_alignment_score", "prompt_source_alignment", "citation_faithfulness_score", "citation_faithfulness"
+                ),
             )
         with h3:
             _histogram_bar_chart(
@@ -667,19 +669,25 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             st.caption("Confidence vs groundedness: missing columns.")
 
         rel = _numeric_series(df, "answer_relevance_score", "answer_relevance")
-        faith = _numeric_series(df, "citation_faithfulness_score", "citation_faithfulness")
+        faith = _numeric_series(
+            df,
+            "prompt_source_alignment_score",
+            "prompt_source_alignment",
+            "citation_faithfulness_score",
+            "citation_faithfulness",
+        )
         if rel is not None and faith is not None:
             scatter2 = pd.DataFrame(
-                {"citation_faithfulness_score": faith, "answer_relevance_score": rel}
+                {"prompt_source_alignment_score": faith, "answer_relevance_score": rel}
             ).dropna()
             if len(scatter2) >= 1:
-                st.caption("Answer relevance vs citation faithfulness (judge; uses prompt sources + context)")
+                st.caption("Answer relevance vs prompt source alignment (judge; uses prompt sources + context)")
                 sc2_chart = (
                     alt.Chart(scatter2)
                     .mark_circle()
                     .encode(
                         x=alt.X(
-                            "citation_faithfulness_score:Q",
+                            "prompt_source_alignment_score:Q",
                             axis=_FLOAT_AXIS_2DP,
                         ),
                         y=alt.Y(
@@ -745,7 +753,7 @@ def render_evaluation_dashboard(
         with j1:
             _summary_metric(summary, "avg_groundedness", "Groundedness")
         with j2:
-            _summary_metric(summary, "avg_citation_faithfulness", "Faithfulness")
+            _summary_metric(summary, "avg_prompt_source_alignment", "Prompt source alignment")
         with j3:
             _summary_metric(summary, "avg_answer_relevance", "Relevance")
         with j4:

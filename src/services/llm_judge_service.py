@@ -10,7 +10,7 @@ from src.domain.llm_judge_result import LLMJudgeResult
 
 class LLMJudgeService:
     """
-    Single LLM-as-a-judge pass: groundedness, citation faithfulness, answer relevance,
+    Single LLM-as-a-judge pass: groundedness, prompt source alignment, answer relevance,
     and hallucination signals in one structured JSON response.
     """
 
@@ -24,7 +24,7 @@ class LLMJudgeService:
         """Used when the LLM call fails or the response is unusable."""
         return LLMJudgeResult(
             groundedness_score=0.0,
-            citation_faithfulness_score=0.0,
+            prompt_source_alignment_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=False,
@@ -36,7 +36,7 @@ class LLMJudgeService:
         """No assistant text: skip the LLM; align with prior per-metric stubs."""
         return LLMJudgeResult(
             groundedness_score=0.0,
-            citation_faithfulness_score=0.0,
+            prompt_source_alignment_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=1.0,
             has_hallucination=False,
@@ -68,13 +68,13 @@ Each score must be a number in [0, 1].
 
 Metrics:
 - groundedness_score: Are factual claims in the answer supported by RETRIEVED CONTEXT only (paraphrases OK)? Ignore real-world truth beyond the context.
-- citation_faithfulness_score: Do PROMPT SOURCES and the context justify the answer's factual claims? If there are no sources, judge faithfulness to the context alone.
+- prompt_source_alignment_score: Do PROMPT SOURCES and the context justify the answer's factual claims? If there are no sources, judge alignment to the context alone.
 - answer_relevance_score: Does the answer address the USER QUESTION (coverage, focus, usefulness)? Do not score factual correctness against the real world.
 - hallucination_score: Higher = less hallucination / better supported by context. 1.0 = no unsupported substantive claims; 0.0 = fully unsupported vs context.
 - has_hallucination: true if ANY substantive claim is not supported by the provided context.
 - reason: short string explaining the scores (optional but preferred).
 
-Required keys: groundedness_score, citation_faithfulness_score, answer_relevance_score, hallucination_score, has_hallucination, reason.
+Required keys: groundedness_score, prompt_source_alignment_score, answer_relevance_score, hallucination_score, has_hallucination, reason.
 
 USER QUESTION:
 {q}
@@ -102,7 +102,7 @@ ASSISTANT ANSWER:
         g, c, r, h, flag, reason = parsed
         return LLMJudgeResult(
             groundedness_score=round(g, 2),
-            citation_faithfulness_score=round(c, 2),
+            prompt_source_alignment_score=round(c, 2),
             answer_relevance_score=round(r, 2),
             hallucination_score=round(h, 2),
             has_hallucination=flag,
@@ -133,7 +133,9 @@ ASSISTANT ANSWER:
 
         if isinstance(data, dict):
             g = self._read_score(data, "groundedness_score", text)
-            c = self._read_score(data, "citation_faithfulness_score", text)
+            c = self._read_score(data, "prompt_source_alignment_score", text)
+            if c is None:
+                c = self._read_score(data, "citation_faithfulness_score", text)
             r = self._read_score(data, "answer_relevance_score", text)
             h = self._read_score(data, "hallucination_score", text)
             if g is None and c is None and r is None and h is None:
@@ -147,7 +149,9 @@ ASSISTANT ANSWER:
             return g, c, r, h, flag, reason
 
         g = self._regex_float(text, r'"groundedness_score"\s*:\s*' + self._FLOAT_RE)
-        c = self._regex_float(text, r'"citation_faithfulness_score"\s*:\s*' + self._FLOAT_RE)
+        c = self._regex_float(text, r'"prompt_source_alignment_score"\s*:\s*' + self._FLOAT_RE)
+        if c is None:
+            c = self._regex_float(text, r'"citation_faithfulness_score"\s*:\s*' + self._FLOAT_RE)
         r = self._regex_float(text, r'"answer_relevance_score"\s*:\s*' + self._FLOAT_RE)
         h = self._regex_float(text, r'"hallucination_score"\s*:\s*' + self._FLOAT_RE)
         if g is None and c is None and r is None and h is None:

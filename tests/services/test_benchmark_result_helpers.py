@@ -20,12 +20,12 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
         # Drop keys entirely to simulate partial / legacy payloads.
         result.summary.data.pop("avg_doc_id_recall", None)
         result.summary.data.pop("avg_answer_f1", None)
-        result.summary.data.pop("avg_citation_source_f1", None)
+        result.summary.data.pop("avg_prompt_source_f1", None)
 
         thresholds = BenchmarkRegressionThresholds(
             min_avg_doc_id_recall=0.01,
             min_avg_answer_f1=0.01,
-            min_avg_citation_source_f1=0.01,
+            min_avg_prompt_source_f1=0.01,
         )
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertEqual(len(violations), 3)
@@ -36,14 +36,14 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
                 "successful_queries": "4",
                 "avg_doc_id_recall": "0.75",
                 "avg_answer_f1": "0.5",
-                "avg_citation_source_f1": "0.25",
+                "avg_prompt_source_f1": "0.25",
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=4,
             min_avg_doc_id_recall=0.75,
             min_avg_answer_f1=0.5,
-            min_avg_citation_source_f1=0.25,
+            min_avg_prompt_source_f1=0.25,
         )
         self.assertEqual(collect_benchmark_regression_violations(result, thresholds), [])
 

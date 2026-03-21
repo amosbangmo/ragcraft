@@ -34,12 +34,12 @@ class BenchmarkRow:
     The ``data`` payload intentionally stays flexible so the evaluation layer can
     evolve incrementally without forcing a broad refactor across the UI.
 
-    Common LLM-judge fields include ``groundedness``, ``citation_faithfulness``,
+    Common LLM-judge fields include ``groundedness``, ``prompt_source_alignment``,
     ``answer_relevance``, and ``hallucination_score`` (0–1 when configured), plus
     ``has_hallucination`` (boolean). The unified judge also adds
-    ``groundedness_score``, ``citation_faithfulness_score``, and
+    ``groundedness_score``, ``prompt_source_alignment_score``, and
     ``answer_relevance_score`` (mirrors of the above for explicit naming).
-    Fields named ``citation_*`` for doc/source overlap compare **prompt sources**
+    Fields named ``prompt_*`` for doc/source overlap compare **prompt sources**
     (sources provided in the prompt) to gold expectations, not parsed answer citations.
     """
 
@@ -65,7 +65,7 @@ class BenchmarkSummary:
     every future metric to become a top-level dataclass field immediately.
 
     Aggregate judge metrics include ``avg_groundedness``,
-    ``avg_citation_faithfulness``, ``avg_answer_relevance``, ``avg_hallucination_score``,
+    ``avg_prompt_source_alignment``, ``avg_answer_relevance``, ``avg_hallucination_score``,
     and ``hallucination_rate`` (fraction of rows with ``has_hallucination`` true).
     """
 

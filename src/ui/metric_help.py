@@ -106,15 +106,15 @@ METRIC_HELP: dict[str, str] = {
     "avg_groundedness": (
         "Mean groundedness over the run. Closer to 1 is better."
     ),
-    "citation_faithfulness": (
-        "Judge score: whether the answer is faithful to the prompt sources and retrieved context. "
+    "prompt_source_alignment": (
+        "Judge score: whether the answer aligns with the prompt sources and retrieved context. "
         "Closer to 1 is better."
     ),
-    "citation_faithfulness_score": (
-        "Same as citation faithfulness (judge metric key). Closer to 1 is better."
+    "prompt_source_alignment_score": (
+        "Same as prompt source alignment (judge metric key). Closer to 1 is better."
     ),
-    "avg_citation_faithfulness": (
-        "Mean citation faithfulness over the run (judge metric). Closer to 1 is better."
+    "avg_prompt_source_alignment": (
+        "Mean prompt source alignment over the run (judge metric). Closer to 1 is better."
     ),
     "answer_relevance": (
         "Judge score: how well the answer addresses the question. "
@@ -141,41 +141,41 @@ METRIC_HELP: dict[str, str] = {
         "Whether the judge flagged likely hallucination for this row. "
         "No is usually preferable."
     ),
-    "citation_doc_id_precision": (
+    "prompt_doc_id_precision": (
         "Precision of prompt-source doc IDs vs expected doc IDs. Higher is better."
     ),
-    "avg_citation_doc_id_precision": (
-        "Mean citation doc ID precision (prompt sources vs expected). Higher is better."
+    "avg_prompt_doc_id_precision": (
+        "Mean prompt doc ID precision (prompt sources vs expected). Higher is better."
     ),
-    "citation_doc_id_recall": (
+    "prompt_doc_id_recall": (
         "Recall of expected doc IDs among prompt sources. Higher is better."
     ),
-    "avg_citation_doc_id_recall": (
-        "Mean citation doc ID recall (prompt sources). Higher is better."
+    "avg_prompt_doc_id_recall": (
+        "Mean prompt doc ID recall (prompt sources). Higher is better."
     ),
-    "citation_doc_id_f1": (
+    "prompt_doc_id_f1": (
         "F1 between prompt-source and expected doc IDs. Closer to 1 is better."
     ),
-    "avg_citation_doc_id_f1": (
-        "Mean citation doc ID F1 (prompt sources). Closer to 1 is better."
+    "avg_prompt_doc_id_f1": (
+        "Mean prompt doc ID F1 (prompt sources). Closer to 1 is better."
     ),
-    "citation_source_precision": (
+    "prompt_source_precision": (
         "Precision of prompt sources vs expected sources. Higher is better."
     ),
-    "avg_citation_source_precision": (
-        "Mean citation source precision (prompt sources). Higher is better."
+    "avg_prompt_source_precision": (
+        "Mean prompt source precision (prompt sources). Higher is better."
     ),
-    "citation_source_recall": (
+    "prompt_source_recall": (
         "Recall of expected sources among prompt sources. Higher is better."
     ),
-    "avg_citation_source_recall": (
-        "Mean citation source recall (prompt sources). Higher is better."
+    "avg_prompt_source_recall": (
+        "Mean prompt source recall (prompt sources). Higher is better."
     ),
-    "citation_source_f1": (
+    "prompt_source_f1": (
         "F1 for prompt sources vs expected sources. Closer to 1 is better."
     ),
-    "avg_citation_source_f1": (
-        "Mean citation source F1 (prompt sources). Closer to 1 is better."
+    "avg_prompt_source_f1": (
+        "Mean prompt source F1 (prompt sources). Closer to 1 is better."
     ),
     "cited_doc_ids_count": (
         "Number of distinct document IDs in prompt sources for this row."
@@ -194,10 +194,10 @@ METRIC_HELP: dict[str, str] = {
         "Share of entries where at least one expected source was hit. "
         "Higher is better."
     ),
-    "citation_doc_id_hit_rate": (
+    "prompt_doc_id_hit_rate": (
         "Share of entries where prompt sources overlap expected doc IDs. Higher is better."
     ),
-    "citation_source_hit_rate": (
+    "prompt_source_hit_rate": (
         "Share of entries where prompt sources overlap expected sources. Higher is better."
     ),
     "retrieval_mode": (

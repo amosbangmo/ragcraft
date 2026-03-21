@@ -15,14 +15,14 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
                 "successful_queries": 3,
                 "avg_doc_id_recall": 0.85,
                 "avg_answer_f1": 0.72,
-                "avg_citation_source_f1": 0.61,
+                "avg_prompt_source_f1": 0.61,
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=3,
             min_avg_doc_id_recall=0.8,
             min_avg_answer_f1=0.7,
-            min_avg_citation_source_f1=0.6,
+            min_avg_prompt_source_f1=0.6,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
         self.assertEqual(
@@ -36,14 +36,14 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
                 "successful_queries": 2,
                 "avg_doc_id_recall": 0.5,
                 "avg_answer_f1": 0.9,
-                "avg_citation_source_f1": 0.9,
+                "avg_prompt_source_f1": 0.9,
             }
         )
         thresholds = BenchmarkRegressionThresholds(
             min_successful_queries=3,
             min_avg_doc_id_recall=0.8,
             min_avg_answer_f1=0.7,
-            min_avg_citation_source_f1=0.6,
+            min_avg_prompt_source_f1=0.6,
         )
         with self.assertRaises(AssertionError) as ctx:
             assert_benchmark_meets_thresholds(result, thresholds)
@@ -63,17 +63,17 @@ class TestBenchmarkRegressionThresholds(unittest.TestCase):
         self.assertEqual(len(violations), 1)
         self.assertIn("avg_groundedness", violations[0])
 
-    def test_citation_faithfulness_threshold_enforced_when_set(self):
+    def test_prompt_source_alignment_threshold_enforced_when_set(self):
         result = make_benchmark_result(
             summary_overrides={
                 "successful_queries": 1,
-                "avg_citation_faithfulness": 0.2,
+                "avg_prompt_source_alignment": 0.2,
             }
         )
-        thresholds = BenchmarkRegressionThresholds(min_avg_citation_faithfulness=0.5)
+        thresholds = BenchmarkRegressionThresholds(min_avg_prompt_source_alignment=0.5)
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertEqual(len(violations), 1)
-        self.assertIn("avg_citation_faithfulness", violations[0])
+        self.assertIn("avg_prompt_source_alignment", violations[0])
 
     def test_answer_relevance_threshold_enforced_when_set(self):
         result = make_benchmark_result(

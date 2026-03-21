@@ -78,7 +78,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         judge = LLMJudgeResult(
             groundedness_score=1.0,
-            citation_faithfulness_score=1.0,
+            prompt_source_alignment_score=1.0,
             answer_relevance_score=1.0,
             hallucination_score=1.0,
             has_hallucination=False,
@@ -95,9 +95,9 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_successful_queries=2,
             min_avg_doc_id_recall=0.99,
             min_avg_answer_f1=0.99,
-            min_avg_citation_source_f1=0.99,
+            min_avg_prompt_source_f1=0.99,
             min_avg_groundedness=0.99,
-            min_avg_citation_faithfulness=0.99,
+            min_avg_prompt_source_alignment=0.99,
             min_avg_answer_relevance=0.99,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
@@ -136,7 +136,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
 
         judge = LLMJudgeResult(
             groundedness_score=0.0,
-            citation_faithfulness_score=0.0,
+            prompt_source_alignment_score=0.0,
             answer_relevance_score=0.0,
             hallucination_score=0.0,
             has_hallucination=True,
@@ -153,9 +153,9 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_successful_queries=1,
             min_avg_doc_id_recall=0.5,
             min_avg_answer_f1=0.5,
-            min_avg_citation_source_f1=0.5,
+            min_avg_prompt_source_f1=0.5,
             min_avg_groundedness=0.5,
-            min_avg_citation_faithfulness=0.5,
+            min_avg_prompt_source_alignment=0.5,
             min_avg_answer_relevance=0.5,
         )
         violations = collect_benchmark_regression_violations(result, thresholds)

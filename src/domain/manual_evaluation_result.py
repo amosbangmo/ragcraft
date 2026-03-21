@@ -21,14 +21,14 @@ class ManualEvaluationAnswerQuality:
 
 
 @dataclass(frozen=True)
-class ManualEvaluationCitationQuality:
-    citation_doc_id_precision: float | None
-    citation_doc_id_recall: float | None
-    citation_doc_id_f1: float | None
-    citation_source_precision: float | None
-    citation_source_recall: float | None
-    citation_source_f1: float | None
-    citation_faithfulness_score: float | None
+class ManualEvaluationPromptSourceQuality:
+    prompt_doc_id_precision: float | None
+    prompt_doc_id_recall: float | None
+    prompt_doc_id_f1: float | None
+    prompt_source_precision: float | None
+    prompt_source_recall: float | None
+    prompt_source_f1: float | None
+    prompt_source_alignment_score: float | None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -85,7 +85,7 @@ class ManualEvaluationResult:
     prompt_sources: list[dict[str, Any]] = field(default_factory=list)
     raw_assets: list[dict[str, Any]] = field(default_factory=list)
     answer_quality: ManualEvaluationAnswerQuality | None = None
-    citation_quality: ManualEvaluationCitationQuality | None = None
+    prompt_source_quality: ManualEvaluationPromptSourceQuality | None = None
     retrieval_quality: ManualEvaluationRetrievalQuality | None = None
     pipeline_signals: ManualEvaluationPipelineSignals | None = None
     expectation_comparison: ManualEvaluationExpectationComparison | None = None
@@ -100,7 +100,9 @@ class ManualEvaluationResult:
             "prompt_sources": list(self.prompt_sources),
             "raw_assets": list(self.raw_assets),
             "answer_quality": self.answer_quality.to_dict() if self.answer_quality else None,
-            "citation_quality": self.citation_quality.to_dict() if self.citation_quality else None,
+            "prompt_source_quality": self.prompt_source_quality.to_dict()
+            if self.prompt_source_quality
+            else None,
             "retrieval_quality": self.retrieval_quality.to_dict() if self.retrieval_quality else None,
             "pipeline_signals": self.pipeline_signals.to_dict() if self.pipeline_signals else None,
             "expectation_comparison": self.expectation_comparison.to_dict()

@@ -296,13 +296,13 @@ This makes the system ideal for **portfolio demonstration and RAG system educati
 
 - RAG evaluation datasets
 - answer correctness scoring
-- citation precision metrics
+- prompt-source precision metrics
 - regression testing
 
 ## LLM-as-a-Judge
 
 - groundedness scoring
-- citation faithfulness checks
+- prompt source alignment checks
 - hallucination detection
 
 ## Retrieval

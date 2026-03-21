@@ -346,14 +346,14 @@ This makes the system **transparent, debuggable, and educational**.
 
 - gold QA datasets per project
 - answer correctness scoring
-- prompt-source vs expected overlap metrics (reported under existing ``citation_*`` benchmark fields)
+- prompt-source vs expected overlap metrics (reported under ``prompt_*`` benchmark fields)
 - automated RAG regression tests
 - downloadable benchmark reports
 
 ## LLM-as-a-Judge
 
 - groundedness scoring
-- citation faithfulness checks (judge; uses prompt sources and retrieved context)
+- prompt source alignment checks (judge; uses prompt sources and retrieved context)
 - hallucination detection
 - answer relevance scoring
 

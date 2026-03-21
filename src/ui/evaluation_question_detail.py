@@ -90,46 +90,52 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
             )
 
     with section_card(
-        title="Citation quality",
-        subtitle="Citation-level overlap with expected doc IDs and sources.",
+        title="Prompt source quality",
+        subtitle="Prompt-source overlap with expected doc IDs and sources.",
         min_height=0,
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
             render_metric_with_help(
-                label="Citation doc ID F1",
-                value=_f(row.get("citation_doc_id_f1")),
-                metric_key="citation_doc_id_f1",
+                label="Prompt doc ID F1",
+                value=_f(row.get("prompt_doc_id_f1", row.get("citation_doc_id_f1"))),
+                metric_key="prompt_doc_id_f1",
             )
         with c2:
             render_metric_with_help(
-                label="Citation doc ID recall",
-                value=_f(row.get("citation_doc_id_recall")),
-                metric_key="citation_doc_id_recall",
+                label="Prompt doc ID recall",
+                value=_f(row.get("prompt_doc_id_recall", row.get("citation_doc_id_recall"))),
+                metric_key="prompt_doc_id_recall",
             )
         with c3:
             render_metric_with_help(
-                label="Citation faithfulness",
+                label="Prompt source alignment",
                 value=_f(
                     row.get(
-                        "citation_faithfulness_score",
-                        row.get("citation_faithfulness"),
+                        "prompt_source_alignment_score",
+                        row.get(
+                            "citation_faithfulness_score",
+                            row.get(
+                                "prompt_source_alignment",
+                                row.get("citation_faithfulness"),
+                            ),
+                        ),
                     )
                 ),
-                metric_key="citation_faithfulness_score",
+                metric_key="prompt_source_alignment_score",
             )
         c4, c5, c6 = st.columns(3)
         with c4:
             render_metric_with_help(
-                label="Citation source F1",
-                value=_f(row.get("citation_source_f1")),
-                metric_key="citation_source_f1",
+                label="Prompt source F1",
+                value=_f(row.get("prompt_source_f1", row.get("citation_source_f1"))),
+                metric_key="prompt_source_f1",
             )
         with c5:
             render_metric_with_help(
-                label="Citation source recall",
-                value=_f(row.get("citation_source_recall")),
-                metric_key="citation_source_recall",
+                label="Prompt source recall",
+                value=_f(row.get("prompt_source_recall", row.get("citation_source_recall"))),
+                metric_key="prompt_source_recall",
             )
         with c6:
             render_metric_with_help(
