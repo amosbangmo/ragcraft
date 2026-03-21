@@ -27,6 +27,24 @@ def _iso_utc(when: datetime) -> str:
     return when.isoformat().replace("+00:00", "Z")
 
 
+def coerce_generated_at(value: Any) -> datetime | None:
+    """Accept ``datetime`` or ISO-8601 string (e.g. after session round-trips)."""
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        try:
+            normalized = s.replace("Z", "+00:00")
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    return None
+
+
 def safe_filename_segment(value: str, *, max_length: int = 80) -> str:
     cleaned = re.sub(r"[^\w.\-]+", "_", (value or "").strip(), flags=re.UNICODE)
     cleaned = cleaned.strip("._") or "project"
@@ -91,7 +109,7 @@ class BenchmarkReportService:
         enable_hybrid_retrieval: bool,
         generated_at: datetime | None = None,
     ) -> BenchmarkExportArtifacts:
-        when = generated_at or datetime.now(timezone.utc)
+        when = coerce_generated_at(generated_at) or datetime.now(timezone.utc)
         ts_file = _utc_timestamp_for_filename(when)
         ts_meta = _iso_utc(when)
 

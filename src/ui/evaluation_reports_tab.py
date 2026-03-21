@@ -8,7 +8,23 @@ from typing import Any
 
 import streamlit as st
 
-from src.services.benchmark_report_service import BenchmarkExportArtifacts
+def _is_benchmark_export_artifact(obj: Any) -> bool:
+    """
+    Structural check so export UI survives Streamlit hot-reload (multiple class objects
+    for the same dataclass name).
+    """
+    if obj is None:
+        return False
+    required = (
+        "metadata",
+        "json_bytes",
+        "csv_bytes",
+        "markdown_bytes",
+        "json_filename",
+        "csv_filename",
+        "markdown_filename",
+    )
+    return all(hasattr(obj, name) for name in required)
 
 
 def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
@@ -18,7 +34,7 @@ def render_evaluation_reports_tab(reports_payload: dict[str, Any]) -> None:
     )
 
     export = reports_payload.get("export")
-    if not isinstance(export, BenchmarkExportArtifacts):
+    if not _is_benchmark_export_artifact(export):
         st.info(
             "No benchmark export yet. Run **dataset evaluation** above when your gold QA dataset has entries; "
             "download links will appear in this section."

@@ -2,7 +2,21 @@ import unittest
 from datetime import datetime, timezone
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkSummary, BenchmarkRow
-from src.services.benchmark_report_service import BenchmarkReportService
+from src.services.benchmark_report_service import BenchmarkReportService, coerce_generated_at
+
+
+class TestCoerceGeneratedAt(unittest.TestCase):
+    def test_none(self) -> None:
+        self.assertIsNone(coerce_generated_at(None))
+
+    def test_datetime_passthrough(self) -> None:
+        dt = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        self.assertEqual(coerce_generated_at(dt), dt)
+
+    def test_iso_string_z_suffix(self) -> None:
+        out = coerce_generated_at("2025-01-02T03:04:05Z")
+        assert out is not None
+        self.assertEqual(out.tzinfo, timezone.utc)
 
 
 class TestBenchmarkReportService(unittest.TestCase):
@@ -43,6 +57,18 @@ class TestBenchmarkReportService(unittest.TestCase):
         self.assertIn("## Notes", md)
         self.assertIn("judge_failed", md)
         self.assertIn("pipeline_failure_rate", md)
+
+    def test_build_accepts_iso_string_generated_at(self) -> None:
+        result = self._minimal_result()
+        art = self.svc.build_export_artifacts(
+            project_id="p1",
+            result=result,
+            enable_query_rewrite=True,
+            enable_hybrid_retrieval=False,
+            generated_at="2025-06-15T12:00:00+00:00",
+        )
+        self.assertTrue(art.json_filename.endswith(".json"))
+        self.assertIn("2025-06-15", art.metadata.generated_at_utc)
 
     def test_markdown_includes_run_id_when_present(self) -> None:
         result = self._minimal_result(run_id="abc123runid")

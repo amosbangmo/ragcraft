@@ -373,24 +373,35 @@ def _resolve_benchmark_export_artifacts(
     ``st.session_state`` after a run and avoids stale or missing precomputed exports.
     """
     raw = st.session_state.get(dataset_evaluation_result_key)
-    if raw is None or not isinstance(raw, dict) or "error" in raw:
+    if isinstance(raw, dict) and raw.get("error"):
         return None
 
-    result = coerce_benchmark_result(raw.get("result"))
-    if result is None:
-        if not summary and not rows:
-            return None
+    result: BenchmarkResult | None = None
+    enable_query_rewrite = False
+    enable_hybrid_retrieval = False
+    generated_at: object | None = None
+
+    if isinstance(raw, dict) and "result" in raw:
+        result = coerce_benchmark_result(raw.get("result"))
+        enable_query_rewrite = bool(raw.get("enable_query_rewrite"))
+        enable_hybrid_retrieval = bool(raw.get("enable_hybrid_retrieval"))
+        generated_at = raw.get("generated_at")
+
+    if result is None and (summary or rows):
         try:
             result = BenchmarkResult.from_plain_dict({"summary": summary, "rows": rows})
         except (TypeError, ValueError, KeyError):
-            return None
+            result = None
+
+    if result is None:
+        return None
 
     return app.build_benchmark_export_artifacts(
         project_id=project_id,
         result=result,
-        enable_query_rewrite=bool(raw.get("enable_query_rewrite")),
-        enable_hybrid_retrieval=bool(raw.get("enable_hybrid_retrieval")),
-        generated_at=raw.get("generated_at"),
+        enable_query_rewrite=enable_query_rewrite,
+        enable_hybrid_retrieval=enable_hybrid_retrieval,
+        generated_at=generated_at,
     )
 
 
