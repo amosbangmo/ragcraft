@@ -15,34 +15,6 @@ class EvaluationService:
             llm_judge_service if llm_judge_service is not None else LLMJudgeService()
         )
 
-    def compute_confidence(self, reranked_assets: list) -> float:
-        if not reranked_assets:
-            return 0.0
-
-        scores: list[float] = []
-
-        for item in reranked_assets:
-            metadata = self._confidence_metadata(item)
-            score = metadata.get("rerank_score")
-            if score is None:
-                continue
-
-            normalized_score = 1 / (1 + np.exp(-score))
-            scores.append(float(normalized_score))
-
-        if not scores:
-            return 0.0
-
-        confidence = float(np.mean(scores))
-
-        return round(confidence, 2)
-
-    def _confidence_metadata(self, item) -> dict:
-        if isinstance(item, dict):
-            meta = item.get("metadata")
-            return meta if isinstance(meta, dict) else {}
-        return getattr(item, "metadata", None) or {}
-
     def evaluate_gold_qa_dataset(
         self,
         *,

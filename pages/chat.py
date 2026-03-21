@@ -14,6 +14,7 @@ from src.ui.request_runner import (
     render_result_payload,
     run_request_action,
 )
+from src.ui.confidence_display import confidence_band
 from src.ui.source_citations import render_source_citations
 
 
@@ -131,7 +132,8 @@ with st.chat_message("assistant"):
             st.stop()
 
         st.markdown(response.answer)
-        st.markdown(f"**Confidence:** {response.confidence}")
+        band = confidence_band(float(response.confidence))
+        st.markdown(f"**Confidence:** {response.confidence} ({band})")
 
         render_source_citations(getattr(response, "citations", []))
         render_raw_assets(

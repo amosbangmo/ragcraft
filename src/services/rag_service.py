@@ -5,6 +5,7 @@ from src.core.exceptions import LLMServiceError
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.source_citation import SourceCitation
+from src.services.confidence_service import ConfidenceService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
@@ -36,6 +37,7 @@ class RAGService:
         self.evaluation_service = evaluation_service
         self.docstore_service = docstore_service
         self.reranking_service = reranking_service
+        self.confidence_service = ConfidenceService()
         self.source_citation_service = SourceCitationService()
         self.query_rewrite_service = QueryRewriteService(
             max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
@@ -298,7 +300,9 @@ class RAGService:
             raw_context=raw_context,
         )
 
-        confidence = self.evaluation_service.compute_confidence(reranked_raw_assets)
+        confidence = self.confidence_service.compute_confidence(
+            reranked_raw_assets=reranked_raw_assets,
+        )
 
         retrieval_mode = "faiss+bm25" if enable_hybrid_retrieval else "faiss"
 

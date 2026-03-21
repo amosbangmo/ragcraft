@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import cast
 from src.app.ragcraft_app import RAGCraftApp
 from src.domain.benchmark_result import BenchmarkResult
+from src.ui.confidence_display import format_confidence_with_band
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.raw_assets import render_raw_assets
@@ -122,7 +123,10 @@ def _render_evaluation_result(response):
         st.markdown("</div>", unsafe_allow_html=True)
 
     with c2:
-        st.metric("Confidence", response.confidence)
+        st.metric(
+            "Confidence",
+            format_confidence_with_band(float(response.confidence)),
+        )
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="card-title">Source citations</div>', unsafe_allow_html=True)

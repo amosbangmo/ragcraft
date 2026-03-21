@@ -7,6 +7,7 @@ from src.app.ragcraft_app import RAGCraftApp
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.ui.confidence_display import format_confidence_with_band
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.request_runner import (
@@ -307,7 +308,10 @@ def _render_inspection_result(pipeline):
     with top_metrics[5]:
         st.metric("Prompt assets", len(pipeline["reranked_raw_assets"]))
     with top_metrics[6]:
-        st.metric("Confidence", pipeline["confidence"])
+        st.metric(
+            "Confidence",
+            format_confidence_with_band(float(pipeline["confidence"])),
+        )
 
     with st.expander("1. Original query and rewritten retrieval query", expanded=True):
         st.markdown("**Original user query**")

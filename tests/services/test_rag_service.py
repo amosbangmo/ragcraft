@@ -78,6 +78,7 @@ from langchain_core.documents import Document
 from src.core.exceptions import LLMServiceError
 from src.domain.project import Project
 from src.domain.source_citation import SourceCitation
+from src.services.confidence_service import ConfidenceService
 from src.services.rag_service import RAGService
 
 
@@ -219,7 +220,7 @@ class TestRAGService(unittest.TestCase):
 
     def test_run_pipeline_success_builds_payload(self):
         # Validate the orchestration path from retrieval to prompt payload fields.
-        service, _, evaluation_service, docstore_service, reranking_service = self._build_service()
+        service, _, _evaluation_service, docstore_service, reranking_service = self._build_service()
         project = Project(user_id="u1", project_id="p1")
         recalled_summary_docs = [
             Document(page_content="sum1", metadata={"doc_id": "d1"}),
@@ -269,7 +270,6 @@ class TestRAGService(unittest.TestCase):
         ):
             docstore_service.get_assets_by_doc_ids.return_value = raw_assets
             reranking_service.rerank.return_value = reranked_assets
-            evaluation_service.compute_confidence.return_value = 0.77
 
             payload = service._run_pipeline(project=project, question="question", chat_history=["h1"])
 
@@ -277,7 +277,10 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(payload["rewritten_question"], "rewritten")
         self.assertEqual(payload["selected_doc_ids"], ["d1"])
         self.assertEqual(payload["source_references"][0]["doc_id"], "d1")
-        self.assertEqual(payload["confidence"], 0.77)
+        expected_confidence = ConfidenceService().compute_confidence(
+            reranked_raw_assets=reranked_assets,
+        )
+        self.assertEqual(payload["confidence"], expected_confidence)
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
