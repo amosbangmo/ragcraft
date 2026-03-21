@@ -6,6 +6,7 @@ import re
 
 import numpy as np
 
+from src.application.common.evaluation_judge_metrics import EvaluationJudgeMetricsRow
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.multimodal_metrics import (
@@ -70,38 +71,12 @@ def _judge_row_fields(
     Build per-row judge keys. When ``judge_failed``, all judge metrics are ``None`` so clients never
     show numeric placeholders from the judge failure stub (:meth:`LLMJudgeService._failure_result`).
     """
-    if judge_failed:
-        raw_reason = getattr(judge_result, "reason", None)
-        reason = (
-            raw_reason
-            if isinstance(raw_reason, str) and raw_reason.strip()
-            else JUDGE_FAILURE_REASON
-        )
-        return {
-            "groundedness_score": None,
-            "citation_faithfulness_score": None,
-            "answer_relevance_score": None,
-            "hallucination_score": None,
-            "has_hallucination": None,
-            "answer_correctness_score": None,
-            "judge_failure_reason": reason,
-        }
-    ac_row = (
-        _r2(float(getattr(judge_result, "answer_correctness_score", 0.0)))
-        if has_expected_answer
-        else None
-    )
-    return {
-        "groundedness_score": _r2(getattr(judge_result, "groundedness_score", None)),
-        "citation_faithfulness_score": _r2(
-            getattr(judge_result, "citation_faithfulness_score", None)
-        ),
-        "answer_relevance_score": _r2(getattr(judge_result, "answer_relevance_score", None)),
-        "hallucination_score": _r2(getattr(judge_result, "hallucination_score", None)),
-        "has_hallucination": bool(getattr(judge_result, "has_hallucination", False)),
-        "answer_correctness_score": ac_row,
-        "judge_failure_reason": None,
-    }
+    return EvaluationJudgeMetricsRow.from_judge_result(
+        judge_result,
+        judge_failed=judge_failed,
+        has_expected_answer=has_expected_answer,
+        failure_reason_fallback=JUDGE_FAILURE_REASON,
+    ).to_row_fragment()
 
 
 class EvaluationService:

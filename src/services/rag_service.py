@@ -1,6 +1,9 @@
 from time import perf_counter
 from typing import Any
 
+from src.application.common.pipeline_query_context import RAGPipelineQueryContext
+from src.application.common.query_log_payload import QueryLogIngressPayload
+from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
 from src.domain.pipeline_payloads import PipelineBuildResult, SummaryRecallResult
 from src.domain.project import Project
@@ -18,19 +21,19 @@ from src.services.table_qa_service import TableQAService
 from src.services.vectorstore_service import VectorStoreService
 
 
-def _preview_from_summary_recall(bundle: SummaryRecallResult) -> dict | None:
+def _preview_from_summary_recall(bundle: SummaryRecallResult) -> SummaryRecallPreviewDTO | None:
     if not bundle.recalled_summary_docs:
         return None
-    return {
-        "rewritten_question": bundle.rewritten_question,
-        "recalled_summary_docs": bundle.recalled_summary_docs,
-        "vector_summary_docs": bundle.vector_summary_docs,
-        "bm25_summary_docs": bundle.bm25_summary_docs,
-        "retrieval_mode": "faiss+bm25" if bundle.enable_hybrid_retrieval else "faiss",
-        "query_rewrite_enabled": bundle.enable_query_rewrite,
-        "hybrid_retrieval_enabled": bundle.enable_hybrid_retrieval,
-        "use_adaptive_retrieval": bundle.use_adaptive_retrieval,
-    }
+    return SummaryRecallPreviewDTO(
+        rewritten_question=bundle.rewritten_question,
+        recalled_summary_docs=bundle.recalled_summary_docs,
+        vector_summary_docs=bundle.vector_summary_docs,
+        bm25_summary_docs=bundle.bm25_summary_docs,
+        retrieval_mode="faiss+bm25" if bundle.enable_hybrid_retrieval else "faiss",
+        query_rewrite_enabled=bundle.enable_query_rewrite,
+        hybrid_retrieval_enabled=bundle.enable_hybrid_retrieval,
+        use_adaptive_retrieval=bundle.use_adaptive_retrieval,
+    )
 
 
 def _latency_fields_for_query_log(latency: PipelineLatency) -> dict[str, float]:
@@ -52,33 +55,37 @@ def _query_log_payload(
     pipeline: PipelineBuildResult,
     latency: PipelineLatency,
     answer: str | None = None,
-) -> dict[str, Any]:
+) -> QueryLogIngressPayload:
     section_expansion = pipeline.section_expansion
     context_compression = pipeline.context_compression
-    payload: dict[str, Any] = {
-        "question": question,
-        "rewritten_query": pipeline.rewritten_question,
-        "project_id": project.project_id,
-        "user_id": project.user_id,
-        "selected_doc_ids": pipeline.selected_doc_ids,
-        "retrieved_doc_ids": pipeline.recalled_doc_ids,
-        "latency_ms": latency.total_ms,
-        "confidence": pipeline.confidence,
-        "hybrid_retrieval_enabled": pipeline.hybrid_retrieval_enabled,
-        "retrieval_mode": pipeline.retrieval_mode,
-        "query_intent": pipeline.query_intent.value,
-        "table_aware_qa_enabled": pipeline.table_aware_qa_enabled,
-        "retrieval_strategy": pipeline.retrieval_strategy.to_dict(),
-        "context_compression_chars_before": context_compression.chars_before,
-        "context_compression_chars_after": context_compression.chars_after,
-        "context_compression_ratio": context_compression.ratio,
-        "section_expansion_count": section_expansion.section_expansion_count,
-        "expanded_assets_count": section_expansion.expanded_assets_count,
-        **_latency_fields_for_query_log(latency),
-    }
-    if answer is not None:
-        payload["answer"] = answer
-    return payload
+    stage = _latency_fields_for_query_log(latency)
+    return QueryLogIngressPayload(
+        question=question,
+        rewritten_query=pipeline.rewritten_question,
+        project_id=project.project_id,
+        user_id=project.user_id,
+        selected_doc_ids=tuple(pipeline.selected_doc_ids),
+        retrieved_doc_ids=tuple(pipeline.recalled_doc_ids),
+        latency_ms=latency.total_ms,
+        confidence=pipeline.confidence,
+        hybrid_retrieval_enabled=pipeline.hybrid_retrieval_enabled,
+        retrieval_mode=pipeline.retrieval_mode,
+        query_intent=pipeline.query_intent.value,
+        table_aware_qa_enabled=pipeline.table_aware_qa_enabled,
+        retrieval_strategy=pipeline.retrieval_strategy.to_dict(),
+        context_compression_chars_before=context_compression.chars_before,
+        context_compression_chars_after=context_compression.chars_after,
+        context_compression_ratio=context_compression.ratio,
+        section_expansion_count=section_expansion.section_expansion_count,
+        expanded_assets_count=section_expansion.expanded_assets_count,
+        query_rewrite_ms=stage["query_rewrite_ms"],
+        retrieval_ms=stage["retrieval_ms"],
+        reranking_ms=stage["reranking_ms"],
+        prompt_build_ms=stage["prompt_build_ms"],
+        answer_generation_ms=stage["answer_generation_ms"],
+        total_latency_ms=stage["total_latency_ms"],
+        answer=answer,
+    )
 
 
 class RAGService:
@@ -126,11 +133,12 @@ class RAGService:
     def config(self, value: Any) -> None:
         self.retrieval_settings_service.set_config_source(value)
 
-    def _safe_log_query(self, payload: dict[str, Any]) -> None:
+    def _safe_log_query(self, payload: QueryLogIngressPayload | dict[str, Any]) -> None:
         if self.query_log_service is None:
             return
         try:
-            self.query_log_service.log_query(payload=payload)
+            raw = payload.to_log_dict() if isinstance(payload, QueryLogIngressPayload) else payload
+            self.query_log_service.log_query(payload=raw)
         except Exception:
             pass
 
@@ -149,16 +157,24 @@ class RAGService:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> dict | None:
+        ctx = RAGPipelineQueryContext.from_legacy(
+            chat_history,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )
         bundle = self.summary_recall_service.summary_recall_stage(
             project,
             question,
-            chat_history or [],
-            enable_query_rewrite_override=enable_query_rewrite_override,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
-            filters=filters,
-            retrieval_settings=retrieval_settings,
+            list(ctx.chat_history),
+            enable_query_rewrite_override=ctx.enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=ctx.enable_hybrid_retrieval_override,
+            filters=ctx.filters,
+            retrieval_settings=ctx.retrieval_settings,
         )
-        return _preview_from_summary_recall(bundle)
+        preview = _preview_from_summary_recall(bundle)
+        return preview.to_dict() if preview is not None else None
 
     def build_pipeline(
         self,
@@ -173,14 +189,21 @@ class RAGService:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> PipelineBuildResult | None:
         pipeline_started = perf_counter()
+        ctx = RAGPipelineQueryContext.from_legacy(
+            chat_history,
+            filters=filters,
+            retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        )
         bundle = self.summary_recall_service.summary_recall_stage(
             project,
             question,
-            chat_history or [],
-            enable_query_rewrite_override=enable_query_rewrite_override,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
-            filters=filters,
-            retrieval_settings=retrieval_settings,
+            list(ctx.chat_history),
+            enable_query_rewrite_override=ctx.enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=ctx.enable_hybrid_retrieval_override,
+            filters=ctx.filters,
+            retrieval_settings=ctx.retrieval_settings,
         )
         payload = self.pipeline_assembly_service.build(
             project=project,

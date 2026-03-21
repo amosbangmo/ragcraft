@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.application.common.query_log_payload import QueryLogIngressPayload
 from src.domain.query_intent import QueryIntent
 from src.infrastructure.logging.query_log_repository import QueryLogRepository, QueryLogStore
 from src.infrastructure.logging.sqlite_query_log_repository import SQLiteQueryLogRepository
@@ -53,9 +54,10 @@ class QueryLogService:
     def __init__(self, repository: QueryLogStore | None = None) -> None:
         self._repository = repository or SQLiteQueryLogRepository()
 
-    def log_query(self, *, payload: dict) -> None:
+    def log_query(self, *, payload: dict | QueryLogIngressPayload) -> None:
         try:
-            entry = self._build_entry(payload)
+            raw = payload.to_log_dict() if isinstance(payload, QueryLogIngressPayload) else payload
+            entry = self._build_entry(raw)
             self._repository.log(entry)
         except Exception:
             return
