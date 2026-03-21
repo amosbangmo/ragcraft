@@ -71,13 +71,17 @@ if selected_project:
 st.markdown("</div>", unsafe_allow_html=True)
 
 projects = app.list_projects(user_id)
-total_documents = sum(len(app.list_project_documents(user_id, pid)) for pid in projects)
+active_docs = (
+    len(app.list_project_documents(user_id, selected_project))
+    if selected_project
+    else 0
+)
 
 m1, m2 = st.columns(2)
 with m1:
     st.metric("Projects", len(projects))
 with m2:
-    st.metric("Ingested documents", total_documents)
+    st.metric("Ingested documents", active_docs)
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">All projects</div>', unsafe_allow_html=True)
@@ -96,16 +100,6 @@ for project_id in projects:
         f"{'✅ ' if is_current else '📂 '}{project_id} — {len(documents)} document(s) · retrieval: {retrieval_label}",
         expanded=is_current,
     ):
-        col_a, col_b = st.columns([1, 4])
-
-        with col_a:
-            if st.button("Use project", key=f"use_{project_id}", use_container_width=True):
-                st.session_state["project_id"] = project_id
-                st.success(f"Selected project: {project_id}")
-
-        with col_b:
-            if is_current:
-                st.caption("This is the current active project.")
 
         document_action = render_document_table(
             documents=documents,

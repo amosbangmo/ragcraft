@@ -33,8 +33,14 @@ def render_navigation(hide_sidebar: bool = False):
     if auth_service.is_authenticated():
         app = get_app()
         user_id = get_user_id()
-        project_id = st.session_state.get("project_id")
         projects = app.list_projects(user_id)
+        project_id = st.session_state.get("project_id")
+        if not projects:
+            st.session_state["project_id"] = None
+            project_id = None
+        elif not project_id or project_id not in projects:
+            project_id = projects[0]
+            st.session_state["project_id"] = project_id
     else:
         app = None
         user_id = None

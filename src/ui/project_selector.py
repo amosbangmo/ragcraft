@@ -52,12 +52,13 @@ def render_project_selector(
         current_project_id = projects[0]
         st.session_state["project_id"] = current_project_id
 
+    # Use key="project_id" so Streamlit updates session state on change before other
+    # elements (e.g. sidebar navigation) run in the same script pass.
     selected_project = st.selectbox(
         label,
         options=projects,
         index=projects.index(current_project_id),
-        key=f"selector_{label}",
+        key="project_id",
     )
 
-    st.session_state["project_id"] = selected_project
     return selected_project
