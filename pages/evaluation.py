@@ -12,6 +12,7 @@ from src.ui.request_runner import (
     run_request_action,
     render_result_payload,
 )
+from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.source_citations import render_source_citations
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
@@ -487,91 +488,17 @@ def _render_dataset_evaluation_result(payload: dict):
     summary = result.summary.to_dict()
     rows = [row.to_dict() for row in result.rows]
 
-    top_metrics = st.columns(4)
-    with top_metrics[0]:
-        st.metric("Entries", summary["total_entries"])
-    with top_metrics[1]:
-        st.metric("Successful queries", summary["successful_queries"])
-    with top_metrics[2]:
-        st.metric("Avg doc_id recall", summary["avg_doc_id_recall"])
-    with top_metrics[3]:
-        st.metric("Avg source recall", summary["avg_source_recall"])
+    def _scope_metric(key: str, label: str) -> None:
+        raw = summary.get(key)
+        st.metric(label, raw if raw is not None else "—")
 
-    middle_metrics = st.columns(4)
-    with middle_metrics[0]:
-        st.metric("Avg precision@k", summary["avg_precision_at_k"])
-    with middle_metrics[1]:
-        st.metric("MRR", summary["mrr"])
-    with middle_metrics[2]:
-        st.metric("MAP", summary["map"])
-    with middle_metrics[3]:
-        st.metric("Avg confidence", summary["avg_confidence"])
+    scope = st.columns(2)
+    with scope[0]:
+        _scope_metric("total_entries", "Entries")
+    with scope[1]:
+        _scope_metric("successful_queries", "Successful queries")
 
-    correctness_metrics = st.columns(8)
-    with correctness_metrics[0]:
-        st.metric("Entries w/ expected answers", summary["entries_with_expected_answers"])
-    with correctness_metrics[1]:
-        st.metric("Exact match rate", summary["answer_exact_match_rate"])
-    with correctness_metrics[2]:
-        st.metric("Avg answer precision", summary["avg_answer_precision"])
-    with correctness_metrics[3]:
-        st.metric("Avg answer recall", summary["avg_answer_recall"])
-    with correctness_metrics[4]:
-        st.metric("Avg answer F1", summary["avg_answer_f1"])
-    with correctness_metrics[5]:
-        st.metric("Avg answer relevance", summary["avg_answer_relevance"])
-    with correctness_metrics[6]:
-        st.metric("Avg groundedness", summary["avg_groundedness"])
-    with correctness_metrics[7]:
-        st.metric("Avg citation faithfulness", summary["avg_citation_faithfulness"])
-
-    hallucination_metrics = st.columns(2)
-    with hallucination_metrics[0]:
-        st.metric("Avg hallucination score", summary["avg_hallucination_score"])
-    with hallucination_metrics[1]:
-        st.metric("Hallucination rate", summary["hallucination_rate"])
-
-    citation_doc_metrics = st.columns(4)
-    with citation_doc_metrics[0]:
-        st.metric("Citation doc_id precision", summary["avg_citation_doc_id_precision"])
-    with citation_doc_metrics[1]:
-        st.metric("Citation doc_id recall", summary["avg_citation_doc_id_recall"])
-    with citation_doc_metrics[2]:
-        st.metric("Citation doc_id F1", summary["avg_citation_doc_id_f1"])
-    with citation_doc_metrics[3]:
-        st.metric("Citation doc_id hit rate", summary["citation_doc_id_hit_rate"])
-
-    citation_source_metrics = st.columns(4)
-    with citation_source_metrics[0]:
-        st.metric("Citation source precision", summary["avg_citation_source_precision"])
-    with citation_source_metrics[1]:
-        st.metric("Citation source recall", summary["avg_citation_source_recall"])
-    with citation_source_metrics[2]:
-        st.metric("Citation source F1", summary["avg_citation_source_f1"])
-    with citation_source_metrics[3]:
-        st.metric("Citation source hit rate", summary["citation_source_hit_rate"])
-
-    bottom_metrics = st.columns(5)
-    with bottom_metrics[0]:
-        st.metric("Avg latency (ms)", summary["avg_latency_ms"])
-    with bottom_metrics[1]:
-        st.metric("Doc_id hit rate", summary["doc_id_hit_rate"])
-    with bottom_metrics[2]:
-        st.metric("Source hit rate", summary["source_hit_rate"])
-    with bottom_metrics[3]:
-        st.metric("Entries with expected doc_ids", summary["entries_with_expected_doc_ids"])
-    with bottom_metrics[4]:
-        st.metric("Entries with expected sources", summary["entries_with_expected_sources"])
-
-    st.markdown("### Per-entry metrics")
-    display_rows: list[dict] = []
-    for row in rows:
-        display_row = dict(row)
-        flag = display_row.get("has_hallucination")
-        if isinstance(flag, bool):
-            display_row["has_hallucination"] = "Hallucination" if flag else "Supported"
-        display_rows.append(display_row)
-    st.dataframe(display_rows, use_container_width=True)
+    render_evaluation_dashboard(summary=summary, rows=rows)
 
     st.markdown("### Download benchmark reports")
     export = app.build_benchmark_export_artifacts(
