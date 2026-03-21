@@ -31,7 +31,13 @@ from src.services.reranking_service import RerankingService
 from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
-from src.services.benchmark_report_service import BenchmarkExportArtifacts, BenchmarkReportService
+from src.application.evaluation.benchmark_export_dtos import (
+    BenchmarkExportArtifacts,
+    BuildBenchmarkExportCommand,
+)
+from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
+)
 from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.retrieval_filters import RetrievalFilters
@@ -64,7 +70,6 @@ class RAGCraftApp:
             docstore_service=self.docstore_service,
             project_service=self.project_service,
         )
-        self.benchmark_report_service = BenchmarkReportService()
         self.project_settings_service = ProjectSettingsService()
 
         self._rag_service = None
@@ -536,10 +541,12 @@ class RAGCraftApp:
         generated_at: datetime | None = None,
     ) -> BenchmarkExportArtifacts:
         """Build JSON/CSV/Markdown downloads; ``BenchmarkExportArtifacts.run_id`` mirrors ``result.run_id`` when set."""
-        return self.benchmark_report_service.build_export_artifacts(
-            project_id=project_id,
-            result=result,
-            enable_query_rewrite=enable_query_rewrite,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
-            generated_at=generated_at,
+        return BuildBenchmarkExportArtifactsUseCase().execute(
+            BuildBenchmarkExportCommand(
+                project_id=project_id,
+                result=result,
+                enable_query_rewrite=enable_query_rewrite,
+                enable_hybrid_retrieval=enable_hybrid_retrieval,
+                generated_at=generated_at,
+            )
         )
