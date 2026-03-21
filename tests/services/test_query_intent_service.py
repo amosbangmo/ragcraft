@@ -68,7 +68,10 @@ class TestQueryIntentService(unittest.TestCase):
         )
 
     def test_classify_never_raises(self) -> None:
-        with patch.object(QueryIntentService, "_classify_inner", side_effect=RuntimeError("boom")):
+        with patch(
+            "src.domain.retrieval.query_intent_classification._classify_query_intent_inner",
+            side_effect=RuntimeError("boom"),
+        ):
             self.assertEqual(QueryIntentService().classify("hello"), QueryIntent.UNKNOWN)
 
 

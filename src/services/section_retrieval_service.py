@@ -1,190 +1,20 @@
 """
 Section-aware retrieval expansion: widen the rerank pool with same-section and
 neighbor chunks so related context is scored together.
+
+Pure eligibility/distance rules: :mod:`src.domain.retrieval.section_expansion_rules`.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-
-def _norm_str(value: object | None) -> str | None:
-    if value is None:
-        return None
-    s = str(value).strip()
-    return s or None
-
-
-def _meta(asset: dict) -> dict:
-    return asset.get("metadata") or {}
-
-
-def _source_file(asset: dict) -> str | None:
-    return _norm_str(asset.get("source_file")) or _norm_str(_meta(asset).get("source_file"))
-
-
-def _element_span(asset: dict) -> tuple[int, int] | None:
-    m = _meta(asset)
-    raw_s, raw_e = m.get("start_element_index"), m.get("end_element_index")
-    if raw_s is None or raw_e is None:
-        return None
-    try:
-        s, e = int(raw_s), int(raw_e)
-    except (TypeError, ValueError):
-        return None
-    lo, hi = (s, e) if s <= e else (e, s)
-    return lo, hi
-
-
-def _page_span(asset: dict) -> tuple[int, int] | None:
-    m = _meta(asset)
-    ps, pe = m.get("page_start"), m.get("page_end")
-    if ps is not None and pe is not None:
-        try:
-            a, b = int(ps), int(pe)
-        except (TypeError, ValueError):
-            return None
-        lo, hi = (a, b) if a <= b else (b, a)
-        return lo, hi
-    pn = m.get("page_number")
-    if pn is not None:
-        try:
-            p = int(pn)
-        except (TypeError, ValueError):
-            return None
-        return p, p
-    return None
-
-
-def _pages_overlap(a: tuple[int, int] | None, b: tuple[int, int] | None) -> bool:
-    if not a or not b:
-        return False
-    return not (a[1] < b[0] or b[1] < a[0])
-
-
-def _element_gap(
-    span_a: tuple[int, int] | None,
-    span_b: tuple[int, int] | None,
-) -> int | None:
-    if not span_a or not span_b:
-        return None
-    alo, ahi = span_a
-    blo, bhi = span_b
-    if alo <= bhi and blo <= ahi:
-        return 0
-    if ahi < blo:
-        return blo - ahi - 1
-    if bhi < alo:
-        return alo - bhi - 1
-    return 0
-
-
-def _has_expansion_signals(asset: dict) -> bool:
-    m = _meta(asset)
-    if _norm_str(m.get("section_id")):
-        return True
-    if _norm_str(m.get("chunk_title")):
-        return True
-    if _norm_str(m.get("section_title")):
-        return True
-    if _element_span(asset) is not None:
-        return True
-    if _page_span(asset) is not None:
-        return True
-    return False
-
-
-def _anchor_cap_key(seed: dict) -> str:
-    """Bucket for per-section expansion limits (anchored on the retrieved seed)."""
-    m = _meta(seed)
-    sf = _source_file(seed) or ""
-    sid = _norm_str(m.get("section_id"))
-    if sid:
-        return f"sid:{sf}:{sid}"
-    ct = _norm_str(m.get("chunk_title"))
-    if ct:
-        return f"ct:{sf}:{ct}"
-    st = _norm_str(m.get("section_title"))
-    if st:
-        return f"st:{sf}:{st}"
-    if _element_span(seed) is not None or _page_span(seed) is not None:
-        return f"prox:{sf}"
-    return f"none:{sf}"
-
-
-def _distance(seed: dict, candidate: dict, *, neighbor_window: int) -> int:
-    ms, mc = _meta(seed), _meta(candidate)
-
-    sid_s = _norm_str(ms.get("section_id"))
-    sid_c = _norm_str(mc.get("section_id"))
-    if sid_s and sid_c and sid_s == sid_c:
-        return 0
-
-    ct_s = _norm_str(ms.get("chunk_title"))
-    ct_c = _norm_str(mc.get("chunk_title"))
-    if ct_s and ct_c and ct_s == ct_c:
-        return 0
-
-    st_s = _norm_str(ms.get("section_title"))
-    st_c = _norm_str(mc.get("section_title"))
-    if st_s and st_c and st_s == st_c:
-        return 0
-
-    es, ec = _element_span(seed), _element_span(candidate)
-    gap = _element_gap(es, ec)
-    if gap is not None and gap <= neighbor_window:
-        return gap
-
-    ps, pc = _page_span(seed), _page_span(candidate)
-    if _pages_overlap(ps, pc):
-        if gap is not None:
-            return neighbor_window + 1 + gap
-        return neighbor_window + 1
-
-    return 10**9
-
-
-def _eligible_pair(
-    seed: dict,
-    candidate: dict,
-    *,
-    neighbor_window: int,
-) -> bool:
-    if not _has_expansion_signals(seed):
-        return False
-
-    sf_s = _source_file(seed)
-    sf_c = _source_file(candidate)
-    if not sf_s or sf_s != sf_c:
-        return False
-
-    ms, mc = _meta(seed), _meta(candidate)
-
-    sid_s = _norm_str(ms.get("section_id"))
-    sid_c = _norm_str(mc.get("section_id"))
-    if sid_s and sid_c and sid_s == sid_c:
-        return True
-
-    ct_s = _norm_str(ms.get("chunk_title"))
-    ct_c = _norm_str(mc.get("chunk_title"))
-    if ct_s and ct_c and ct_s == ct_c:
-        return True
-
-    st_s = _norm_str(ms.get("section_title"))
-    st_c = _norm_str(mc.get("section_title"))
-    if st_s and st_c and st_s == st_c:
-        return True
-
-    es, ec = _element_span(seed), _element_span(candidate)
-    gap = _element_gap(es, ec)
-    if gap is not None and gap <= neighbor_window:
-        return True
-
-    ps, pc = _page_span(seed), _page_span(candidate)
-    if _pages_overlap(ps, pc):
-        return True
-
-    return False
+from src.domain.retrieval.section_expansion_rules import (
+    anchor_cap_key,
+    eligible_expansion_pair,
+    expansion_distance,
+    has_expansion_signals,
+)
 
 
 @dataclass(frozen=True)
@@ -227,7 +57,7 @@ class SectionRetrievalService:
                 expanded_assets_count=len(retrieved_assets),
             )
 
-        if not any(_has_expansion_signals(a) for a in retrieved_assets):
+        if not any(has_expansion_signals(a) for a in retrieved_assets):
             return SectionExpansionResult(
                 assets=list(retrieved_assets),
                 applied=False,
@@ -259,7 +89,7 @@ class SectionRetrievalService:
 
         key_counts: dict[str, int] = {}
         for a in pool:
-            k = _anchor_cap_key(a)
+            k = anchor_cap_key(a)
             key_counts[k] = key_counts.get(k, 0) + 1
 
         seeds_by_id: dict[str, dict] = {
@@ -275,9 +105,9 @@ class SectionRetrievalService:
                 cid = cand.get("doc_id")
                 if not cid or str(cid) in pool_ids:
                     continue
-                if not _eligible_pair(seed, cand, neighbor_window=neighbor_window):
+                if not eligible_expansion_pair(seed, cand, neighbor_window=neighbor_window):
                     continue
-                dist = _distance(seed, cand, neighbor_window=neighbor_window)
+                dist = expansion_distance(seed, cand, neighbor_window=neighbor_window)
                 pair_scores.append((dist, str(sid), str(cid), cand))
 
         pair_scores.sort(key=lambda t: (t[0], t[1], t[2]))
@@ -291,7 +121,7 @@ class SectionRetrievalService:
             seed = seeds_by_id.get(seed_id)
             if seed is None:
                 continue
-            cap_key = _anchor_cap_key(seed)
+            cap_key = anchor_cap_key(seed)
             if key_counts.get(cap_key, 0) >= max_per_section:
                 continue
             if dist >= 10**9:
