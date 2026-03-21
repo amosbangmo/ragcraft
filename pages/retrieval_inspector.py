@@ -446,6 +446,17 @@ def _render_inspection_result(pipeline):
             format_confidence_with_band(float(pipeline["confidence"])),
         )
 
+    mm = pipeline.get("multimodal_analysis") or {}
+    mm_labels = [
+        label
+        for label, key in (("text", "has_text"), ("table", "has_table"), ("image", "has_image"))
+        if mm.get(key)
+    ]
+    st.caption(
+        "Modalities in final prompt: "
+        + (", ".join(mm_labels) if mm_labels else "none detected")
+    )
+
     se = pipeline.get("section_expansion") or {}
     if se:
         st.markdown("### Section-aware expansion")
@@ -568,6 +579,8 @@ def _render_inspection_result(pipeline):
             "latency": pipeline.get("latency"),
             "context_compression": pipeline.get("context_compression"),
             "section_expansion": pipeline.get("section_expansion"),
+            "multimodal_analysis": pipeline.get("multimodal_analysis"),
+            "multimodal_orchestration_hint": pipeline.get("multimodal_orchestration_hint"),
             "pre_rerank_raw_assets_doc_ids": [
                 a.get("doc_id")
                 for a in (pipeline.get("pre_rerank_raw_assets") or [])

@@ -30,6 +30,24 @@ class TestPromptBuilderService(unittest.TestCase):
         self.assertIn("Table-focused question: read carefully.", p)
         self.assertIn("Raw multimodal context:", p)
 
+    def test_orchestration_hint_omitted_by_default(self) -> None:
+        p = self.svc.build_prompt(
+            question="Q?",
+            chat_history=[],
+            raw_context="ctx",
+        )
+        self.assertNotIn("Multimodal orchestration:", p)
+
+    def test_orchestration_hint_injected_when_provided(self) -> None:
+        p = self.svc.build_prompt(
+            question="Q?",
+            chat_history=[],
+            raw_context="ctx",
+            orchestration_hint="Use table for numbers.",
+        )
+        self.assertIn("Multimodal orchestration:", p)
+        self.assertIn("Use table for numbers.", p)
+
     def test_table_asset_includes_structured_excerpt(self) -> None:
         asset = {
             "content_type": "table",

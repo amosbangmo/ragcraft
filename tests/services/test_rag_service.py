@@ -313,6 +313,16 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(payload["section_expansion"]["recall_pool_size"], 1)
         self.assertIn("image_context_enriched", payload)
         self.assertFalse(payload["image_context_enriched"])
+        self.assertEqual(
+            payload.get("multimodal_analysis"),
+            {
+                "has_text": True,
+                "has_table": False,
+                "has_image": False,
+                "modality_count": 1,
+            },
+        )
+        self.assertEqual(payload.get("multimodal_orchestration_hint"), "")
 
     @patch("src.services.rag_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):

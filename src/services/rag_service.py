@@ -21,6 +21,7 @@ from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.hybrid_retrieval_service import HybridRetrievalService
 from src.services.layout_context_service import LayoutContextService
+from src.services.multimodal_orchestration_service import MultimodalOrchestrationService
 from src.services.prompt_builder_service import PromptBuilderService
 from src.services.query_intent_service import QueryIntentService
 from src.services.query_log_service import QueryLogService
@@ -81,6 +82,7 @@ class RAGService:
         self.query_log_service = query_log_service
         self.section_retrieval_service = SectionRetrievalService()
         self.layout_context_service = LayoutContextService()
+        self.multimodal_orchestration_service = MultimodalOrchestrationService()
 
     @staticmethod
     def _latency_fields_for_query_log(latency: PipelineLatency) -> dict:
@@ -490,6 +492,10 @@ class RAGService:
             image_context_by_doc_id=image_ctx_by_id,
             asset_groups=asset_groups,
         )
+        multimodal_analysis = self.multimodal_orchestration_service.analyze(prompt_context_assets)
+        multimodal_orchestration_hint = self.multimodal_orchestration_service.build_prompt_hint(
+            multimodal_analysis
+        )
         prompt = self.prompt_builder_service.build_prompt(
             question=question,
             chat_history=chat_history,
@@ -499,6 +505,7 @@ class RAGService:
                 if table_aware_qa_enabled
                 else None
             ),
+            orchestration_hint=multimodal_orchestration_hint or None,
             layout_aware=bool(asset_groups),
         )
         prompt_build_ms = (perf_counter() - t0) * 1000.0
@@ -550,6 +557,8 @@ class RAGService:
             "context_compression": context_compression,
             "source_references": source_references,
             "image_context_enriched": image_context_enriched,
+            "multimodal_analysis": multimodal_analysis,
+            "multimodal_orchestration_hint": multimodal_orchestration_hint,
             "raw_context": raw_context,
             "prompt": prompt,
             "confidence": confidence,

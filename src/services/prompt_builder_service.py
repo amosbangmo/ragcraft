@@ -101,6 +101,7 @@ class PromptBuilderService:
         chat_history: list[str],
         raw_context: str,
         table_aware_instruction: str | None = None,
+        orchestration_hint: str | None = None,
         layout_aware: bool = False,
     ) -> str:
         history_text = "\n".join(chat_history) if chat_history else "No prior chat history."
@@ -108,6 +109,10 @@ class PromptBuilderService:
         table_block = ""
         if table_aware_instruction and table_aware_instruction.strip():
             table_block = f"\n{table_aware_instruction.strip()}\n"
+
+        orchestration_block = ""
+        if orchestration_hint and orchestration_hint.strip():
+            orchestration_block = f"\nMultimodal orchestration:\n{orchestration_hint.strip()}\n"
 
         layout_block = ""
         if layout_aware:
@@ -127,7 +132,7 @@ Question:
 
 Raw multimodal context:
 {raw_context}
-{table_block}
+{table_block}{orchestration_block}
 Instructions:
 - Use only the provided raw context.
 - Retrieval happened in two stages:
