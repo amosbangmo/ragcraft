@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+
+from src.domain.project import Project
+from src.services.docstore_service import DocStoreService
+from src.services.vectorstore_service import VectorStoreService
+
+
+def replace_document_assets_for_reingest(
+    *,
+    project: Project,
+    user_id: str,
+    project_id: str,
+    source_file: str,
+    docstore_service: DocStoreService,
+    vectorstore_service: VectorStoreService,
+    invalidate_project_chain: Callable[[str, str], None],
+) -> dict:
+    """
+    Remove existing vectors and SQLite assets for ``source_file``, then invalidate the
+    retrieval cache when anything was removed.
+    """
+    existing_doc_ids = docstore_service.get_doc_ids_for_source_file(
+        user_id=user_id,
+        project_id=project_id,
+        source_file=source_file,
+    )
+
+    deleted_vectors = 0
+    deleted_assets = 0
+
+    if existing_doc_ids:
+        vectorstore_service.delete_documents(project, existing_doc_ids)
+        deleted_vectors = len(existing_doc_ids)
+
+        deleted_assets = docstore_service.delete_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
+
+        invalidate_project_chain(user_id, project_id)
+
+    return {
+        "existing_doc_ids": existing_doc_ids,
+        "deleted_vectors": deleted_vectors,
+        "deleted_assets": deleted_assets,
+    }

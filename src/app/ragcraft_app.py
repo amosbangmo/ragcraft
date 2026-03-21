@@ -1,10 +1,14 @@
-import json
-import logging
-from dataclasses import replace
 from datetime import datetime
 from time import perf_counter
 
 from src.infrastructure.persistence.db import init_app_db
+from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
+from src.application.ingestion.use_cases.dtos import DeleteDocumentCommand, ReindexDocumentCommand
+from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
+from src.application.ingestion.use_cases.replace_document_assets import (
+    replace_document_assets_for_reingest,
+)
+from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
 from src.auth.auth_service import AuthService
 from src.services.project_service import ProjectService
 from src.services.ingestion_service import IngestionService
@@ -25,7 +29,6 @@ from src.services.benchmark_report_service import BenchmarkExportArtifacts, Benc
 from src.services.manual_evaluation_service import ManualEvaluationService
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.retrieval_filters import RetrievalFilters
-from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.pipeline_payloads import PipelineBuildResult
@@ -225,190 +228,48 @@ class RAGCraftApp:
 
     def replace_document_assets(self, user_id: str, project_id: str, source_file: str) -> dict:
         project = self.get_project(user_id, project_id)
-
-        existing_doc_ids = self.docstore_service.get_doc_ids_for_source_file(
+        return replace_document_assets_for_reingest(
+            project=project,
             user_id=user_id,
             project_id=project_id,
             source_file=source_file,
+            docstore_service=self.docstore_service,
+            vectorstore_service=self.vectorstore_service,
+            invalidate_project_chain=self.invalidate_project_chain,
         )
-
-        deleted_vectors = 0
-        deleted_assets = 0
-
-        if existing_doc_ids:
-            self.vectorstore_service.delete_documents(project, existing_doc_ids)
-            deleted_vectors = len(existing_doc_ids)
-
-            deleted_assets = self.docstore_service.delete_assets_for_source_file(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=source_file,
-            )
-
-            self.invalidate_project_chain(user_id, project_id)
-
-        return {
-            "existing_doc_ids": existing_doc_ids,
-            "deleted_vectors": deleted_vectors,
-            "deleted_assets": deleted_assets,
-        }
 
     def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
         project = self.get_project(user_id, project_id)
-        file_path = project.path / source_file
-
-        existing_doc_ids = self.docstore_service.get_doc_ids_for_source_file(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
+        uc = DeleteDocumentUseCase(
+            docstore_service=self.docstore_service,
+            vectorstore_service=self.vectorstore_service,
+            invalidate_project_chain=self.invalidate_project_chain,
         )
-
-        deleted_vectors = 0
-        deleted_assets = 0
-        file_deleted = False
-
-        if existing_doc_ids:
-            self.vectorstore_service.delete_documents(project, existing_doc_ids)
-            deleted_vectors = len(existing_doc_ids)
-
-            deleted_assets = self.docstore_service.delete_assets_for_source_file(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=source_file,
-            )
-
-        if file_path.exists() and file_path.is_file():
-            file_path.unlink()
-            file_deleted = True
-
-        self.invalidate_project_chain(user_id, project_id)
-
-        return {
-            "source_file": source_file,
-            "file_deleted": file_deleted,
-            "deleted_vectors": deleted_vectors,
-            "deleted_assets": deleted_assets,
-        }
-
-    def _maybe_log_ingestion_diagnostics(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        source_file: str,
-        diagnostics: IngestionDiagnostics,
-    ) -> None:
-        log = logging.getLogger("ragcraft.ingestion")
-        try:
-            log.info(
-                json.dumps(
-                    {
-                        "event": "ingestion_diagnostics",
-                        "user_id": user_id,
-                        "project_id": project_id,
-                        "source_file": source_file,
-                        **diagnostics.to_dict(),
-                    },
-                    ensure_ascii=False,
-                )
-            )
-        except Exception:
-            return
+        return uc.execute(
+            DeleteDocumentCommand(project=project, source_file=source_file)
+        ).as_payload()
 
     def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
         project = self.get_project(user_id, project_id)
-
-        replacement_info = self.replace_document_assets(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=uploaded_file.name,
+        uc = IngestUploadedFileUseCase(
+            ingestion_service=self.ingestion_service,
+            docstore_service=self.docstore_service,
+            vectorstore_service=self.vectorstore_service,
+            invalidate_project_chain=self.invalidate_project_chain,
         )
-
-        summary_documents, raw_assets, diagnostics = self.ingestion_service.ingest_uploaded_file(
-            project,
-            uploaded_file,
-        )
-
-        if not raw_assets:
-            raise ValueError(f"No raw assets generated for file: {uploaded_file.name}")
-
-        for asset in raw_assets:
-            self.docstore_service.save_asset(**asset)
-
-        indexing_ms = 0.0
-        if summary_documents:
-            _, indexing_ms = self.vectorstore_service.index_documents(project, summary_documents)
-
-        diagnostics = replace(
-            diagnostics,
-            indexing_ms=indexing_ms,
-            total_ms=diagnostics.extraction_ms + diagnostics.summarization_ms + indexing_ms,
-        )
-
-        self.invalidate_project_chain(user_id, project_id)
-
-        payload = {
-            "raw_assets": raw_assets,
-            "replacement_info": replacement_info,
-            "diagnostics": diagnostics,
-        }
-        self._maybe_log_ingestion_diagnostics(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=uploaded_file.name,
-            diagnostics=diagnostics,
-        )
-        return payload
+        return uc.execute(project, uploaded_file).as_payload()
 
     def reindex_project_document(self, user_id: str, project_id: str, source_file: str):
         project = self.get_project(user_id, project_id)
-        file_path = project.path / source_file
-
-        if not file_path.exists() or not file_path.is_file():
-            raise FileNotFoundError(f"Document not found on disk: {source_file}")
-
-        replacement_info = self.replace_document_assets(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
+        uc = ReindexDocumentUseCase(
+            ingestion_service=self.ingestion_service,
+            docstore_service=self.docstore_service,
+            vectorstore_service=self.vectorstore_service,
+            invalidate_project_chain=self.invalidate_project_chain,
         )
-
-        summary_documents, raw_assets, diagnostics = self.ingestion_service.ingest_file_path(
-            project=project,
-            file_path=file_path,
-            source_file=source_file,
-        )
-
-        if not raw_assets:
-            raise ValueError(f"No raw assets generated for file: {source_file}")
-
-        for asset in raw_assets:
-            self.docstore_service.save_asset(**asset)
-
-        indexing_ms = 0.0
-        if summary_documents:
-            _, indexing_ms = self.vectorstore_service.index_documents(project, summary_documents)
-
-        diagnostics = replace(
-            diagnostics,
-            indexing_ms=indexing_ms,
-            total_ms=diagnostics.extraction_ms + diagnostics.summarization_ms + indexing_ms,
-        )
-
-        self.invalidate_project_chain(user_id, project_id)
-
-        payload = {
-            "raw_assets": raw_assets,
-            "replacement_info": replacement_info,
-            "diagnostics": diagnostics,
-        }
-        self._maybe_log_ingestion_diagnostics(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
-            diagnostics=diagnostics,
-        )
-        return payload
+        return uc.execute(
+            ReindexDocumentCommand(project=project, source_file=source_file)
+        ).as_payload()
 
     def ask_question(
         self,
