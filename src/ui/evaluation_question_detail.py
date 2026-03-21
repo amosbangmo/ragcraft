@@ -7,6 +7,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.ui.metric_help import render_metric_with_help
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.section_card import inject_section_card_styles, section_card
 
@@ -51,18 +52,42 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Groundedness", _f(row.get("groundedness_score", row.get("groundedness"))))
+            render_metric_with_help(
+                label="Groundedness",
+                value=_f(row.get("groundedness_score", row.get("groundedness"))),
+                metric_key="groundedness_score",
+            )
         with c2:
-            st.metric("Answer relevance", _f(row.get("answer_relevance_score", row.get("answer_relevance"))))
+            render_metric_with_help(
+                label="Answer relevance",
+                value=_f(row.get("answer_relevance_score", row.get("answer_relevance"))),
+                metric_key="answer_relevance_score",
+            )
         with c3:
-            st.metric("Hallucination score", _f(row.get("hallucination_score")))
+            render_metric_with_help(
+                label="Hallucination score",
+                value=_f(row.get("hallucination_score")),
+                metric_key="hallucination_score",
+            )
         c4, c5, c6 = st.columns(3)
         with c4:
-            st.metric("Has hallucination", _f(row.get("has_hallucination")))
+            render_metric_with_help(
+                label="Has hallucination",
+                value=_f(row.get("has_hallucination")),
+                metric_key="has_hallucination",
+            )
         with c5:
-            st.metric("Answer F1 (gold)", _f(row.get("answer_f1")))
+            render_metric_with_help(
+                label="Answer F1 (gold)",
+                value=_f(row.get("answer_f1")),
+                metric_key="answer_f1",
+            )
         with c6:
-            st.metric("Exact match (gold)", _f(row.get("answer_exact_match")))
+            render_metric_with_help(
+                label="Exact match (gold)",
+                value=_f(row.get("answer_exact_match")),
+                metric_key="answer_exact_match",
+            )
 
     with section_card(
         title="Citation quality",
@@ -71,18 +96,47 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Citation doc ID F1", _f(row.get("citation_doc_id_f1")))
+            render_metric_with_help(
+                label="Citation doc ID F1",
+                value=_f(row.get("citation_doc_id_f1")),
+                metric_key="citation_doc_id_f1",
+            )
         with c2:
-            st.metric("Citation doc ID recall", _f(row.get("citation_doc_id_recall")))
+            render_metric_with_help(
+                label="Citation doc ID recall",
+                value=_f(row.get("citation_doc_id_recall")),
+                metric_key="citation_doc_id_recall",
+            )
         with c3:
-            st.metric("Citation faithfulness", _f(row.get("citation_faithfulness_score", row.get("citation_faithfulness"))))
+            render_metric_with_help(
+                label="Citation faithfulness",
+                value=_f(
+                    row.get(
+                        "citation_faithfulness_score",
+                        row.get("citation_faithfulness"),
+                    )
+                ),
+                metric_key="citation_faithfulness_score",
+            )
         c4, c5, c6 = st.columns(3)
         with c4:
-            st.metric("Citation source F1", _f(row.get("citation_source_f1")))
+            render_metric_with_help(
+                label="Citation source F1",
+                value=_f(row.get("citation_source_f1")),
+                metric_key="citation_source_f1",
+            )
         with c5:
-            st.metric("Citation source recall", _f(row.get("citation_source_recall")))
+            render_metric_with_help(
+                label="Citation source recall",
+                value=_f(row.get("citation_source_recall")),
+                metric_key="citation_source_recall",
+            )
         with c6:
-            st.metric("Cited doc IDs", _f(row.get("cited_doc_ids_count")))
+            render_metric_with_help(
+                label="Cited doc IDs",
+                value=_f(row.get("cited_doc_ids_count")),
+                metric_key="cited_doc_ids_count",
+            )
 
     with section_card(
         title="Retrieval quality",
@@ -91,16 +145,36 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Doc ID recall", _f(row.get("doc_id_recall")))
+            render_metric_with_help(
+                label="Doc ID recall",
+                value=_f(row.get("doc_id_recall")),
+                metric_key="doc_id_recall",
+            )
         with c2:
-            st.metric("Precision@k", _f(row.get("precision_at_k")))
+            render_metric_with_help(
+                label="Precision@k",
+                value=_f(row.get("precision_at_k")),
+                metric_key="precision_at_k",
+            )
         with c3:
-            st.metric("Source recall", _f(row.get("source_recall")))
+            render_metric_with_help(
+                label="Source recall",
+                value=_f(row.get("source_recall")),
+                metric_key="source_recall",
+            )
         c4, c5 = st.columns(2)
         with c4:
-            st.metric("MRR (row)", _f(row.get("reciprocal_rank")))
+            render_metric_with_help(
+                label="MRR (row)",
+                value=_f(row.get("reciprocal_rank")),
+                metric_key="reciprocal_rank",
+            )
         with c5:
-            st.metric("MAP (row)", _f(row.get("average_precision")))
+            render_metric_with_help(
+                label="MAP (row)",
+                value=_f(row.get("average_precision")),
+                metric_key="average_precision",
+            )
 
     with section_card(
         title="Pipeline signals",
@@ -109,16 +183,36 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
     ):
         c1, c2, c3 = st.columns(3)
         with c1:
-            st.metric("Confidence", _f(row.get("confidence")))
+            render_metric_with_help(
+                label="Confidence",
+                value=_f(row.get("confidence")),
+                metric_key="confidence",
+            )
         with c2:
-            st.metric("Latency (ms)", _f(row.get("latency_ms")))
+            render_metric_with_help(
+                label="Latency (ms)",
+                value=_f(row.get("latency_ms")),
+                metric_key="latency_ms",
+            )
         with c3:
-            st.metric("Retrieval mode", row.get("retrieval_mode") or "—")
+            render_metric_with_help(
+                label="Retrieval mode",
+                value=row.get("retrieval_mode") or "—",
+                metric_key="retrieval_mode",
+            )
         c4, c5 = st.columns(2)
         with c4:
-            st.metric("Query rewrite", "On" if row.get("query_rewrite_enabled") else "Off")
+            render_metric_with_help(
+                label="Query rewrite",
+                value="On" if row.get("query_rewrite_enabled") else "Off",
+                metric_key="query_rewrite_enabled",
+            )
         with c5:
-            st.metric("Hybrid retrieval", "On" if row.get("hybrid_retrieval_enabled") else "Off")
+            render_metric_with_help(
+                label="Hybrid retrieval",
+                value="On" if row.get("hybrid_retrieval_enabled") else "Off",
+                metric_key="hybrid_retrieval_enabled",
+            )
 
     with section_card(
         title="Detected issues",

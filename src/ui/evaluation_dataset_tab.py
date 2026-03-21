@@ -15,6 +15,7 @@ from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_question_detail import render_benchmark_row_detail
+from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
 
@@ -33,12 +34,14 @@ def _summary_metric_cell(summary: dict, key: str, label: str, *, as_percent: boo
     raw = summary.get(key)
     num = _coerce_float(raw)
     if num is None:
-        st.metric(label, "—")
+        render_metric_with_help(label=label, value="—", metric_key=key)
         return
     if as_percent:
-        st.metric(label, f"{num * 100:.1f}%")
+        render_metric_with_help(
+            label=label, value=f"{num * 100:.1f}%", metric_key=key
+        )
     else:
-        st.metric(label, num)
+        render_metric_with_help(label=label, value=num, metric_key=key)
 
 
 def _render_dataset_overview(
@@ -51,9 +54,17 @@ def _render_dataset_overview(
     st.markdown("##### At a glance")
     c1, c2 = st.columns(2)
     with c1:
-        st.metric("Dataset entries", entry_count)
+        render_metric_with_help(
+            label="Dataset entries",
+            value=entry_count,
+            metric_key="dataset_entry_count",
+        )
     with c2:
-        st.metric("Current project", project_id)
+        render_metric_with_help(
+            label="Current project",
+            value=project_id,
+            metric_key="evaluation_project_context",
+        )
 
     if not summary and not rows:
         st.info(

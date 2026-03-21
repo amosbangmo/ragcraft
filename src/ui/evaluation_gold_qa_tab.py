@@ -12,6 +12,7 @@ from src.app.ragcraft_app import RAGCraftApp
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError
 from src.ui.evaluation_manual_tab import parse_evaluation_csv_list
+from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
 
 
@@ -220,7 +221,11 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
             "Lightweight status for the dataset. Detailed listing, benchmark scores, and delete actions "
             "live under **Dataset evaluation → Entries** so there is a single entries surface."
         )
-        st.metric("Entries in this project", entry_count)
+        render_metric_with_help(
+            label="Entries in this project",
+            value=entry_count,
+            metric_key="gold_qa_entry_count",
+        )
         st.markdown("###### Hygiene tips")
         st.markdown(
             "- Use **Generate → Append with dedup** to grow the dataset without repeating questions.\n"

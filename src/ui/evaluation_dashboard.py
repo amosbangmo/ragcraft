@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from src.ui.metric_help import render_metric_with_help
 from src.ui.section_card import inject_section_card_styles, section_card
 
 
@@ -27,12 +28,14 @@ def _summary_metric(summary: dict, key: str, label: str, *, as_percent: bool = F
     raw = summary.get(key)
     num = _coerce_float(raw)
     if num is None:
-        st.metric(label, "—")
+        render_metric_with_help(label=label, value="—", metric_key=key)
         return
     if as_percent:
-        st.metric(label, f"{num * 100:.1f}%")
+        render_metric_with_help(
+            label=label, value=f"{num * 100:.1f}%", metric_key=key
+        )
     else:
-        st.metric(label, num)
+        render_metric_with_help(label=label, value=num, metric_key=key)
 
 
 def _coerce_hallucination_flag(value: object) -> bool:
@@ -245,9 +248,17 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             ratio = (n_flagged / n_total) if n_total else 0.0
             m1, m2 = st.columns(2)
             with m1:
-                st.metric("Flagged rows", n_flagged)
+                render_metric_with_help(
+                    label="Flagged rows",
+                    value=n_flagged,
+                    metric_key="hallucination_flagged_rows",
+                )
             with m2:
-                st.metric("Flagged share", f"{ratio * 100:.1f}%")
+                render_metric_with_help(
+                    label="Flagged share",
+                    value=f"{ratio * 100:.1f}%",
+                    metric_key="hallucination_flagged_share",
+                )
             counts = pd.Series(
                 {"Not flagged": int((~hall_mask).sum()), "Flagged": n_flagged},
                 name="rows",
@@ -407,4 +418,8 @@ def render_evaluation_dashboard(
                         st.write(ans)
                     else:
                         st.caption("No answer text available for this row.")
-                    st.metric("Hallucination score", score if score is not None else "—")
+                    render_metric_with_help(
+                        label="Hallucination score",
+                        value=score if score is not None else "—",
+                        metric_key="hallucination_score",
+                    )

@@ -4,6 +4,7 @@ import streamlit as st
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.ui.confidence_display import format_confidence_with_band
+from src.ui.metric_help import render_metric_with_help
 from src.ui.raw_assets import render_raw_assets
 from src.ui.source_citations import render_source_citations
 
@@ -20,11 +21,13 @@ def _fmt_bool(value: bool | None) -> str:
     return "Yes" if value else "No"
 
 
-def _metric_row(items: list[tuple[str, str]]) -> None:
+def _metric_row(items: list[tuple[str, str, str | None]]) -> None:
     cols = st.columns(len(items))
-    for col, (label, display) in zip(cols, items):
+    for col, (label, display, metric_key) in zip(cols, items):
         with col:
-            st.metric(label, display)
+            render_metric_with_help(
+                label=label, value=display, metric_key=metric_key
+            )
 
 
 def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
@@ -65,7 +68,11 @@ def render_manual_evaluation_result(
     with c1:
         st.write(result.answer or "—")
     with c2:
-        st.metric("Confidence", format_confidence_with_band(float(result.confidence)))
+        render_metric_with_help(
+            label="Confidence",
+            value=format_confidence_with_band(float(result.confidence)),
+            metric_key="confidence",
+        )
 
     st.caption("Citations summary")
     render_source_citations(result.citations)
@@ -81,23 +88,43 @@ def render_manual_evaluation_result(
         )
         _metric_row(
             [
-                ("Confidence", format_confidence_with_band(float(aq.confidence))),
-                ("Groundedness", _fmt_float(aq.groundedness_score)),
-                ("Answer relevance", _fmt_float(aq.answer_relevance_score)),
+                (
+                    "Confidence",
+                    format_confidence_with_band(float(aq.confidence)),
+                    "confidence",
+                ),
+                ("Groundedness", _fmt_float(aq.groundedness_score), "groundedness_score"),
+                (
+                    "Answer relevance",
+                    _fmt_float(aq.answer_relevance_score),
+                    "answer_relevance_score",
+                ),
             ]
         )
         _metric_row(
             [
-                ("Hallucination score (↑ better)", _fmt_float(aq.hallucination_score)),
-                ("Has hallucination", _fmt_bool(aq.has_hallucination)),
-                ("Exact match (gold)", _fmt_float(aq.answer_exact_match)),
+                (
+                    "Hallucination score (↑ better)",
+                    _fmt_float(aq.hallucination_score),
+                    "hallucination_score",
+                ),
+                ("Has hallucination", _fmt_bool(aq.has_hallucination), "has_hallucination"),
+                (
+                    "Exact match (gold)",
+                    _fmt_float(aq.answer_exact_match),
+                    "answer_exact_match",
+                ),
             ]
         )
         _metric_row(
             [
-                ("Answer precision (gold)", _fmt_float(aq.answer_precision)),
-                ("Answer recall (gold)", _fmt_float(aq.answer_recall)),
-                ("Answer F1 (gold)", _fmt_float(aq.answer_f1)),
+                (
+                    "Answer precision (gold)",
+                    _fmt_float(aq.answer_precision),
+                    "answer_precision",
+                ),
+                ("Answer recall (gold)", _fmt_float(aq.answer_recall), "answer_recall"),
+                ("Answer F1 (gold)", _fmt_float(aq.answer_f1), "answer_f1"),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -112,21 +139,49 @@ def render_manual_evaluation_result(
         )
         _metric_row(
             [
-                ("Citation doc_id P", _fmt_float(cq.citation_doc_id_precision)),
-                ("Citation doc_id R", _fmt_float(cq.citation_doc_id_recall)),
-                ("Citation doc_id F1", _fmt_float(cq.citation_doc_id_f1)),
+                (
+                    "Citation doc_id P",
+                    _fmt_float(cq.citation_doc_id_precision),
+                    "citation_doc_id_precision",
+                ),
+                (
+                    "Citation doc_id R",
+                    _fmt_float(cq.citation_doc_id_recall),
+                    "citation_doc_id_recall",
+                ),
+                (
+                    "Citation doc_id F1",
+                    _fmt_float(cq.citation_doc_id_f1),
+                    "citation_doc_id_f1",
+                ),
             ]
         )
         _metric_row(
             [
-                ("Citation source P", _fmt_float(cq.citation_source_precision)),
-                ("Citation source R", _fmt_float(cq.citation_source_recall)),
-                ("Citation source F1", _fmt_float(cq.citation_source_f1)),
+                (
+                    "Citation source P",
+                    _fmt_float(cq.citation_source_precision),
+                    "citation_source_precision",
+                ),
+                (
+                    "Citation source R",
+                    _fmt_float(cq.citation_source_recall),
+                    "citation_source_recall",
+                ),
+                (
+                    "Citation source F1",
+                    _fmt_float(cq.citation_source_f1),
+                    "citation_source_f1",
+                ),
             ]
         )
         _metric_row(
             [
-                ("Citation faithfulness", _fmt_float(cq.citation_faithfulness_score)),
+                (
+                    "Citation faithfulness",
+                    _fmt_float(cq.citation_faithfulness_score),
+                    "citation_faithfulness_score",
+                ),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -141,21 +196,37 @@ def render_manual_evaluation_result(
         )
         _metric_row(
             [
-                ("Doc_id recall", _fmt_float(rq.doc_id_recall)),
-                ("Source recall", _fmt_float(rq.source_recall)),
-                ("Precision@K", _fmt_float(rq.precision_at_k)),
+                ("Doc_id recall", _fmt_float(rq.doc_id_recall), "doc_id_recall"),
+                ("Source recall", _fmt_float(rq.source_recall), "source_recall"),
+                ("Precision@K", _fmt_float(rq.precision_at_k), "precision_at_k"),
             ]
         )
         _metric_row(
             [
-                ("Reciprocal rank", _fmt_float(rq.reciprocal_rank)),
-                ("Average precision", _fmt_float(rq.average_precision)),
-                ("Retrieved doc_ids", str(rq.retrieved_doc_ids_count)),
+                (
+                    "Reciprocal rank",
+                    _fmt_float(rq.reciprocal_rank),
+                    "reciprocal_rank",
+                ),
+                (
+                    "Average precision",
+                    _fmt_float(rq.average_precision),
+                    "average_precision",
+                ),
+                (
+                    "Retrieved doc_ids",
+                    str(rq.retrieved_doc_ids_count),
+                    "retrieved_doc_ids_count",
+                ),
             ]
         )
         _metric_row(
             [
-                ("Distinct cited sources", str(rq.selected_source_count)),
+                (
+                    "Distinct cited sources",
+                    str(rq.selected_source_count),
+                    "selected_source_count",
+                ),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)
@@ -170,15 +241,27 @@ def render_manual_evaluation_result(
         )
         _metric_row(
             [
-                ("Confidence", format_confidence_with_band(float(ps.confidence))),
-                ("Latency (ms)", f"{ps.latency_ms:.1f}"),
-                ("Retrieval mode", ps.retrieval_mode),
+                (
+                    "Confidence",
+                    format_confidence_with_band(float(ps.confidence)),
+                    "confidence",
+                ),
+                ("Latency (ms)", f"{ps.latency_ms:.1f}", "latency_ms"),
+                ("Retrieval mode", ps.retrieval_mode, "retrieval_mode"),
             ]
         )
         _metric_row(
             [
-                ("Query rewrite", "On" if ps.query_rewrite_enabled else "Off"),
-                ("Hybrid retrieval", "On" if ps.hybrid_retrieval_enabled else "Off"),
+                (
+                    "Query rewrite",
+                    "On" if ps.query_rewrite_enabled else "Off",
+                    "query_rewrite_enabled",
+                ),
+                (
+                    "Hybrid retrieval",
+                    "On" if ps.hybrid_retrieval_enabled else "Off",
+                    "hybrid_retrieval_enabled",
+                ),
             ]
         )
         st.markdown("</div>", unsafe_allow_html=True)
