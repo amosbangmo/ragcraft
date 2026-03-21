@@ -9,6 +9,8 @@ from src.core.config import LLM
 
 class HallucinationService:
     """
+    Deprecated: use ``LLMJudgeService`` for a single-pass judge with all metrics.
+
     LLM-as-a-judge: detect factual claims in the answer that are not supported by
     the provided context (hallucinations), including partial hallucinations.
     """

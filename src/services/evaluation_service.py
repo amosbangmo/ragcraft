@@ -5,22 +5,15 @@ import re
 import numpy as np
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.services.llm_judge_service import LLMJudgeService
 
 
 class EvaluationService:
-    def __init__(
-        self,
-        groundedness_service: object | None = None,
-        citation_faithfulness_service: object | None = None,
-        answer_relevance_service: object | None = None,
-        hallucination_service: object | None = None,
-    ):
-        # Optional LLM-judge implementations; kept untyped so importing ``EvaluationService``
-        # does not pull LLM / OpenAI dependencies.
-        self._groundedness_service = groundedness_service
-        self._citation_faithfulness_service = citation_faithfulness_service
-        self._answer_relevance_service = answer_relevance_service
-        self._hallucination_service = hallucination_service
+    def __init__(self, llm_judge_service: object | None = None):
+        # Untyped so tests can inject a stub without coupling to ``LLMJudgeService``.
+        self._llm_judge_service = (
+            llm_judge_service if llm_judge_service is not None else LLMJudgeService()
+        )
 
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
@@ -154,6 +147,9 @@ class EvaluationService:
                     "answer_relevance": 0.0,
                     "hallucination_score": 0.0,
                     "has_hallucination": True,
+                    "groundedness_score": 0.0,
+                    "citation_faithfulness_score": 0.0,
+                    "answer_relevance_score": 0.0,
                 }
                 rows.append(
                     BenchmarkRow(
@@ -298,48 +294,25 @@ class EvaluationService:
             confidence_values.append(confidence)
             latency_values.append(latency_ms)
 
-            raw_context = (pipeline.get("raw_context") or "").strip()
-            if self._groundedness_service is not None and answer:
-                groundedness = self._groundedness_service.compute_groundedness(
-                    question=entry.question,
-                    answer=answer,
-                    raw_context=raw_context,
-                )
-            else:
-                groundedness = 0.0
-            groundedness_values.append(groundedness)
-
             refs_for_judge: list[dict] = []
             if isinstance(source_references, list):
                 refs_for_judge = [r for r in source_references if isinstance(r, dict)]
-            if self._citation_faithfulness_service is not None and answer:
-                citation_faithfulness = self._citation_faithfulness_service.compute_citation_faithfulness(
-                    question=entry.question,
-                    answer=answer,
-                    source_references=refs_for_judge,
-                    raw_context=raw_context,
-                )
-            else:
-                citation_faithfulness = 0.0
+
+            judge_result = self._llm_judge_service.evaluate(
+                question=entry.question,
+                answer=result.get("answer", ""),
+                raw_context=pipeline.get("raw_context", ""),
+                citations=refs_for_judge,
+            )
+            groundedness = judge_result.groundedness_score
+            citation_faithfulness = judge_result.citation_faithfulness_score
+            answer_relevance = judge_result.answer_relevance_score
+            hallucination_score = judge_result.hallucination_score
+            has_hallucination = judge_result.has_hallucination
+
+            groundedness_values.append(groundedness)
             citation_faithfulness_values.append(citation_faithfulness)
-
-            if self._answer_relevance_service is not None and answer:
-                answer_relevance = self._answer_relevance_service.compute_answer_relevance(
-                    question=entry.question,
-                    answer=answer,
-                )
-            else:
-                answer_relevance = 0.0
             answer_relevance_values.append(answer_relevance)
-
-            if self._hallucination_service is not None and answer:
-                hallucination_score, has_hallucination = self._hallucination_service.compute_hallucination(
-                    question=entry.question,
-                    answer=answer,
-                    raw_context=raw_context,
-                )
-            else:
-                hallucination_score, has_hallucination = 1.0, False
             hallucination_score_values.append(hallucination_score)
             hallucination_flags.append(has_hallucination)
 
@@ -380,6 +353,9 @@ class EvaluationService:
                 "answer_relevance": round(answer_relevance, 2),
                 "hallucination_score": round(hallucination_score, 2),
                 "has_hallucination": bool(has_hallucination),
+                "groundedness_score": round(judge_result.groundedness_score, 2),
+                "citation_faithfulness_score": round(judge_result.citation_faithfulness_score, 2),
+                "answer_relevance_score": round(judge_result.answer_relevance_score, 2),
             }
             rows.append(
                 BenchmarkRow(

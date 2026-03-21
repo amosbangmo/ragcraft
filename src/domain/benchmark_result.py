@@ -34,7 +34,9 @@ class BenchmarkRow:
 
     Common LLM-judge fields include ``groundedness``, ``citation_faithfulness``,
     ``answer_relevance``, and ``hallucination_score`` (0–1 when configured), plus
-    ``has_hallucination`` (boolean).
+    ``has_hallucination`` (boolean). The unified judge also adds
+    ``groundedness_score``, ``citation_faithfulness_score``, and
+    ``answer_relevance_score`` (mirrors of the above for explicit naming).
     """
 
     entry_id: int

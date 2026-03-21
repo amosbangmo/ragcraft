@@ -1,5 +1,6 @@
 import unittest
 
+from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.services.evaluation_service import EvaluationService
 
@@ -10,50 +11,12 @@ from tests.quality.benchmark_regression_checks import (
 )
 
 
-class StubGroundednessService:
-    def __init__(self, score: float) -> None:
-        self._score = score
+class StubLLMJudgeService:
+    def __init__(self, result: LLMJudgeResult) -> None:
+        self._result = result
 
-    def compute_groundedness(self, *, question: str, answer: str, raw_context: str) -> float:
-        return self._score
-
-
-class StubCitationFaithfulnessService:
-    def __init__(self, score: float) -> None:
-        self._score = score
-
-    def compute_citation_faithfulness(
-        self,
-        *,
-        question: str,
-        answer: str,
-        source_references: list[dict],
-        raw_context: str,
-    ) -> float:
-        return self._score
-
-
-class StubAnswerRelevanceService:
-    def __init__(self, score: float) -> None:
-        self._score = score
-
-    def compute_answer_relevance(self, *, question: str, answer: str) -> float:
-        return self._score
-
-
-class StubHallucinationService:
-    def __init__(self, score: float, has_hallucination: bool) -> None:
-        self._score = score
-        self._has_hallucination = has_hallucination
-
-    def compute_hallucination(
-        self,
-        *,
-        question: str,
-        answer: str,
-        raw_context: str,
-    ) -> tuple[float, bool]:
-        return self._score, self._has_hallucination
+    def evaluate(self, **_kwargs) -> LLMJudgeResult:
+        return self._result
 
 
 def _good_pipeline_for(entry: QADatasetEntry) -> dict:
@@ -106,11 +69,16 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
                 "latency_ms": 10.0,
             }
 
+        judge = LLMJudgeResult(
+            groundedness_score=1.0,
+            citation_faithfulness_score=1.0,
+            answer_relevance_score=1.0,
+            hallucination_score=1.0,
+            has_hallucination=False,
+            reason=None,
+        )
         result = EvaluationService(
-            groundedness_service=StubGroundednessService(1.0),
-            citation_faithfulness_service=StubCitationFaithfulnessService(1.0),
-            answer_relevance_service=StubAnswerRelevanceService(1.0),
-            hallucination_service=StubHallucinationService(1.0, False),
+            llm_judge_service=StubLLMJudgeService(judge),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
@@ -155,11 +123,16 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
                 "latency_ms": 5.0,
             }
 
+        judge = LLMJudgeResult(
+            groundedness_score=0.0,
+            citation_faithfulness_score=0.0,
+            answer_relevance_score=0.0,
+            hallucination_score=0.0,
+            has_hallucination=True,
+            reason=None,
+        )
         result = EvaluationService(
-            groundedness_service=StubGroundednessService(0.0),
-            citation_faithfulness_service=StubCitationFaithfulnessService(0.0),
-            answer_relevance_service=StubAnswerRelevanceService(0.0),
-            hallucination_service=StubHallucinationService(0.0, True),
+            llm_judge_service=StubLLMJudgeService(judge),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,

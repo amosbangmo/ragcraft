@@ -9,6 +9,8 @@ from src.core.config import LLM
 
 class GroundednessService:
     """
+    Deprecated: use ``LLMJudgeService`` for a single-pass judge with all metrics.
+
     LLM-as-a-judge groundedness: whether the answer is fully supported by the raw
     retrieval context (not string overlap with expected answers).
     """

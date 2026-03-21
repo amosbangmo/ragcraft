@@ -9,6 +9,8 @@ from src.core.config import LLM
 
 class CitationFaithfulnessService:
     """
+    Deprecated: use ``LLMJudgeService`` for a single-pass judge with all metrics.
+
     LLM-as-a-judge: whether cited sources actually support the claims made in the
     answer (not whether citations match a gold label set).
     """

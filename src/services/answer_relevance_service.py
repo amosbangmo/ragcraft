@@ -9,6 +9,8 @@ from src.core.config import LLM
 
 class AnswerRelevanceService:
     """
+    Deprecated: use ``LLMJudgeService`` for a single-pass judge with all metrics.
+
     LLM-as-a-judge: how well the answer addresses the user's question (coverage,
     focus, usefulness), independent of factual correctness or retrieval grounding.
     """
