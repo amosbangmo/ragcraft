@@ -12,11 +12,13 @@ class EvaluationService:
         self,
         groundedness_service: object | None = None,
         citation_faithfulness_service: object | None = None,
+        answer_relevance_service: object | None = None,
     ):
         # Optional LLM-judge implementations; kept untyped so importing ``EvaluationService``
         # does not pull LLM / OpenAI dependencies.
         self._groundedness_service = groundedness_service
         self._citation_faithfulness_service = citation_faithfulness_service
+        self._answer_relevance_service = answer_relevance_service
 
     def compute_confidence(self, reranked_assets: list) -> float:
         if not reranked_assets:
@@ -79,6 +81,7 @@ class EvaluationService:
 
         groundedness_values: list[float] = []
         citation_faithfulness_values: list[float] = []
+        answer_relevance_values: list[float] = []
 
         entries_with_expected_doc_ids = 0
         entries_with_expected_sources = 0
@@ -144,6 +147,7 @@ class EvaluationService:
                     "hybrid_retrieval_enabled": False,
                     "groundedness": 0.0,
                     "citation_faithfulness": 0.0,
+                    "answer_relevance": 0.0,
                 }
                 rows.append(
                     BenchmarkRow(
@@ -154,6 +158,7 @@ class EvaluationService:
                 )
                 groundedness_values.append(0.0)
                 citation_faithfulness_values.append(0.0)
+                answer_relevance_values.append(0.0)
                 latency_values.append(latency_ms)
                 continue
 
@@ -310,6 +315,15 @@ class EvaluationService:
                 citation_faithfulness = 0.0
             citation_faithfulness_values.append(citation_faithfulness)
 
+            if self._answer_relevance_service is not None and answer:
+                answer_relevance = self._answer_relevance_service.compute_answer_relevance(
+                    question=entry.question,
+                    answer=answer,
+                )
+            else:
+                answer_relevance = 0.0
+            answer_relevance_values.append(answer_relevance)
+
             row_payload = {
                 "expected_doc_ids_count": len(expected_doc_ids),
                 "retrieved_doc_ids_count": len(selected_doc_ids),
@@ -344,6 +358,7 @@ class EvaluationService:
                 "hybrid_retrieval_enabled": bool(pipeline.get("hybrid_retrieval_enabled", False)),
                 "groundedness": round(groundedness, 2),
                 "citation_faithfulness": round(citation_faithfulness, 2),
+                "answer_relevance": round(answer_relevance, 2),
             }
             rows.append(
                 BenchmarkRow(
@@ -413,6 +428,9 @@ class EvaluationService:
             else 0.0,
             "avg_citation_faithfulness": round(float(np.mean(citation_faithfulness_values)), 2)
             if citation_faithfulness_values
+            else 0.0,
+            "avg_answer_relevance": round(float(np.mean(answer_relevance_values)), 2)
+            if answer_relevance_values
             else 0.0,
         }
 

@@ -33,6 +33,14 @@ class StubCitationFaithfulnessService:
         return self._score
 
 
+class StubAnswerRelevanceService:
+    def __init__(self, score: float) -> None:
+        self._score = score
+
+    def compute_answer_relevance(self, *, question: str, answer: str) -> float:
+        return self._score
+
+
 def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     doc_ids = list(entry.expected_doc_ids or [])
     sources = list(entry.expected_sources or [])
@@ -86,6 +94,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
         result = EvaluationService(
             groundedness_service=StubGroundednessService(1.0),
             citation_faithfulness_service=StubCitationFaithfulnessService(1.0),
+            answer_relevance_service=StubAnswerRelevanceService(1.0),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
@@ -98,6 +107,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_citation_source_f1=0.99,
             min_avg_groundedness=0.99,
             min_avg_citation_faithfulness=0.99,
+            min_avg_answer_relevance=0.99,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
 
@@ -132,6 +142,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
         result = EvaluationService(
             groundedness_service=StubGroundednessService(0.0),
             citation_faithfulness_service=StubCitationFaithfulnessService(0.0),
+            answer_relevance_service=StubAnswerRelevanceService(0.0),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,
@@ -144,6 +155,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_citation_source_f1=0.5,
             min_avg_groundedness=0.5,
             min_avg_citation_faithfulness=0.5,
+            min_avg_answer_relevance=0.5,
         )
         violations = collect_benchmark_regression_violations(result, thresholds)
         self.assertTrue(violations)

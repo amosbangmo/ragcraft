@@ -180,6 +180,7 @@ class BenchmarkReportService:
                 "doc_id_recall",
                 "source_recall",
                 "answer_f1",
+                "answer_relevance",
                 "groundedness",
                 "citation_faithfulness",
                 "citation_doc_id_f1",

@@ -55,6 +55,7 @@ class BenchmarkRegressionThresholds:
     min_avg_citation_source_f1: float | None = None
     min_avg_groundedness: float | None = None
     min_avg_citation_faithfulness: float | None = None
+    min_avg_answer_relevance: float | None = None
     min_successful_queries: int | None = None
 
 
@@ -111,6 +112,14 @@ def collect_benchmark_regression_violations(
             violations.append(
                 "avg_citation_faithfulness "
                 f"{actual} < minimum {thresholds.min_avg_citation_faithfulness}"
+            )
+
+    if thresholds.min_avg_answer_relevance is not None:
+        actual = _summary_float(summary, "avg_answer_relevance")
+        if actual < thresholds.min_avg_answer_relevance:
+            violations.append(
+                "avg_answer_relevance "
+                f"{actual} < minimum {thresholds.min_avg_answer_relevance}"
             )
 
     return violations
