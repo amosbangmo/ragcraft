@@ -9,6 +9,8 @@ FAILURE_LABEL_ORDER: tuple[str, ...] = (
     "hallucination",
     "low_relevance",
     "low_confidence",
+    "table_misuse",
+    "image_hallucination",
 )
 
 DEFAULT_QUALITY_THRESHOLD = 0.5
@@ -173,6 +175,19 @@ class FailureAnalysisService:
         ):
             labels.append("grounding_failure")
 
+        ctx_table = _coerce_bool(row.get("context_uses_table"))
+        if ctx_table is None:
+            ctx_table = False
+        ctx_image = _coerce_bool(row.get("context_uses_image"))
+        if ctx_image is None:
+            ctx_image = False
+
+        if ctx_table and has_gold and answer_f1 is not None and answer_f1 < self._q:
+            labels.append("table_misuse")
+
+        if ctx_image and ((hall_score is not None and hall_score < self._hall) or hall_flag is True):
+            labels.append("image_hallucination")
+
         ordered = [lb for lb in FAILURE_LABEL_ORDER if lb in labels]
 
         critical = bool(
@@ -206,4 +221,6 @@ class FailureAnalysisService:
             "answer_relevance": _coerce_float(row.get("answer_relevance")),
             "confidence": _coerce_float(row.get("confidence")),
             "citation_doc_id_precision": _coerce_float(row.get("citation_doc_id_precision")),
+            "context_uses_table": _coerce_bool(row.get("context_uses_table")),
+            "context_uses_image": _coerce_bool(row.get("context_uses_image")),
         }

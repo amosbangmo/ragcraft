@@ -24,13 +24,20 @@ def _good_pipeline_for(entry: QADatasetEntry) -> dict:
     sources = list(entry.expected_sources or [])
     refs = []
     for doc_id, src in zip(doc_ids, sources):
-        refs.append({"doc_id": doc_id, "source_file": src})
+        refs.append({"doc_id": doc_id, "source_file": src, "content_type": "text"})
     if not refs and doc_ids:
-        refs = [{"doc_id": doc_ids[0], "source_file": sources[0] if sources else "s.pdf"}]
+        refs = [{"doc_id": doc_ids[0], "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}]
+    base_doc = doc_ids[0] if doc_ids else "d1"
+    base_src = sources[0] if sources else "s.pdf"
+    prompt_assets = [
+        {"doc_id": base_doc, "source_file": base_src, "content_type": "text"},
+        {"doc_id": base_doc, "source_file": base_src, "content_type": "table"},
+    ]
     return {
         "selected_doc_ids": doc_ids or ["d1"],
         "source_references": refs
-        or [{"doc_id": "d1", "source_file": sources[0] if sources else "s.pdf"}],
+        or [{"doc_id": "d1", "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}],
+        "prompt_context_assets": prompt_assets,
         "confidence": 0.9,
         "retrieval_mode": "hybrid",
         "query_rewrite_enabled": False,
@@ -94,6 +101,10 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             min_avg_answer_relevance=0.99,
         )
         assert_benchmark_meets_thresholds(result, thresholds)
+        mm = result.multimodal_metrics
+        self.assertIsNotNone(mm)
+        self.assertTrue(mm.get("has_multimodal_assets"))
+        self.assertEqual(mm.get("table_usage_rate"), 1.0)
 
     def test_evaluation_service_regression_detected_when_runner_degrades(self):
         entries = [

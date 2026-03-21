@@ -5,6 +5,11 @@ import re
 import numpy as np
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.domain.multimodal_metrics import (
+    aggregate_multimodal_metrics,
+    empty_modality_row_fields,
+    modality_row_fields_from_pipeline,
+)
 from src.services.correlation_service import CorrelationService
 from src.services.failure_analysis_service import FailureAnalysisService
 from src.services.llm_judge_service import LLMJudgeService
@@ -163,6 +168,7 @@ class EvaluationService:
                     "groundedness_score": 0.0,
                     "citation_faithfulness_score": 0.0,
                     "answer_relevance_score": 0.0,
+                    **empty_modality_row_fields(),
                 }
                 rows.append(
                     BenchmarkRow(
@@ -371,6 +377,7 @@ class EvaluationService:
                 "groundedness_score": round(judge_result.groundedness_score, 2),
                 "citation_faithfulness_score": round(judge_result.citation_faithfulness_score, 2),
                 "answer_relevance_score": round(judge_result.answer_relevance_score, 2),
+                **modality_row_fields_from_pipeline(pipeline),
             }
             rows.append(
                 BenchmarkRow(
@@ -477,11 +484,18 @@ class EvaluationService:
                 BenchmarkRow(entry_id=row.entry_id, question=row.question, data=d)
             )
 
+        row_dicts_final = [row.to_dict() for row in rebuilt]
+        mm_raw = aggregate_multimodal_metrics(row_dicts_final)
+        multimodal_metrics = None
+        if mm_raw and mm_raw.get("has_multimodal_assets"):
+            multimodal_metrics = dict(mm_raw)
+
         return BenchmarkResult(
             summary=BenchmarkSummary(data=summary_payload),
             rows=rebuilt,
             correlations=correlations,
             failures=failures_report,
+            multimodal_metrics=multimodal_metrics,
         )
 
     def _compute_precision_at_k(

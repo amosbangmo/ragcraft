@@ -166,6 +166,8 @@ _FAILURE_TYPE_LABELS: dict[str, str] = {
     "hallucination": "Hallucination signal",
     "low_relevance": "Low relevance",
     "low_confidence": "Low confidence",
+    "table_misuse": "Table context + low gold F1",
+    "image_hallucination": "Image context + hallucination signal",
 }
 
 
@@ -359,6 +361,146 @@ def render_overview_insight_charts(rows: list[dict]) -> None:
             "Doc ID recall",
             _numeric_series(df, "doc_id_recall"),
         )
+
+
+def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
+    if not multimodal_metrics:
+        return
+
+    with section_card(
+        title="Multimodal performance",
+        subtitle="Usage of tables and images in retrieved or cited context, mixed-modality prompts, and quality "
+        "when those modalities appear.",
+        min_height=0,
+    ):
+        u1, u2, u3 = st.columns(3)
+        with u1:
+            _summary_metric(
+                multimodal_metrics,
+                "table_usage_rate",
+                "Table usage (retrieval or citations)",
+                as_percent=True,
+            )
+        with u2:
+            _summary_metric(
+                multimodal_metrics,
+                "image_usage_rate",
+                "Image usage (retrieval or citations)",
+                as_percent=True,
+            )
+        with u3:
+            _summary_metric(
+                multimodal_metrics,
+                "multimodal_answers_rate",
+                "Mixed-modality prompts (≥2 asset types)",
+                as_percent=True,
+            )
+
+        q1, q2 = st.columns(2)
+        with q1:
+            tc = multimodal_metrics.get("table_correctness")
+            if tc is None:
+                render_metric_with_help(
+                    label="Table rows — avg answer F1",
+                    value="—",
+                    metric_key="table_correctness",
+                )
+            else:
+                render_metric_with_help(
+                    label="Table rows — avg answer F1",
+                    value=float(tc),
+                    metric_key="table_correctness",
+                )
+        with q2:
+            ig = multimodal_metrics.get("image_groundedness")
+            if ig is None:
+                render_metric_with_help(
+                    label="Image rows — avg groundedness",
+                    value="—",
+                    metric_key="image_groundedness",
+                )
+            else:
+                render_metric_with_help(
+                    label="Image rows — avg groundedness",
+                    value=float(ig),
+                    metric_key="image_groundedness",
+                )
+
+        eligible = multimodal_metrics.get("eligible_rows")
+        if eligible is not None:
+            st.caption(f"Based on **{int(eligible)}** successful pipeline row(s) with modality metadata.")
+
+        by_mod = multimodal_metrics.get("by_modality")
+        if isinstance(by_mod, dict) and by_mod:
+            st.markdown("##### Performance by modality context")
+            records: list[dict[str, Any]] = []
+            labels = {
+                "text_only": "Text-only context",
+                "with_table": "Table in context",
+                "with_image": "Image in context",
+            }
+            for key, title in labels.items():
+                block = by_mod.get(key)
+                if not isinstance(block, dict):
+                    continue
+                rc = block.get("row_count")
+                f1 = block.get("avg_answer_f1")
+                g = block.get("avg_groundedness")
+                records.append(
+                    {
+                        "context": title,
+                        "rows": int(rc) if rc is not None else 0,
+                        "avg_answer_f1": float(f1) if f1 is not None else None,
+                        "avg_groundedness": float(g) if g is not None else None,
+                    }
+                )
+            if records:
+                st.dataframe(pd.DataFrame(records), use_container_width=True, hide_index=True)
+
+                usage_chart_df = pd.DataFrame(
+                    [
+                        {
+                            "modality": "Table usage",
+                            "rate": float(multimodal_metrics.get("table_usage_rate") or 0.0),
+                        },
+                        {
+                            "modality": "Image usage",
+                            "rate": float(multimodal_metrics.get("image_usage_rate") or 0.0),
+                        },
+                        {
+                            "modality": "Mixed prompt (≥2 types)",
+                            "rate": float(multimodal_metrics.get("multimodal_answers_rate") or 0.0),
+                        },
+                    ]
+                )
+                bar = (
+                    alt.Chart(usage_chart_df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("rate:Q", title="Share of rows", axis=_FLOAT_AXIS_2DP),
+                        y=alt.Y("modality:N", title="", sort="-x"),
+                    )
+                )
+                st.altair_chart(bar, use_container_width=True)
+
+                f1_chart_records: list[dict[str, Any]] = []
+                for r in records:
+                    if r["avg_answer_f1"] is not None:
+                        f1_chart_records.append(
+                            {"bucket": r["context"], "avg_answer_f1": r["avg_answer_f1"]}
+                        )
+                if f1_chart_records:
+                    st.caption("Average gold answer F1 by context (where gold answers exist).")
+                    f1df = pd.DataFrame(f1_chart_records)
+                    f1_chart = (
+                        alt.Chart(f1df)
+                        .mark_bar()
+                        .encode(
+                            x=alt.X("avg_answer_f1:Q", title="Avg answer F1", axis=_FLOAT_AXIS_2DP),
+                            y=alt.Y("bucket:N", title="", sort="-x"),
+                        )
+                    )
+                    st.altair_chart(f1_chart, use_container_width=True)
 
 
 def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> None:
@@ -560,6 +702,7 @@ def render_evaluation_dashboard(
     widget_key_prefix: str = "benchmark_dashboard",
     correlations: dict[str, Any] | None = None,
     failures: dict[str, Any] | None = None,
+    multimodal_metrics: dict[str, Any] | None = None,
 ) -> None:
     inject_section_card_styles()
 
@@ -609,6 +752,9 @@ def render_evaluation_dashboard(
             _summary_metric(summary, "avg_hallucination_score", "Hallucination")
         with j5:
             _summary_metric(summary, "hallucination_rate", "Hallucination rate", as_percent=True)
+
+    if multimodal_metrics:
+        _render_multimodal_performance(multimodal_metrics)
 
     with section_card(
         title="Per-entry results",

@@ -53,11 +53,13 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
         row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "doc_id_recall": 0.8})
         correlations = {"available": True, "pairwise": {"confidence_vs_latency_ms": 0.25}}
         failures = {"failed_row_count": 1, "counts": {"retrieval_failure": 1}}
+        multimodal_metrics = {"table_usage_rate": 0.25, "has_multimodal_assets": True}
         original = BenchmarkResult(
             summary=BenchmarkSummary(data={"avg_doc_id_recall": 0.9}),
             rows=[row],
             correlations=correlations,
             failures=failures,
+            multimodal_metrics=multimodal_metrics,
         )
         restored = BenchmarkResult.from_plain_dict(original.to_dict())
         self.assertEqual(restored.summary.data, original.summary.data)
@@ -68,6 +70,7 @@ class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
         self.assertEqual(restored.rows[0].data["doc_id_recall"], 0.8)
         self.assertEqual(restored.correlations, correlations)
         self.assertEqual(restored.failures, failures)
+        self.assertEqual(restored.multimodal_metrics, multimodal_metrics)
 
     def test_coerce_benchmark_result_accepts_instance_and_dict(self):
         result = make_benchmark_result()

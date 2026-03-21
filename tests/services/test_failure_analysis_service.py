@@ -72,6 +72,35 @@ class TestFailureAnalysisService(unittest.TestCase):
         out = FailureAnalysisService().analyze(rows)
         self.assertIn("retrieval_failure", out["row_failures"][0]["failure_labels"])
 
+    def test_table_misuse_when_table_context_and_low_gold_f1(self) -> None:
+        rows = [
+            {
+                "entry_id": 6,
+                "question": "Q?",
+                "has_expected_answer": True,
+                "answer_f1": 0.1,
+                "context_uses_table": True,
+                "expected_doc_ids_count": 0,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertIn("table_misuse", out["row_failures"][0]["failure_labels"])
+
+    def test_image_hallucination_when_image_context_and_hallucination(self) -> None:
+        rows = [
+            {
+                "entry_id": 7,
+                "question": "Q?",
+                "has_expected_answer": False,
+                "context_uses_image": True,
+                "hallucination_score": 0.1,
+                "has_hallucination": False,
+                "expected_doc_ids_count": 0,
+            }
+        ]
+        out = FailureAnalysisService().analyze(rows)
+        self.assertIn("image_hallucination", out["row_failures"][0]["failure_labels"])
+
 
 if __name__ == "__main__":
     unittest.main()

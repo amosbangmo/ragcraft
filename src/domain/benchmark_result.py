@@ -87,12 +87,14 @@ class BenchmarkResult:
     Optional ``correlations`` holds Pearson summaries from :class:`~src.services.correlation_service.CorrelationService`.
     Optional ``failures`` holds rule-based diagnostics from
     :class:`~src.services.failure_analysis_service.FailureAnalysisService` (counts, examples, etc.).
+    Optional ``multimodal_metrics`` holds aggregates from modality-aware evaluation (usage rates, conditional scores).
     """
 
     summary: BenchmarkSummary
     rows: list[BenchmarkRow] = field(default_factory=list)
     correlations: dict[str, Any] | None = None
     failures: dict[str, Any] | None = None
+    multimodal_metrics: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         out: dict[str, Any] = {
@@ -103,6 +105,8 @@ class BenchmarkResult:
             out["correlations"] = dict(self.correlations)
         if self.failures is not None:
             out["failures"] = dict(self.failures)
+        if self.multimodal_metrics is not None:
+            out["multimodal_metrics"] = dict(self.multimodal_metrics)
         return out
 
     @classmethod
@@ -135,7 +139,17 @@ class BenchmarkResult:
         failures: dict[str, Any] | None = None
         if isinstance(fail_raw, dict):
             failures = dict(fail_raw)
-        return cls(summary=summary, rows=rows, correlations=correlations, failures=failures)
+        mm_raw = payload.get("multimodal_metrics")
+        multimodal_metrics: dict[str, Any] | None = None
+        if isinstance(mm_raw, dict):
+            multimodal_metrics = dict(mm_raw)
+        return cls(
+            summary=summary,
+            rows=rows,
+            correlations=correlations,
+            failures=failures,
+            multimodal_metrics=multimodal_metrics,
+        )
 
 
 def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:
