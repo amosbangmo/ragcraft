@@ -139,7 +139,7 @@ LLM
 | RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`adapters/`, `persistence/`, `vectorstores/`, …) |
 | SQLite port implementations | `src/infrastructure/adapters/sqlite/` |
 | Wiring the graph | `src/composition/` |
-| Streamlit/HTTP client seam | `src/frontend_gateway/` (stubs that need `infrastructure.adapters` → `src/application/frontend_support/`) |
+| Streamlit/HTTP client seam | `src/frontend_gateway/` (`BackendClient`, Streamlit chat transcript); HTTP placeholders → `src/application/frontend_support/` |
 
 ---
 

@@ -59,6 +59,7 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 
 - `README.md` — install, run, high-level diagram, **migration status**.
 - `docs/architecture/clean_architecture_target.md` — canonical Clean Architecture map and dependency rules.
+- `docs/migration/final_clean_architecture_report.md` — closure narrative, candid assessment, and out-of-scope items.
 - `tests/architecture/README.md` — enforced import rules matrix.
 - `docs/migration/streamlit-fastapi-dev.md` — env vars and local dev.
 - `docs/migration/MIGRATION_COMPLETE_REPORT.md` — closure narrative and SPA readiness notes.

@@ -134,12 +134,12 @@ Supporting module: `use_cases/evaluation/rag_answer_for_eval.py` (RAG inspect + 
 | Layer | Responsibility | Verification |
 |--------|------------------|--------------|
 | **Domain** | Pure models, domain services, ports (`domain/ports`, `domain/shared/*_port`). | `tests/architecture/test_layer_boundaries.py::test_domain_does_not_depend_on_outer_layers` |
-| **Application** | Use cases, DTOs, HTTP wire helpers, policies; may import **`src.infrastructure.adapters`** only (not persistence/vectorstores directly from use-case modules per rule). | `test_application_does_not_depend_on_ui_or_infrastructure` (allows `adapters` subtree only) |
+| **Application** | Use cases, DTOs, HTTP wire helpers, policies; **no** `src.infrastructure` imports (wiring in composition). Use cases must not import `src.frontend_gateway`. | `test_application_does_not_depend_on_ui_or_infrastructure`, `test_application_orchestration_purity` |
 | **Infrastructure** | Adapters, persistence, vector stores, LLM integration. Adapters under `adapters/` may import `src.application` where needed; other infra packages may not import application (test). | `test_infrastructure_does_not_depend_on_application_or_streamlit` |
 | **API routers** | Map HTTP ↔ use cases; no direct infrastructure imports. | `test_api_routers_do_not_import_infrastructure` |
 | **Streamlit / UI** | No `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` imports. | `test_streamlit_pages_and_ui_avoid_direct_backend_internals` |
 | **Frontend gateway** | No `src.infrastructure` imports. | `test_frontend_gateway_does_not_import_infrastructure_internals` |
-| **FastAPI package** | No `src.infrastructure.adapters`, `src.backend`, `src.services` imports. | `test_apps_api_package_avoids_runtime_services_layer` |
+| **FastAPI package** | No `src.infrastructure.adapters`, `src.infrastructure.services`, `src.backend`, `src.adapters`, `src.services` imports. | `test_apps_api_package_avoids_runtime_services_layer` |
 
 **UI / API vs orchestration:** Pages and `src/ui` call **`BackendClient`** façade methods (including chat session helpers and existing ask/inspect/evaluate routes). **`InProcessBackendClient`** delegates to the **same use cases** as HTTP for the operations it implements. No `pages/` or `src/ui/` imports of `src.composition` were found in a repo grep.
 
@@ -152,7 +152,7 @@ Only **real** follow-ups worth tracking:
 1. **Production identity** — `X-User-Id` (and similar) are not browser-grade auth for a public API.
 2. **Concrete types in use cases** — Prefer ports + smaller adapters over importing large `*Service` facades from application code (incremental refactor).
 3. **`RAGService` composition** — Optional: move use-case wiring fully into `composition/` and leave `RAGService` as a thin delegate.
-4. **Dual persistence layout** — SQLite code split between `src/adapters/sqlite/` and `src/infrastructure/persistence/`; consolidation is cleanup, not blocking.
+4. **Persistence layout** — SQLite port implementations live under **`src/infrastructure/adapters/sqlite/`**; some forwarding modules remain under **`src/infrastructure/persistence/sqlite/`** for historical import paths.
 5. **Optional deps** — Full `build_backend()` may require `unstructured`; some architecture tests skip if missing — ensure CI installs full `requirements.txt` if you want zero skips.
 
 **Explicit non-issues (do not mistake for drift):**
