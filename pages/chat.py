@@ -118,9 +118,9 @@ retrieval_settings = render_retrieval_settings_panel(
     backend_client=client,
 )
 
-client.chat_service.init(project.project_id)
+client.init_chat_session(project.project_id)
 
-messages = client.chat_service.get_messages()
+messages = client.get_chat_messages()
 render_chat_history(messages)
 
 question = st.chat_input("Ask a question about your documents")
@@ -128,7 +128,7 @@ question = st.chat_input("Ask a question about your documents")
 if not question:
     st.stop()
 
-client.chat_service.add_user_message(question)
+client.add_chat_user_message(question)
 
 with st.chat_message("user"):
     st.markdown(question)
@@ -136,7 +136,7 @@ with st.chat_message("user"):
 with st.chat_message("assistant"):
     try:
         with st.spinner("Thinking..."):
-            messages = client.chat_service.get_messages()
+            messages = client.get_chat_messages()
             chat_history = build_chat_history(messages)
 
             response = client.ask_question(
@@ -164,7 +164,7 @@ with st.chat_message("assistant"):
             mode="chat",
         )
 
-        client.chat_service.add_assistant_message(response.answer)
+        client.add_chat_assistant_message(response.answer)
 
     except VectorStoreError as exc:
         st.error(get_user_error_message(exc, "Unable to query the FAISS index for this question."))

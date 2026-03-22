@@ -11,6 +11,7 @@ import httpx
 from src.application.settings.dtos import UpdateProjectRetrievalSettingsCommand
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.domain.manual_evaluation_result import manual_evaluation_result_from_plain_dict
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.project_settings import ProjectSettings
 from src.domain.qa_dataset_entry import QADatasetEntry
@@ -27,13 +28,7 @@ from src.frontend_gateway.http_payloads import (
     qa_generate_result_from_api_dict,
 )
 from src.frontend_gateway.http_transport import HttpTransport
-from src.frontend_gateway.stubs import (
-    http_client_chat_service,
-    http_client_evaluation_service,
-    http_client_project_settings_repository,
-    http_client_rag_service,
-    http_client_retrieval_settings_service,
-)
+from src.frontend_gateway.stubs import http_client_chat_service, http_client_project_settings_repository
 
 
 def _format_created_at(created_at: str | None) -> str:
@@ -104,21 +99,36 @@ class HttpBackendClient:
     def close(self) -> None:
         self._t.close()
 
-    @property
-    def chat_service(self) -> Any:
-        return http_client_chat_service()
+    def init_chat_session(self, project_id: str) -> None:
+        http_client_chat_service().init(project_id)
 
-    @property
-    def retrieval_settings_service(self) -> Any:
-        return http_client_retrieval_settings_service()
+    def get_chat_messages(self) -> list[dict[str, Any]]:
+        return http_client_chat_service().get_messages()
 
-    @property
-    def rag_service(self) -> Any:
-        return http_client_rag_service()
+    def add_chat_user_message(self, content: str) -> None:
+        http_client_chat_service().add_user_message(content)
 
-    @property
-    def evaluation_service(self) -> Any:
-        return http_client_evaluation_service()
+    def add_chat_assistant_message(self, content: str) -> None:
+        http_client_chat_service().add_assistant_message(content)
+
+    def generate_answer_from_pipeline(
+        self, *, project: Project, pipeline: PipelineBuildResult
+    ) -> str:
+        raise NotImplementedError(
+            "generate_answer_from_pipeline is not exposed over HTTP; use POST /evaluation/manual "
+            "or the in-process backend client."
+        )
+
+    def evaluate_gold_qa_dataset_with_runner(
+        self,
+        *,
+        entries: list[QADatasetEntry],
+        pipeline_runner: Any,
+    ) -> BenchmarkResult:
+        raise NotImplementedError(
+            "evaluate_gold_qa_dataset_with_runner is not exposed over HTTP; use POST /evaluation/dataset/run "
+            "or the in-process backend client."
+        )
 
     @property
     def project_settings_repository(self) -> Any:

@@ -9,6 +9,7 @@ or **in-process** (:class:`~src.frontend_gateway.in_process.InProcessBackendClie
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
@@ -19,7 +20,9 @@ from src.application.settings.dtos import (
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.project import Project
 from src.domain.project_settings import ProjectSettings
+from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.application.ingestion.dtos import DeleteDocumentResult, IngestDocumentResult
@@ -32,19 +35,29 @@ class BackendClient(Protocol):
 
     Login, registration, and session display-name/avatar reads use
     :mod:`src.frontend_gateway.streamlit_auth` (HTTP mode calls ``/auth/login`` and ``/auth/register``).
+
+    Chat transcript, preset merge, RAG answer generation, and gold-QA benchmarking are exposed as
+    façade methods so pages do not reach adapter singletons directly.
     """
 
-    @property
-    def chat_service(self) -> Any: ...
+    def init_chat_session(self, project_id: str) -> None: ...
 
-    @property
-    def retrieval_settings_service(self) -> Any: ...
+    def get_chat_messages(self) -> list[dict[str, Any]]: ...
 
-    @property
-    def rag_service(self) -> Any: ...
+    def add_chat_user_message(self, content: str) -> None: ...
 
-    @property
-    def evaluation_service(self) -> Any: ...
+    def add_chat_assistant_message(self, content: str) -> None: ...
+
+    def generate_answer_from_pipeline(
+        self, *, project: Project, pipeline: PipelineBuildResult
+    ) -> str: ...
+
+    def evaluate_gold_qa_dataset_with_runner(
+        self,
+        *,
+        entries: list[QADatasetEntry],
+        pipeline_runner: Callable[[QADatasetEntry], dict[str, Any]],
+    ) -> BenchmarkResult: ...
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort: ...

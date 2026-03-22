@@ -212,7 +212,7 @@ def test_evaluate_question_without_pipeline():
     app = MagicMock()
     app.get_project.return_value = MagicMock()
     app.inspect_retrieval.return_value = None
-    app.evaluation_service.evaluate_gold_qa_dataset.return_value = BenchmarkResult(
+    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -246,8 +246,8 @@ def test_evaluate_question_with_pipeline_and_judge_branches():
     app = MagicMock()
     app.get_project.return_value = MagicMock()
     app.inspect_retrieval.return_value = pipeline
-    app.rag_service.generate_answer_from_pipeline.return_value = "  ans  "
-    app.evaluation_service.evaluate_gold_qa_dataset.return_value = BenchmarkResult(
+    app.generate_answer_from_pipeline.return_value = "  ans  "
+    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -292,8 +292,8 @@ def test_evaluate_question_judge_failure_default_message():
     app = MagicMock()
     app.get_project.return_value = MagicMock()
     app.inspect_retrieval.return_value = pipeline
-    app.rag_service.generate_answer_from_pipeline.return_value = "ok"
-    app.evaluation_service.evaluate_gold_qa_dataset.return_value = BenchmarkResult(
+    app.generate_answer_from_pipeline.return_value = "ok"
+    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -319,8 +319,8 @@ def test_evaluate_question_pipeline_failed_banner():
     app = MagicMock()
     app.get_project.return_value = MagicMock()
     app.inspect_retrieval.return_value = PipelineBuildResult()
-    app.rag_service.generate_answer_from_pipeline.return_value = ""
-    app.evaluation_service.evaluate_gold_qa_dataset.return_value = BenchmarkResult(
+    app.generate_answer_from_pipeline.return_value = ""
+    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(

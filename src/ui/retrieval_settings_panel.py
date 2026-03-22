@@ -69,7 +69,7 @@ def build_ui_retrieval_settings(
 
 
 def retrieval_settings_to_request_dict(settings: RetrievalSettings) -> dict:
-    """Flat dict for ``RAGService`` / ``RetrievalSettingsService.merge``."""
+    """Flat dict for chat/search ask endpoints (retrieval override payload)."""
     return dict(asdict(settings))
 
 
@@ -155,7 +155,7 @@ def render_retrieval_settings_panel(
     *,
     title: str = "Retrieval",
     expanded: bool = False,
-    service: RetrievalSettingsService | None = None,
+    service: RetrievalPresetMergePort | None = None,
     user_id: str | None = None,
     project_id: str | None = None,
     backend_client: BackendClient | None = None,
@@ -174,9 +174,7 @@ def render_retrieval_settings_panel(
     and
     :meth:`~src.frontend_gateway.protocol.BackendClient.update_project_retrieval_settings`.
     """
-    svc = service or (
-        backend_client.retrieval_settings_service if backend_client is not None else None
-    ) or default_retrieval_preset_merge_port()
+    svc = service or default_retrieval_preset_merge_port()
 
     if "retrieval_preset" not in st.session_state:
         st.session_state["retrieval_preset"] = RetrievalPreset.BALANCED.value

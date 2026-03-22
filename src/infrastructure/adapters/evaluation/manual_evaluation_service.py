@@ -178,10 +178,9 @@ def _ordered_sources_from_pipeline(
     return ordered
 
 
-def manual_evaluation_result_from_rag_outputs(
+def manual_evaluation_result_from_eval_row(
     *,
-    user_id: str,
-    project_id: str,
+    row: dict[str, Any],
     q: str,
     exp_ans: str | None,
     exp_docs: list[str],
@@ -190,31 +189,7 @@ def manual_evaluation_result_from_rag_outputs(
     answer: str,
     latency_ms: float,
     full_latency_dict: dict[str, float] | None,
-    evaluation_service: EvaluationService,
 ) -> ManualEvaluationResult:
-    entry = QADatasetEntry(
-        id=_MANUAL_EVAL_ENTRY_ID,
-        user_id=user_id,
-        project_id=project_id,
-        question=q,
-        expected_answer=exp_ans,
-        expected_doc_ids=exp_docs,
-        expected_sources=exp_src,
-    )
-
-    def pipeline_runner(_e: QADatasetEntry) -> dict[str, Any]:
-        return {
-            "pipeline": pipeline,
-            "answer": answer,
-            "latency_ms": latency_ms,
-            "latency": full_latency_dict,
-        }
-
-    benchmark = evaluation_service.evaluate_gold_qa_dataset(
-        entries=[entry],
-        pipeline_runner=pipeline_runner,
-    )
-    row = benchmark.rows[0].data
     has_pipeline = pipeline is not None
     judge_failed = bool(row.get("judge_failed"))
     pipeline_failed = bool(row.get("pipeline_failed"))
@@ -395,6 +370,55 @@ def manual_evaluation_result_from_rag_outputs(
     )
 
 
+def manual_evaluation_result_from_rag_outputs(
+    *,
+    user_id: str,
+    project_id: str,
+    q: str,
+    exp_ans: str | None,
+    exp_docs: list[str],
+    exp_src: list[str],
+    pipeline: PipelineBuildResult | None,
+    answer: str,
+    latency_ms: float,
+    full_latency_dict: dict[str, float] | None,
+    evaluation_service: EvaluationService,
+) -> ManualEvaluationResult:
+    entry = QADatasetEntry(
+        id=_MANUAL_EVAL_ENTRY_ID,
+        user_id=user_id,
+        project_id=project_id,
+        question=q,
+        expected_answer=exp_ans,
+        expected_doc_ids=exp_docs,
+        expected_sources=exp_src,
+    )
+
+    def pipeline_runner(_e: QADatasetEntry) -> dict[str, Any]:
+        return {
+            "pipeline": pipeline,
+            "answer": answer,
+            "latency_ms": latency_ms,
+            "latency": full_latency_dict,
+        }
+
+    benchmark = evaluation_service.evaluate_gold_qa_dataset(
+        entries=[entry],
+        pipeline_runner=pipeline_runner,
+    )
+    return manual_evaluation_result_from_eval_row(
+        row=benchmark.rows[0].data,
+        q=q,
+        exp_ans=exp_ans,
+        exp_docs=exp_docs,
+        exp_src=exp_src,
+        pipeline=pipeline,
+        answer=answer,
+        latency_ms=latency_ms,
+        full_latency_dict=full_latency_dict,
+    )
+
+
 class ManualEvaluationService:
     @staticmethod
     def evaluate_question(
@@ -426,7 +450,7 @@ class ManualEvaluationService:
         answer_generation_ms = 0.0
         if pipeline is not None:
             gen_started = perf_counter()
-            answer = backend_client.rag_service.generate_answer_from_pipeline(
+            answer = backend_client.generate_answer_from_pipeline(
                 project=project,
                 pipeline=pipeline,
             )
@@ -444,9 +468,30 @@ class ManualEvaluationService:
             pipeline.latency = full_latency_dict
             pipeline.latency_ms = latency_ms
 
-        return manual_evaluation_result_from_rag_outputs(
+        entry = QADatasetEntry(
+            id=_MANUAL_EVAL_ENTRY_ID,
             user_id=user_id,
             project_id=project_id,
+            question=q,
+            expected_answer=exp_ans,
+            expected_doc_ids=exp_docs,
+            expected_sources=exp_src,
+        )
+
+        def pipeline_runner(_e: QADatasetEntry) -> dict[str, Any]:
+            return {
+                "pipeline": pipeline,
+                "answer": answer,
+                "latency_ms": latency_ms,
+                "latency": full_latency_dict,
+            }
+
+        benchmark = backend_client.evaluate_gold_qa_dataset_with_runner(
+            entries=[entry],
+            pipeline_runner=pipeline_runner,
+        )
+        return manual_evaluation_result_from_eval_row(
+            row=benchmark.rows[0].data,
             q=q,
             exp_ans=exp_ans,
             exp_docs=exp_docs,
@@ -455,5 +500,4 @@ class ManualEvaluationService:
             answer=answer,
             latency_ms=latency_ms,
             full_latency_dict=full_latency_dict,
-            evaluation_service=backend_client.evaluation_service,
         )

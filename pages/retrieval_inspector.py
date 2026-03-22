@@ -301,7 +301,7 @@ chat_history_mode = st.toggle("Include current chat history context", value=Fals
 
 chat_history = []
 if chat_history_mode:
-    chat_history = client.chat_service.get_messages()
+    chat_history = client.get_chat_messages()
     chat_history = [f"{msg['role']}: {msg['content']}" for msg in chat_history[-6:]]
 
 with st.expander("Advanced metadata filters (optional)", expanded=False):

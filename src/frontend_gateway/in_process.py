@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -32,6 +33,8 @@ from src.composition import BackendApplicationContainer
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.project import Project
+from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
@@ -44,21 +47,33 @@ class InProcessBackendClient:
     def __init__(self, container: BackendApplicationContainer) -> None:
         self._container = container
 
-    @property
-    def chat_service(self) -> Any:
-        return self._container.chat_service
+    def init_chat_session(self, project_id: str) -> None:
+        self._container.chat_service.init(project_id)
 
-    @property
-    def retrieval_settings_service(self) -> Any:
-        return self._container.retrieval_settings_service
+    def get_chat_messages(self) -> list[dict[str, Any]]:
+        return self._container.chat_service.get_messages()
 
-    @property
-    def rag_service(self) -> Any:
-        return self._container.rag_service
+    def add_chat_user_message(self, content: str) -> None:
+        self._container.chat_service.add_user_message(content)
 
-    @property
-    def evaluation_service(self) -> Any:
-        return self._container.evaluation_service
+    def add_chat_assistant_message(self, content: str) -> None:
+        self._container.chat_service.add_assistant_message(content)
+
+    def generate_answer_from_pipeline(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
+        return self._container.rag_service.generate_answer_from_pipeline(
+            project=project, pipeline=pipeline
+        )
+
+    def evaluate_gold_qa_dataset_with_runner(
+        self,
+        *,
+        entries: list[QADatasetEntry],
+        pipeline_runner: Callable[[QADatasetEntry], dict[str, Any]],
+    ) -> BenchmarkResult:
+        return self._container.evaluation_service.evaluate_gold_qa_dataset(
+            entries=entries,
+            pipeline_runner=pipeline_runner,
+        )
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
