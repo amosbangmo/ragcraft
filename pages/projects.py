@@ -1,3 +1,9 @@
+"""
+Projects workspace UI. All backend access goes through :class:`~src.frontend_gateway.protocol.BackendClient`
+(:func:`~src.frontend_gateway.streamlit_api_client.get_backend_client`); set ``RAGCRAFT_BACKEND_CLIENT=http``
+to use FastAPI as system of record.
+"""
+
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient

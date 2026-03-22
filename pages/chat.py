@@ -1,3 +1,8 @@
+"""
+RAG chat UI. Uses :class:`~src.frontend_gateway.protocol.BackendClient` for ``ask_question``; HTTP mode
+targets ``POST /chat/ask`` on the FastAPI app (``RAGCRAFT_BACKEND_CLIENT=http``).
+"""
+
 import streamlit as st
 
 from src.auth.guards import require_authentication

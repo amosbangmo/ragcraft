@@ -11,6 +11,9 @@ __all__ = [
     "BackendClient",
     "HttpBackendClient",
     "InProcessBackendClient",
+    "get_backend_client",
+    "get_frontend_backend_settings",
+    "is_http_backend_mode",
     "load_frontend_backend_settings",
     "use_http_backend_client",
 ]
@@ -33,4 +36,8 @@ def __getattr__(name: str):
         from src.frontend_gateway import settings as _settings
 
         return getattr(_settings, name)
+    if name in ("get_backend_client", "get_frontend_backend_settings", "is_http_backend_mode"):
+        from src.frontend_gateway import streamlit_api_client as _sac
+
+        return getattr(_sac, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

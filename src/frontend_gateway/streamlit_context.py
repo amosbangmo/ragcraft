@@ -1,20 +1,13 @@
 """
 Streamlit wiring for :class:`~src.frontend_gateway.protocol.BackendClient` and session user id.
 
-UI modules import from here instead of ``src.core.app_state`` / ``src.core.session`` so
-``src/ui`` does not depend on the composition-root module path (the implementation still
-lives under ``src.core`` for the Streamlit host app).
+Re-exports :func:`~src.frontend_gateway.streamlit_api_client.get_backend_client`. Prefer importing
+from :mod:`src.frontend_gateway.streamlit_api_client` in new code for clearer intent.
 """
 
 from __future__ import annotations
 
-from src.frontend_gateway.protocol import BackendClient
-
-
-def get_backend_client() -> BackendClient:
-    from src.core.app_state import get_backend_client as _get_backend_client
-
-    return _get_backend_client()
+from src.frontend_gateway.streamlit_api_client import get_backend_client
 
 
 def get_user_id() -> str:

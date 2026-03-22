@@ -19,9 +19,25 @@ class HttpTransport:
 
     __slots__ = ("_client", "_base")
 
-    def __init__(self, *, base_url: str, timeout: float) -> None:
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        connect_timeout: float = 10.0,
+        read_timeout: float = 300.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
         self._base = base_url.rstrip("/")
-        self._client = httpx.Client(base_url=self._base, timeout=timeout)
+        timeout = httpx.Timeout(
+            connect=connect_timeout,
+            read=read_timeout,
+            write=read_timeout,
+            pool=connect_timeout,
+        )
+        client_kw: dict[str, Any] = {"base_url": self._base, "timeout": timeout}
+        if transport is not None:
+            client_kw["transport"] = transport
+        self._client = httpx.Client(**client_kw)
 
     def close(self) -> None:
         self._client.close()

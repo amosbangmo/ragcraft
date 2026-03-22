@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
+import httpx
+
 from src.application.settings.dtos import UpdateProjectRetrievalSettingsCommand
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.domain.manual_evaluation_result import manual_evaluation_result_from_plain_dict
@@ -81,11 +83,25 @@ def _chat_pipeline_body(
 
 
 class HttpBackendClient:
-    __slots__ = ("_t", "base_url")
+    __slots__ = ("_t", "base_url", "connect_timeout", "read_timeout")
 
-    def __init__(self, *, base_url: str, timeout: float) -> None:
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        connect_timeout: float = 10.0,
+        read_timeout: float = 300.0,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
-        self._t = HttpTransport(base_url=self.base_url, timeout=timeout)
+        self.connect_timeout = float(connect_timeout)
+        self.read_timeout = float(read_timeout)
+        self._t = HttpTransport(
+            base_url=self.base_url,
+            connect_timeout=self.connect_timeout,
+            read_timeout=self.read_timeout,
+            transport=transport,
+        )
 
     def close(self) -> None:
         self._t.close()

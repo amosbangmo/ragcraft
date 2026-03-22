@@ -1,3 +1,8 @@
+"""
+Evaluation hub. Dataset benchmark and related calls use :class:`~src.frontend_gateway.protocol.BackendClient`
+(``POST /evaluation/dataset/run`` and siblings when ``RAGCRAFT_BACKEND_CLIENT=http``).
+"""
+
 import streamlit as st
 
 from typing import Any

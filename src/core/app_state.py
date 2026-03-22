@@ -27,9 +27,17 @@ def get_backend_client() -> BackendClient:
 
         cfg = load_frontend_backend_settings()
         cached = st.session_state.get(HTTP_BACKEND_CLIENT_KEY)
-        if isinstance(cached, HttpBackendClient) and getattr(cached, "base_url", "") == cfg.api_base_url:
+        if isinstance(cached, HttpBackendClient) and (
+            cached.base_url == cfg.api_base_url
+            and cached.connect_timeout == cfg.api_connect_timeout_seconds
+            and cached.read_timeout == cfg.api_read_timeout_seconds
+        ):
             return cached
-        client = HttpBackendClient(base_url=cfg.api_base_url, timeout=cfg.timeout_seconds)
+        client = HttpBackendClient(
+            base_url=cfg.api_base_url,
+            connect_timeout=cfg.api_connect_timeout_seconds,
+            read_timeout=cfg.api_read_timeout_seconds,
+        )
         st.session_state[HTTP_BACKEND_CLIENT_KEY] = client
         return client
 
