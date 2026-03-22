@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
 
@@ -129,6 +129,46 @@ class ManualEvaluationResult:
             else None,
             "detected_issues": list(self.detected_issues),
         }
+
+
+def _optional_subdataclass(cls: type, raw: Any) -> Any:
+    if raw is None or not isinstance(raw, dict):
+        return None
+    try:
+        kwargs: dict[str, Any] = {}
+        for f in fields(cls):
+            kwargs[f.name] = raw.get(f.name)
+        return cls(**kwargs)
+    except TypeError:
+        return None
+
+
+def manual_evaluation_result_from_plain_dict(d: dict[str, Any]) -> ManualEvaluationResult:
+    """Rebuild :class:`ManualEvaluationResult` from JSON (e.g. FastAPI ``ManualEvaluationResponse``)."""
+    return ManualEvaluationResult(
+        question=str(d.get("question") or ""),
+        answer=str(d.get("answer") or ""),
+        expected_answer=d.get("expected_answer"),
+        confidence=float(d.get("confidence") or 0.0),
+        pipeline_failed=bool(d.get("pipeline_failed")),
+        judge_failed=bool(d.get("judge_failed")),
+        judge_failure_reason=d.get("judge_failure_reason"),
+        prompt_sources=list(d.get("prompt_sources") or []),
+        raw_assets=list(d.get("raw_assets") or []),
+        answer_quality=_optional_subdataclass(ManualEvaluationAnswerQuality, d.get("answer_quality")),
+        answer_citation_quality=_optional_subdataclass(
+            ManualEvaluationAnswerCitationQuality, d.get("answer_citation_quality")
+        ),
+        prompt_source_quality=_optional_subdataclass(
+            ManualEvaluationPromptSourceQuality, d.get("prompt_source_quality")
+        ),
+        retrieval_quality=_optional_subdataclass(ManualEvaluationRetrievalQuality, d.get("retrieval_quality")),
+        pipeline_signals=_optional_subdataclass(ManualEvaluationPipelineSignals, d.get("pipeline_signals")),
+        expectation_comparison=_optional_subdataclass(
+            ManualEvaluationExpectationComparison, d.get("expectation_comparison")
+        ),
+        detected_issues=list(d.get("detected_issues") or []),
+    )
 
 
 def is_manual_evaluation_result_like(value: Any) -> bool:

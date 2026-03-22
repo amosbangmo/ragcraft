@@ -120,6 +120,23 @@ class PipelineInspectResponse(BaseModel):
     )
 
 
+class RetrievalCompareRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    user_id: str = Field(..., min_length=1, description="Must match ``X-User-Id``.")
+    project_id: str = Field(..., min_length=1)
+    questions: list[str] = Field(default_factory=list)
+    enable_query_rewrite: bool = True
+
+
+class RetrievalCompareResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    questions: list[str] = Field(default_factory=list)
+    summary: dict[str, Any] = Field(default_factory=dict)
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class PreviewSummaryRecallResponse(BaseModel):
     model_config = {"extra": "forbid"}
 

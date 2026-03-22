@@ -89,6 +89,41 @@ class ProjectRetrievalSettingsResponse(BaseModel):
     effective_retrieval: dict[str, Any] = Field(default_factory=dict)
 
 
+class ProjectSummaryResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    user_id: str
+    project_id: str
+    path: str = Field(description="Absolute workspace path for this project.")
+
+
+class RetrievalPresetLabelResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    label: str
+
+
+class ProjectDocumentDetailsResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    documents: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Per-file stats (name, path, asset counts, latest_ingested_at, …).",
+    )
+
+
+class DocumentAssetsResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    assets: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class InvalidateCacheResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    ok: bool = True
+
+
 class UpdateProjectRetrievalSettingsRequest(BaseModel):
     model_config = {"extra": "forbid"}
 

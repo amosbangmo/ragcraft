@@ -4,6 +4,7 @@ streamlit
 fastapi
 uvicorn[standard]
 python-multipart
+httpx
 
 # RAG core
 langchain

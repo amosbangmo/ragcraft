@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from apps.api.dependencies import (
     get_ask_question_use_case,
     get_inspect_pipeline_use_case,
     get_preview_summary_recall_use_case,
     get_project_service,
+    get_retrieval_comparison_service,
+    get_request_user_id,
 )
 from apps.api.schemas.chat import (
     ChatAskRequest,
@@ -23,6 +25,8 @@ from apps.api.schemas.chat import (
     PipelineInspectResponse,
     PreviewSummaryRecallRequest,
     PreviewSummaryRecallResponse,
+    RetrievalCompareRequest,
+    RetrievalCompareResponse,
 )
 from apps.api.schemas.serialization import (
     pipeline_build_result_to_api_dict,
@@ -178,4 +182,37 @@ def post_preview_summary_recall(
         status="ok",
         question=body.question,
         preview=preview,
+    )
+
+
+@router.post(
+    "/retrieval/compare",
+    response_model=RetrievalCompareResponse,
+    summary="Compare FAISS-only vs hybrid retrieval across questions",
+    responses={
+        502: {"description": "LLM or upstream model failure"},
+        503: {"description": "Vector store, doc store, or infrastructure failure"},
+    },
+)
+def post_retrieval_compare(
+    body: RetrievalCompareRequest,
+    header_user_id: Annotated[str, Depends(get_request_user_id)],
+    project_service: Annotated[Any, Depends(get_project_service)],
+    comparison: Annotated[Any, Depends(get_retrieval_comparison_service)],
+) -> RetrievalCompareResponse:
+    if body.user_id.strip() != header_user_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Body user_id must match X-User-Id header.",
+        )
+    project = project_service.get_project(body.user_id, body.project_id)
+    raw = comparison.compare(
+        project=project,
+        questions=list(body.questions),
+        enable_query_rewrite=bool(body.enable_query_rewrite),
+    )
+    return RetrievalCompareResponse(
+        questions=list(raw.get("questions") or []),
+        summary=dict(raw.get("summary") or {}),
+        rows=list(raw.get("rows") or []),
     )

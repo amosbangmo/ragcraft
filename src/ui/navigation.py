@@ -31,9 +31,9 @@ def render_navigation(hide_sidebar: bool = False):
     auth_service = AuthService()
 
     if auth_service.is_authenticated():
-        app = get_app()
+        backend_client = get_backend_client()
         user_id = get_user_id()
-        projects = app.list_projects(user_id)
+        projects = backend_client.list_projects(user_id)
         project_id = st.session_state.get("project_id")
         if not projects:
             st.session_state["project_id"] = None

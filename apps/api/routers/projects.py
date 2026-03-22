@@ -12,13 +12,16 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from apps.api.dependencies import (
+    get_backend_application_container,
     get_create_project_use_case,
     get_delete_document_use_case,
+    get_docstore_service,
     get_get_effective_retrieval_settings_use_case,
     get_ingest_uploaded_file_use_case,
     get_list_project_documents_use_case,
     get_list_projects_use_case,
     get_project_service,
+    get_project_settings_service,
     get_reindex_document_use_case,
     get_request_user_id,
     get_update_project_retrieval_settings_use_case,
@@ -27,10 +30,15 @@ from apps.api.schemas.projects import (
     CreateProjectRequest,
     CreateProjectResponse,
     DeleteDocumentResponse,
+    DocumentAssetsResponse,
     IngestDocumentResponse,
+    InvalidateCacheResponse,
+    ProjectDocumentDetailsResponse,
     ProjectDocumentsResponse,
     ProjectListResponse,
     ProjectRetrievalSettingsResponse,
+    ProjectSummaryResponse,
+    RetrievalPresetLabelResponse,
     UpdateProjectRetrievalSettingsRequest,
 )
 from apps.api.schemas.serialization import (
@@ -42,6 +50,10 @@ from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
     IngestUploadedFileCommand,
     ReindexDocumentCommand,
+)
+from src.application.settings.dtos import (
+    GetEffectiveRetrievalSettingsQuery,
+    UpdateProjectRetrievalSettingsCommand,
 )
 from src.services.project_service import ProjectService
 
@@ -231,3 +243,110 @@ def delete_project_document(
         deleted_vectors=out.deleted_vectors,
         deleted_assets=out.deleted_assets,
     )
+
+
+@router.get(
+    "/{project_id}",
+    response_model=ProjectSummaryResponse,
+    summary="Resolve project workspace path",
+)
+def get_project_summary(
+    project_id: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+) -> ProjectSummaryResponse:
+    project = project_service.get_project(user_id, project_id)
+    return ProjectSummaryResponse(
+        user_id=project.user_id,
+        project_id=project.project_id,
+        path=str(project.path),
+    )
+
+
+@router.get(
+    "/{project_id}/retrieval-preset-label",
+    response_model=RetrievalPresetLabelResponse,
+    summary="Human-readable retrieval preset label for a project",
+)
+def get_retrieval_preset_label(
+    project_id: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    settings_service: Annotated[Any, Depends(get_project_settings_service)],
+) -> RetrievalPresetLabelResponse:
+    label = settings_service.preset_label_for_project(user_id, project_id)
+    return RetrievalPresetLabelResponse(label=label)
+
+
+@router.get(
+    "/{project_id}/documents/details",
+    response_model=ProjectDocumentDetailsResponse,
+    summary="List documents with ingestion stats (Streamlit projects/ingestion parity)",
+)
+def get_project_document_details(
+    project_id: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    docstore: Annotated[Any, Depends(get_docstore_service)],
+) -> ProjectDocumentDetailsResponse:
+    project = project_service.get_project(user_id, project_id)
+    documents = project_service.list_project_documents(user_id, project_id)
+    details: list[dict[str, Any]] = []
+    for doc_name in documents:
+        file_path = project.path / doc_name
+        asset_count = docstore.count_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=doc_name,
+        )
+        asset_stats = docstore.get_asset_stats_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=doc_name,
+        )
+        details.append(
+            {
+                "name": doc_name,
+                "project_id": project_id,
+                "path": str(file_path),
+                "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
+                "asset_count": asset_count,
+                "text_count": int(asset_stats.get("text_count", 0)),
+                "table_count": int(asset_stats.get("table_count", 0)),
+                "image_count": int(asset_stats.get("image_count", 0)),
+                "latest_ingested_at": asset_stats.get("latest_ingested_at"),
+            }
+        )
+    return ProjectDocumentDetailsResponse(documents=details)
+
+
+@router.get(
+    "/{project_id}/documents/{source_file}/assets",
+    response_model=DocumentAssetsResponse,
+    summary="List indexed SQLite assets for a source file",
+)
+def get_document_assets(
+    project_id: str,
+    source_file: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    docstore: Annotated[Any, Depends(get_docstore_service)],
+) -> DocumentAssetsResponse:
+    assets = docstore.list_assets_for_source_file(
+        user_id=user_id,
+        project_id=project_id,
+        source_file=source_file,
+    )
+    return DocumentAssetsResponse(assets=list(assets))
+
+
+@router.post(
+    "/{project_id}/retrieval-cache/invalidate",
+    response_model=InvalidateCacheResponse,
+    summary="Drop cached LangChain chain for this project",
+)
+def post_invalidate_retrieval_cache(
+    project_id: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> InvalidateCacheResponse:
+    container.invalidate_project_chain(user_id, project_id)
+    return InvalidateCacheResponse(ok=True)

@@ -204,3 +204,37 @@ def get_delete_document_use_case(
     container: Annotated[Any, Depends(get_backend_application_container)],
 ) -> Any:
     return container.ingestion_delete_document_use_case
+
+
+def get_docstore_service(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.docstore_service
+
+
+def get_project_settings_service(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.project_settings_service
+
+
+def get_retrieval_comparison_service(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.retrieval_comparison_service
+
+
+def ensure_auth_database() -> bool:
+    """Create SQLite app tables if missing (users router dependency)."""
+    from src.infrastructure.persistence.db import init_app_db
+
+    init_app_db()
+    return True
+
+
+def get_user_repository(
+    _: Annotated[bool, Depends(ensure_auth_database)],
+) -> Any:
+    from src.auth.user_repository import UserRepository
+
+    return UserRepository()

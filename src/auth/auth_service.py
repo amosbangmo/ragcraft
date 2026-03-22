@@ -156,6 +156,19 @@ class AuthService:
             return None
         return self.user_repository.get_by_user_id(user_id)
 
+    def refresh_session_from_user_id(self, user_id: str) -> bool:
+        """Reload session fields from SQLite (e.g. after profile changes via HTTP API)."""
+        user = self.user_repository.get_by_user_id(user_id)
+        if not user:
+            return False
+        self._set_session(
+            username=user["username"],
+            user_id=user["user_id"],
+            display_name=user["display_name"],
+            avatar_path=user["avatar_path"],
+        )
+        return True
+
     def format_created_at(self, created_at: str | None) -> str:
         if not created_at:
             return "-"

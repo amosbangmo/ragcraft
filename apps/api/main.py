@@ -17,7 +17,7 @@ from fastapi import FastAPI
 
 from apps.api.config import load_settings
 from apps.api.error_handlers import register_exception_handlers
-from apps.api.routers import chat, evaluation, projects, system
+from apps.api.routers import chat, evaluation, projects, system, users
 
 
 def create_app() -> FastAPI:
@@ -33,6 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(projects.router)
     app.include_router(evaluation.router)
+    app.include_router(users.router)
     return app
 
 
