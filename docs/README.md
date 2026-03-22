@@ -8,7 +8,8 @@ Concise, **code-aligned** documentation for the repository layout after the Clea
 | [rag_orchestration.md](rag_orchestration.md) | RAG flow: entrypoints, use cases, orchestration modules, ports, adapters, logging, evaluation path |
 | [dependency_rules.md](dependency_rules.md) | Allowed import directions, RAG-specific rules, anti-patterns |
 | [testing_strategy.md](testing_strategy.md) | Architecture tests (including orchestration purity and RAG layering), integration coverage |
-| [migration_report_final.md](migration_report_final.md) | **End-state** migration report: removed/moved items, final model, compromises, debt, guards, next steps |
+| [migration_report_final.md](migration_report_final.md) | **End-state** migration report, **final verdict**, last-pass removals, acceptable residual detail, post-migration non-architecture backlog |
+| [final_orchestration_gap_analysis.md](final_orchestration_gap_analysis.md) | Historical baseline → **closure** summary (orchestration gaps addressed); live flow in `rag_orchestration.md` |
 
 **Also at repo root:** `ARCHITECTURE_TARGET.md` — short runtime layout and client modes; should stay aligned with `docs/architecture.md` and `docs/migration_report_final.md`.
 

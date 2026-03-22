@@ -22,7 +22,7 @@ class RAGPipelineQueryContext:
     enable_hybrid_retrieval_override: bool | None
 
     @staticmethod
-    def from_legacy(
+    def from_chat_request(
         chat_history: list[str] | None,
         *,
         filters: RetrievalFilters | None,

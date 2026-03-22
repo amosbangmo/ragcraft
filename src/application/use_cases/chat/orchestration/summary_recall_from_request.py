@@ -26,7 +26,7 @@ def run_summary_recall_from_chat_request(
     Build :class:`~src.application.common.pipeline_query_context.RAGPipelineQueryContext` from
     transport kwargs and run :meth:`SummaryRecallStagePort.summary_recall_stage`.
     """
-    ctx = RAGPipelineQueryContext.from_legacy(
+    ctx = RAGPipelineQueryContext.from_chat_request(
         chat_history,
         filters=filters,
         retrieval_settings=retrieval_settings,
