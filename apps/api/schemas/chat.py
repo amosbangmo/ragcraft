@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.retrieval_filters import RetrievalFilters
 
@@ -40,17 +40,31 @@ class RetrievalFiltersPayload(BaseModel):
 
 class ChatPipelineRequestBase(BaseModel):
     """
-    Shared body for chat and pipeline calls.
+    Shared JSON body for chat and pipeline calls.
 
-    Example::
-
-        {"user_id": "demo-user", "project_id": "my-rag-project", "question": "What is the refund policy?"}
+    The authenticated user is taken from the ``X-User-Id`` header (see
+    :func:`apps.api.dependencies.get_request_user_id`); do not send ``user_id`` in the body.
     """
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "project_id": "my-rag-project",
+                    "question": "What is the refund policy?",
+                    "chat_history": [],
+                }
+            ]
+        },
+    )
 
-    user_id: str = Field(..., min_length=1, description="Owner of the project workspace.")
-    project_id: str = Field(..., min_length=1, description="Project directory name under the user.")
+    project_id: str = Field(
+        ...,
+        min_length=1,
+        description="Project directory name under the user from ``X-User-Id``.",
+        examples=["demo"],
+    )
     question: str = Field(..., min_length=1, description="User question for this turn.")
     chat_history: list[str] = Field(
         default_factory=list,
@@ -121,12 +135,30 @@ class PipelineInspectResponse(BaseModel):
 
 
 class RetrievalCompareRequest(BaseModel):
-    model_config = {"extra": "forbid"}
+    """Compare FAISS-only vs hybrid retrieval; identity comes from ``X-User-Id``."""
 
-    user_id: str = Field(..., min_length=1, description="Must match ``X-User-Id``.")
-    project_id: str = Field(..., min_length=1)
-    questions: list[str] = Field(default_factory=list)
-    enable_query_rewrite: bool = True
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "project_id": "demo",
+                    "questions": ["What are the payment terms?", "Who is the counterparty?"],
+                    "enable_query_rewrite": True,
+                }
+            ]
+        },
+    )
+
+    project_id: str = Field(..., min_length=1, description="Project under the authenticated user.")
+    questions: list[str] = Field(
+        default_factory=list,
+        description="Questions to run under both retrieval modes.",
+    )
+    enable_query_rewrite: bool = Field(
+        default=True,
+        description="Whether to rewrite each question before retrieval.",
+    )
 
 
 class RetrievalCompareResponse(BaseModel):

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from apps.api.dependencies import (
     get_ask_question_use_case,
@@ -18,6 +18,7 @@ from apps.api.dependencies import (
     get_retrieval_comparison_service,
     get_request_user_id,
 )
+from apps.api.openapi_common import chat_route_responses
 from apps.api.schemas.chat import (
     ChatAskRequest,
     ChatAskResponse,
@@ -43,24 +44,20 @@ router = APIRouter(prefix="/chat", tags=["chat"])
     "/ask",
     response_model=ChatAskResponse,
     summary="Ask a question (full RAG)",
-    responses={
-        502: {"description": "LLM or upstream model failure"},
-        503: {"description": "Vector store, doc store, or infrastructure failure"},
-    },
+    responses=chat_route_responses(),
 )
 def post_chat_ask(
     body: ChatAskRequest,
+    user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
     use_case: Annotated[Any, Depends(get_ask_question_use_case)],
 ) -> ChatAskResponse:
     """
     Run end-to-end RAG for one turn.
 
-    Example body::
-
-        {"user_id": "u1", "project_id": "demo", "question": "Summarize the main risks."}
+    Send ``X-User-Id`` and a body with ``project_id`` and ``question`` (see schema example).
     """
-    project = project_service.get_project(body.user_id, body.project_id)
+    project = project_service.get_project(user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     result = use_case.execute(
         project,
@@ -91,24 +88,18 @@ def post_chat_ask(
     "/pipeline/inspect",
     response_model=PipelineInspectResponse,
     summary="Inspect full retrieval pipeline (no answer, no query log)",
-    responses={
-        502: {"description": "LLM or upstream model failure"},
-        503: {"description": "Vector store, doc store, or infrastructure failure"},
-    },
+    responses=chat_route_responses(),
 )
 def post_pipeline_inspect(
     body: PipelineInspectRequest,
+    user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
     use_case: Annotated[Any, Depends(get_inspect_pipeline_use_case)],
 ) -> PipelineInspectResponse:
     """
     Build the same pipeline as ``/chat/ask`` but stop before answer generation and do not write query logs.
-
-    Example::
-
-        {"user_id": "u1", "project_id": "demo", "question": "What tables mention revenue?"}
     """
-    project = project_service.get_project(body.user_id, body.project_id)
+    project = project_service.get_project(user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     pipeline = use_case.execute(
         project,
@@ -137,24 +128,18 @@ def post_pipeline_inspect(
     "/pipeline/preview-summary-recall",
     response_model=PreviewSummaryRecallResponse,
     summary="Preview summary recall stage only",
-    responses={
-        502: {"description": "LLM or upstream model failure"},
-        503: {"description": "Vector store, doc store, or infrastructure failure"},
-    },
+    responses=chat_route_responses(),
 )
 def post_preview_summary_recall(
     body: PreviewSummaryRecallRequest,
+    user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
     use_case: Annotated[Any, Depends(get_preview_summary_recall_use_case)],
 ) -> PreviewSummaryRecallResponse:
     """
     Run vector (+ optional BM25) summary recall and return recalled chunks (Streamlit “preview” parity).
-
-    Example::
-
-        {"user_id": "u1", "project_id": "demo", "question": "Key dates in the contract?"}
     """
-    project = project_service.get_project(body.user_id, body.project_id)
+    project = project_service.get_project(user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     raw = use_case.execute(
         project,
@@ -183,23 +168,15 @@ def post_preview_summary_recall(
     "/retrieval/compare",
     response_model=RetrievalCompareResponse,
     summary="Compare FAISS-only vs hybrid retrieval across questions",
-    responses={
-        502: {"description": "LLM or upstream model failure"},
-        503: {"description": "Vector store, doc store, or infrastructure failure"},
-    },
+    responses=chat_route_responses(),
 )
 def post_retrieval_compare(
     body: RetrievalCompareRequest,
-    header_user_id: Annotated[str, Depends(get_request_user_id)],
+    user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[Any, Depends(get_project_service)],
     comparison: Annotated[Any, Depends(get_retrieval_comparison_service)],
 ) -> RetrievalCompareResponse:
-    if body.user_id.strip() != header_user_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Body user_id must match X-User-Id header.",
-        )
-    project = project_service.get_project(body.user_id, body.project_id)
+    project = project_service.get_project(user_id, body.project_id)
     raw = comparison.compare(
         project=project,
         questions=list(body.questions),

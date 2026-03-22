@@ -61,7 +61,6 @@ def _filters_body(filters: RetrievalFilters | None) -> dict[str, Any] | None:
 
 def _chat_pipeline_body(
     *,
-    user_id: str,
     project_id: str,
     question: str,
     chat_history: Any,
@@ -71,7 +70,6 @@ def _chat_pipeline_body(
     enable_hybrid_retrieval_override: bool | None,
 ) -> dict[str, Any]:
     return {
-        "user_id": user_id,
         "project_id": project_id,
         "question": question,
         "chat_history": list(chat_history or []),
@@ -304,7 +302,6 @@ class HttpBackendClient:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         body = _chat_pipeline_body(
-            user_id=user_id,
             project_id=project_id,
             question=question,
             chat_history=chat_history,
@@ -369,7 +366,6 @@ class HttpBackendClient:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         body = _chat_pipeline_body(
-            user_id=user_id,
             project_id=project_id,
             question=query,
             chat_history=chat_history,
@@ -401,7 +397,6 @@ class HttpBackendClient:
         retrieval_settings: dict | None = None,
     ) -> Any:
         body = _chat_pipeline_body(
-            user_id=user_id,
             project_id=project_id,
             question=question,
             chat_history=chat_history,
@@ -429,7 +424,6 @@ class HttpBackendClient:
             "/chat/retrieval/compare",
             user_id=user_id,
             json_body={
-                "user_id": user_id,
                 "project_id": project_id,
                 "questions": questions,
                 "enable_query_rewrite": enable_query_rewrite,

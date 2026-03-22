@@ -28,12 +28,13 @@ def _make_mock_transport() -> httpx.MockTransport:
             pid = body.get("project_id", "x")
             return httpx.Response(
                 201,
-                json={"user_id": "u1", "project_id": pid},
+                json={"project_id": pid},
             )
         if method == "GET" and path == "/projects/demo":
             return httpx.Response(200, json={"user_id": "u1", "project_id": "demo"})
         if method == "POST" and path == "/chat/ask":
             payload = json.loads(request.content.decode("utf-8"))
+            assert "user_id" not in payload
             assert payload["question"] == "hi"
             return httpx.Response(
                 200,

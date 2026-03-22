@@ -17,7 +17,18 @@ from fastapi import FastAPI
 
 from apps.api.config import load_settings
 from apps.api.error_handlers import register_exception_handlers
+from apps.api.openapi_common import build_openapi_schema
 from apps.api.routers import chat, evaluation, projects, system, users
+
+_API_DESCRIPTION = """\
+RAGCraft HTTP API for workspaces, RAG chat, evaluation flows, and user profile data.
+
+**Identity:** send header ``X-User-Id`` on requests that touch user-scoped data (projects, chat,
+evaluation, ``/users/me``). ``GET /health`` and ``GET /version`` do not require it.
+
+**Errors:** JSON error bodies use a stable envelope — ``detail``, ``message``, ``error_type``,
+``code``, ``category`` — see ``CanonicalApiError`` in this schema and ``apps.api.error_payload``.
+"""
 
 
 def create_app() -> FastAPI:
@@ -25,9 +36,43 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.api_title,
         version=settings.api_version,
+        description=_API_DESCRIPTION,
         docs_url="/docs",
         redoc_url="/redoc",
+        openapi_tags=[
+            {
+                "name": "chat",
+                "description": "RAG turns, pipeline inspection, summary recall preview, retrieval comparison.",
+            },
+            {
+                "name": "projects",
+                "description": "Projects, documents, ingest/reindex, retrieval settings, cache invalidation.",
+            },
+            {
+                "name": "evaluation",
+                "description": "Manual eval, gold QA benchmarks, QA dataset CRUD, query logs, benchmark export.",
+            },
+            {
+                "name": "users",
+                "description": "Profile and account APIs keyed by ``X-User-Id`` (SQLite-backed).",
+            },
+            {"name": "system", "description": "Liveness and version metadata (no auth header)."},
+        ],
     )
+
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        app.openapi_schema = build_openapi_schema(
+            app_title=app.title,
+            app_version=app.version,
+            app_description=app.description or "",
+            routes=app.routes,
+        )
+        return app.openapi_schema
+
+    app.openapi = custom_openapi  # type: ignore[method-assign]
+
     register_exception_handlers(app)
     app.include_router(system.router)
     app.include_router(chat.router)
