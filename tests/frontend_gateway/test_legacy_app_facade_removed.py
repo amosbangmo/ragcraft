@@ -1,4 +1,4 @@
-"""Guardrails: production Streamlit wiring must not depend on the removed ``src.app.ragcraft_app`` façade."""
+"""Guardrails: production Streamlit wiring must not depend on the removed legacy ``src.app`` UI shell."""
 
 from __future__ import annotations
 

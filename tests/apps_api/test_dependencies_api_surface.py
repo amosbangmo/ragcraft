@@ -7,7 +7,7 @@ import pytest
 import apps.api.dependencies as api_dependencies
 
 
-def test_legacy_ragcraft_app_dependency_removed() -> None:
+def test_legacy_app_shell_not_exposed_from_dependencies() -> None:
     """FastAPI wiring uses the application container only; the Streamlit façade is not a DI export."""
     assert not hasattr(api_dependencies, "get_ragcraft_app")
 
@@ -28,7 +28,7 @@ def test_dependencies_module_has_no_legacy_db_bootstrap() -> None:
     assert "BackendContainerDep" in source
 
 
-def test_dependencies_module_never_imports_ragcraft_app() -> None:
+def test_dependencies_avoids_legacy_streamlit_facade_imports() -> None:
     """Guards the FastAPI graph against the Streamlit façade (see apps.api.dependencies docstring)."""
     from pathlib import Path
 
@@ -39,7 +39,7 @@ def test_dependencies_module_never_imports_ragcraft_app() -> None:
     assert "RAGCraftApp" not in source
 
 
-def test_backend_container_resolution_skips_ragcraft_app() -> None:
+def test_backend_container_resolution_avoids_legacy_app_module() -> None:
     """Instantiating the API composition root must not load the legacy UI façade."""
     sys.modules.pop("src.app.ragcraft_app", None)
 
