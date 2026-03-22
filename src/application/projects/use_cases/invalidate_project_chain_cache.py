@@ -6,7 +6,12 @@ from src.services.project_service import ProjectService
 
 
 class InvalidateProjectChainCacheUseCase:
-    """Drop the in-process LangChain cache entry for a project (same semantics as the app helper)."""
+    """
+    Drop the in-process vector-store handle for a project (see ``ProjectChainHandleCachePort``).
+
+    The injected ``invalidate_project_chain`` callable is wired at the composition root: FastAPI passes
+    ``ProcessProjectChainCache.drop``; Streamlit builds may compose additional session eviction.
+    """
 
     def __init__(
         self,

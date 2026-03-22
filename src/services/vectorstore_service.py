@@ -3,6 +3,8 @@ import time
 from langchain_core.documents import Document
 
 from src.domain.project import Project
+from src.domain.ports.project_chain_handle_cache_port import ProjectChainHandleCachePort
+from src.infrastructure.caching.process_project_chain_cache import get_default_process_project_chain_cache
 from src.infrastructure.vectorstores.faiss.vector_store import (
     load_vector_store,
     save_vector_store,
@@ -15,16 +17,35 @@ from src.core.exceptions import VectorStoreError
 class VectorStoreService:
     """
     FAISS-backed implementation of :class:`~src.domain.retrieval.vector_store_port.VectorStorePort`.
+
+    ``load`` consults an in-process :class:`~src.domain.ports.project_chain_handle_cache_port.ProjectChainHandleCachePort`
+    so repeated retrieval work reuses the same handle until :meth:`ProjectChainHandleCachePort.drop` runs
+    (ingestion / explicit cache invalidation).
     """
 
+    def __init__(
+        self,
+        *,
+        chain_cache: ProjectChainHandleCachePort | None = None,
+    ) -> None:
+        self._chain_cache: ProjectChainHandleCachePort = (
+            chain_cache if chain_cache is not None else get_default_process_project_chain_cache()
+        )
+
     def load(self, project: Project):
+        project_id = project.project_id
+        cached = self._chain_cache.get(project_id)
+        if cached is not None:
+            return cached
         try:
-            return load_vector_store(project.faiss_index_path)
+            loaded = load_vector_store(project.faiss_index_path)
         except Exception as exc:
             raise VectorStoreError(
-                f"Failed to load vector store for project '{project.project_id}': {exc}",
+                f"Failed to load vector store for project '{project_id}': {exc}",
                 user_message="Unable to load the vector index for the selected project.",
             ) from exc
+        self._chain_cache.set(project_id, loaded)
+        return loaded
 
     def index_documents(self, project: Project, chunks: list[Document]) -> tuple[object | None, float]:
         if not chunks:

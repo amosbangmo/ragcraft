@@ -37,12 +37,14 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
 from langchain_core.documents import Document
 from src.core.exceptions import VectorStoreError
 from src.domain.project import Project
+from src.infrastructure.caching.process_project_chain_cache import ProcessProjectChainCache
 from src.services.vectorstore_service import VectorStoreService
 
 
 class TestVectorStoreService(unittest.TestCase):
     def setUp(self):
-        self.service = VectorStoreService()
+        self._chain_cache = ProcessProjectChainCache()
+        self.service = VectorStoreService(chain_cache=self._chain_cache)
         self.project = Project(user_id="u1", project_id="p1")
 
     @patch("src.services.vectorstore_service.load_vector_store")
@@ -54,6 +56,20 @@ class TestVectorStoreService(unittest.TestCase):
 
         self.assertIs(result, vector_store)
         mock_load.assert_called_once_with(self.project.faiss_index_path)
+
+    @patch("src.services.vectorstore_service.load_vector_store")
+    def test_load_uses_cache_until_dropped(self, mock_load):
+        vector_store = MagicMock()
+        mock_load.return_value = vector_store
+
+        first = self.service.load(self.project)
+        second = self.service.load(self.project)
+        self.assertIs(first, second)
+        mock_load.assert_called_once_with(self.project.faiss_index_path)
+
+        self._chain_cache.drop(self.project.project_id)
+        self.service.load(self.project)
+        self.assertEqual(mock_load.call_count, 2)
 
     @patch("src.services.vectorstore_service.load_vector_store")
     def test_load_wraps_errors(self, mock_load):

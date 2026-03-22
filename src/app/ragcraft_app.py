@@ -53,12 +53,21 @@ from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 
-from src.core.chain_state import (
+from src.infrastructure.caching.process_project_chain_cache import (
+    get_default_process_project_chain_cache,
+)
+from src.ui.streamlit_project_chain_session_cache import (
     get_cached_chain,
     set_cached_chain,
     invalidate_all_project_chains,
-    invalidate_project_chain as _drop_cached_chain_for_project,
+    invalidate_project_chain as _invalidate_streamlit_session_chain,
 )
+
+
+def _invalidate_process_and_streamlit_chain_cache(project_id: str) -> None:
+    """Evict shared process cache then Streamlit session cache (UI process only)."""
+    get_default_process_project_chain_cache().drop(project_id)
+    _invalidate_streamlit_session_chain(project_id)
 
 
 class RAGCraftApp:
@@ -88,7 +97,7 @@ class RAGCraftApp:
             resolved_backend = backend or build_backend_composition()
             self._container = build_backend(
                 backend=resolved_backend,
-                invalidate_chain_key=_drop_cached_chain_for_project,
+                invalidate_chain_key=_invalidate_process_and_streamlit_chain_cache,
             )
 
         self._backend = self._container.backend
@@ -274,6 +283,9 @@ class RAGCraftApp:
 
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
         self._container.invalidate_project_chain(user_id, project_id)
+        # Always evict the Streamlit session layer too when this façade is used (including a shared
+        # FastAPI-built container whose ``invalidate_chain_key`` only targets the process cache).
+        _invalidate_streamlit_session_chain(project_id)
 
     def invalidate_all_project_chains(self):
         invalidate_all_project_chains()

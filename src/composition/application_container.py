@@ -73,6 +73,8 @@ class BackendApplicationContainer:
     """
 
     backend: BackendComposition
+    # Composition-boundary hook: evicts process-scoped handles (``ProcessProjectChainCache.drop`` for
+    # FastAPI). Streamlit entrypoints may wrap the same hook to also clear session-scoped caches.
     _invalidate_chain_key: Callable[[str], None] = field(repr=False)
 
     @property

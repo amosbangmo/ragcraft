@@ -1,7 +1,11 @@
+"""Streamlit session adapter for optional legacy chain caching (mocked ``streamlit``)."""
+
+from __future__ import annotations
+
 import unittest
 from unittest.mock import patch
 
-from src.core.chain_state import (
+from src.ui.streamlit_project_chain_session_cache import (
     CHAIN_CACHE_KEY,
     get_cached_chain,
     invalidate_all_project_chains,
@@ -10,11 +14,11 @@ from src.core.chain_state import (
 )
 
 
-class TestChainState(unittest.TestCase):
+class TestStreamlitProjectChainSessionCache(unittest.TestCase):
     def _session(self) -> dict:
         return {}
 
-    @patch("src.core.chain_state.st")
+    @patch("src.ui.streamlit_project_chain_session_cache.st")
     def test_cache_roundtrip(self, mock_st) -> None:
         mock_st.session_state = self._session()
         set_cached_chain("k1", "chain-a")
@@ -22,13 +26,13 @@ class TestChainState(unittest.TestCase):
         invalidate_project_chain("k1")
         self.assertIsNone(get_cached_chain("k1"))
 
-    @patch("src.core.chain_state.st")
+    @patch("src.ui.streamlit_project_chain_session_cache.st")
     def test_invalidate_all_when_present(self, mock_st) -> None:
         mock_st.session_state = {CHAIN_CACHE_KEY: {"a": 1, "b": 2}}
         invalidate_all_project_chains()
         self.assertEqual(mock_st.session_state[CHAIN_CACHE_KEY], {})
 
-    @patch("src.core.chain_state.st")
+    @patch("src.ui.streamlit_project_chain_session_cache.st")
     def test_invalidate_all_when_absent(self, mock_st) -> None:
         mock_st.session_state = {}
         invalidate_all_project_chains()

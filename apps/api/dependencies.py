@@ -5,8 +5,10 @@ FastAPI dependency providers.
 :class:`~src.composition.application_container.BackendApplicationContainer` from
 :func:`~src.composition.build_backend` (composition root: services + use cases).
 
-FastAPI wiring does **not** import the Streamlit-oriented façade in ``src.app`` or Streamlit
-entrypoints; the HTTP API’s composition graph is independent of the desktop UI process.
+FastAPI wiring does **not** import the legacy UI façade in ``src.app`` or UI entrypoints; the HTTP
+API’s composition graph is independent of the desktop UI process.
+Project-level retrieval handle eviction uses
+:class:`~src.infrastructure.caching.process_project_chain_cache.ProcessProjectChainCache` only.
 
 The composition build stays inside a cached getter so ``import apps.api.dependencies`` does not load
 FAISS, LangChain, or UI session chain state until a route resolves a dependency. Service return
@@ -32,9 +34,12 @@ from src.services.retrieval_comparison_service import RetrievalComparisonService
 @lru_cache(maxsize=1)
 def get_backend_application_container() -> Any:
     from src.composition import build_backend
-    from src.core.chain_state import invalidate_project_chain as invalidate_chain_key
+    from src.infrastructure.caching.process_project_chain_cache import (
+        get_default_process_project_chain_cache,
+    )
 
-    return build_backend(invalidate_chain_key=invalidate_chain_key)
+    process_chain_cache = get_default_process_project_chain_cache()
+    return build_backend(invalidate_chain_key=process_chain_cache.drop)
 
 
 BackendContainerDep = Annotated[Any, Depends(get_backend_application_container)]
