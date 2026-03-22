@@ -5,14 +5,14 @@
 | Kind | What | Why keep it |
 |------|------|-------------|
 | **Strategic** | FastAPI as the HTTP backend; `BackendClient` + `HttpBackendClient` / `InProcessBackendClient` | Single composition root; Streamlit and future SPAs share the same capabilities. |
-| **Strategic** | `RAGCraftApp` + in-process mode | Fast local UI without uvicorn; thin wrapper over `BackendApplicationContainer`. |
+| **Strategic** | `InProcessBackendClient` + in-process mode | Fast local UI without uvicorn; holds `BackendApplicationContainer` (same use cases as the API). |
 | **Local / transitional** | Streamlit `session_state` chain cache, optional legacy query-log file import | UX and dev utilities; not part of the public API contract. |
 
 ## Modes
 
 | Mode | `RAGCRAFT_BACKEND_CLIENT` | What calls use cases |
 |------|---------------------------|----------------------|
-| **In-process** (default) | unset or `in_process` | `RAGCraftApp` in the Streamlit process |
+| **In-process** (default) | unset or `in_process` | `InProcessBackendClient` + `BackendApplicationContainer` in the Streamlit process |
 | **HTTP** | `http` | FastAPI server; Streamlit uses `httpx` + `X-User-Id` |
 
 Chat transcript stays in **Streamlit `session_state`** in both modes (`ChatService`). RAG, ingestion, evaluation, and projects go through the backend client (`get_backend_client()`).

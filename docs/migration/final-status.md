@@ -14,7 +14,7 @@ This document summarizes what the migration achieved, what debt remains, and how
 | Projects, documents, retrieval settings | **Yes** | `apps/api/routers/projects.py`. |
 | Evaluation, QA dataset CRUD, benchmark export, query logs | **Yes** | `apps/api/routers/evaluation.py`. |
 | Users / profile / avatar / password (SQLite-backed) | **Yes** | `apps/api/routers/users.py` (Streamlit can use `HttpBackendClient` + `X-User-Id`). |
-| **Streamlit in-process mode** | **No (by design)** | Uses `InProcessBackendClient(RAGCraftApp)` for zero-latency local dev without running uvicorn. |
+| **Streamlit in-process mode** | **No (by design)** | Uses `InProcessBackendClient` + `BackendApplicationContainer` for zero-latency local dev without running uvicorn. |
 
 **Conclusion:** A non-Streamlit frontend **can** be built against the HTTP API for the main RAG and workspace flows, provided it sends **`X-User-Id`** (and uses the same auth story the API expects today). **Gaps** are not hidden: see [Remaining limitations](#remaining-limitations-and-debt) below.
 
@@ -23,9 +23,9 @@ This document summarizes what the migration achieved, what debt remains, and how
 ## Completed migration items (high level)
 
 - **Single backend composition root for the API:** `build_backend_composition` → `build_backend_application_container`; FastAPI `Depends` getters in `apps/api/dependencies.py` resolve use cases from the container (not from a duplicate façade graph).
-- **Streamlit decoupling from services:** Pages and `src/ui` do not import `src.services`, `src.composition`, or `src.app` directly; RAG/workspace calls go through `BackendClient` (`protocol`, `HttpBackendClient`, `InProcessBackendClient`). See `docs/migration/streamlit-decoupling-checklist.md`.
+- **Streamlit decoupling from services:** Pages and `src/ui` do not import `src.infrastructure`, `src.composition`, or `apps.api` directly; RAG/workspace calls go through `BackendClient` (`protocol`, `HttpBackendClient`, `InProcessBackendClient`). See `docs/migration/streamlit-decoupling-checklist.md`.
 - **Gateway layering:** `src/frontend_gateway/streamlit_context.py` isolates `src/ui` from `src.core.app_state` / `src.core.session` import paths.
-- **Lazy `src.frontend_gateway` package init:** Submodules such as `streamlit_context` can import without eagerly loading `in_process` / `RAGCraftApp` (helps tests and lighter tooling).
+- **Lazy `src.frontend_gateway` package init:** Submodules such as `streamlit_context` can import without eagerly loading `in_process` (helps tests and lighter tooling).
 - **Dead API compatibility removed:** `get_ragcraft_app` was removed from `apps/api/dependencies.py` — no router used it; the container is the only FastAPI integration root.
 - **Tests added/extended:** Public API routes (`/health`, `/version`), frontend gateway settings and lazy import, `streamlit_context` auth refresh delegation, serialization for `EffectiveRetrievalSettingsView`, dependency surface guard.
 
@@ -33,11 +33,11 @@ This document summarizes what the migration achieved, what debt remains, and how
 
 ## Remaining limitations and debt
 
-1. **`RAGCraftApp` is the supported in-process adapter** for Streamlit (see `ARCHITECTURE_TARGET.md`). An optional follow-up is to fold its remaining helpers into `InProcessBackendClient` + container-only wiring; that is a refactor, not an open migration gap.
+1. **In-process Streamlit** uses **`InProcessBackendClient`** wrapping **`BackendApplicationContainer`** (see `ARCHITECTURE_TARGET.md`). Further shrinking the client surface is optional hardening.
 2. **Optional / heavy Python dependencies:** Full composition (e.g. ingestion with `unstructured`) may be missing in minimal environments; `/health` and lightweight tests should still run. Full integration and UI tests need the complete dependency set from the project’s environment spec.
 3. **`BackendClient` protocol coverage vs REST:** The protocol is the Streamlit-facing contract. HTTP coverage should stay aligned when adding methods (see checklist in `streamlit-decoupling-checklist.md`).
 4. **Auth model for external frontends:** Today the API uses **`X-User-Id`** as a header. A production SPA would typically replace this with JWT/OAuth and a verified principal; that is an explicit extension point, not implemented in this migration pass.
-5. **Domain / application coupling to LangChain and FAISS** (documented in `current-architecture-baseline.md`) remains; this is broader than “Streamlit vs API”.
+5. **Domain purity vs adapters:** Domain no longer imports LangChain; FAISS and LangChain stay in infrastructure. Broader DI cleanup remains optional.
 
 ---
 

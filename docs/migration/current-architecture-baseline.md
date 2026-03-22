@@ -1,6 +1,8 @@
 # Current architecture baseline (RAGCraft)
 
-This document captures the **as-is** layout, known Clean Architecture leaks, and **non-negotiable constraints** for the FastAPI-first migration. It is a snapshot baseline; target shape remains in [`ARCHITECTURE_TARGET.md`](../../ARCHITECTURE_TARGET.md).
+> **Historical snapshot:** Written during the migration; it describes an **older** tree (`src/services`, `RAGCraftApp`). For the **current** system, read **`ARCHITECTURE_TARGET.md`** and **`docs/migration/MIGRATION_COMPLETE_REPORT.md`**. This file is kept for audit trail only.
+
+This document captured the **as-is** layout, known Clean Architecture leaks, and **non-negotiable constraints** for the FastAPI-first migration.
 
 ---
 

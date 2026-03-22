@@ -1,6 +1,6 @@
 # Backend migration checklist — FastAPI as primary surface
 
-This checklist records **completed** HTTP backend work and **follow-ups** for non-Streamlit frontends. The authoritative runtime description is **`ARCHITECTURE_TARGET.md`**; `RAGCraftApp` remains **by design** for Streamlit in-process mode (see **`ragcraftapp-deprecation.md`**).
+This checklist records **completed** HTTP backend work and **follow-ups** for non-Streamlit frontends. The authoritative runtime description is **`ARCHITECTURE_TARGET.md`**. Streamlit **in-process** mode uses **`InProcessBackendClient`** + **`BackendApplicationContainer`** (the old **`RAGCraftApp`** type was removed; see **`ragcraftapp-deprecation.md`**).
 
 ---
 

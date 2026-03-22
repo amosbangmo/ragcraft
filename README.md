@@ -84,10 +84,10 @@ The demo allows you to:
 
 # 🏗️ Architecture Overview
 
-- **FastAPI (`apps/api/`)** is the **backend HTTP boundary** — OpenAPI at `/docs`, the contract for automation and non-Streamlit frontends.
-- **Streamlit** (`streamlit_app.py`, `pages/`, `src/ui/`) is a **client/UI** — it must not import services or the composition root directly; it goes through **`BackendClient`** (`src/frontend_gateway/protocol.py`).
-- **Angular or other SPAs** should target the **same HTTP API** (plus `X-User-Id` for workspace identity as implemented today).
-- **Runtime modes:** **`RAGCRAFT_BACKEND_CLIENT=http`** → `HttpBackendClient` → FastAPI; **default / `in_process`** → `InProcessBackendClient` → `RAGCraftApp` wrapping the same `BackendApplicationContainer` (no uvicorn required for local UI dev). See `docs/migration/streamlit-fastapi-dev.md` and `ARCHITECTURE_TARGET.md`.
+- **FastAPI (`apps/api/`)** is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
+- **Streamlit** (`streamlit_app.py`, `pages/`, `src/ui/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`src/frontend_gateway/protocol.py`). It must **not** import `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api` directly (enforced by architecture tests).
+- **Default Streamlit mode** is **`RAGCRAFT_BACKEND_CLIENT=http`**: the UI calls the API over HTTP like any other client. **`in_process`** builds a **`BackendApplicationContainer`** inside the Streamlit process (no uvicorn) for fast local work — same use cases, different transport.
+- **Angular or other SPAs** should use the **same HTTP API** (today: `X-User-Id` for workspace identity on scoped routes).
 
 ```text
 User (Browser)
@@ -97,9 +97,9 @@ User (Browser)
 Streamlit UI                  Angular / API clients
       │                              │
       │  BackendClient               │  HTTP (+ X-User-Id)
-      │  (in-process OR HTTP)      │
+      │  (in-process OR HTTP)        │
       ▼                              ▼
-Backend composition (services + use cases)
+BackendApplicationContainer (use cases + infrastructure services)
       │
       ▼
 Document Processing
@@ -120,7 +120,26 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** `ARCHITECTURE_TARGET.md` — migration closure report: `docs/migration/MIGRATION_COMPLETE_REPORT.md` — history and SPA checklist: `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
+**Architecture reference:** `ARCHITECTURE_TARGET.md` (source of truth) · `docs/migration/MIGRATION_COMPLETE_REPORT.md` (status + history) · `tests/architecture/README.md` (import guardrails).
+
+### Migration status (short)
+
+| Done | Transitional / deprecated |
+|------|---------------------------|
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** — shim re-exports only; import **`src.infrastructure.services`** in new code |
+| Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
+| Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **`X-User-Id`** trust model — replace with real auth for production browsers |
+
+### Where new logic should live
+
+| Kind of change | Place |
+|----------------|--------|
+| Business rules, entities, ports | `src/domain/` |
+| Orchestration, commands, HTTP wire DTOs | `src/application/**/use_cases/` (and `application/http/wire.py` for JSON shapes) |
+| RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`services/`, `persistence/`, `vectorstores/`, …) |
+| SQLite port implementations | `src/adapters/sqlite/` |
+| Wiring the graph | `src/composition/` |
+| Streamlit/HTTP client seam | `src/frontend_gateway/` (stubs that need `infrastructure.services` → `src/application/frontend_support/`) |
 
 ---
 
@@ -195,27 +214,27 @@ Assets are rehydrated from SQLite during retrieval to build the final prompt.
 ```text
 ragcraft/
 │
-├── apps/api/              # FastAPI app (primary HTTP API)
-├── streamlit_app.py
-├── pages/
-│   ├── chat.py
-│   ├── ingestion.py
-│   ├── retrieval_inspector.py
-│   ├── retrieval_comparison.py
-│   └── ...
-│
+├── apps/api/                    # FastAPI — HTTP backend, OpenAPI, Depends → container
+├── streamlit_app.py             # Streamlit entry
+├── pages/                       # Streamlit multipage app
 ├── src/
-│   ├── app/
+│   ├── adapters/sqlite/         # Port implementations (users, assets, project settings)
+│   ├── application/             # Use cases, policies, HTTP wire helpers, frontend_support stubs
 │   ├── auth/
-│   ├── core/
-│   ├── domain/
-│   ├── frontend_gateway/  # BackendClient seam: Http vs InProcess → RAGCraftApp
-│   ├── infrastructure/
-│   ├── services/
-│   └── ui/
-│
+│   ├── composition/             # build_backend(), BackendApplicationContainer
+│   ├── core/                    # config, paths, shared errors (Streamlit session helpers here)
+│   ├── domain/                  # Entities, ports, SummaryRecallDocument, no framework imports
+│   ├── frontend_gateway/        # BackendClient, HttpBackendClient, InProcessBackendClient
+│   ├── infrastructure/          # services/, persistence/, vectorstores/, adapters
+│   ├── backend/               # DEPRECATED: re-export shims → infrastructure.services
+│   └── ui/                      # Streamlit widgets (no direct domain/infra imports)
+├── tests/
+│   ├── architecture/            # Layer boundary + migration guardrails
+│   ├── apps_api/                # FastAPI contract tests
+│   └── infrastructure_services/  # Unit tests for src.infrastructure.services
 ├── data/
 ├── requirements.txt
+├── ARCHITECTURE_TARGET.md       # Current runtime layout (read this)
 └── README.md
 ```
 

@@ -1,5 +1,5 @@
 """
-Streamlit session singletons for the backend boundary.
+Streamlit session singletons for resolving a :class:`~src.frontend_gateway.protocol.BackendClient`.
 
 Pages and ``src/ui`` must call :func:`get_backend_client` (via
 :mod:`src.frontend_gateway.streamlit_api_client` / :mod:`src.frontend_gateway.streamlit_context`).
