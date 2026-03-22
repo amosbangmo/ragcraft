@@ -80,7 +80,8 @@ class _FakeRAGService:
 class TestRetrievalQualityGate(unittest.TestCase):
     def test_baseline_gate_hybrid_should_not_regress(self):
         project = Project(user_id="u1", project_id="p1")
-        service = RetrievalComparisonService(rag_service=_FakeRAGService())
+        fake = _FakeRAGService()
+        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
         questions = ["invoice total", "payment terms"]
 
         report = service.compare(

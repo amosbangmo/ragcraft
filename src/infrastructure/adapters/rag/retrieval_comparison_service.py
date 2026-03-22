@@ -1,25 +1,24 @@
-"""Thin adapter: delegates to application retrieval comparison (kept for tests and ``RAGService.inspect_pipeline`` wiring)."""
+"""Thin adapter: delegates to application retrieval comparison (tests and legacy callers)."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
+from typing import Any
 
 from src.application.use_cases.retrieval.retrieval_mode_comparison import compare_retrieval_modes_for_project
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
-
-if TYPE_CHECKING:
-    from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 class RetrievalComparisonService:
     """
-    Compare FAISS-only vs hybrid retrieval using ``rag_service.inspect_pipeline``.
+    Compare FAISS-only vs hybrid retrieval using an ``inspect_pipeline`` callable.
 
     Orchestration lives in :mod:`src.application.use_cases.retrieval.retrieval_mode_comparison`.
     """
 
-    def __init__(self, rag_service: RAGService) -> None:
-        self.rag_service = rag_service
+    def __init__(self, *, inspect_pipeline: Callable[..., PipelineBuildResult | None]) -> None:
+        self._inspect_pipeline = inspect_pipeline
 
     def compare(
         self,
@@ -29,7 +28,7 @@ class RetrievalComparisonService:
         enable_query_rewrite: bool,
     ) -> dict[str, Any]:
         return compare_retrieval_modes_for_project(
-            inspect_pipeline=self.rag_service.inspect_pipeline,
+            inspect_pipeline=self._inspect_pipeline,
             project=project,
             questions=questions,
             enable_query_rewrite=enable_query_rewrite,

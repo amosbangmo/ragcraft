@@ -60,7 +60,7 @@ class InProcessBackendClient:
         self._container.chat_service.add_assistant_message(content)
 
     def generate_answer_from_pipeline(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
-        return self._container.rag_service.generate_answer_from_pipeline(
+        return self._container.chat_generate_answer_from_pipeline_use_case.execute(
             project=project, pipeline=pipeline
         )
 

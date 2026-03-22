@@ -18,7 +18,7 @@ from src.infrastructure.adapters.rag.answer_generation_service import AnswerGene
 class AskQuestionUseCase:
     """
     End-to-end RAG ask: build pipeline via injected callable (typically
-    :meth:`src.infrastructure.adapters.rag.rag_service.RAGService.build_pipeline` → :class:`BuildRagPipelineUseCase`),
+    :meth:`src.application.use_cases.chat.build_rag_pipeline.BuildRagPipelineUseCase.execute`),
     generate answer, merge latency, emit deferred query log with answer payload, return
     :class:`~src.domain.rag_response.RAGResponse`.
     """

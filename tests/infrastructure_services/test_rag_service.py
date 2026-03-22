@@ -27,7 +27,7 @@ if "src.core.config" not in sys.modules:
     sys.modules["src.core.config"] = types.ModuleType("src.core.config")
 
 config_module = sys.modules["src.core.config"]
-# ``retrieval_settings`` imports this symbol; tests stub the module before importing RAGService.
+# ``retrieval_settings`` imports this symbol; tests stub the module before importing subgraph wiring.
 if not hasattr(config_module, "RetrievalConfig"):
 
     class RetrievalConfig:
@@ -104,15 +104,50 @@ from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
+from src.composition.chat_rag_wiring import build_chat_rag_use_cases, build_rag_retrieval_subgraph
 from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
-from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 def _mutable_retrieval_config_view(cfg):
-    """RAGService tests mutate ``service.config``; real ``RetrievalConfig`` is frozen."""
+    """Tests mutate ``service.config``; real ``RetrievalConfig`` is frozen."""
     if is_dataclass(cfg) and cfg.__dataclass_params__.frozen:
         return SimpleNamespace(**asdict(cfg))
     return cfg
+
+
+class _RagPipelineTestFacade:
+    """Mirrors the old ``RAGService`` surface used by these unit tests."""
+
+    def __init__(self, subgraph, ucs, *, query_log_service):
+        self._sub = subgraph
+        self._ucs = ucs
+        self.query_log_service = query_log_service
+
+    @property
+    def config(self):
+        return self._sub.config
+
+    @config.setter
+    def config(self, value):
+        self._sub.config = value
+
+    @property
+    def summary_recall_service(self):
+        return self._sub.summary_recall_service
+
+    @property
+    def pipeline_assembly_service(self):
+        return self._sub.pipeline_assembly_service
+
+    @property
+    def retrieval_settings_service(self):
+        return self._sub.retrieval_settings_service
+
+    def build_pipeline(self, *args, **kwargs):
+        return self._ucs.build_rag_pipeline.execute(*args, **kwargs)
+
+    def ask(self, *args, **kwargs):
+        return self._ucs.ask_question.execute(*args, **kwargs)
 
 
 class TestRAGService(unittest.TestCase):
@@ -121,13 +156,13 @@ class TestRAGService(unittest.TestCase):
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
         reranking_service = MagicMock()
-        service = RAGService(
+        subgraph = build_rag_retrieval_subgraph(
             vectorstore_service=vectorstore_service,
-            evaluation_service=evaluation_service,
             docstore_service=docstore_service,
             reranking_service=reranking_service,
-            query_log_service=query_log_service,
         )
+        ucs = build_chat_rag_use_cases(subgraph, query_log=query_log_service)
+        service = _RagPipelineTestFacade(subgraph, ucs, query_log_service=query_log_service)
         service.config = _mutable_retrieval_config_view(service.config)
         # Match stable RRF expectations; real ``RetrievalConfig`` may come from env.
         service.config.hybrid_beta = 0.5
@@ -400,7 +435,7 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
-        with patch.object(service, "build_pipeline", return_value=pipeline):
+        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline):
             response = service.ask(project=project, question="Q", chat_history=[])
 
         self.assertEqual(response.answer, "final answer")
@@ -422,7 +457,7 @@ class TestRAGService(unittest.TestCase):
             confidence=0.0,
         )
 
-        with patch.object(service, "build_pipeline", return_value=pipeline):
+        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline):
             with self.assertRaises(LLMServiceError):
                 service.ask(project=project, question="Q", chat_history=[])
 
@@ -446,7 +481,7 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
-        with patch.object(service, "build_pipeline", return_value=pipeline) as build_pipeline:
+        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline) as build_pipeline:
             service.ask(project=project, question="Q", chat_history=[])
 
         build_pipeline.assert_called_once()

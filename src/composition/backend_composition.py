@@ -8,9 +8,9 @@ Layers (in build order):
 1. SQLite app DB (:func:`~src.infrastructure.persistence.db.init_app_db`).
 2. Core services: auth, projects, ingestion, vector store, evaluation, chat, doc store, reranking,
    QA dataset + generation, project settings, retrieval settings merge.
-3. Shared :class:`~src.infrastructure.adapters.query_logging.query_log_service.QueryLogService` (injected into ``RAGService``).
-4. ``RAGService`` and ``RetrievalComparisonService`` — lazily instantiated on first access to break
-   the dependency cycle and defer heavy LangChain wiring.
+3. Shared :class:`~src.infrastructure.adapters.query_logging.query_log_service.QueryLogService`.
+4. RAG retrieval subgraph — lazily instantiated on first access to defer heavy LangChain wiring
+   (see :mod:`src.composition.chat_rag_wiring`).
 """
 
 from __future__ import annotations
@@ -35,9 +35,8 @@ from src.infrastructure.adapters.rag.reranking_service import RerankingService
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
+    from src.composition.chat_rag_wiring import RagRetrievalSubgraph
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
-    from src.infrastructure.adapters.rag.rag_service import RAGService
-    from src.infrastructure.adapters.rag.retrieval_comparison_service import RetrievalComparisonService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 
@@ -46,8 +45,8 @@ class BackendComposition:
     """
     Immutable service graph for one application instance (API process or Streamlit session).
 
-    ``rag_service`` and ``retrieval_comparison_service`` are built on first read; all other
-    references are fixed at construction time.
+    ``rag_retrieval_subgraph`` is built on first read; all other references are fixed at
+    construction time.
     """
 
     query_log_service: QueryLogService
@@ -63,33 +62,20 @@ class BackendComposition:
     qa_dataset_generation_service: QADatasetGenerationService
     project_settings_repository: ProjectSettingsRepositoryPort
     retrieval_settings_service: RetrievalSettingsService
-    _rag_service: RAGService | None = field(default=None, init=False, repr=False)
-    _retrieval_comparison_service: RetrievalComparisonService | None = field(
-        default=None, init=False, repr=False
-    )
+    _rag_retrieval_subgraph: RagRetrievalSubgraph | None = field(default=None, init=False, repr=False)
 
     @property
-    def rag_service(self) -> RAGService:
-        if self._rag_service is None:
-            from src.infrastructure.adapters.rag.rag_service import RAGService
+    def rag_retrieval_subgraph(self) -> RagRetrievalSubgraph:
+        if self._rag_retrieval_subgraph is None:
+            from src.composition.chat_rag_wiring import build_rag_retrieval_subgraph
 
-            self._rag_service = RAGService(
+            self._rag_retrieval_subgraph = build_rag_retrieval_subgraph(
                 vectorstore_service=self.vectorstore_service,
-                evaluation_service=self.evaluation_service,
                 docstore_service=self.docstore_service,
                 reranking_service=self.reranking_service,
-                query_log_service=self.query_log_service,
                 retrieval_settings_service=self.retrieval_settings_service,
             )
-        return self._rag_service
-
-    @property
-    def retrieval_comparison_service(self) -> RetrievalComparisonService:
-        if self._retrieval_comparison_service is None:
-            self._retrieval_comparison_service = RetrievalComparisonService(
-                rag_service=self.rag_service,
-            )
-        return self._retrieval_comparison_service
+        return self._rag_retrieval_subgraph
 
 
 def build_backend_composition() -> BackendComposition:

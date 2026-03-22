@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.application.evaluation.dtos import RunManualEvaluationCommand
+from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
 from src.infrastructure.adapters.workspace.project_service import ProjectService
-from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 class RunManualEvaluationUseCase:
@@ -16,11 +17,13 @@ class RunManualEvaluationUseCase:
         self,
         *,
         project_service: ProjectService,
-        rag_service: RAGService,
+        inspect_pipeline: InspectRagPipelineUseCase,
+        generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
         evaluation_service: EvaluationService,
     ) -> None:
         self._project_service = project_service
-        self._rag = rag_service
+        self._inspect_pipeline = inspect_pipeline
+        self._generate_answer_from_pipeline = generate_answer_from_pipeline
         self._evaluation = evaluation_service
 
     def execute(self, command: RunManualEvaluationCommand) -> ManualEvaluationResult:
@@ -32,7 +35,8 @@ class RunManualEvaluationUseCase:
         project = self._project_service.get_project(command.user_id, command.project_id)
 
         run = run_rag_inspect_and_answer_for_eval(
-            rag_service=self._rag,
+            inspect_pipeline=self._inspect_pipeline,
+            generate_answer_from_pipeline=self._generate_answer_from_pipeline,
             project=project,
             question=q,
             enable_query_rewrite=command.enable_query_rewrite_override,

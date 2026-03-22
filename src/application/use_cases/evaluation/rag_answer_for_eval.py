@@ -4,21 +4,23 @@ from __future__ import annotations
 
 from time import perf_counter
 
+from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.project import Project
-from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 def run_rag_inspect_and_answer_for_eval(
     *,
-    rag_service: RAGService,
+    inspect_pipeline: InspectRagPipelineUseCase,
+    generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
     project: Project,
     question: str,
     enable_query_rewrite: bool | None,
     enable_hybrid_retrieval: bool | None,
 ) -> dict:
     started = perf_counter()
-    pipeline = rag_service.inspect_pipeline(
+    pipeline = inspect_pipeline.execute(
         project,
         question,
         [],
@@ -29,7 +31,7 @@ def run_rag_inspect_and_answer_for_eval(
     answer_generation_ms = 0.0
     if pipeline is not None:
         gen_started = perf_counter()
-        answer = rag_service.generate_answer_from_pipeline(project=project, pipeline=pipeline)
+        answer = generate_answer_from_pipeline.execute(project=project, pipeline=pipeline)
         answer_generation_ms = (perf_counter() - gen_started) * 1000.0
     latency_ms = (perf_counter() - started) * 1000.0
     latency_dict = None

@@ -10,7 +10,7 @@ class QueryLogIngressPayload:
     Typed payload produced after a RAG pipeline run, before normalization in
     :class:`~src.infrastructure.adapters.query_logging.query_log_service.QueryLogService`.
 
-    Mirrors the dict shape historically built in ``RAGService`` for query logging.
+    Mirrors the dict shape used when logging end-to-end ask flows.
     """
 
     question: str

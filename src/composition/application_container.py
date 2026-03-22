@@ -29,6 +29,10 @@ from src.infrastructure.adapters.rag.retrieval_settings_service import Retrieval
 
 if TYPE_CHECKING:
     from src.application.use_cases.chat.ask_question import AskQuestionUseCase
+    from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+    from src.application.use_cases.chat.generate_answer_from_pipeline import (
+        GenerateAnswerFromPipelineUseCase,
+    )
     from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
     from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
     from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
@@ -57,8 +61,8 @@ if TYPE_CHECKING:
     from src.application.use_cases.settings.update_project_retrieval_settings import (
         UpdateProjectRetrievalSettingsUseCase,
     )
+    from src.composition.chat_rag_wiring import ChatRagUseCases
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
-    from src.infrastructure.adapters.rag.rag_service import RAGService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 
@@ -119,10 +123,6 @@ class BackendApplicationContainer:
     @property
     def query_log_service(self) -> QueryLogService:
         return self.backend.query_log_service
-
-    @property
-    def rag_service(self) -> RAGService:
-        return self.backend.rag_service
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
@@ -222,17 +222,34 @@ class BackendApplicationContainer:
 
         return GetProjectRetrievalPresetLabelUseCase(project_settings=self.project_settings_repository)
 
+    @cached_property
+    def _chat_rag_use_cases(self) -> ChatRagUseCases:
+        from src.composition.chat_rag_wiring import build_chat_rag_use_cases
+
+        return build_chat_rag_use_cases(
+            self.backend.rag_retrieval_subgraph,
+            query_log=self.query_log_service,
+        )
+
     @property
     def chat_ask_question_use_case(self) -> AskQuestionUseCase:
-        return self.rag_service.ask_question_use_case
+        return self._chat_rag_use_cases.ask_question
 
     @property
     def chat_inspect_pipeline_use_case(self) -> InspectRagPipelineUseCase:
-        return self.rag_service.inspect_pipeline_use_case
+        return self._chat_rag_use_cases.inspect_rag_pipeline
 
     @property
     def chat_preview_summary_recall_use_case(self) -> PreviewSummaryRecallUseCase:
-        return self.rag_service.preview_summary_recall_use_case
+        return self._chat_rag_use_cases.preview_summary_recall
+
+    @property
+    def chat_build_rag_pipeline_use_case(self) -> BuildRagPipelineUseCase:
+        return self._chat_rag_use_cases.build_rag_pipeline
+
+    @property
+    def chat_generate_answer_from_pipeline_use_case(self) -> GenerateAnswerFromPipelineUseCase:
+        return self._chat_rag_use_cases.generate_answer_from_pipeline
 
     @cached_property
     def chat_compare_retrieval_modes_use_case(self) -> CompareRetrievalModesUseCase:
@@ -297,7 +314,8 @@ class BackendApplicationContainer:
 
         return RunManualEvaluationUseCase(
             project_service=self.project_service,
-            rag_service=self.rag_service,
+            inspect_pipeline=self.chat_inspect_pipeline_use_case,
+            generate_answer_from_pipeline=self.chat_generate_answer_from_pipeline_use_case,
             evaluation_service=self.evaluation_service,
         )
 
@@ -310,7 +328,8 @@ class BackendApplicationContainer:
         return RunGoldQaDatasetEvaluationUseCase(
             list_qa_dataset_entries=self.evaluation_list_qa_dataset_entries_use_case,
             project_service=self.project_service,
-            rag_service=self.rag_service,
+            inspect_pipeline=self.chat_inspect_pipeline_use_case,
+            generate_answer_from_pipeline=self.chat_generate_answer_from_pipeline_use_case,
             evaluation_service=self.evaluation_service,
         )
 

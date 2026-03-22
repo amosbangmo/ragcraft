@@ -64,7 +64,6 @@ def setUpModule():
         JUDGE_FAILURE_REASON="judge_failure",
     )
     _install_module("src.infrastructure.adapters.chat.chat_service", ChatService=_DummyService)
-    _install_module("src.infrastructure.adapters.rag.rag_service", RAGService=_DummyService)
     _install_module("src.infrastructure.adapters.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("src.infrastructure.adapters.rag.reranking_service", RerankingService=_DummyService)
     _install_module(
@@ -111,7 +110,6 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         backend.ingestion_service = MagicMock()
         backend.vectorstore_service = MagicMock()
         backend.docstore_service = MagicMock()
-        backend._rag_service = MagicMock()
         client.invalidate_project_chain = MagicMock()  # type: ignore[method-assign]
 
         for _uc_key in (
@@ -153,7 +151,13 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         )
         ask_uc = MagicMock()
         ask_uc.execute.return_value = response
-        backend._rag_service.ask_question_use_case = ask_uc
+        container.__dict__["_chat_rag_use_cases"] = SimpleNamespace(
+            ask_question=ask_uc,
+            build_rag_pipeline=MagicMock(),
+            inspect_rag_pipeline=MagicMock(),
+            preview_summary_recall=MagicMock(),
+            generate_answer_from_pipeline=MagicMock(),
+        )
 
         ingest_result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
         ask_result = client.ask_question(

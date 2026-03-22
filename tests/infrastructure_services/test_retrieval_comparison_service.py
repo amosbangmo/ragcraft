@@ -67,7 +67,8 @@ class TestRetrievalComparisonService(unittest.TestCase):
                 confidence=0.7,
             ),
         }
-        service = RetrievalComparisonService(rag_service=_FakeRAGService(pipelines))
+        fake = _FakeRAGService(pipelines)
+        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
 
         report = service.compare(
             project=self.project,
@@ -88,7 +89,8 @@ class TestRetrievalComparisonService(unittest.TestCase):
         self.assertEqual(summary["hybrid_wins_on_confidence"], 1)
 
     def test_compare_handles_missing_pipelines(self):
-        service = RetrievalComparisonService(rag_service=_FakeRAGService({}))
+        fake = _FakeRAGService({})
+        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
 
         report = service.compare(
             project=self.project,

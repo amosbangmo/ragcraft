@@ -60,9 +60,9 @@ class RetrievalSettingsService:
         """
         Effective retrieval settings for a workspace when the UI does not pass overrides.
 
-        Without a ``ProjectSettingsRepositoryPort``, returns ``get_default()`` so standalone
-        ``RAGService`` construction matches the pre–per-project merge base. With a
-        repository, missing rows use **Balanced** preset semantics via ``load`` defaults.
+        Without a ``ProjectSettingsRepositoryPort``, returns ``get_default()`` for standalone
+        tooling and tests. With a repository, missing rows use **Balanced** preset semantics via
+        ``load`` defaults.
         """
         repo = self._project_settings_repository
         if repo is None:
