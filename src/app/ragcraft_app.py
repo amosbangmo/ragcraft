@@ -16,7 +16,15 @@ from src.composition.application_container import (
     build_backend_application_container,
 )
 from src.composition import BackendComposition, build_backend_composition
-from src.application.evaluation.dtos import GenerateQaDatasetCommand
+from src.application.evaluation.dtos import (
+    CreateQaDatasetEntryCommand,
+    DeleteQaDatasetEntryCommand,
+    GenerateQaDatasetCommand,
+    ListQaDatasetEntriesQuery,
+    RunGoldQaDatasetEvaluationCommand,
+    RunManualEvaluationCommand,
+    UpdateQaDatasetEntryCommand,
+)
 from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
     DeleteDocumentResult,
@@ -295,14 +303,20 @@ class RAGCraftApp:
         expected_answer: str | None = None,
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
+        enable_query_rewrite_override: bool | None = None,
+        enable_hybrid_retrieval_override: bool | None = None,
     ) -> ManualEvaluationResult:
         return self._container.evaluation_run_manual_evaluation_use_case.execute(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
+            RunManualEvaluationCommand(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=expected_answer,
+                expected_doc_ids=expected_doc_ids,
+                expected_sources=expected_sources,
+                enable_query_rewrite_override=enable_query_rewrite_override,
+                enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            )
         )
 
     def inspect_retrieval(
@@ -392,8 +406,7 @@ class RAGCraftApp:
         project_id: str,
     ):
         return self._container.evaluation_list_qa_dataset_entries_use_case.execute(
-            user_id=user_id,
-            project_id=project_id,
+            ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id)
         )
 
     def update_qa_dataset_entry(
@@ -408,13 +421,15 @@ class RAGCraftApp:
         expected_sources: list[str] | None = None,
     ):
         return self._container.evaluation_update_qa_dataset_entry_use_case.execute(
-            entry_id=entry_id,
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
+            UpdateQaDatasetEntryCommand(
+                entry_id=entry_id,
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=expected_answer,
+                expected_doc_ids=expected_doc_ids,
+                expected_sources=expected_sources,
+            )
         )
 
     def delete_qa_dataset_entry(
@@ -425,9 +440,11 @@ class RAGCraftApp:
         project_id: str,
     ) -> bool:
         return self._container.evaluation_delete_qa_dataset_entry_use_case.execute(
-            entry_id=entry_id,
-            user_id=user_id,
-            project_id=project_id,
+            DeleteQaDatasetEntryCommand(
+                entry_id=entry_id,
+                user_id=user_id,
+                project_id=project_id,
+            )
         )
 
     def generate_qa_dataset_entries(
@@ -458,10 +475,12 @@ class RAGCraftApp:
         enable_hybrid_retrieval: bool,
     ):
         return self._container.evaluation_run_gold_qa_dataset_evaluation_use_case.execute(
-            user_id=user_id,
-            project_id=project_id,
-            enable_query_rewrite=enable_query_rewrite,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
+            RunGoldQaDatasetEvaluationCommand(
+                user_id=user_id,
+                project_id=project_id,
+                enable_query_rewrite=enable_query_rewrite,
+                enable_hybrid_retrieval=enable_hybrid_retrieval,
+            )
         )
 
     def build_benchmark_export_artifacts(

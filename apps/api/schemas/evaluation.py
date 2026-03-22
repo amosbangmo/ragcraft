@@ -173,16 +173,63 @@ class RetrievalLogsResponse(BaseModel):
     )
 
 
-# --- Export stub ---
+# --- Benchmark export ---
 
 
-class BenchmarkExportStubResponse(BaseModel):
+class BenchmarkExportApiInfoResponse(BaseModel):
+    """Discovery payload for GET ``/evaluation/export/benchmark``."""
+
     model_config = {"extra": "forbid"}
 
-    implemented: bool = False
+    implemented: bool = True
     message: str = Field(
-        default="Benchmark export via API is not implemented yet; use the same "
-        "BuildBenchmarkExportArtifactsUseCase from a client job or Streamlit.",
+        default=(
+            "POST JSON with project_id, retrieval flags, and result (BenchmarkResult.to_dict) "
+            "to receive base64-encoded json, csv, and markdown exports."
+        ),
+        description="Short summary (legacy stub clients used this field).",
     )
     planned_post_path: str = "/evaluation/export/benchmark"
+    post_supported: bool = True
+    description: str = Field(
+        default=(
+            "POST a JSON body with project_id, enable_query_rewrite, enable_hybrid_retrieval, "
+            "and result (the object returned by POST /evaluation/dataset/run — "
+            "BenchmarkResult.to_dict shape). Response contains base64-encoded json, csv, and markdown bytes."
+        )
+    )
+    endpoint: str = "/evaluation/export/benchmark"
     formats: list[str] = Field(default_factory=lambda: ["json", "csv", "markdown"])
+
+
+# Backward-compatible name for imports / OpenAPI consumers.
+BenchmarkExportStubResponse = BenchmarkExportApiInfoResponse
+
+
+class BenchmarkExportRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    project_id: str = Field(..., min_length=1)
+    enable_query_rewrite: bool
+    enable_hybrid_retrieval: bool
+    result: dict[str, Any] = Field(
+        ...,
+        description="Canonical benchmark aggregate (same keys as BenchmarkResult.to_dict()).",
+    )
+    generated_at: str | None = Field(
+        default=None,
+        description="Optional ISO-8601 timestamp for filenames and metadata.",
+    )
+
+
+class BenchmarkExportResponse(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    json_base64: str
+    json_filename: str
+    csv_base64: str
+    csv_filename: str
+    markdown_base64: str
+    markdown_filename: str
+    run_id: str | None = None

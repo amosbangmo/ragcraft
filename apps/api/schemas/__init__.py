@@ -10,6 +10,9 @@ from apps.api.schemas.chat import (
     RetrievalFiltersPayload,
 )
 from apps.api.schemas.evaluation import (
+    BenchmarkExportApiInfoResponse,
+    BenchmarkExportRequest,
+    BenchmarkExportResponse,
     BenchmarkExportStubResponse,
     BenchmarkResultResponse,
     DatasetBenchmarkRunRequest,
@@ -35,6 +38,9 @@ from apps.api.schemas.projects import (
 )
 
 __all__ = [
+    "BenchmarkExportApiInfoResponse",
+    "BenchmarkExportRequest",
+    "BenchmarkExportResponse",
     "BenchmarkExportStubResponse",
     "BenchmarkResultResponse",
     "ChatAskRequest",

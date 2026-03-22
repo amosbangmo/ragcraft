@@ -8,8 +8,10 @@ Map domain / application results to JSON-safe dicts for FastAPI response models.
 
 from __future__ import annotations
 
+import base64
 from typing import Any
 
+from src.application.evaluation.benchmark_export_dtos import BenchmarkExportArtifacts
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.rag_response import RAGResponse
@@ -49,3 +51,17 @@ def ingest_document_result_to_api_dict(result: Any) -> dict[str, Any]:
 def benchmark_result_to_api_dict(result: BenchmarkResult) -> dict[str, Any]:
     """Normalize benchmark payloads so row ``data`` cannot leak non-JSON types."""
     return jsonify_value(result.to_dict())
+
+
+def benchmark_export_artifacts_to_api_dict(artifacts: BenchmarkExportArtifacts) -> dict[str, Any]:
+    """Map export bytes to JSON-safe fields for :class:`~apps.api.schemas.evaluation.BenchmarkExportResponse`."""
+    return {
+        "metadata": artifacts.metadata.to_dict(),
+        "json_base64": base64.standard_b64encode(artifacts.json_bytes).decode("ascii"),
+        "json_filename": artifacts.json_filename,
+        "csv_base64": base64.standard_b64encode(artifacts.csv_bytes).decode("ascii"),
+        "csv_filename": artifacts.csv_filename,
+        "markdown_base64": base64.standard_b64encode(artifacts.markdown_bytes).decode("ascii"),
+        "markdown_filename": artifacts.markdown_filename,
+        "run_id": artifacts.run_id,
+    }

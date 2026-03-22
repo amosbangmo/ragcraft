@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.domain.ports import QADatasetEntriesPort
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.application.evaluation.dtos import CreateQaDatasetEntryCommand
 
 
 class CreateQaDatasetEntryUseCase:
@@ -10,21 +11,12 @@ class CreateQaDatasetEntryUseCase:
     def __init__(self, *, qa_dataset: QADatasetEntriesPort) -> None:
         self._qa = qa_dataset
 
-    def execute(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        question: str,
-        expected_answer: str | None = None,
-        expected_doc_ids: list[str] | None = None,
-        expected_sources: list[str] | None = None,
-    ) -> QADatasetEntry:
+    def execute(self, command: CreateQaDatasetEntryCommand) -> QADatasetEntry:
         return self._qa.create_entry(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
+            user_id=command.user_id,
+            project_id=command.project_id,
+            question=command.question,
+            expected_answer=command.expected_answer,
+            expected_doc_ids=command.expected_doc_ids,
+            expected_sources=command.expected_sources,
         )

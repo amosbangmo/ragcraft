@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from src.application.evaluation.dtos import ListRetrievalQueryLogsQuery
 from src.domain.ports import QueryLogPort
 
 
@@ -26,21 +27,13 @@ class ListRetrievalQueryLogsUseCase:
     def __init__(self, *, query_log: QueryLogPort) -> None:
         self._logs = query_log
 
-    def execute(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        since_iso: str | None = None,
-        until_iso: str | None = None,
-        last_n: int | None = None,
-    ) -> list[dict]:
-        since_utc = _parse_iso_utc(since_iso)
-        until_utc = _parse_iso_utc(until_iso)
+    def execute(self, query: ListRetrievalQueryLogsQuery) -> list[dict]:
+        since_utc = _parse_iso_utc(query.since_iso)
+        until_utc = _parse_iso_utc(query.until_iso)
         return self._logs.load_logs(
-            project_id=project_id,
-            user_id=user_id,
+            project_id=query.project_id,
+            user_id=query.user_id,
             since_utc=since_utc,
             until_utc=until_utc,
-            last_n=last_n,
+            last_n=query.last_n,
         )

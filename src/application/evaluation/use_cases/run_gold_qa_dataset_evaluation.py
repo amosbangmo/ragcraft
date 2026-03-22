@@ -6,7 +6,10 @@ from time import perf_counter
 
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.pipeline_latency import merge_with_answer_stage
-from src.domain.project import Project
+from src.application.evaluation.dtos import (
+    ListQaDatasetEntriesQuery,
+    RunGoldQaDatasetEvaluationCommand,
+)
 from src.services.evaluation_service import EvaluationService
 from src.services.project_service import ProjectService
 from src.services.rag_service import RAGService
@@ -28,16 +31,14 @@ class RunGoldQaDatasetEvaluationUseCase:
         self._rag = rag_service
         self._evaluation = evaluation_service
 
-    def execute(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        enable_query_rewrite: bool,
-        enable_hybrid_retrieval: bool,
-    ) -> BenchmarkResult:
-        entries = self._list_qa.execute(user_id=user_id, project_id=project_id)
-        project = self._project_service.get_project(user_id, project_id)
+    def execute(self, command: RunGoldQaDatasetEvaluationCommand) -> BenchmarkResult:
+        entries = self._list_qa.execute(
+            ListQaDatasetEntriesQuery(
+                user_id=command.user_id,
+                project_id=command.project_id,
+            )
+        )
+        project = self._project_service.get_project(command.user_id, command.project_id)
 
         def pipeline_runner(entry):
             started = perf_counter()
@@ -45,8 +46,8 @@ class RunGoldQaDatasetEvaluationUseCase:
                 project,
                 entry.question,
                 [],
-                enable_query_rewrite_override=enable_query_rewrite,
-                enable_hybrid_retrieval_override=enable_hybrid_retrieval,
+                enable_query_rewrite_override=command.enable_query_rewrite,
+                enable_hybrid_retrieval_override=command.enable_hybrid_retrieval,
             )
 
             answer = ""

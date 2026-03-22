@@ -8,7 +8,7 @@ Canonical import path: `src.domain.ports`. Protocols remain defined next to thei
 |------------------|----------------------|-------------------------|-------------------------|
 | **AssetRepositoryPort** | `src.domain.documents.asset_repository_port` | `DocStoreService` → SQLite asset repository | Ingest/reindex/delete document use cases, `finalize_ingestion_pipeline`, `replace_document_assets_for_reingest`, `GetProjectDocumentDetailsUseCase`, `ListDocumentAssetsForSourceUseCase` |
 | **VectorStorePort** | `src.domain.retrieval.vector_store_port` | `VectorStoreService` (FAISS) | Same ingestion paths as assets; RAG stack via services |
-| **QueryLogPort** | `src.domain.ports.query_log_port` | `QueryLogService` | `AskQuestionUseCase`, `ListRetrievalQueryLogsUseCase`, `PipelineQueryLogEmitter` |
+| **QueryLogPort** | `src.domain.ports.query_log_port` | `QueryLogService` | `AskQuestionUseCase`, `ListRetrievalQueryLogsUseCase` (evaluation module), `PipelineQueryLogEmitter` |
 | **QueryLogPersistencePort** | `src.domain.shared.query_log_port` | `SQLiteQueryLogRepository` | Injected into `QueryLogService`; file-based legacy reader |
 | **QADatasetEntriesPort** | `src.domain.ports.qa_dataset_entries_port` | `QADatasetService` | Gold QA CRUD/generate use cases |
 | **QADatasetRepositoryPort** | `src.domain.evaluation.qa_dataset_repository_port` | `QADatasetRepository` | `QADatasetService` internally |

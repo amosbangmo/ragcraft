@@ -252,15 +252,20 @@ class BackendApplicationContainer:
 
         return BuildBenchmarkExportArtifactsUseCase()
 
-    # --- Retrieval analytics ---
+    # --- Retrieval logs (evaluation module) ---
 
     @cached_property
-    def retrieval_analytics_list_query_logs_use_case(self):
+    def evaluation_list_retrieval_query_logs_use_case(self):
         from src.application.evaluation.use_cases.list_retrieval_query_logs import (
             ListRetrievalQueryLogsUseCase,
         )
 
         return ListRetrievalQueryLogsUseCase(query_log=self.query_log_service)
+
+    @property
+    def retrieval_analytics_list_query_logs_use_case(self):
+        """Backward-compatible alias for :attr:`evaluation_list_retrieval_query_logs_use_case`."""
+        return self.evaluation_list_retrieval_query_logs_use_case
 
 
 def build_backend_application_container(

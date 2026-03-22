@@ -6,6 +6,7 @@ from time import perf_counter
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
+from src.application.evaluation.dtos import RunManualEvaluationCommand
 from src.services.evaluation_service import EvaluationService
 from src.services.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
 from src.services.project_service import ProjectService
@@ -24,32 +25,21 @@ class RunManualEvaluationUseCase:
         self._rag = rag_service
         self._evaluation = evaluation_service
 
-    def execute(
-        self,
-        *,
-        user_id: str,
-        project_id: str,
-        question: str,
-        expected_answer: str | None = None,
-        expected_doc_ids: list[str] | None = None,
-        expected_sources: list[str] | None = None,
-        enable_query_rewrite_override: bool | None = None,
-        enable_hybrid_retrieval_override: bool | None = None,
-    ) -> ManualEvaluationResult:
-        q = (question or "").strip()
-        exp_ans = (expected_answer or "").strip() or None
-        exp_docs = list(expected_doc_ids or [])
-        exp_src = list(expected_sources or [])
+    def execute(self, command: RunManualEvaluationCommand) -> ManualEvaluationResult:
+        q = (command.question or "").strip()
+        exp_ans = (command.expected_answer or "").strip() or None
+        exp_docs = list(command.expected_doc_ids or [])
+        exp_src = list(command.expected_sources or [])
 
-        project = self._project_service.get_project(user_id, project_id)
+        project = self._project_service.get_project(command.user_id, command.project_id)
 
         started = perf_counter()
         pipeline = self._rag.inspect_pipeline(
             project,
             q,
             [],
-            enable_query_rewrite_override=enable_query_rewrite_override,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            enable_query_rewrite_override=command.enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=command.enable_hybrid_retrieval_override,
         )
         answer = ""
         answer_generation_ms = 0.0
@@ -74,8 +64,8 @@ class RunManualEvaluationUseCase:
             pipeline.latency_ms = latency_ms
 
         return manual_evaluation_result_from_rag_outputs(
-            user_id=user_id,
-            project_id=project_id,
+            user_id=command.user_id,
+            project_id=command.project_id,
             q=q,
             exp_ans=exp_ans,
             exp_docs=exp_docs,

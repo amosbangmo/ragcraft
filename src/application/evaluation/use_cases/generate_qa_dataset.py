@@ -6,7 +6,11 @@ from src.domain.ports import QADatasetEntriesPort
 
 from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from .delete_all_qa_dataset_entries import DeleteAllQaDatasetEntriesUseCase
-from src.application.evaluation.dtos import GenerateQaDatasetCommand
+from src.application.evaluation.dtos import (
+    CreateQaDatasetEntryCommand,
+    DeleteAllQaDatasetEntriesCommand,
+    GenerateQaDatasetCommand,
+)
 
 
 class GenerateQaDatasetUseCase:
@@ -34,10 +38,12 @@ class GenerateQaDatasetUseCase:
 
         if normalized_mode == "replace":
             deleted_existing_entries = DeleteAllQaDatasetEntriesUseCase(
-                qa_dataset_service=self._qa
+                qa_dataset=self._qa
             ).execute(
-                user_id=command.user_id,
-                project_id=command.project_id,
+                DeleteAllQaDatasetEntriesCommand(
+                    user_id=command.user_id,
+                    project_id=command.project_id,
+                )
             )
 
         existing_question_keys: set[str] = set()
@@ -67,12 +73,14 @@ class GenerateQaDatasetUseCase:
                 continue
 
             created_entry = create_uc.execute(
-                user_id=command.user_id,
-                project_id=command.project_id,
-                question=question,
-                expected_answer=item.get("expected_answer"),
-                expected_doc_ids=item.get("expected_doc_ids", []),
-                expected_sources=item.get("expected_sources", []),
+                CreateQaDatasetEntryCommand(
+                    user_id=command.user_id,
+                    project_id=command.project_id,
+                    question=question,
+                    expected_answer=item.get("expected_answer"),
+                    expected_doc_ids=item.get("expected_doc_ids", []),
+                    expected_sources=item.get("expected_sources", []),
+                )
             )
             created_entries.append(created_entry)
 

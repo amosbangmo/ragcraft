@@ -134,13 +134,10 @@ def get_list_qa_dataset_entries_use_case(
     return container.evaluation_list_qa_dataset_entries_use_case
 
 
-def get_build_benchmark_export_artifacts_use_case() -> Any:
-    """Stateless use case; no container ``Depends`` so resolving it alone does not bootstrap the full graph."""
-    from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
-        BuildBenchmarkExportArtifactsUseCase,
-    )
-
-    return BuildBenchmarkExportArtifactsUseCase()
+def get_build_benchmark_export_artifacts_use_case(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.evaluation_build_benchmark_export_artifacts_use_case
 
 
 def get_run_manual_evaluation_use_case(
@@ -176,7 +173,7 @@ def get_generate_qa_dataset_use_case(
 def get_list_retrieval_query_logs_use_case(
     container: Annotated[Any, Depends(get_backend_application_container)],
 ) -> Any:
-    return container.retrieval_analytics_list_query_logs_use_case
+    return container.evaluation_list_retrieval_query_logs_use_case
 
 
 def get_ingest_uploaded_file_use_case(
