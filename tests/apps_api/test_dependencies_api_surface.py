@@ -32,7 +32,6 @@ def test_backend_container_resolution_skips_ragcraft_app() -> None:
     """Instantiating the API composition root must not load the legacy UI façade."""
     sys.modules.pop("src.app.ragcraft_app", None)
 
-    api_dependencies.get_backend_composition.cache_clear()
     api_dependencies.get_backend_application_container.cache_clear()
 
     try:

@@ -1,8 +1,8 @@
 """
-Legacy Streamlit façade over :class:`~src.composition.application_container.BackendApplicationContainer`.
+Legacy Streamlit façade over :class:`~src.composition.BackendApplicationContainer`.
 
-**Compatibility only:** new code should depend on :class:`~src.composition.application_container.BackendApplicationContainer`
-(or FastAPI ``Depends`` wired from ``apps.api.dependencies``). This class remains so existing ``pages/`` and
+**Compatibility only:** new code should depend on :class:`~src.composition.BackendApplicationContainer` /
+:func:`~src.composition.build_backend` (or FastAPI ``Depends`` from ``apps.api.dependencies``). This class remains so existing ``pages/`` and
 ``src/ui`` call sites keep working until they are migrated off the façade. Scheduled for removal once
 Streamlit uses the application container or HTTP boundaries directly — see ``docs/migration/ragcraftapp-deprecation.md``.
 """
@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from src.composition.application_container import (
+from src.composition import (
+    BackendComposition,
     BackendApplicationContainer,
-    build_backend_application_container,
+    build_backend,
+    build_backend_composition,
 )
-from src.composition import BackendComposition, build_backend_composition
 from src.application.settings.dtos import (
     EffectiveRetrievalSettingsView,
     GetEffectiveRetrievalSettingsQuery,
@@ -85,7 +86,7 @@ class RAGCraftApp:
             self._container = application_container
         else:
             resolved_backend = backend or build_backend_composition()
-            self._container = build_backend_application_container(
+            self._container = build_backend(
                 backend=resolved_backend,
                 invalidate_chain_key=_drop_cached_chain_for_project,
             )

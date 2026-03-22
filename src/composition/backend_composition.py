@@ -1,20 +1,21 @@
 """
-Backend composition root: explicit wiring for services used by Streamlit and FastAPI.
+Backend service graph: persistence bootstrap, infrastructure adapters, and orchestration services.
 
-Construction order (high level):
-1. Persistence bootstrap (SQLite app DB).
-2. Core adapters: project paths, doc store, vector store, ingestion, auth.
-3. Shared ``QueryLogService`` (single instance per composition; injected into ``RAGService``).
-4. ``RAGService`` (lazy): retrieval settings surface and wiring to chat-layer use cases under
-   ``src.application.chat`` (pipeline build, inspect, preview, ask).
-5. ``RetrievalComparisonService`` (lazy): depends on ``RAGService``.
+Construction is **deterministic** and centralized in :func:`build_backend_composition`. Application
+use cases are composed in :mod:`src.composition.application_container` on top of this graph.
 
-Application use cases are composed in :class:`~src.composition.application_container.BackendApplicationContainer`
-(see :func:`~src.composition.application_container.build_backend_application_container`). This module
-owns **service-level** singletons per composition instance.
+Layers (in build order):
+1. SQLite app DB (:func:`~src.infrastructure.persistence.db.init_app_db`).
+2. Core services: auth, projects, ingestion, vector store, evaluation, chat, doc store, reranking,
+   QA dataset + generation, project settings, retrieval settings merge.
+3. Shared :class:`~src.services.query_log_service.QueryLogService` (injected into ``RAGService``).
+4. ``RAGService`` and ``RetrievalComparisonService`` — lazily instantiated on first access to break
+   the dependency cycle and defer heavy LangChain wiring.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass, field
 
 from src.auth.auth_service import AuthService
 from src.infrastructure.persistence.db import init_app_db
@@ -35,34 +36,32 @@ from src.services.retrieval_settings_service import RetrievalSettingsService
 from src.services.vectorstore_service import VectorStoreService
 
 
+@dataclass
 class BackendComposition:
-    """Wired backend services for one application instance (session or API process)."""
+    """
+    Immutable service graph for one application instance (API process or Streamlit session).
 
-    def __init__(self) -> None:
-        init_app_db()
+    ``rag_service`` and ``retrieval_comparison_service`` are built on first read; all other
+    references are fixed at construction time.
+    """
 
-        self.query_log_service = QueryLogService()
-
-        self.auth_service = AuthService()
-        self.project_service = ProjectService()
-        self.ingestion_service = IngestionService()
-        self.vectorstore_service = VectorStoreService()
-        self.evaluation_service = EvaluationService(llm_judge_service=LLMJudgeService())
-        self.chat_service = ChatService()
-        self.docstore_service = DocStoreService()
-        self.reranking_service = RerankingService()
-        self.qa_dataset_service = QADatasetService()
-        self.qa_dataset_generation_service = QADatasetGenerationService(
-            docstore_service=self.docstore_service,
-            project_service=self.project_service,
-        )
-        self.project_settings_service = ProjectSettingsService()
-        self.retrieval_settings_service = RetrievalSettingsService(
-            project_settings_service=self.project_settings_service,
-        )
-
-        self._rag_service: RAGService | None = None
-        self._retrieval_comparison_service: RetrievalComparisonService | None = None
+    query_log_service: QueryLogService
+    auth_service: AuthService
+    project_service: ProjectService
+    ingestion_service: IngestionService
+    vectorstore_service: VectorStoreService
+    evaluation_service: EvaluationService
+    chat_service: ChatService
+    docstore_service: DocStoreService
+    reranking_service: RerankingService
+    qa_dataset_service: QADatasetService
+    qa_dataset_generation_service: QADatasetGenerationService
+    project_settings_service: ProjectSettingsService
+    retrieval_settings_service: RetrievalSettingsService
+    _rag_service: RAGService | None = field(default=None, init=False, repr=False)
+    _retrieval_comparison_service: RetrievalComparisonService | None = field(
+        default=None, init=False, repr=False
+    )
 
     @property
     def rag_service(self) -> RAGService:
@@ -87,5 +86,35 @@ class BackendComposition:
 
 
 def build_backend_composition() -> BackendComposition:
-    """Factory for a new wired graph (Streamlit session, tests, or explicit injection)."""
-    return BackendComposition()
+    """Assemble the service-level composition root (no use cases)."""
+    init_app_db()
+
+    query_log_service = QueryLogService()
+    project_service = ProjectService()
+    docstore_service = DocStoreService()
+    project_settings_service = ProjectSettingsService()
+    retrieval_settings_service = RetrievalSettingsService(
+        project_settings_service=project_settings_service,
+    )
+
+    return BackendComposition(
+        query_log_service=query_log_service,
+        auth_service=AuthService(),
+        project_service=project_service,
+        ingestion_service=IngestionService(),
+        vectorstore_service=VectorStoreService(),
+        evaluation_service=EvaluationService(llm_judge_service=LLMJudgeService()),
+        chat_service=ChatService(),
+        docstore_service=docstore_service,
+        reranking_service=RerankingService(),
+        qa_dataset_service=QADatasetService(),
+        qa_dataset_generation_service=QADatasetGenerationService(
+            docstore_service=docstore_service,
+            project_service=project_service,
+        ),
+        project_settings_service=project_settings_service,
+        retrieval_settings_service=retrieval_settings_service,
+    )
+
+
+__all__ = ["BackendComposition", "build_backend_composition"]

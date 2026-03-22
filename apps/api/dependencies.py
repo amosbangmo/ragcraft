@@ -2,15 +2,15 @@
 FastAPI dependency providers.
 
 **Primary entrypoint:** :func:`get_backend_application_container` — process-wide
-:class:`~src.composition.application_container.BackendApplicationContainer` plus named use cases
-and services from :class:`~src.composition.backend_composition.BackendComposition`.
+:class:`~src.composition.application_container.BackendApplicationContainer` from
+:func:`~src.composition.build_backend` (composition root: services + use cases).
 
 Streamlit in-process mode may still use the legacy UI façade; FastAPI wiring does not import or
 construct that module.
 
-``build_backend_composition`` / ``build_backend_application_container`` stay inside cached getters so
-``import apps.api.dependencies`` does not load FAISS, LangChain, or the Streamlit chain cache until
-a route resolves a dependency. Service return types below are explicit where imports stay cheap;
+The composition build stays inside a cached getter so ``import apps.api.dependencies`` does not load
+FAISS, LangChain, or the Streamlit chain cache until a route resolves a dependency. Service return
+types below are explicit where imports stay cheap;
 chat and evaluation use cases that sit behind :class:`~src.services.rag_service.RAGService` remain
 ``Any`` at the annotation layer to avoid eager heavy imports.
 """
@@ -30,21 +30,11 @@ from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 
 @lru_cache(maxsize=1)
-def get_backend_composition() -> Any:
-    from src.composition import build_backend_composition
-
-    return build_backend_composition()
-
-
-@lru_cache(maxsize=1)
 def get_backend_application_container() -> Any:
-    from src.composition import build_backend_application_container
+    from src.composition import build_backend
     from src.core.chain_state import invalidate_project_chain as invalidate_chain_key
 
-    return build_backend_application_container(
-        backend=get_backend_composition(),
-        invalidate_chain_key=invalidate_chain_key,
-    )
+    return build_backend(invalidate_chain_key=invalidate_chain_key)
 
 
 BackendContainerDep = Annotated[Any, Depends(get_backend_application_container)]
