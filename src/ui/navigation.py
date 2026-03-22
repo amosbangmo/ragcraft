@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.auth.auth_service import AuthService
+from src.frontend_gateway import streamlit_auth
 from src.frontend_gateway.streamlit_context import get_backend_client, get_user_id
 from src.ui.avatar import render_user_avatar
 
@@ -27,9 +27,7 @@ def render_navigation(hide_sidebar: bool = False):
         )
         return
 
-    auth_service = AuthService()
-
-    if auth_service.is_authenticated():
+    if streamlit_auth.is_authenticated():
         backend_client = get_backend_client()
         user_id = get_user_id()
         projects = backend_client.list_projects(user_id)
@@ -73,9 +71,9 @@ def render_navigation(hide_sidebar: bool = False):
         st.page_link("pages/evaluation.py", label="📊 Evaluation")
         st.page_link("pages/profile.py", label="👤 Profile")
 
-        if auth_service.is_authenticated():
+        if streamlit_auth.is_authenticated():
             if st.button("Logout", use_container_width=True):
-                auth_service.logout()
+                streamlit_auth.logout()
                 st.switch_page("pages/login.py")
 
         st.markdown("---")

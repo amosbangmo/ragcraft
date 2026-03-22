@@ -25,7 +25,12 @@ from src.application.ingestion.dtos import DeleteDocumentResult, IngestDocumentR
 
 @runtime_checkable
 class BackendClient(Protocol):
-    """Minimal backend operations used by Streamlit pages today."""
+    """
+    Minimal backend operations used by Streamlit pages today.
+
+    Login, registration, and session display-name/avatar reads use
+    :mod:`src.frontend_gateway.streamlit_auth` (HTTP mode calls ``/auth/login`` and ``/auth/register``).
+    """
 
     @property
     def chat_service(self) -> Any: ...

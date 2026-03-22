@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from apps.api.config import load_settings
 from apps.api.error_handlers import register_exception_handlers
 from apps.api.openapi_common import build_openapi_schema
-from apps.api.routers import chat, evaluation, projects, system, users
+from apps.api.routers import auth, chat, evaluation, projects, system, users
 
 _API_DESCRIPTION = """\
 RAGCraft HTTP API for workspaces, RAG chat, evaluation flows, and user profile data.
@@ -56,6 +56,10 @@ def create_app() -> FastAPI:
                 "name": "users",
                 "description": "Profile and account APIs keyed by ``X-User-Id`` (SQLite-backed).",
             },
+            {
+                "name": "auth",
+                "description": "Login and registration (no ``X-User-Id``; client stores returned user id).",
+            },
             {"name": "system", "description": "Liveness and version metadata (no auth header)."},
         ],
     )
@@ -75,6 +79,7 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(system.router)
+    app.include_router(auth.router)
     app.include_router(chat.router)
     app.include_router(projects.router)
     app.include_router(evaluation.router)

@@ -15,11 +15,16 @@ __all__ = [
     "get_frontend_backend_settings",
     "is_http_backend_mode",
     "load_frontend_backend_settings",
+    "streamlit_auth",
     "use_http_backend_client",
 ]
 
 
 def __getattr__(name: str):
+    if name == "streamlit_auth":
+        import importlib
+
+        return importlib.import_module("src.frontend_gateway.streamlit_auth")
     if name == "BackendClient":
         from src.frontend_gateway.protocol import BackendClient
 

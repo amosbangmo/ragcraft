@@ -59,7 +59,7 @@ def test_openapi_tags_cover_surface_areas(api_client: TestClient) -> None:
                 {"get", "post", "put", "patch", "delete", "head", "options"}
             ) and isinstance(op, dict):
                 names.update(op.get("tags") or [])
-    assert names >= {"chat", "projects", "evaluation", "users", "system"}
+    assert names >= {"chat", "projects", "evaluation", "users", "auth", "system"}
 
 
 def test_missing_x_user_id_returns_canonical_error(api_client: TestClient) -> None:

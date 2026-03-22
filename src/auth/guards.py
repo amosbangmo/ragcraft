@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.auth.auth_service import AuthService
+from src.frontend_gateway import streamlit_auth
 
 
 def require_authentication(current_page: str):
@@ -8,9 +8,7 @@ def require_authentication(current_page: str):
     Block access to protected pages when the user is not authenticated.
     Store the requested page for redirection after login.
     """
-    auth_service = AuthService()
-
-    if auth_service.is_authenticated():
+    if streamlit_auth.is_authenticated():
         return
 
     st.session_state["post_login_redirect"] = current_page

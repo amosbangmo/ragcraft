@@ -28,10 +28,9 @@ Vertical slices already wired through ``BackendClient`` (projects list/create, c
 inspect, gold QA dataset run, exports, etc.) automatically use FastAPI when HTTP mode is enabled —
 no per-page branching required.
 
-.. todo::
-
-    Remaining screens that still touch ``AuthService`` or SQLite directly for auth should move
-    behind ``BackendClient`` / users API where parity exists.
+Login/register and session reads for Streamlit go through :mod:`src.frontend_gateway.streamlit_auth`
+(HTTP mode uses ``/auth/login`` and ``/auth/register``). Profile mutations use :class:`~src.frontend_gateway.protocol.BackendClient` and
+:func:`~src.frontend_gateway.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
 """
 
 from __future__ import annotations

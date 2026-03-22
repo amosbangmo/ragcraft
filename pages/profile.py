@@ -97,6 +97,7 @@ def confirm_avatar_removal_dialog(user_id: str):
         if st.button("Remove avatar", use_container_width=True, key="confirm_avatar_removal"):
             success, message = client.remove_avatar(user_id)
             if success:
+                refresh_streamlit_auth_session_from_user_id(user_id)
                 st.session_state["profile_success_message"] = message
             else:
                 st.session_state["profile_error_message"] = message

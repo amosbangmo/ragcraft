@@ -1,7 +1,7 @@
 import streamlit as st
 
 from src.ui.layout import apply_layout
-from src.auth.auth_service import AuthService
+from src.frontend_gateway import streamlit_auth
 
 
 st.set_page_config(
@@ -68,10 +68,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-auth_service = AuthService()
-
-if auth_service.is_authenticated():
-    st.success(f"Already signed in as {auth_service.get_display_name()}.")
+if streamlit_auth.is_authenticated():
+    st.success(f"Already signed in as {streamlit_auth.get_display_name()}.")
     if st.button("Go to Projects", use_container_width=True):
         st.switch_page("pages/projects.py")
     st.stop()
@@ -99,7 +97,7 @@ with tab_login:
     password = st.text_input("Password", type="password", key="login_password")
 
     if st.button("Sign in", use_container_width=True):
-        success, message = auth_service.login(username, password)
+        success, message = streamlit_auth.login(username, password)
 
         if success:
             st.success(message)
@@ -116,7 +114,7 @@ with tab_signup:
     confirm_password = st.text_input("Confirm password", type="password", key="signup_confirm_password")
 
     if st.button("Create account", use_container_width=True):
-        success, message = auth_service.register(
+        success, message = streamlit_auth.register(
             username=username,
             password=password,
             confirm_password=confirm_password,

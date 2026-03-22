@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from src.auth.auth_credentials import try_login, try_register
 from src.auth.password_utils import hash_password, verify_password
 from src.auth.user_repository import UserRepository
 from src.core.paths import get_data_root
@@ -69,63 +70,32 @@ class AuthService:
         confirm_password: str,
         display_name: str,
     ) -> tuple[bool, str]:
-        username = username.strip().lower()
-        display_name = display_name.strip()
-
-        if not username or not password or not confirm_password or not display_name:
-            return False, "All fields are required."
-
-        if not re.fullmatch(r"[a-z0-9._-]{3,30}", username):
-            return False, "Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens."
-
-        if len(password) < 8:
-            return False, "Password must contain at least 8 characters."
-
-        if password != confirm_password:
-            return False, "Passwords do not match."
-
-        if self.user_repository.username_exists(username):
-            return False, "This username is already taken."
-
-        password_hash = hash_password(password)
-
-        user = self.user_repository.create_user(
+        ok, message, user = try_register(
+            self.user_repository,
             username=username,
-            password_hash=password_hash,
+            password=password,
+            confirm_password=confirm_password,
             display_name=display_name,
         )
-
-        self._set_session(
-            username=user["username"],
-            user_id=user["user_id"],
-            display_name=user["display_name"],
-            avatar_path=user["avatar_path"],
-        )
-
-        return True, "Account created successfully."
+        if ok and user:
+            self._set_session(
+                username=user["username"],
+                user_id=user["user_id"],
+                display_name=user["display_name"],
+                avatar_path=user["avatar_path"],
+            )
+        return ok, message
 
     def login(self, username: str, password: str) -> tuple[bool, str]:
-        username = username.strip().lower()
-
-        if not username or not password:
-            return False, "Please enter both username and password."
-
-        user = self.user_repository.get_by_username(username)
-
-        if not user:
-            return False, "Invalid username or password."
-
-        if not verify_password(password, user["password_hash"]):
-            return False, "Invalid username or password."
-
-        self._set_session(
-            username=user["username"],
-            user_id=user["user_id"],
-            display_name=user["display_name"],
-            avatar_path=user["avatar_path"],
-        )
-
-        return True, "Login successful."
+        ok, message, user = try_login(self.user_repository, username, password)
+        if ok and user:
+            self._set_session(
+                username=user["username"],
+                user_id=user["user_id"],
+                display_name=user["display_name"],
+                avatar_path=user["avatar_path"],
+            )
+        return ok, message
 
     def logout(self):
         st.session_state[self.SESSION_AUTH_KEY] = False
