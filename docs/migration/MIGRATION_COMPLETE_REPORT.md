@@ -1,18 +1,175 @@
-# Final migration verification report — RAGCraft (FastAPI-first)
+# Orchestration migration — final verification report (RAGCraft)
 
-**Document type:** Honest closure / gap analysis after automated verification.  
-**Verification date:** Generated during Prompt 8 (full `pytest`, architecture scans, targeted greps).  
-**Companion docs:** `ARCHITECTURE_TARGET.md` (layout), `README.md` (developer entry), `tests/architecture/README.md` (enforced import rules).
+**Document type:** Closure report for the orchestration / layering migration track.  
+**Verification date:** 2026-03-22 (Prompt 6: audit, tests, legacy-import grep).  
+**Live architecture spec:** [`ARCHITECTURE_TARGET.md`](../../ARCHITECTURE_TARGET.md)  
+**Enforced import rules:** [`tests/architecture/README.md`](../../tests/architecture/README.md)
 
 ---
 
-## Executive summary
+## 1. Current architecture status
 
-The **structural** migration goals are **largely achieved**: FastAPI is the HTTP integration surface, use cases live in `src/application/`, long-running orchestration lives in `src/infrastructure/services/`, Streamlit is isolated behind `BackendClient`, and automated tests enforce several boundaries.
+### Target structure (reached)
 
-This is **not** a claim of “production-complete SaaS backend.” Identity is still header-based for scoped routes, and some API modules intentionally touch `src.infrastructure.persistence` for SQLite bootstrap. The legacy **`src/backend/`** shim package has been **removed** (canonical concrete runtime code lives under `src.infrastructure.adapters`). An **Angular (or other) SPA can start integration now** against OpenAPI, but **must plan** for real auth, CORS, and hardening—called out explicitly below.
+| Area | Location | Status |
+|------|----------|--------|
+| **HTTP API** | `apps/api/` | Primary integration surface; routers use `Depends` → `BackendApplicationContainer` / use cases. |
+| **Application orchestration** | `src/application/use_cases/**`, `src/application/chat/orchestration/**` | Use cases own user-journey sequencing; chat helpers (e.g. pipeline query logging) live under `orchestration/`. |
+| **Concrete runtime implementations** | `src/infrastructure/adapters/{rag,evaluation,document,workspace,chat,qa_dataset,query_logging}/` | Former `src/infrastructure/services` tree **removed**; code lives in typed adapter subpackages. |
+| **Other infrastructure** | `src/infrastructure/persistence/`, `src/infrastructure/vectorstores/`, `src/infrastructure/llm/`, etc. | Technical I/O and drivers. |
+| **SQLite port implementations** | `src/adapters/sqlite/` | Domain port implementations (users, assets, settings). |
+| **Domain** | `src/domain/**` | Entities, value objects, ports; no framework / LangChain / sqlite imports (enforced by tests). |
+| **Streamlit + UI** | `pages/`, `src/ui/` | Presentation; call **`BackendClient`** façade methods and view models — no direct `src.domain` / `src.infrastructure` / `src.composition` imports (enforced). |
+| **Gateway** | `src/frontend_gateway/` | `HttpBackendClient`, `InProcessBackendClient`, `protocol.BackendClient`, HTTP payloads; **no** `src.infrastructure` imports (enforced). |
+| **Composition** | `src/composition/` | `build_backend()`, `BackendApplicationContainer`, wiring graph. |
+| **Removed shim** | `src/backend/` | **Absent** from tree; tests assert directory does not exist and `src/` does not import `src.backend`. |
 
-**Verdict:** Migration is **substantively complete for architecture and API-first development**; **product hardening** remains.
+### Remaining deviations (honest)
+
+1. **Use cases depend on concrete adapter classes** — Several use cases import types such as `RAGService`, `EvaluationService`, `ProjectService`, `IngestionService` from `src.infrastructure.adapters.*` instead of narrow ports only. This is **not** a legacy package violation; it is **remaining coupling** that a future track could replace with explicit ports + injection.
+2. **`RAGService` (adapter) still builds a subgraph of chat use cases** — Orchestration is largely in `src/application`, but `RAGService` remains a **composition-heavy adapter** that instantiates and exposes use-case shortcuts for the container. Works; further slimming is optional hardening.
+3. **`HttpBackendClient` methods that have no REST equivalent** — e.g. `generate_answer_from_pipeline` / `evaluate_gold_qa_dataset_with_runner` raise `NotImplementedError`; callers use documented HTTP routes (`POST /evaluation/manual`, `POST /evaluation/dataset/run`) instead. This is intentional boundary documentation, not a missing migration step.
+4. **FastAPI package touches SQLite bootstrap** — `apps/api/dependencies.py` may call `init_app_db` for app tables (documented transitional pattern).
+
+---
+
+## 2. Removed legacy areas
+
+### `src/backend/`
+
+- **Status:** **Removed.** No `src/backend/` directory under the repo’s `src/` tree.
+- **Enforcement:** `tests/architecture/test_deprecated_backend_and_gateway_guardrails.py` asserts the path is absent and that no file under `src/` imports `src.backend`.
+- **Residual mentions:** Only in **documentation and architecture test strings** (explaining the removal), not in production imports.
+
+### `src/infrastructure/services`
+
+- **Status:** **Removed** as a package. Runtime modules were moved to **`src/infrastructure/adapters/`** with subpackages: `rag`, `evaluation`, `document`, `workspace`, `chat`, `qa_dataset`, `query_logging`.
+- **Enforcement:** Repository grep for `src.infrastructure.services` / `infrastructure.services` under Python sources: **no matches** (post–doc update). Application layer may import only `src.infrastructure.adapters` among infrastructure packages (see `tests/architecture/test_layer_boundaries.py`).
+- **Tests:** `tests/infrastructure_services/` remains the historical name for unit tests targeting adapter modules (not a second `services` tree).
+
+### `src.services` (legacy package name)
+
+- **Status:** **Not used** as an import target under `src/` (forbidden by layer tests). References appear only in **forbidden-prefix lists** in architecture tests.
+
+---
+
+## 3. Application orchestration map
+
+All classes below live under **`src/application/use_cases/`** unless noted.
+
+### Chat / RAG
+
+| Use case | Module |
+|----------|--------|
+| `BuildRagPipelineUseCase` | `use_cases/chat/build_rag_pipeline.py` |
+| `AskQuestionUseCase` | `use_cases/chat/ask_question.py` |
+| `InspectRagPipelineUseCase` | `use_cases/chat/inspect_rag_pipeline.py` |
+| `PreviewSummaryRecallUseCase` | `use_cases/chat/preview_summary_recall.py` |
+| `GenerateAnswerFromPipelineUseCase` | `use_cases/chat/generate_answer_from_pipeline.py` |
+| `CompareRetrievalModesUseCase` | `use_cases/retrieval/compare_retrieval_modes.py` |
+
+**Application policies / helpers:** `src/application/use_cases/chat/orchestration/` — e.g. `PipelineQueryLogEmitter`, `recall_then_assemble_pipeline`, ports for pipeline steps.
+
+### Projects / workspace
+
+| Use case | Module |
+|----------|--------|
+| `CreateProjectUseCase` | `use_cases/projects/create_project.py` |
+| `ListProjectsUseCase` | `use_cases/projects/list_projects.py` |
+| `ResolveProjectUseCase` | `use_cases/projects/resolve_project.py` |
+| `ListProjectDocumentsUseCase` | `use_cases/projects/list_project_documents.py` |
+| `GetProjectDocumentDetailsUseCase` | `use_cases/projects/get_project_document_details.py` |
+| `ListDocumentAssetsForSourceUseCase` | `use_cases/projects/list_document_assets_for_source.py` |
+| `GetProjectRetrievalPresetLabelUseCase` | `use_cases/projects/get_project_retrieval_preset_label.py` |
+| `InvalidateProjectChainCacheUseCase` | `use_cases/projects/invalidate_project_chain_cache.py` |
+
+### Ingestion
+
+| Use case | Module |
+|----------|--------|
+| `IngestUploadedFileUseCase` | `use_cases/ingestion/ingest_uploaded_file.py` |
+| `IngestFilePathUseCase` | `use_cases/ingestion/ingest_file_path.py` |
+| `ReindexDocumentUseCase` | `use_cases/ingestion/reindex_document.py` |
+| `DeleteDocumentUseCase` | `use_cases/ingestion/delete_document.py` |
+
+Shared helpers: `use_cases/ingestion/ingest_common.py`; asset replacement helpers in `use_cases/ingestion/replace_document_assets.py`.
+
+### Evaluation / QA dataset / logs / export
+
+| Use case | Module |
+|----------|--------|
+| `RunManualEvaluationUseCase` | `use_cases/evaluation/run_manual_evaluation.py` |
+| `RunGoldQaDatasetEvaluationUseCase` | `use_cases/evaluation/run_gold_qa_dataset_evaluation.py` |
+| `BenchmarkExecutionUseCase` | `use_cases/evaluation/benchmark_execution.py` |
+| `GenerateQaDatasetUseCase` | `use_cases/evaluation/generate_qa_dataset.py` |
+| `ListQaDatasetEntriesUseCase` | `use_cases/evaluation/list_qa_dataset_entries.py` |
+| `CreateQaDatasetEntryUseCase` | `use_cases/evaluation/create_qa_dataset_entry.py` |
+| `UpdateQaDatasetEntryUseCase` | `use_cases/evaluation/update_qa_dataset_entry.py` |
+| `DeleteQaDatasetEntryUseCase` | `use_cases/evaluation/delete_qa_dataset_entry.py` |
+| `DeleteAllQaDatasetEntriesUseCase` | `use_cases/evaluation/delete_all_qa_dataset_entries.py` |
+| `ListRetrievalQueryLogsUseCase` | `use_cases/evaluation/list_retrieval_query_logs.py` |
+| `BuildBenchmarkExportArtifactsUseCase` | `use_cases/evaluation/build_benchmark_export_artifacts.py` |
+
+Supporting module: `use_cases/evaluation/rag_answer_for_eval.py` (RAG inspect + answer for eval flows).
+
+### Settings
+
+| Use case | Module |
+|----------|--------|
+| `GetEffectiveRetrievalSettingsUseCase` | `use_cases/settings/get_effective_retrieval_settings.py` |
+| `UpdateProjectRetrievalSettingsUseCase` | `use_cases/settings/update_project_retrieval_settings.py` |
+
+**Preset merge port:** `src/application/settings/retrieval_preset_merge_port.py` (used by UI and HTTP paths).
+
+### Composition entry
+
+- **`BackendApplicationContainer`** (`src/composition/application_container.py`) exposes memoized use-case factories consumed by FastAPI and `InProcessBackendClient`.
+
+---
+
+## 4. Boundary validation
+
+| Layer | Responsibility | Verification |
+|--------|------------------|--------------|
+| **Domain** | Pure models, domain services, ports (`domain/ports`, `domain/shared/*_port`). | `tests/architecture/test_layer_boundaries.py::test_domain_does_not_depend_on_outer_layers` |
+| **Application** | Use cases, DTOs, HTTP wire helpers, policies; may import **`src.infrastructure.adapters`** only (not persistence/vectorstores directly from use-case modules per rule). | `test_application_does_not_depend_on_ui_or_infrastructure` (allows `adapters` subtree only) |
+| **Infrastructure** | Adapters, persistence, vector stores, LLM integration. Adapters under `adapters/` may import `src.application` where needed; other infra packages may not import application (test). | `test_infrastructure_does_not_depend_on_application_or_streamlit` |
+| **API routers** | Map HTTP ↔ use cases; no direct infrastructure imports. | `test_api_routers_do_not_import_infrastructure` |
+| **Streamlit / UI** | No `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` imports. | `test_streamlit_pages_and_ui_avoid_direct_backend_internals` |
+| **Frontend gateway** | No `src.infrastructure` imports. | `test_frontend_gateway_does_not_import_infrastructure_internals` |
+| **FastAPI package** | No `src.infrastructure.adapters`, `src.backend`, `src.services` imports. | `test_apps_api_package_avoids_runtime_services_layer` |
+
+**UI / API vs orchestration:** Pages and `src/ui` call **`BackendClient`** façade methods (including chat session helpers and existing ask/inspect/evaluate routes). **`InProcessBackendClient`** delegates to the **same use cases** as HTTP for the operations it implements. No `pages/` or `src/ui/` imports of `src.composition` were found in a repo grep.
+
+---
+
+## 5. Remaining issues
+
+Only **real** follow-ups worth tracking:
+
+1. **Production identity** — `X-User-Id` (and similar) are not browser-grade auth for a public API.
+2. **Concrete types in use cases** — Prefer ports + smaller adapters over importing large `*Service` facades from application code (incremental refactor).
+3. **`RAGService` composition** — Optional: move use-case wiring fully into `composition/` and leave `RAGService` as a thin delegate.
+4. **Dual persistence layout** — SQLite code split between `src/adapters/sqlite/` and `src/infrastructure/persistence/`; consolidation is cleanup, not blocking.
+5. **Optional deps** — Full `build_backend()` may require `unstructured`; some architecture tests skip if missing — ensure CI installs full `requirements.txt` if you want zero skips.
+
+**Explicit non-issues (do not mistake for drift):**
+
+- Mentions of `src.backend` / `src.services` inside **architecture test sources** are **intentional** forbidden-prefix checks.
+- `HttpBackendClient` / `InProcessBackendClient` **must** stay aligned; `tests/architecture/test_fastapi_migration_guardrails.py` guards public surface drift.
+
+---
+
+## 6. Recommended next priorities (after orchestration)
+
+Ordered shortlist for **subsequent** tracks (not required to call orchestration “done”):
+
+1. **P0 — AuthN/Z** — Verified principals (e.g. JWT), CORS, and a clear browser security story.
+2. **P1 — Application ↔ adapter ports** — Replace direct `RAGService` / `EvaluationService` constructor coupling in use cases with narrower protocols where ROI is high.
+3. **P1 — API lifespan / DB bootstrap** — Move `init_app_db` style setup out of hot `Depends` paths if desired.
+4. **P2 — Persistence consolidation** — Single obvious home for SQLite helpers and migrations.
+5. **P2 — OpenAPI / client parity** — Any new `BackendClient` method should ship with route + contract test in the same change.
+6. **P3 — CI determinism** — Install full deps so composition/architecture tests never skip in CI.
 
 ---
 
@@ -20,114 +177,12 @@ This is **not** a claim of “production-complete SaaS backend.” Identity is s
 
 | Check | Result |
 |-------|--------|
-| Full test suite | `563 passed`, `3 skipped` (skips: composition smoke tests when optional `unstructured` is not installed — see below) |
-| Architecture pytest package | `15 passed`, `3 skipped` (same optional dependency) |
-| `src.services` imports under `src/` | **None found** |
-| `pages/` + `src/ui/` importing `src.domain` / `src.infrastructure` / `src.composition` | **None found** (grep) |
-| `src/backend/` directory | **Removed** (tests assert absent) |
-| `src/` importing `src.backend` | **None allowed** |
-| `apps/api/routers/` importing `src.infrastructure` | **None found** |
-| `BackendClient` vs `HttpBackendClient` surface alignment | Covered by `tests/architecture/test_fastapi_migration_guardrails.py` |
-
-**Note on skips:** `tests/architecture/test_migration_regression_flows.py` calls `pytest.importorskip("unstructured.chunking.title")` before `build_backend()` because importing the full graph pulls `IngestionService` → `unstructured`. **CI environments that install `requirements.txt` should not skip these tests.**
-
----
-
-## What is fully migrated (truthful list)
-
-1. **HTTP API as primary contract** — `apps/api/` with routers, Pydantic schemas, and `Depends` → `BackendApplicationContainer` / use cases.
-2. **Use-case layer** — `src/application/use_cases/**` holds orchestration entry points consumed by FastAPI and by `RAGService` / composition.
-3. **Runtime service implementations** — `src/infrastructure/services/` (RAG, evaluation, ingestion, docstore, vectorstore, etc.); **no parallel `src/services` package**.
-4. **Streamlit decoupling (import-level)** — `pages/` and `src/ui/` are forbidden by tests from importing domain, infrastructure, composition, or `apps.api`; they use `BackendClient` and `frontend_gateway` view models.
-5. **Default Streamlit → HTTP** — `RAGCRAFT_BACKEND_CLIENT` defaults to **`http`** in `src/frontend_gateway/settings.py` (API-first local and deployed setups).
-6. **In-process dev path** — `InProcessBackendClient` + `BackendApplicationContainer` (no `RAGCraftApp`).
-7. **Domain purity** — No LangChain / FastAPI / Streamlit / `sqlite3` in `src/domain/`; summary recall DTOs use `SummaryRecallDocument`.
-8. **Automated boundary tests** — `tests/architecture/` (domain, application, infrastructure, routers, gateway, absence of removed `src.backend`, inline service construction in routers).
-9. **Service-layer unit tests** — `tests/infrastructure_services/` (renamed from misleading `tests/backend/`).
-
----
-
-## What remains transitional or partial
-
-| Item | Detail |
-|------|--------|
-| **`X-User-Id`** | Workspace identity for many routes is **trust-on-first-hop**. Fine for demos and trusted proxies; **not** browser-grade auth. |
-| **`apps/api/dependencies.py`** | Uses a **lazy** `from src.infrastructure.persistence.db import init_app_db` inside `ensure_auth_database()` so SQLite app tables exist. This is **infrastructure in the API package** by design today; stricter layering would move DB bootstrap behind a port or lifespan hook. |
-| **Streamlit product role** | Still the **reference UI**; long-term product may replace it with a SPA while keeping the same API. |
-| **Optional heavy deps** | Full `build_backend()` requires **`unstructured`** (and related stack). Minimal envs can skip a few architecture regression tests. |
-| **Historical markdown** | Some files under `docs/migration/` are **baseline snapshots** (e.g. `current-architecture-baseline.md`) and marked historical; they are not the live spec. |
-
----
-
-## Remaining risks
-
-1. **Security:** Header-based user id without cryptographic verification is the **largest production risk** for any public deployment.
-2. **Drift:** `HttpBackendClient` and `InProcessBackendClient` must stay aligned with `BackendClient`; tests exist but **new methods need dual implementation**.
-3. **Forks / notebooks:** External copies may still reference removed `src.backend` paths; grep before merging.
-4. **SQLite + single process:** Typical deployment assumptions; scaling and multi-worker SQLite need explicit design.
-
----
-
-## Architectural debt (honest)
-
-- **Large `src/infrastructure/services/` modules** — RAG pipeline split into policies/use cases has started; further decomposition is optional.
-- **Global config / embedding singletons** — `src/core/config` and similar patterns; full constructor injection not done.
-- **Dual persistence story** — Some SQLite lives under `src/adapters/sqlite/`, some under `src/infrastructure/persistence/`; consolidation is incremental cleanup.
-- **Protocol typing** — `BackendClient` uses `Any` in several places for pragmatic Streamlit/HTTP bridging.
-
----
-
-## Can the frontend function through the API boundary?
-
-**Yes, for the capabilities exposed on `BackendClient` and mirrored in OpenAPI.**
-
-- Streamlit in **`http`** mode exercises the same REST surface as an external client.
-- **Caveat:** Chat transcripts remain **Streamlit `session_state`** (`ChatService` in the UI process); they are **not** the API’s source of truth. A SPA would implement its own conversation state or a future server-side chat API.
-
-**Coverage:** `tests/apps_api/` and `tests/apps_api/test_http_pipeline_e2e.py` exercise major flows (projects, ingest, chat, inspect, evaluation, export) with overrides where appropriate.
-
-**Not guaranteed:** Every niche UI helper has a matching route—when adding screens, compare `protocol.py` to `apps/api/routers/` and extend both sides if needed.
-
----
-
-## Can Angular migration proceed now?
-
-**Yes, as a technical spike or internal prototype**, using OpenAPI (`/openapi.json`) and the same headers/env as `HttpBackendClient`.
-
-**Not “production Angular-ready” without:**
-
-- Verified **authentication** (e.g. JWT) replacing or securing `X-User-Id`
-- **CORS**, cookies vs bearer tokens, refresh strategy
-- **Deployment** concerns (TLS, rate limits, file upload limits)
-
-So: **integration work can start immediately**; **launching a public SPA** requires the security and hosting items above.
-
----
-
-## Follow-up tasks (priority order)
-
-1. **P0 — Production identity** — Replace trust-on-header with verified principals for any internet-facing API.
-2. **P0 — CORS + browser auth story** — Explicit policy when the SPA is served from a different origin.
-3. **P1 — Optional: lifespan DB init** — Move `init_app_db` out of router-adjacent `Depends` into FastAPI `lifespan` or an explicit migration command.
-4. **P2 — Align `HttpBackendClient` / OpenAPI** — When adding `BackendClient` methods, add routes + client methods + contract tests in the same change.
-5. **P2 — Consolidate persistence layout** — Reduce split between `adapters/sqlite` and `infrastructure/persistence` where redundant.
-6. **P3 — Further split large adapters** — Continue extracting policies/use cases from the biggest `infrastructure.adapters` modules.
-7. **P3 — CI guarantee for full graph** — Ensure CI always installs `requirements.txt` so composition regression tests are not skipped.
-
----
-
-## Migration completeness statement
-
-| Dimension | Status |
-|-----------|--------|
-| **Target architecture (layers, API-first, Streamlit as client)** | **Met** |
-| **Automated enforcement of key boundaries** | **Met** (with documented exceptions above) |
-| **Production SaaS readiness** | **Not claimed** — identity and deployment gaps remain |
-| **Angular / SPA prototype** | **Unblocked** on API + OpenAPI |
-
----
-
-## Quick reference commands
+| Full test suite | **562 passed**, **4 skipped** |
+| `src/backend/` exists | **No** |
+| `src/infrastructure/services/` exists | **No** |
+| Python imports of `src.infrastructure.services` | **None** |
+| Python imports of `src.backend` under `src/` | **None** (tests only reference the string as a forbidden module) |
+| `pages/` + `src/ui/` importing `src.composition` | **None** (grep) |
 
 ```bash
 pytest -q
@@ -135,7 +190,17 @@ pytest tests/architecture -q
 pytest tests/apps_api -q
 ```
 
-For layout and rules: **`ARCHITECTURE_TARGET.md`**, **`tests/architecture/README.md`**, **`README.md`**.
+---
+
+## Migration completeness statement
+
+| Dimension | Status |
+|-----------|--------|
+| Legacy orchestration packages (`src/backend`, `src/infrastructure/services`) | **Removed** |
+| Use-case ownership of user journeys | **Met** (with noted adapter coupling) |
+| UI / API entrypoints without parallel ad-hoc orchestration in `pages/` / `src/ui/` | **Met** for `BackendClient`-driven flows |
+| Automated boundary enforcement | **Met** (`tests/architecture/`) |
+| Production SaaS readiness | **Not claimed** |
 
 ---
 
@@ -143,7 +208,13 @@ For layout and rules: **`ARCHITECTURE_TARGET.md`**, **`tests/architecture/README
 
 | Mode | `RAGCRAFT_BACKEND_CLIENT` | Notes |
 |------|---------------------------|--------|
-| **HTTP** (default if unset) | `http` (default in `load_frontend_backend_settings`) | Streamlit calls FastAPI; same contract as a SPA. |
-| **In-process** | `in_process` | `InProcessBackendClient` builds `BackendApplicationContainer` inside the Streamlit process (no uvicorn). |
+| **HTTP** (default if unset) | `http` | Streamlit calls FastAPI; same contract as a SPA. |
+| **In-process** | `in_process` | `InProcessBackendClient` + `BackendApplicationContainer` in the Streamlit process. |
 
-See `docs/migration/streamlit-fastapi-dev.md`.
+See [`docs/migration/streamlit-fastapi-dev.md`](streamlit-fastapi-dev.md).
+
+---
+
+## Related documents
+
+- **[`docs/migration/orchestration_audit.md`](orchestration_audit.md)** — Older flow inventory; paths were updated to `src/infrastructure/adapters/` where applicable. For **closure truth**, prefer **this report** and **`ARCHITECTURE_TARGET.md`**.
