@@ -7,9 +7,11 @@ from typing import Any
 
 from langchain_core.documents import Document
 
+from src.application.chat.policies.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.pipeline_payloads import SummaryRecallResult
 from src.domain.project import Project
+from src.domain.query_intent import QueryIntent
 from src.domain.retrieval_filters import (
     RetrievalFilters,
     filter_summary_documents_by_filters,
@@ -57,6 +59,76 @@ class SummaryRecallService:
         self.query_intent_service = QueryIntentService()
         self.adaptive_retrieval_service = AdaptiveRetrievalService()
 
+    def _merged_recall_settings(
+        self,
+        project: Project,
+        retrieval_settings: dict[str, Any] | None,
+        *,
+        enable_query_rewrite_override: bool | None,
+        enable_hybrid_retrieval_override: bool | None,
+    ) -> RetrievalSettings:
+        rss = self.retrieval_settings_service
+        settings = rss.merge(
+            rss.from_project(project.user_id, project.project_id),
+            retrieval_settings,
+        )
+        if enable_query_rewrite_override is not None:
+            settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
+        if enable_hybrid_retrieval_override is not None:
+            settings = replace(settings, enable_hybrid_retrieval=enable_hybrid_retrieval_override)
+        return settings
+
+    def _rewrite_and_classify(
+        self,
+        question: str,
+        chat_history: list[str],
+        *,
+        settings: RetrievalSettings,
+    ) -> tuple[str, float, QueryIntent, bool]:
+        enable_query_rewrite = settings.enable_query_rewrite
+        t0 = perf_counter()
+        rewritten_question = self.rewrite_question(
+            question,
+            chat_history,
+            enable_query_rewrite=enable_query_rewrite,
+            settings=settings,
+        )
+        query_rewrite_ms = (perf_counter() - t0) * 1000.0
+
+        query_intent = self.query_intent_service.classify(rewritten_question)
+        table_aware_qa_enabled = self.table_qa_service.is_table_query(
+            query_intent=query_intent,
+            question=rewritten_question,
+        )
+        return rewritten_question, query_rewrite_ms, query_intent, table_aware_qa_enabled
+
+    def _execution_plan_for_retrieval(
+        self,
+        *,
+        settings: RetrievalSettings,
+        query_intent: QueryIntent,
+        rewritten_question: str,
+        enable_hybrid_retrieval_override: bool | None,
+    ) -> tuple[RetrievalStrategy, bool, int, bool]:
+        use_adaptive_retrieval = enable_hybrid_retrieval_override is None
+        if use_adaptive_retrieval:
+            strategy = self.adaptive_retrieval_service.choose_strategy(
+                settings=settings,
+                intent=query_intent,
+                rewritten_query=rewritten_question,
+            )
+            enable_hybrid_retrieval = strategy.use_hybrid
+            similarity_search_k = strategy.k
+        else:
+            strategy = RetrievalStrategy(
+                k=max(1, int(settings.similarity_search_k)),
+                use_hybrid=bool(settings.enable_hybrid_retrieval),
+                apply_filters=True,
+            )
+            enable_hybrid_retrieval = settings.enable_hybrid_retrieval
+            similarity_search_k = strategy.k
+        return strategy, enable_hybrid_retrieval, similarity_search_k, use_adaptive_retrieval
+
     def rewrite_question(
         self,
         question: str,
@@ -82,63 +154,13 @@ class SummaryRecallService:
         secondary_docs: list[Document],
         max_docs: int | None = None,
     ) -> list[Document]:
-        """
-        Merge two ranked document lists using weighted Reciprocal Rank Fusion (RRF).
-
-        Final score for each doc_id:
-          beta * (1 / (rrf_k + rank_semantic)) + (1 - beta) * (1 / (rrf_k + rank_lexical))
-        for each list where the doc appears (primary = semantic/FAISS, secondary = BM25).
-        """
-        rrf_k = settings.rrf_k
-        hybrid_beta = settings.hybrid_beta
-
-        primary_ranks: dict[str, int] = {}
-        secondary_ranks: dict[str, int] = {}
-        docs_by_id: dict[str, Document] = {}
-        first_seen_order: dict[str, int] = {}
-
-        def _ingest(docs: list[Document], *, target_ranks: dict[str, int]) -> None:
-            for rank, doc in enumerate(docs, start=1):
-                doc_id = doc.metadata.get("doc_id")
-                if not doc_id:
-                    continue
-
-                # Keep the earliest (best) rank only.
-                target_ranks.setdefault(doc_id, rank)
-
-                # Preserve a deterministic representative doc for the fused output.
-                if doc_id not in docs_by_id:
-                    docs_by_id[doc_id] = doc
-                    first_seen_order[doc_id] = len(first_seen_order)
-
-        _ingest(primary_docs, target_ranks=primary_ranks)
-        _ingest(secondary_docs, target_ranks=secondary_ranks)
-
-        fused: list[tuple[str, float, int, int]] = []
-        all_doc_ids = set(docs_by_id.keys())
-
-        for doc_id in all_doc_ids:
-            score = 0.0
-            min_rank = 10**18
-
-            if doc_id in primary_ranks:
-                rank = primary_ranks[doc_id]
-                score += hybrid_beta * (1.0 / (rrf_k + rank))
-                min_rank = min(min_rank, rank)
-
-            if doc_id in secondary_ranks:
-                rank = secondary_ranks[doc_id]
-                score += (1.0 - hybrid_beta) * (1.0 / (rrf_k + rank))
-                min_rank = min(min_rank, rank)
-
-            fused.append((doc_id, score, min_rank, first_seen_order[doc_id]))
-
-        # Sort by fused score desc, then by best (lowest) rank asc, then by first-seen order asc.
-        fused.sort(key=lambda item: (-item[1], item[2], item[3]))
-
-        limit = max_docs if max_docs is not None else len(fused)
-        fused_doc_ids = [doc_id for doc_id, _, _, _ in fused[:limit]]
-        return [docs_by_id[doc_id] for doc_id in fused_doc_ids]
+        """Thin adapter over :func:`merge_summary_documents_weighted_rrf`."""
+        return merge_summary_documents_weighted_rrf(
+            settings=settings,
+            primary_docs=primary_docs,
+            secondary_docs=secondary_docs,
+            max_docs=max_docs,
+        )
 
     def retrieve_summary_docs(
         self,
@@ -214,15 +236,12 @@ class SummaryRecallService:
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict[str, Any] | None = None,
     ) -> SummaryRecallResult:
-        rss = self.retrieval_settings_service
-        settings = rss.merge(
-            rss.from_project(project.user_id, project.project_id),
+        settings = self._merged_recall_settings(
+            project,
             retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        if enable_query_rewrite_override is not None:
-            settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
-        if enable_hybrid_retrieval_override is not None:
-            settings = replace(settings, enable_hybrid_retrieval=enable_hybrid_retrieval_override)
 
         logger.debug(
             "Retrieval settings (project_id=%s): %s",
@@ -231,39 +250,19 @@ class SummaryRecallService:
         )
 
         enable_query_rewrite = settings.enable_query_rewrite
-        enable_hybrid_retrieval = settings.enable_hybrid_retrieval
 
-        t0 = perf_counter()
-        rewritten_question = self.rewrite_question(
-            question,
-            chat_history,
-            enable_query_rewrite=enable_query_rewrite,
-            settings=settings,
-        )
-        query_rewrite_ms = (perf_counter() - t0) * 1000.0
-
-        query_intent = self.query_intent_service.classify(rewritten_question)
-        table_aware_qa_enabled = self.table_qa_service.is_table_query(
-            query_intent=query_intent,
-            question=rewritten_question,
+        rewritten_question, query_rewrite_ms, query_intent, table_aware_qa_enabled = (
+            self._rewrite_and_classify(question, chat_history, settings=settings)
         )
 
-        use_adaptive_retrieval = enable_hybrid_retrieval_override is None
-        if use_adaptive_retrieval:
-            strategy = self.adaptive_retrieval_service.choose_strategy(
+        strategy, enable_hybrid_retrieval, similarity_search_k, use_adaptive_retrieval = (
+            self._execution_plan_for_retrieval(
                 settings=settings,
-                intent=query_intent,
-                rewritten_query=rewritten_question,
+                query_intent=query_intent,
+                rewritten_question=rewritten_question,
+                enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             )
-            enable_hybrid_retrieval = strategy.use_hybrid
-            similarity_search_k = strategy.k
-        else:
-            strategy = RetrievalStrategy(
-                k=max(1, int(settings.similarity_search_k)),
-                use_hybrid=bool(enable_hybrid_retrieval),
-                apply_filters=True,
-            )
-            similarity_search_k = strategy.k
+        )
 
         filters_for_retrieval = (
             filters if filters is not None and not filters.is_empty() else None

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from time import perf_counter
-from typing import Any
 
 from langchain_core.documents import Document
 
+from src.application.chat.policies.pipeline_document_selection import (
+    deduplicate_summary_doc_ids,
+    select_summary_documents_by_doc_ids,
+)
+from src.application.chat.policies.prompt_source_wire import prompt_source_to_wire_dict
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import (
@@ -55,28 +59,11 @@ class PipelineAssemblyService:
 
     @staticmethod
     def deduplicate_doc_ids(summary_docs: list[Document]) -> list[str]:
-        seen = set()
-        ordered_doc_ids: list[str] = []
-
-        for doc in summary_docs:
-            doc_id = doc.metadata.get("doc_id")
-            if not doc_id or doc_id in seen:
-                continue
-            seen.add(doc_id)
-            ordered_doc_ids.append(doc_id)
-
-        return ordered_doc_ids
+        return deduplicate_summary_doc_ids(summary_docs)
 
     @staticmethod
     def select_summary_docs_by_doc_ids(summary_docs: list, doc_ids: list[str]) -> list:
-        docs_by_id: dict[Any, Any] = {}
-
-        for doc in summary_docs:
-            doc_id = doc.metadata.get("doc_id")
-            if doc_id and doc_id not in docs_by_id:
-                docs_by_id[doc_id] = doc
-
-        return [docs_by_id[doc_id] for doc_id in doc_ids if doc_id in docs_by_id]
+        return select_summary_documents_by_doc_ids(summary_docs, doc_ids)
 
     def _section_expansion_corpus(
         self,
@@ -116,22 +103,7 @@ class PipelineAssemblyService:
 
     @staticmethod
     def prompt_source_to_dict(prompt_source: PromptSource) -> dict:
-        rerank_score = (
-            prompt_source.metadata.get("rerank_score") if prompt_source.metadata else None
-        )
-
-        return {
-            "source_number": prompt_source.source_number,
-            "doc_id": prompt_source.doc_id,
-            "source_file": prompt_source.source_file,
-            "content_type": prompt_source.content_type,
-            "page_label": prompt_source.page_label,
-            "locator_label": prompt_source.locator_label,
-            "display_label": prompt_source.display_label,
-            "inline_label": prompt_source.prompt_label,
-            "metadata": prompt_source.metadata,
-            "rerank_score": rerank_score,
-        }
+        return prompt_source_to_wire_dict(prompt_source)
 
     def build(
         self,
