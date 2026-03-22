@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from src.services.project_service import ProjectService
+from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
 
 
 class InvalidateProjectChainCacheUseCase:
@@ -16,12 +16,12 @@ class InvalidateProjectChainCacheUseCase:
     def __init__(
         self,
         *,
-        project_service: ProjectService,
+        resolve_project: ResolveProjectUseCase,
         invalidate_project_chain: Callable[[str], None],
     ) -> None:
-        self._project_service = project_service
+        self._resolve_project = resolve_project
         self._invalidate = invalidate_project_chain
 
     def execute(self, *, user_id: str, project_id: str) -> None:
-        project = self._project_service.get_project(user_id, project_id)
+        project = self._resolve_project.execute(user_id, project_id)
         self._invalidate(project.project_id)

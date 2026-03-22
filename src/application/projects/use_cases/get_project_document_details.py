@@ -1,18 +1,18 @@
 from __future__ import annotations
 
+from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
 from src.domain.ports import AssetRepositoryPort
-from src.services.project_service import ProjectService
 
 
 class GetProjectDocumentDetailsUseCase:
     """Build document listing rows (paths, sizes, asset stats) for a project root directory."""
 
-    def __init__(self, *, project_service: ProjectService, asset_repository: AssetRepositoryPort) -> None:
-        self._project_service = project_service
+    def __init__(self, *, resolve_project: ResolveProjectUseCase, asset_repository: AssetRepositoryPort) -> None:
+        self._resolve_project = resolve_project
         self._assets = asset_repository
 
     def execute(self, *, user_id: str, project_id: str, document_names: list[str]) -> list[dict]:
-        project = self._project_service.get_project(user_id, project_id)
+        project = self._resolve_project.execute(user_id, project_id)
         details: list[dict] = []
 
         for doc_name in document_names:

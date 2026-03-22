@@ -162,15 +162,27 @@ class BackendApplicationContainer:
             project_settings=self.project_settings_repository,
         )
 
-    def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
+    @cached_property
+    def projects_resolve_project_use_case(self):
+        from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
+
+        return ResolveProjectUseCase(project_service=self.project_service)
+
+    @cached_property
+    def projects_invalidate_project_chain_cache_use_case(self):
         from src.application.projects.use_cases.invalidate_project_chain_cache import (
             InvalidateProjectChainCacheUseCase,
         )
 
-        InvalidateProjectChainCacheUseCase(
-            project_service=self.project_service,
+        return InvalidateProjectChainCacheUseCase(
+            resolve_project=self.projects_resolve_project_use_case,
             invalidate_project_chain=self._invalidate_chain_key,
-        ).execute(user_id=user_id, project_id=project_id)
+        )
+
+    def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
+        self.projects_invalidate_project_chain_cache_use_case.execute(
+            user_id=user_id, project_id=project_id
+        )
 
     @cached_property
     def projects_list_projects_use_case(self) -> ListProjectsUseCase:
@@ -192,6 +204,33 @@ class BackendApplicationContainer:
 
         return ListProjectDocumentsUseCase(project_service=self.project_service)
 
+    @cached_property
+    def projects_get_project_document_details_use_case(self):
+        from src.application.projects.use_cases.get_project_document_details import (
+            GetProjectDocumentDetailsUseCase,
+        )
+
+        return GetProjectDocumentDetailsUseCase(
+            resolve_project=self.projects_resolve_project_use_case,
+            asset_repository=self.docstore_service,
+        )
+
+    @cached_property
+    def projects_list_document_assets_for_source_use_case(self):
+        from src.application.projects.use_cases.list_document_assets_for_source import (
+            ListDocumentAssetsForSourceUseCase,
+        )
+
+        return ListDocumentAssetsForSourceUseCase(asset_repository=self.docstore_service)
+
+    @cached_property
+    def projects_get_retrieval_preset_label_use_case(self):
+        from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+            GetProjectRetrievalPresetLabelUseCase,
+        )
+
+        return GetProjectRetrievalPresetLabelUseCase(project_settings=self.project_settings_repository)
+
     @property
     def chat_ask_question_use_case(self) -> AskQuestionUseCase:
         return self.rag_service.ask_question_use_case
@@ -203,6 +242,15 @@ class BackendApplicationContainer:
     @property
     def chat_preview_summary_recall_use_case(self) -> PreviewSummaryRecallUseCase:
         return self.rag_service.preview_summary_recall_use_case
+
+    @cached_property
+    def chat_compare_retrieval_modes_use_case(self):
+        from src.application.chat.use_cases.compare_retrieval_modes import CompareRetrievalModesUseCase
+
+        return CompareRetrievalModesUseCase(
+            resolve_project=self.projects_resolve_project_use_case,
+            comparison_service=self.retrieval_comparison_service,
+        )
 
     @cached_property
     def ingestion_ingest_uploaded_file_use_case(self) -> IngestUploadedFileUseCase:

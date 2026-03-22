@@ -12,18 +12,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from apps.api.dependencies import (
-    BackendContainerDep,
     get_create_project_use_case,
     get_delete_document_use_case,
-    get_docstore_service,
     get_get_effective_retrieval_settings_use_case,
+    get_get_project_document_details_use_case,
+    get_get_project_retrieval_preset_label_use_case,
     get_ingest_uploaded_file_use_case,
+    get_invalidate_project_chain_cache_use_case,
+    get_list_document_assets_for_source_use_case,
     get_list_project_documents_use_case,
     get_list_projects_use_case,
-    get_project_service,
-    get_project_settings_service,
     get_reindex_document_use_case,
     get_request_user_id,
+    get_resolve_project_use_case,
     get_update_project_retrieval_settings_use_case,
 )
 from apps.api.schemas.mappers import document_asset_row_from_store, project_document_detail_item
@@ -68,9 +69,17 @@ from src.application.settings.use_cases.update_project_retrieval_settings import
 from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
 from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
 from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
-from src.services.docstore_service import DocStoreService
-from src.services.project_service import ProjectService
-from src.services.project_settings_service import ProjectSettingsService
+from src.application.projects.use_cases.get_project_document_details import GetProjectDocumentDetailsUseCase
+from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+    GetProjectRetrievalPresetLabelUseCase,
+)
+from src.application.projects.use_cases.invalidate_project_chain_cache import (
+    InvalidateProjectChainCacheUseCase,
+)
+from src.application.projects.use_cases.list_document_assets_for_source import (
+    ListDocumentAssetsForSourceUseCase,
+)
+from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -189,7 +198,7 @@ def put_project_retrieval_settings(
 async def post_document_ingest(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[IngestUploadedFileUseCase, Depends(get_ingest_uploaded_file_use_case)],
     file: UploadFile = File(
         ...,
@@ -206,7 +215,7 @@ async def post_document_ingest(
     The server reads the entire body into memory before calling the ingest use case.
     """
     buffered = await read_upload_for_ingestion(file)
-    project = project_service.get_project(user_id, project_id)
+    project = resolve_project.execute(user_id, project_id)
     result = use_case.execute(
         IngestUploadedFileCommand(project=project, uploaded_file=buffered)
     )
@@ -228,11 +237,11 @@ def post_document_reindex(
     project_id: str,
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[ReindexDocumentUseCase, Depends(get_reindex_document_use_case)],
 ) -> IngestDocumentResponse:
     """Rebuild vectors and assets from the file already stored for this project (URL-encode ``source_file`` if needed)."""
-    project = project_service.get_project(user_id, project_id)
+    project = resolve_project.execute(user_id, project_id)
     result = use_case.execute(ReindexDocumentCommand(project=project, source_file=source_file))
     wire = IngestDocumentWirePayload.from_ingest_result(result)
     return IngestDocumentResponse.model_validate(wire.as_json_dict())
@@ -250,11 +259,11 @@ def delete_project_document(
     project_id: str,
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[DeleteDocumentUseCase, Depends(get_delete_document_use_case)],
 ) -> DeleteDocumentResponse:
     """Removes the project file, SQLite assets, FAISS vectors, and invalidates the chain cache."""
-    project = project_service.get_project(user_id, project_id)
+    project = resolve_project.execute(user_id, project_id)
     out = use_case.execute(DeleteDocumentCommand(project=project, source_file=source_file))
     return DeleteDocumentResponse(
         source_file=out.source_file,
@@ -272,9 +281,9 @@ def delete_project_document(
 def get_project_summary(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
 ) -> ProjectSummaryResponse:
-    project = project_service.get_project(user_id, project_id)
+    project = resolve_project.execute(user_id, project_id)
     return ProjectSummaryResponse(
         user_id=project.user_id,
         project_id=project.project_id,
@@ -290,9 +299,11 @@ def get_project_summary(
 def get_retrieval_preset_label(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    settings_service: Annotated[ProjectSettingsService, Depends(get_project_settings_service)],
+    use_case: Annotated[
+        GetProjectRetrievalPresetLabelUseCase, Depends(get_get_project_retrieval_preset_label_use_case)
+    ],
 ) -> RetrievalPresetLabelResponse:
-    label = settings_service.preset_label_for_project(user_id, project_id)
+    label = use_case.execute(user_id=user_id, project_id=project_id)
     return RetrievalPresetLabelResponse(label=label)
 
 
@@ -304,35 +315,26 @@ def get_retrieval_preset_label(
 def get_project_document_details(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[ProjectService, Depends(get_project_service)],
-    docstore: Annotated[DocStoreService, Depends(get_docstore_service)],
+    list_docs: Annotated[ListProjectDocumentsUseCase, Depends(get_list_project_documents_use_case)],
+    details_uc: Annotated[
+        GetProjectDocumentDetailsUseCase, Depends(get_get_project_document_details_use_case)
+    ],
 ) -> ProjectDocumentDetailsResponse:
-    project = project_service.get_project(user_id, project_id)
-    documents = project_service.list_project_documents(user_id, project_id)
+    doc_names = list_docs.execute(user_id, project_id)
+    rows = details_uc.execute(user_id=user_id, project_id=project_id, document_names=doc_names)
     details = []
-    for doc_name in documents:
-        file_path = project.path / doc_name
-        asset_count = docstore.count_assets_for_source_file(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=doc_name,
-        )
-        asset_stats = docstore.get_asset_stats_for_source_file(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=doc_name,
-        )
-        latest = asset_stats.get("latest_ingested_at")
+    for row in rows:
+        latest = row.get("latest_ingested_at")
         details.append(
             project_document_detail_item(
-                name=doc_name,
-                project_id=project_id,
-                path=str(file_path),
-                size_bytes=file_path.stat().st_size if file_path.exists() else 0,
-                asset_count=asset_count,
-                text_count=int(asset_stats.get("text_count", 0)),
-                table_count=int(asset_stats.get("table_count", 0)),
-                image_count=int(asset_stats.get("image_count", 0)),
+                name=str(row["name"]),
+                project_id=str(row["project_id"]),
+                path=str(row["path"]),
+                size_bytes=int(row["size_bytes"]),
+                asset_count=int(row["asset_count"]),
+                text_count=int(row["text_count"]),
+                table_count=int(row["table_count"]),
+                image_count=int(row["image_count"]),
                 latest_ingested_at=None if latest is None else str(latest),
             )
         )
@@ -348,13 +350,11 @@ def get_document_assets(
     project_id: str,
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    docstore: Annotated[DocStoreService, Depends(get_docstore_service)],
+    use_case: Annotated[
+        ListDocumentAssetsForSourceUseCase, Depends(get_list_document_assets_for_source_use_case)
+    ],
 ) -> DocumentAssetsResponse:
-    assets = docstore.list_assets_for_source_file(
-        user_id=user_id,
-        project_id=project_id,
-        source_file=source_file,
-    )
+    assets = use_case.execute(user_id=user_id, project_id=project_id, source_file=source_file)
     return DocumentAssetsResponse(assets=[document_asset_row_from_store(a) for a in assets])
 
 
@@ -366,7 +366,9 @@ def get_document_assets(
 def post_invalidate_retrieval_cache(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    container: BackendContainerDep,
+    use_case: Annotated[
+        InvalidateProjectChainCacheUseCase, Depends(get_invalidate_project_chain_cache_use_case)
+    ],
 ) -> InvalidateCacheResponse:
-    container.invalidate_project_chain(user_id, project_id)
+    use_case.execute(user_id=user_id, project_id=project_id)
     return InvalidateCacheResponse(ok=True)

@@ -24,7 +24,7 @@ from apps.api.dependencies import (
     get_inspect_pipeline_use_case,
     get_list_project_documents_use_case,
     get_list_projects_use_case,
-    get_project_service,
+    get_resolve_project_use_case,
     get_run_gold_qa_dataset_evaluation_use_case,
     get_run_manual_evaluation_use_case,
 )
@@ -64,6 +64,16 @@ class _FakeProjectService:
         if self._default is not None:
             return self._default
         return Project(user_id=user_id, project_id=project_id)
+
+
+class _FakeResolveProjectUseCase:
+    """Mirrors :class:`~src.application.projects.use_cases.resolve_project.ResolveProjectUseCase` for tests."""
+
+    def __init__(self, svc: _FakeProjectService) -> None:
+        self._svc = svc
+
+    def execute(self, user_id: str, project_id: str) -> Project:
+        return self._svc.get_project(user_id, project_id)
 
 
 class _CallableUseCase:
@@ -199,7 +209,9 @@ def test_document_ingest_happy_path(override_app: tuple[TestClient, FastAPI]) ->
             diagnostics=IngestionDiagnostics(total_ms=12.0, generated_assets=1),
         )
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ingest_uploaded_file_use_case] = lambda: _CallableUseCase(_ingest)
 
     r = tc.post(
@@ -221,7 +233,9 @@ def test_document_ingest_infrastructure_error_maps_to_503(
     def _boom(_cmd: Any) -> IngestDocumentResult:
         raise VectorStoreError("internal", user_message="Vector layer unavailable.")
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ingest_uploaded_file_use_case] = lambda: _CallableUseCase(_boom)
 
     r = tc.post(
@@ -239,7 +253,9 @@ def test_chat_ask_validation_without_loading_composition(
     override_app: tuple[TestClient, FastAPI],
 ) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
 
     r = tc.post(
@@ -262,7 +278,9 @@ def test_chat_ask_answered_happy_path(override_app: tuple[TestClient, FastAPI]) 
             latency={"total_ms": 1.0},
         )
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(_answer)
 
     r = tc.post(
@@ -279,7 +297,9 @@ def test_chat_ask_answered_happy_path(override_app: tuple[TestClient, FastAPI]) 
 
 def test_chat_ask_no_pipeline_status(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
 
     r = tc.post(
@@ -299,7 +319,9 @@ def test_chat_ask_llm_service_error_maps_to_502(override_app: tuple[TestClient, 
     def _fail(*a: Any, **k: Any) -> None:
         raise LLMServiceError("upstream", user_message="Model failed.")
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(_fail)
 
     r = tc.post(
@@ -319,7 +341,9 @@ def test_chat_ask_domain_error_maps_to_400(override_app: tuple[TestClient, FastA
     def _domain_fail(*a: Any, **k: Any) -> None:
         raise DomainError("rule broken", user_message="Not allowed.")
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(_domain_fail)
 
     r = tc.post(
@@ -341,7 +365,9 @@ def test_pipeline_inspect_happy_path(override_app: tuple[TestClient, FastAPI]) -
         r.question = "Inspect me"
         return r
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(_pipe)
 
     r = tc.post(
@@ -358,7 +384,9 @@ def test_pipeline_inspect_happy_path(override_app: tuple[TestClient, FastAPI]) -
 
 def test_pipeline_inspect_no_pipeline(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
 
     r = tc.post(
@@ -380,7 +408,9 @@ def test_pipeline_inspect_vector_store_error_maps_to_503(
     def _boom(*a: Any, **k: Any) -> None:
         raise VectorStoreError("bad index", user_message="Index failed.")
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService()
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
     app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(_boom)
 
     r = tc.post(
@@ -523,7 +553,9 @@ def test_value_error_not_found_maps_to_404(override_app: tuple[TestClient, FastA
     def _missing(_uid: str, _pid: str) -> Project:
         raise ValueError("Project not found for user")
 
-    app.dependency_overrides[get_project_service] = lambda: _FakeProjectService(get_project_hook=_missing)
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService(get_project_hook=_missing)
+    )
     app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
 
     r = tc.post(

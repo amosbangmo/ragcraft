@@ -23,6 +23,7 @@ from typing import Annotated
 from fastapi import Depends, Header, HTTPException
 
 from src.application.chat.use_cases.ask_question import AskQuestionUseCase
+from src.application.chat.use_cases.compare_retrieval_modes import CompareRetrievalModesUseCase
 from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
@@ -42,8 +43,19 @@ from src.application.ingestion.use_cases.delete_document import DeleteDocumentUs
 from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
 from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
 from src.application.projects.use_cases.create_project import CreateProjectUseCase
+from src.application.projects.use_cases.get_project_document_details import GetProjectDocumentDetailsUseCase
+from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+    GetProjectRetrievalPresetLabelUseCase,
+)
+from src.application.projects.use_cases.invalidate_project_chain_cache import (
+    InvalidateProjectChainCacheUseCase,
+)
+from src.application.projects.use_cases.list_document_assets_for_source import (
+    ListDocumentAssetsForSourceUseCase,
+)
 from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
 from src.application.projects.use_cases.list_projects import ListProjectsUseCase
+from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
 from src.application.settings.use_cases.get_effective_retrieval_settings import (
     GetEffectiveRetrievalSettingsUseCase,
 )
@@ -52,11 +64,6 @@ from src.application.settings.use_cases.update_project_retrieval_settings import
 )
 from src.auth.user_repository import UserRepository
 from src.composition.application_container import BackendApplicationContainer
-from src.services.docstore_service import DocStoreService
-from src.services.project_service import ProjectService
-from src.services.project_settings_service import ProjectSettingsService
-from src.services.rag_service import RAGService
-from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 
 @lru_cache(maxsize=1)
@@ -71,10 +78,6 @@ def get_backend_application_container() -> BackendApplicationContainer:
 
 
 BackendContainerDep = Annotated[BackendApplicationContainer, Depends(get_backend_application_container)]
-
-
-def get_project_service(container: BackendContainerDep) -> ProjectService:
-    return container.project_service
 
 
 def get_request_user_id(
@@ -121,8 +124,38 @@ def get_list_project_documents_use_case(container: BackendContainerDep) -> ListP
     return container.projects_list_project_documents_use_case
 
 
-def get_rag_service(container: BackendContainerDep) -> RAGService:
-    return container.rag_service
+def get_resolve_project_use_case(container: BackendContainerDep) -> ResolveProjectUseCase:
+    return container.projects_resolve_project_use_case
+
+
+def get_get_project_document_details_use_case(
+    container: BackendContainerDep,
+) -> GetProjectDocumentDetailsUseCase:
+    return container.projects_get_project_document_details_use_case
+
+
+def get_list_document_assets_for_source_use_case(
+    container: BackendContainerDep,
+) -> ListDocumentAssetsForSourceUseCase:
+    return container.projects_list_document_assets_for_source_use_case
+
+
+def get_get_project_retrieval_preset_label_use_case(
+    container: BackendContainerDep,
+) -> GetProjectRetrievalPresetLabelUseCase:
+    return container.projects_get_retrieval_preset_label_use_case
+
+
+def get_invalidate_project_chain_cache_use_case(
+    container: BackendContainerDep,
+) -> InvalidateProjectChainCacheUseCase:
+    return container.projects_invalidate_project_chain_cache_use_case
+
+
+def get_compare_retrieval_modes_use_case(
+    container: BackendContainerDep,
+) -> CompareRetrievalModesUseCase:
+    return container.chat_compare_retrieval_modes_use_case
 
 
 def get_ask_question_use_case(container: BackendContainerDep) -> AskQuestionUseCase:
@@ -189,18 +222,6 @@ def get_reindex_document_use_case(container: BackendContainerDep) -> ReindexDocu
 
 def get_delete_document_use_case(container: BackendContainerDep) -> DeleteDocumentUseCase:
     return container.ingestion_delete_document_use_case
-
-
-def get_docstore_service(container: BackendContainerDep) -> DocStoreService:
-    return container.docstore_service
-
-
-def get_project_settings_service(container: BackendContainerDep) -> ProjectSettingsService:
-    return container.project_settings_service
-
-
-def get_retrieval_comparison_service(container: BackendContainerDep) -> RetrievalComparisonService:
-    return container.retrieval_comparison_service
 
 
 def ensure_auth_database() -> bool:

@@ -12,7 +12,7 @@ import sys
 
 from fastapi.testclient import TestClient
 
-from apps.api.dependencies import get_backend_application_container
+from apps.api.dependencies import get_invalidate_project_chain_cache_use_case
 from apps.api.main import create_app
 
 
@@ -32,15 +32,17 @@ def test_dependencies_module_statically_avoids_streamlit_token() -> None:
     assert "streamlit" not in text.lower()
 
 
-def test_post_invalidate_retrieval_cache_invokes_container() -> None:
+def test_post_invalidate_retrieval_cache_invokes_use_case() -> None:
     calls: list[tuple[str, str]] = []
 
-    class _FakeContainer:
-        def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
+    class _FakeInvalidateProjectChain:
+        def execute(self, *, user_id: str, project_id: str) -> None:
             calls.append((user_id, project_id))
 
     app = create_app()
-    app.dependency_overrides[get_backend_application_container] = lambda: _FakeContainer()
+    app.dependency_overrides[get_invalidate_project_chain_cache_use_case] = (
+        lambda: _FakeInvalidateProjectChain()
+    )
     try:
         with TestClient(app) as client:
             r = client.post(
