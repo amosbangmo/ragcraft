@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from src.application.chat.use_cases.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
+from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 

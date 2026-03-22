@@ -151,7 +151,9 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
             raw_assets=raw_assets,
             confidence=0.9,
         )
-        backend._rag_service.ask.return_value = response
+        ask_uc = MagicMock()
+        ask_uc.execute.return_value = response
+        backend._rag_service.ask_question_use_case = ask_uc
 
         ingest_result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
         ask_result = client.ask_question(

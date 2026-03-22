@@ -30,7 +30,7 @@ from apps.api.main import create_app
 from apps.api.schemas.chat import ChatAskResponse, PipelineInspectResponse
 from apps.api.schemas.evaluation import BenchmarkResultResponse
 from apps.api.schemas.projects import CreateProjectResponse, IngestDocumentResponse
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 from src.application.ingestion.dtos import IngestDocumentResult

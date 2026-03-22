@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkSummary

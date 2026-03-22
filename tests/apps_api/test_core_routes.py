@@ -29,7 +29,7 @@ from apps.api.dependencies import (
     get_run_manual_evaluation_use_case,
 )
 from apps.api.main import create_app
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 from src.application.ingestion.dtos import IngestDocumentResult
@@ -67,7 +67,7 @@ class _FakeProjectService:
 
 
 class _FakeResolveProjectUseCase:
-    """Mirrors :class:`~src.application.projects.use_cases.resolve_project.ResolveProjectUseCase` for tests."""
+    """Mirrors :class:`~src.application.use_cases.projects.resolve_project.ResolveProjectUseCase` for tests."""
 
     def __init__(self, svc: _FakeProjectService) -> None:
         self._svc = svc

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.application.evaluation.use_cases.benchmark_execution import BenchmarkExecutionUseCase
+from src.application.use_cases.evaluation.benchmark_execution import BenchmarkExecutionUseCase
 from src.infrastructure.services.answer_quality_aggregation_service import AnswerQualityAggregationService
 from src.infrastructure.services.auto_debug_service import AutoDebugService
 from src.infrastructure.services.correlation_service import CorrelationService
@@ -18,7 +18,7 @@ _DEFAULT_ANSWER = AnswerQualityAggregationService()
 class EvaluationService:
     """
     Façade for gold QA benchmark evaluation. Delegates orchestration to
-    :class:`~src.application.evaluation.use_cases.benchmark_execution.BenchmarkExecutionUseCase`
+    :class:`~src.application.use_cases.evaluation.benchmark_execution.BenchmarkExecutionUseCase`
     and composes focused metric / row services.
     """
 

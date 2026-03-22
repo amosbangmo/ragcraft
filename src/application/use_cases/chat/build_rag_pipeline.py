@@ -3,11 +3,11 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any
 
-from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
-from src.application.chat.orchestration.recall_then_assemble_pipeline import (
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.orchestration.recall_then_assemble_pipeline import (
     run_recall_then_assemble_pipeline,
 )
-from src.application.chat.orchestration.ports import PipelineAssemblyPort, SummaryRecallStagePort
+from src.application.use_cases.chat.orchestration.ports import PipelineAssemblyPort, SummaryRecallStagePort
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters

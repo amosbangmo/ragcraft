@@ -29,17 +29,17 @@ from apps.api.schemas.chat import (
     RetrievalCompareRequest,
     RetrievalCompareResponse,
 )
-from src.application.chat.use_cases.ask_question import AskQuestionUseCase
-from src.application.chat.use_cases.compare_retrieval_modes import CompareRetrievalModesUseCase
-from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
-from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
+from src.application.use_cases.chat.ask_question import AskQuestionUseCase
+from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.application.http.wire import (
     PipelineSnapshotWirePayload,
     PreviewSummaryRecallWirePayload,
     RagAnswerWirePayload,
     RetrievalComparisonWirePayload,
 )
-from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
+from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 

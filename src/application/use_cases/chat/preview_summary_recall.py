@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.application.chat.orchestration.ports import SummaryRecallStagePort
+from src.application.use_cases.chat.orchestration.ports import SummaryRecallStagePort
 from src.application.common.pipeline_query_context import RAGPipelineQueryContext
 from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from src.domain.pipeline_payloads import SummaryRecallResult

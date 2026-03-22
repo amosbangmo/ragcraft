@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from apps.api.dependencies import get_build_benchmark_export_artifacts_use_case
 from apps.api.main import create_app
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 

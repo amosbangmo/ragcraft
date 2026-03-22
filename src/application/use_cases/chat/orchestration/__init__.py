@@ -5,6 +5,6 @@ Avoid importing :mod:`recall_then_assemble_pipeline` here so ``from … import P
 does not pull FAISS / LangChain in minimal test environments.
 """
 
-from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 
 __all__ = ["PipelineQueryLogEmitter"]

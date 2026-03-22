@@ -3,7 +3,7 @@ Service façade for benchmark exports.
 
 Formatting lives in :mod:`src.application.evaluation.benchmark_report_formatter`;
 orchestration entry point is
-:class:`~src.application.evaluation.use_cases.build_benchmark_export_artifacts.BuildBenchmarkExportArtifactsUseCase`.
+:class:`~src.application.use_cases.evaluation.build_benchmark_export_artifacts.BuildBenchmarkExportArtifactsUseCase`.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from src.application.evaluation.benchmark_report_formatter import (
     coerce_generated_at,
     safe_filename_segment,
 )
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 

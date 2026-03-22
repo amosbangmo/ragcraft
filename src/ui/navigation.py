@@ -47,14 +47,14 @@ def render_navigation(hide_sidebar: bool = False):
         st.markdown('<div class="nav-title">🚀 RAGCraft</div>', unsafe_allow_html=True)
         st.markdown('<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True)
 
-        if auth_service.is_authenticated():
+        if streamlit_auth.is_authenticated():
             render_user_avatar(
-                avatar_path=auth_service.get_current_avatar_path(),
-                display_name=auth_service.get_display_name(),
+                avatar_path=streamlit_auth.get_current_avatar_path(),
+                display_name=streamlit_auth.get_display_name(),
                 size=64,
             )
             st.markdown(
-                f'<div style="text-align:center;font-weight:600;margin-bottom:30px">{auth_service.get_display_name()}</div>',
+                f'<div style="text-align:center;font-weight:600;margin-bottom:30px">{streamlit_auth.get_display_name()}</div>',
                 unsafe_allow_html=True,
             )
         else:

@@ -1,19 +1,19 @@
 """
 RAG transport-facing shell: vector store loading, retrieval settings, and chat use-case wiring.
 
-Orchestration lives under ``src.application.chat`` (use cases + ``orchestration``). This class keeps
-a stable object graph for :class:`~src.composition.backend_composition.BackendComposition`, Streamlit,
-and code that still expects ``rag_service.inspect_pipeline`` / ``.ask`` / ``.build_pipeline``.
+Application orchestration lives under ``src.application.use_cases.chat`` (and ``…chat.orchestration``).
+This class keeps a stable object graph for :class:`~src.composition.backend_composition.BackendComposition`,
+Streamlit, and code that still expects ``rag_service.inspect_pipeline`` / ``.ask`` / ``.build_pipeline``.
 """
 
 from typing import Any
 
-from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
-from src.application.chat.use_cases.ask_question import AskQuestionUseCase
-from src.application.chat.use_cases.build_rag_pipeline import BuildRagPipelineUseCase
-from src.application.chat.use_cases.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
-from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
-from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.ask_question import AskQuestionUseCase
+from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse

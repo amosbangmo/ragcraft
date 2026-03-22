@@ -28,37 +28,37 @@ from src.infrastructure.services.reranking_service import RerankingService
 from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
-    from src.application.chat.use_cases.ask_question import AskQuestionUseCase
-    from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
-    from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
-    from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+    from src.application.use_cases.chat.ask_question import AskQuestionUseCase
+    from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+    from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
+    from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
         BuildBenchmarkExportArtifactsUseCase,
     )
-    from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
-    from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-    from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
-    from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
-    from src.application.evaluation.use_cases.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
-    from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+    from src.application.use_cases.evaluation.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+    from src.application.use_cases.evaluation.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
+    from src.application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
+    from src.application.use_cases.evaluation.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+    from src.application.use_cases.evaluation.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
+    from src.application.use_cases.evaluation.run_gold_qa_dataset_evaluation import (
         RunGoldQaDatasetEvaluationUseCase,
     )
-    from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
-    from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
-    from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
-    from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
-    from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
-    from src.application.projects.use_cases.create_project import CreateProjectUseCase
-    from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
-    from src.application.projects.use_cases.list_projects import ListProjectsUseCase
-    from src.application.settings.use_cases.get_effective_retrieval_settings import (
+    from src.application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
+    from src.application.use_cases.evaluation.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
+    from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
+    from src.application.use_cases.ingestion.delete_document import DeleteDocumentUseCase
+    from src.application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
+    from src.application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
+    from src.application.use_cases.projects.create_project import CreateProjectUseCase
+    from src.application.use_cases.projects.list_project_documents import ListProjectDocumentsUseCase
+    from src.application.use_cases.projects.list_projects import ListProjectsUseCase
+    from src.application.use_cases.settings.get_effective_retrieval_settings import (
         GetEffectiveRetrievalSettingsUseCase,
     )
-    from src.application.settings.use_cases.update_project_retrieval_settings import (
+    from src.application.use_cases.settings.update_project_retrieval_settings import (
         UpdateProjectRetrievalSettingsUseCase,
     )
     from src.infrastructure.services.ingestion_service import IngestionService
     from src.infrastructure.services.rag_service import RAGService
-    from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
     from src.infrastructure.services.vectorstore_service import VectorStoreService
 
 
@@ -125,10 +125,6 @@ class BackendApplicationContainer:
         return self.backend.rag_service
 
     @property
-    def retrieval_comparison_service(self) -> RetrievalComparisonService:
-        return self.backend.retrieval_comparison_service
-
-    @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
         return self.backend.project_settings_repository
 
@@ -138,7 +134,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def settings_get_effective_retrieval_use_case(self) -> GetEffectiveRetrievalSettingsUseCase:
-        from src.application.settings.use_cases.get_effective_retrieval_settings import (
+        from src.application.use_cases.settings.get_effective_retrieval_settings import (
             GetEffectiveRetrievalSettingsUseCase,
         )
 
@@ -149,7 +145,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def settings_update_project_retrieval_use_case(self) -> UpdateProjectRetrievalSettingsUseCase:
-        from src.application.settings.use_cases.update_project_retrieval_settings import (
+        from src.application.use_cases.settings.update_project_retrieval_settings import (
             UpdateProjectRetrievalSettingsUseCase,
         )
 
@@ -159,13 +155,13 @@ class BackendApplicationContainer:
 
     @cached_property
     def projects_resolve_project_use_case(self):
-        from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
+        from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
         return ResolveProjectUseCase(project_service=self.project_service)
 
     @cached_property
     def projects_invalidate_project_chain_cache_use_case(self):
-        from src.application.projects.use_cases.invalidate_project_chain_cache import (
+        from src.application.use_cases.projects.invalidate_project_chain_cache import (
             InvalidateProjectChainCacheUseCase,
         )
 
@@ -181,19 +177,19 @@ class BackendApplicationContainer:
 
     @cached_property
     def projects_list_projects_use_case(self) -> ListProjectsUseCase:
-        from src.application.projects.use_cases.list_projects import ListProjectsUseCase
+        from src.application.use_cases.projects.list_projects import ListProjectsUseCase
 
         return ListProjectsUseCase(project_service=self.project_service)
 
     @cached_property
     def projects_create_project_use_case(self) -> CreateProjectUseCase:
-        from src.application.projects.use_cases.create_project import CreateProjectUseCase
+        from src.application.use_cases.projects.create_project import CreateProjectUseCase
 
         return CreateProjectUseCase(project_service=self.project_service)
 
     @cached_property
     def projects_list_project_documents_use_case(self) -> ListProjectDocumentsUseCase:
-        from src.application.projects.use_cases.list_project_documents import (
+        from src.application.use_cases.projects.list_project_documents import (
             ListProjectDocumentsUseCase,
         )
 
@@ -201,7 +197,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def projects_get_project_document_details_use_case(self):
-        from src.application.projects.use_cases.get_project_document_details import (
+        from src.application.use_cases.projects.get_project_document_details import (
             GetProjectDocumentDetailsUseCase,
         )
 
@@ -212,7 +208,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def projects_list_document_assets_for_source_use_case(self):
-        from src.application.projects.use_cases.list_document_assets_for_source import (
+        from src.application.use_cases.projects.list_document_assets_for_source import (
             ListDocumentAssetsForSourceUseCase,
         )
 
@@ -220,7 +216,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def projects_get_retrieval_preset_label_use_case(self):
-        from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+        from src.application.use_cases.projects.get_project_retrieval_preset_label import (
             GetProjectRetrievalPresetLabelUseCase,
         )
 
@@ -239,17 +235,17 @@ class BackendApplicationContainer:
         return self.rag_service.preview_summary_recall_use_case
 
     @cached_property
-    def chat_compare_retrieval_modes_use_case(self):
-        from src.application.chat.use_cases.compare_retrieval_modes import CompareRetrievalModesUseCase
+    def chat_compare_retrieval_modes_use_case(self) -> CompareRetrievalModesUseCase:
+        from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
 
         return CompareRetrievalModesUseCase(
             resolve_project=self.projects_resolve_project_use_case,
-            comparison_service=self.retrieval_comparison_service,
+            inspect_pipeline=self.chat_inspect_pipeline_use_case,
         )
 
     @cached_property
     def ingestion_ingest_uploaded_file_use_case(self) -> IngestUploadedFileUseCase:
-        from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
+        from src.application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
 
         return IngestUploadedFileUseCase(
             ingestion_service=self.ingestion_service,
@@ -260,7 +256,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def ingestion_reindex_document_use_case(self) -> ReindexDocumentUseCase:
-        from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
+        from src.application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
 
         return ReindexDocumentUseCase(
             ingestion_service=self.ingestion_service,
@@ -271,7 +267,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def ingestion_delete_document_use_case(self) -> DeleteDocumentUseCase:
-        from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
+        from src.application.use_cases.ingestion.delete_document import DeleteDocumentUseCase
 
         return DeleteDocumentUseCase(
             asset_repository=self.docstore_service,
@@ -281,7 +277,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_create_qa_dataset_entry_use_case(self) -> CreateQaDatasetEntryUseCase:
-        from src.application.evaluation.use_cases.create_qa_dataset_entry import (
+        from src.application.use_cases.evaluation.create_qa_dataset_entry import (
             CreateQaDatasetEntryUseCase,
         )
 
@@ -289,7 +285,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_list_qa_dataset_entries_use_case(self) -> ListQaDatasetEntriesUseCase:
-        from src.application.evaluation.use_cases.list_qa_dataset_entries import (
+        from src.application.use_cases.evaluation.list_qa_dataset_entries import (
             ListQaDatasetEntriesUseCase,
         )
 
@@ -297,7 +293,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_run_manual_evaluation_use_case(self) -> RunManualEvaluationUseCase:
-        from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
+        from src.application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
 
         return RunManualEvaluationUseCase(
             project_service=self.project_service,
@@ -307,7 +303,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_run_gold_qa_dataset_evaluation_use_case(self) -> RunGoldQaDatasetEvaluationUseCase:
-        from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+        from src.application.use_cases.evaluation.run_gold_qa_dataset_evaluation import (
             RunGoldQaDatasetEvaluationUseCase,
         )
 
@@ -320,7 +316,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_update_qa_dataset_entry_use_case(self) -> UpdateQaDatasetEntryUseCase:
-        from src.application.evaluation.use_cases.update_qa_dataset_entry import (
+        from src.application.use_cases.evaluation.update_qa_dataset_entry import (
             UpdateQaDatasetEntryUseCase,
         )
 
@@ -328,7 +324,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_delete_qa_dataset_entry_use_case(self) -> DeleteQaDatasetEntryUseCase:
-        from src.application.evaluation.use_cases.delete_qa_dataset_entry import (
+        from src.application.use_cases.evaluation.delete_qa_dataset_entry import (
             DeleteQaDatasetEntryUseCase,
         )
 
@@ -336,7 +332,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_generate_qa_dataset_use_case(self) -> GenerateQaDatasetUseCase:
-        from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
+        from src.application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
 
         return GenerateQaDatasetUseCase(
             qa_dataset=self.qa_dataset_service,
@@ -345,7 +341,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_build_benchmark_export_artifacts_use_case(self) -> BuildBenchmarkExportArtifactsUseCase:
-        from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+        from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
             BuildBenchmarkExportArtifactsUseCase,
         )
 
@@ -353,7 +349,7 @@ class BackendApplicationContainer:
 
     @cached_property
     def evaluation_list_retrieval_query_logs_use_case(self) -> ListRetrievalQueryLogsUseCase:
-        from src.application.evaluation.use_cases.list_retrieval_query_logs import (
+        from src.application.use_cases.evaluation.list_retrieval_query_logs import (
             ListRetrievalQueryLogsUseCase,
         )
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
-from src.application.chat.use_cases.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
 from src.domain.project import Project
 
 
@@ -17,7 +17,7 @@ def test_build_invokes_emitter_when_payload_present() -> None:
     emitter = MagicMock(spec=PipelineQueryLogEmitter)
 
     with patch(
-        "src.application.chat.use_cases.build_rag_pipeline.run_recall_then_assemble_pipeline",
+        "src.application.use_cases.chat.build_rag_pipeline.run_recall_then_assemble_pipeline",
         return_value=payload,
     ) as run:
         uc = BuildRagPipelineUseCase(
@@ -41,7 +41,7 @@ def test_build_skips_emitter_when_no_payload() -> None:
     emitter = MagicMock(spec=PipelineQueryLogEmitter)
 
     with patch(
-        "src.application.chat.use_cases.build_rag_pipeline.run_recall_then_assemble_pipeline",
+        "src.application.use_cases.chat.build_rag_pipeline.run_recall_then_assemble_pipeline",
         return_value=None,
     ):
         uc = BuildRagPipelineUseCase(

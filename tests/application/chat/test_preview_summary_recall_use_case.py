@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
+from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.project import Project
 from src.domain.summary_recall_document import SummaryRecallDocument
 

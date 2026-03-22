@@ -60,11 +60,11 @@ def test_key_use_cases_resolve() -> None:
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Composition unavailable in this environment: {exc}")
 
-    from src.application.projects.use_cases.list_projects import ListProjectsUseCase
-    from src.application.evaluation.use_cases.list_retrieval_query_logs import (
+    from src.application.use_cases.projects.list_projects import ListProjectsUseCase
+    from src.application.use_cases.evaluation.list_retrieval_query_logs import (
         ListRetrievalQueryLogsUseCase,
     )
-    from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+    from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
         BuildBenchmarkExportArtifactsUseCase,
     )
 

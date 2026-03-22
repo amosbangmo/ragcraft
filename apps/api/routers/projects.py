@@ -57,29 +57,29 @@ from src.application.settings.dtos import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
-from src.application.projects.use_cases.create_project import CreateProjectUseCase
-from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
-from src.application.projects.use_cases.list_projects import ListProjectsUseCase
-from src.application.settings.use_cases.get_effective_retrieval_settings import (
+from src.application.use_cases.projects.create_project import CreateProjectUseCase
+from src.application.use_cases.projects.list_project_documents import ListProjectDocumentsUseCase
+from src.application.use_cases.projects.list_projects import ListProjectsUseCase
+from src.application.use_cases.settings.get_effective_retrieval_settings import (
     GetEffectiveRetrievalSettingsUseCase,
 )
-from src.application.settings.use_cases.update_project_retrieval_settings import (
+from src.application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
-from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
-from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
-from src.application.projects.use_cases.get_project_document_details import GetProjectDocumentDetailsUseCase
-from src.application.projects.use_cases.get_project_retrieval_preset_label import (
+from src.application.use_cases.ingestion.delete_document import DeleteDocumentUseCase
+from src.application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
+from src.application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
+from src.application.use_cases.projects.get_project_document_details import GetProjectDocumentDetailsUseCase
+from src.application.use_cases.projects.get_project_retrieval_preset_label import (
     GetProjectRetrievalPresetLabelUseCase,
 )
-from src.application.projects.use_cases.invalidate_project_chain_cache import (
+from src.application.use_cases.projects.invalidate_project_chain_cache import (
     InvalidateProjectChainCacheUseCase,
 )
-from src.application.projects.use_cases.list_document_assets_for_source import (
+from src.application.use_cases.projects.list_document_assets_for_source import (
     ListDocumentAssetsForSourceUseCase,
 )
-from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
+from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 

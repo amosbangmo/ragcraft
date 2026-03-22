@@ -32,7 +32,7 @@ from src.composition import BackendApplicationContainer
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
-from src.domain.project_settings import ProjectSettings, ui_label_for_project_settings
+from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.ui.streamlit_project_chain_session_cache import (
@@ -111,58 +111,31 @@ class InProcessBackendClient:
         )
 
     def list_projects(self, user_id: str) -> list[str]:
-        return self._container.project_service.list_projects(user_id)
+        return self._container.projects_list_projects_use_case.execute(user_id)
 
     def create_project(self, user_id: str, project_id: str) -> Any:
-        return self._container.project_service.create_project(user_id, project_id)
+        return self._container.projects_create_project_use_case.execute(user_id, project_id)
 
     def get_project(self, user_id: str, project_id: str) -> Any:
-        return self._container.project_service.get_project(user_id, project_id)
+        return self._container.projects_resolve_project_use_case.execute(user_id, project_id)
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
-        ps = self._container.project_settings_repository.load(user_id, project_id)
-        return ui_label_for_project_settings(ps)
+        return self._container.projects_get_retrieval_preset_label_use_case.execute(
+            user_id=user_id, project_id=project_id
+        )
 
     def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
-        return self._container.project_service.list_project_documents(user_id, project_id)
+        return self._container.projects_list_project_documents_use_case.execute(user_id, project_id)
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
-        project = self.get_project(user_id, project_id)
-        documents = self.list_project_documents(user_id, project_id)
-
-        details = []
-        for doc_name in documents:
-            file_path = project.path / doc_name
-            asset_count = self._container.docstore_service.count_assets_for_source_file(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=doc_name,
-            )
-            asset_stats = self._container.docstore_service.get_asset_stats_for_source_file(
-                user_id=user_id,
-                project_id=project_id,
-                source_file=doc_name,
-            )
-            details.append(
-                {
-                    "name": doc_name,
-                    "project_id": project_id,
-                    "path": str(file_path),
-                    "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
-                    "asset_count": asset_count,
-                    "text_count": int(asset_stats.get("text_count", 0)),
-                    "table_count": int(asset_stats.get("table_count", 0)),
-                    "image_count": int(asset_stats.get("image_count", 0)),
-                    "latest_ingested_at": asset_stats.get("latest_ingested_at"),
-                }
-            )
-        return details
+        documents = self._container.projects_list_project_documents_use_case.execute(user_id, project_id)
+        return self._container.projects_get_project_document_details_use_case.execute(
+            user_id=user_id, project_id=project_id, document_names=documents
+        )
 
     def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]:
-        return self._container.docstore_service.list_assets_for_source_file(
-            user_id=user_id,
-            project_id=project_id,
-            source_file=source_file,
+        return self._container.projects_list_document_assets_for_source_use_case.execute(
+            user_id=user_id, project_id=project_id, source_file=source_file
         )
 
     def delete_project_document(
@@ -205,8 +178,8 @@ class InProcessBackendClient:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
-        project = self.get_project(user_id, project_id)
-        return self._container.rag_service.ask(
+        project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
+        return self._container.chat_ask_question_use_case.execute(
             project,
             question,
             chat_history,
@@ -240,8 +213,8 @@ class InProcessBackendClient:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
-        project = self.get_project(user_id, project_id)
-        return self._container.rag_service.preview_summary_recall(
+        project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
+        return self._container.chat_preview_summary_recall_use_case.execute(
             project,
             query,
             chat_history,
@@ -263,15 +236,15 @@ class InProcessBackendClient:
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict | None = None,
     ) -> PipelineBuildResult | None:
-        project = self.get_project(user_id, project_id)
-        return self._container.rag_service.inspect_pipeline(
+        project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
+        return self._container.chat_inspect_pipeline_use_case.execute(
             project,
             question,
             chat_history,
-            enable_query_rewrite_override=enable_query_rewrite_override,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             filters=filters,
             retrieval_settings=retrieval_settings,
+            enable_query_rewrite_override=enable_query_rewrite_override,
+            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
 
     def compare_retrieval_modes(
@@ -282,9 +255,9 @@ class InProcessBackendClient:
         questions: list[str],
         enable_query_rewrite: bool,
     ) -> dict:
-        project = self.get_project(user_id, project_id)
-        return self._container.backend.retrieval_comparison_service.compare(
-            project=project,
+        return self._container.chat_compare_retrieval_modes_use_case.execute(
+            user_id=user_id,
+            project_id=project_id,
             questions=questions,
             enable_query_rewrite=enable_query_rewrite,
         )

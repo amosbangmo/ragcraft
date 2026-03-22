@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
+from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from src.domain.ports import AssetRepositoryPort
 
 

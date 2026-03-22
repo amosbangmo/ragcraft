@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.domain.project import Project
 
 

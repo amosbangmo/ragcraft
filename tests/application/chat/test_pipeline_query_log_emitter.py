@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from src.domain.project import Project
 
 

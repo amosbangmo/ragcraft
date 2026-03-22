@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.application.chat.use_cases.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters

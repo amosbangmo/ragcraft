@@ -47,19 +47,19 @@ from apps.api.schemas.mappers import (
 )
 from src.application.http.wire import BenchmarkRunWirePayload
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
-from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
-from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
-from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
-from src.application.evaluation.use_cases.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
-from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+from src.application.use_cases.evaluation.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+from src.application.use_cases.evaluation.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
+from src.application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
+from src.application.use_cases.evaluation.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+from src.application.use_cases.evaluation.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
+from src.application.use_cases.evaluation.run_gold_qa_dataset_evaluation import (
     RunGoldQaDatasetEvaluationUseCase,
 )
-from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
-from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
+from src.application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
+from src.application.use_cases.evaluation.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
     DeleteQaDatasetEntryCommand,
