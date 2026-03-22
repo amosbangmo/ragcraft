@@ -5,12 +5,10 @@ Called from :class:`~src.composition.application_container.BackendApplicationCon
 technical adapters from :class:`~src.composition.backend_composition.BackendComposition`.
 Orchestration lives in application use cases; this module only constructs the object graph.
 
-**Orchestration inventory (remaining hotspots adjacent to this wiring):**
+**Orchestration inventory (adjacent wiring):**
 
-- :class:`~src.infrastructure.adapters.rag.summary_recall_adapter.SummaryRecallAdapter` — implements
-  :class:`~src.application.use_cases.chat.orchestration.ports.SummaryRecallStagePort`; still contains
-  substantial retrieval-stage sequencing (target: keep port surface stable; move policy-heavy ordering into
-  application orchestration helpers if needed).
+- Summary recall sequencing: :class:`~src.application.use_cases.chat.orchestration.summary_recall_workflow.ApplicationSummaryRecallStage`
+  with technical ports from :mod:`src.infrastructure.adapters.rag.summary_recall_technical_adapters`.
 - Post-recall assembly: :class:`~src.application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
   (application) with stage adapters in
   :mod:`src.infrastructure.adapters.rag.post_recall_stage_adapters`.
@@ -36,6 +34,8 @@ from src.application.use_cases.chat.generate_answer_from_pipeline import Generat
 from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from src.application.use_cases.chat.orchestration.ports import PostRecallStagePorts
+from src.application.use_cases.chat.orchestration.summary_recall_ports import SummaryRecallTechnicalPorts
+from src.application.use_cases.chat.orchestration.summary_recall_workflow import ApplicationSummaryRecallStage
 from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.ports import QueryLogPort
 from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
@@ -54,9 +54,16 @@ from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
     TableQaAdjunctAdapter,
     build_post_recall_stage_services,
 )
+from src.core.config import RETRIEVAL_CONFIG
+from src.infrastructure.adapters.rag.hybrid_retrieval_service import HybridRetrievalService
+from src.infrastructure.adapters.rag.query_rewrite_service import QueryRewriteService
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
-from src.infrastructure.adapters.rag.summary_recall_adapter import SummaryRecallAdapter
+from src.infrastructure.adapters.rag.summary_recall_technical_adapters import (
+    QueryRewriteAdapter,
+    SummaryLexicalRecallAdapter,
+    SummaryVectorRecallAdapter,
+)
 from src.infrastructure.adapters.rag.table_qa_service import TableQAService
 from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
@@ -82,7 +89,7 @@ class RagRetrievalSubgraph:
     """Shared RAG infrastructure services (built alongside chat use-case wiring)."""
 
     table_qa_service: TableQAService
-    summary_recall_adapter: SummaryRecallAdapter
+    summary_recall_stage: ApplicationSummaryRecallStage
     pipeline_assembly: ApplicationPipelineAssembly
     post_recall_stage_services: PostRecallStageServices
     answer_generation_service: AnswerGenerationService
@@ -107,12 +114,20 @@ def build_rag_retrieval_subgraph(
 ) -> RagRetrievalSubgraph:
     rs = retrieval_settings_service or RetrievalSettingsService()
     table_qa = TableQAService()
-    summary = SummaryRecallAdapter(
-        vectorstore_service=vectorstore_service,
-        docstore_service=docstore_service,
-        retrieval_settings_service=rs,
-        table_qa_service=table_qa,
+    query_rewrite = QueryRewriteService(
+        max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
     )
+    hybrid = HybridRetrievalService(
+        k1=RETRIEVAL_CONFIG.bm25_k1,
+        b=RETRIEVAL_CONFIG.bm25_b,
+        epsilon=RETRIEVAL_CONFIG.bm25_epsilon,
+    )
+    technical = SummaryRecallTechnicalPorts(
+        query_rewrite=QueryRewriteAdapter(query_rewrite),
+        vector_recall=SummaryVectorRecallAdapter(vectorstore_service),
+        lexical_recall=SummaryLexicalRecallAdapter(docstore_service, hybrid),
+    )
+    summary = ApplicationSummaryRecallStage(settings_tuner=rs, technical_ports=technical)
     post_recall = build_post_recall_stage_services(
         docstore_service=docstore_service,
         reranking_service=reranking_service,
@@ -124,7 +139,7 @@ def build_rag_retrieval_subgraph(
     answer = answer_generation_service or AnswerGenerationService()
     return RagRetrievalSubgraph(
         table_qa_service=table_qa,
-        summary_recall_adapter=summary,
+        summary_recall_stage=summary,
         pipeline_assembly=assembly,
         post_recall_stage_services=post_recall,
         answer_generation_service=answer,
@@ -148,14 +163,14 @@ def build_chat_rag_use_cases(
 ) -> ChatRagUseCases:
     emitter = PipelineQueryLogEmitter(query_log)
     build_uc = BuildRagPipelineUseCase(
-        summary_recall_service=subgraph.summary_recall_adapter,
+        summary_recall_service=subgraph.summary_recall_stage,
         pipeline_assembly_service=subgraph.pipeline_assembly,
         query_log_emitter=emitter,
     )
     inspect_uc = InspectRagPipelineUseCase(
         build_pipeline=partial(build_uc.execute, emit_query_log=False),
     )
-    preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_adapter)
+    preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_stage)
     generate_uc = GenerateAnswerFromPipelineUseCase(
         answer_generation_service=subgraph.answer_generation_service
     )

@@ -77,6 +77,7 @@ from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.application.chat.policies.pipeline_document_selection import deduplicate_summary_doc_ids
+from src.application.use_cases.chat.orchestration.summary_recall_ports import merge_summary_recall_documents
 from src.composition.chat_rag_wiring import ChatRagUseCases, build_chat_rag_use_cases, build_rag_retrieval_subgraph
 from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
 
@@ -104,8 +105,8 @@ class _ChatRagWiringHarness:
         self.subgraph.config = value
 
     @property
-    def summary_recall_adapter(self):
-        return self.subgraph.summary_recall_adapter
+    def summary_recall_stage(self):
+        return self.subgraph.summary_recall_stage
 
     @property
     def post_recall_stage_services(self):
@@ -167,7 +168,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_adapter.merge_summary_docs(
+        merged = merge_summary_recall_documents(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -190,7 +191,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_adapter.merge_summary_docs(
+        merged = merge_summary_recall_documents(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -214,7 +215,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_adapter.merge_summary_docs(
+        merged = merge_summary_recall_documents(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -238,7 +239,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_adapter.merge_summary_docs(
+        merged = merge_summary_recall_documents(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -252,8 +253,8 @@ class TestChatRagWiringComposition(unittest.TestCase):
         project = Project(user_id="u1", project_id="p1")
 
         with patch.object(
-            harness.summary_recall_adapter,
-            "retrieve_summary_docs",
+            harness.summary_recall_stage,
+            "fuse_vector_and_lexical_recalls",
             return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
         ):
             result = harness.use_cases.build_rag_pipeline.execute(project=project, question="q")
@@ -295,10 +296,14 @@ class TestChatRagWiringComposition(unittest.TestCase):
         ]
 
         with (
-            patch.object(harness.summary_recall_adapter, "rewrite_question", return_value="rewritten"),
             patch.object(
-                harness.summary_recall_adapter,
-                "retrieve_summary_docs",
+                harness.summary_recall_stage.technical_ports.query_rewrite,
+                "rewrite",
+                return_value="rewritten",
+            ),
+            patch.object(
+                harness.summary_recall_stage,
+                "fuse_vector_and_lexical_recalls",
                 return_value={
                     "vector_summary_docs": recalled_summary_docs,
                     "bm25_summary_docs": [],
