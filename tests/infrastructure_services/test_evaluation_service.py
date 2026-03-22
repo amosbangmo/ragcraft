@@ -3,6 +3,7 @@ import unittest
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.domain.evaluation.benchmark_math import (
     latency_stage_row_fields,
     mean_round,
@@ -171,12 +172,13 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             expected_sources=["/a.pdf"],
         )
 
-        def runner(_e: QADatasetEntry):
-            return {
-                "pipeline": None,
-                "answer": "",
-                "latency_ms": 12.34,
-            }
+        def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=None,
+                answer="",
+                latency_ms=12.34,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=0.0,
@@ -200,7 +202,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
         self.assertEqual(row.get("latency_ms"), 12.3)
         self.assertIn("failure_labels", row)
 
-    def test_pipeline_build_result_dict_path(self) -> None:
+    def test_pipeline_build_result_success_row(self) -> None:
         entry = QADatasetEntry(
             id=1,
             user_id="u",
@@ -223,12 +225,13 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             latency={"retrieval_ms": 5.555},
         )
 
-        def runner(_e: QADatasetEntry):
-            return {
-                "pipeline": pl,
-                "answer": "the answer",
-                "latency_ms": 100.0,
-            }
+        def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=pl,
+                answer="the answer",
+                latency_ms=100.0,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=0.9,
@@ -291,9 +294,9 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
                 expected_sources=[],
             )
 
-        def runner(_e: QADatasetEntry):
-            return {
-                "pipeline": PipelineBuildResult(
+        def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=PipelineBuildResult(
                     selected_doc_ids=["d1"],
                     prompt_sources=[
                         {"source_number": 1, "doc_id": "d1", "source_file": "a.pdf"},
@@ -304,9 +307,10 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
                     query_rewrite_enabled=False,
                     hybrid_retrieval_enabled=False,
                 ),
-                "answer": "gold",
-                "latency_ms": 1.0,
-            }
+                answer="gold",
+                latency_ms=1.0,
+                full_latency=None,
+            )
 
         result = build_evaluation_service(
             llm_judge_service=_SwitchJudge(),

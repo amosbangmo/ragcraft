@@ -15,5 +15,5 @@ class GoldQaBenchmarkPort(Protocol):
         self,
         *,
         entries: list[Any],
-        pipeline_runner: Callable[[Any], RagInspectAnswerRun | dict[str, Any]],
+        pipeline_runner: Callable[[Any], RagInspectAnswerRun],
     ) -> BenchmarkResult: ...

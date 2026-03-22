@@ -1,7 +1,9 @@
 import unittest
 
 from src.domain.llm_judge_result import LLMJudgeResult
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.composition.evaluation_wiring import build_evaluation_service
 
 
@@ -30,22 +32,23 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
             expected_sources=[],
         )
 
-        def runner(_e: QADatasetEntry):
-            return {
-                "pipeline": {
-                    "selected_doc_ids": ["doc-a"],
-                    "prompt_sources": [
+        def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=PipelineBuildResult(
+                    selected_doc_ids=["doc-a"],
+                    prompt_sources=[
                         {"source_number": 1, "doc_id": "doc-a", "source_file": "a.pdf"},
                     ],
-                    "confidence": 0.5,
-                    "retrieval_mode": "faiss",
-                    "query_rewrite_enabled": False,
-                    "hybrid_retrieval_enabled": False,
-                    "raw_context": "ctx",
-                },
-                "answer": "Confirmed per [Source 1].",
-                "latency_ms": 1.0,
-            }
+                    confidence=0.5,
+                    retrieval_mode="faiss",
+                    query_rewrite_enabled=False,
+                    hybrid_retrieval_enabled=False,
+                    raw_context="ctx",
+                ),
+                answer="Confirmed per [Source 1].",
+                latency_ms=1.0,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=1.0,
@@ -78,22 +81,23 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
             expected_sources=[],
         )
 
-        def runner(_e: QADatasetEntry):
-            return {
-                "pipeline": {
-                    "selected_doc_ids": ["doc-a"],
-                    "prompt_sources": [
+        def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=PipelineBuildResult(
+                    selected_doc_ids=["doc-a"],
+                    prompt_sources=[
                         {"source_number": 1, "doc_id": "doc-a", "source_file": "a.pdf"},
                     ],
-                    "confidence": 0.5,
-                    "retrieval_mode": "faiss",
-                    "query_rewrite_enabled": False,
-                    "hybrid_retrieval_enabled": False,
-                    "raw_context": "ctx",
-                },
-                "answer": "No bracket citations here.",
-                "latency_ms": 1.0,
-            }
+                    confidence=0.5,
+                    retrieval_mode="faiss",
+                    query_rewrite_enabled=False,
+                    hybrid_retrieval_enabled=False,
+                    raw_context="ctx",
+                ),
+                answer="No bracket citations here.",
+                latency_ms=1.0,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=1.0,

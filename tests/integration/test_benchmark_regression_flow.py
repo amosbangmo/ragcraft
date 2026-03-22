@@ -1,7 +1,9 @@
 import unittest
 
 from src.domain.llm_judge_result import LLMJudgeResult
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.composition.evaluation_wiring import build_evaluation_service
 
 from tests.quality.benchmark_regression_checks import (
@@ -24,7 +26,7 @@ class StubSemanticSimilarityService:
         return 1.0 if (answer or "").strip() and (expected_answer or "").strip() else 0.0
 
 
-def _good_pipeline_for(entry: QADatasetEntry) -> dict:
+def _good_pipeline_for(entry: QADatasetEntry) -> PipelineBuildResult:
     doc_ids = list(entry.expected_doc_ids or [])
     sources = list(entry.expected_sources or [])
     refs = []
@@ -38,17 +40,17 @@ def _good_pipeline_for(entry: QADatasetEntry) -> dict:
         {"doc_id": base_doc, "source_file": base_src, "content_type": "text"},
         {"doc_id": base_doc, "source_file": base_src, "content_type": "table"},
     ]
-    return {
-        "selected_doc_ids": doc_ids or ["d1"],
-        "prompt_sources": refs
+    return PipelineBuildResult(
+        selected_doc_ids=doc_ids or ["d1"],
+        prompt_sources=refs
         or [{"doc_id": "d1", "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}],
-        "prompt_context_assets": prompt_assets,
-        "confidence": 0.9,
-        "retrieval_mode": "hybrid",
-        "query_rewrite_enabled": False,
-        "hybrid_retrieval_enabled": True,
-        "raw_context": "Synthetic context for groundedness stub tests.",
-    }
+        prompt_context_assets=prompt_assets,
+        confidence=0.9,
+        retrieval_mode="hybrid",
+        query_rewrite_enabled=False,
+        hybrid_retrieval_enabled=True,
+        raw_context="Synthetic context for groundedness stub tests.",
+    )
 
 
 class TestBenchmarkRegressionFlow(unittest.TestCase):
@@ -74,12 +76,13 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             ),
         ]
 
-        def runner(entry: QADatasetEntry):
-            return {
-                "pipeline": _good_pipeline_for(entry),
-                "answer": entry.expected_answer or "",
-                "latency_ms": 10.0,
-            }
+        def runner(entry: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=_good_pipeline_for(entry),
+                answer=entry.expected_answer or "",
+                latency_ms=10.0,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=1.0,
@@ -125,20 +128,21 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             ),
         ]
 
-        def broken_runner(_entry: QADatasetEntry):
-            return {
-                "pipeline": {
-                    "selected_doc_ids": ["wrong-id"],
-                    "prompt_sources": [{"doc_id": "wrong-id", "source_file": "other.pdf"}],
-                    "confidence": 0.1,
-                    "retrieval_mode": "faiss",
-                    "query_rewrite_enabled": False,
-                    "hybrid_retrieval_enabled": False,
-                    "raw_context": "Unrelated context.",
-                },
-                "answer": "unrelated answer tokens",
-                "latency_ms": 5.0,
-            }
+        def broken_runner(_entry: QADatasetEntry) -> RagInspectAnswerRun:
+            return RagInspectAnswerRun(
+                pipeline=PipelineBuildResult(
+                    selected_doc_ids=["wrong-id"],
+                    prompt_sources=[{"doc_id": "wrong-id", "source_file": "other.pdf"}],
+                    confidence=0.1,
+                    retrieval_mode="faiss",
+                    query_rewrite_enabled=False,
+                    hybrid_retrieval_enabled=False,
+                    raw_context="Unrelated context.",
+                ),
+                answer="unrelated answer tokens",
+                latency_ms=5.0,
+                full_latency=None,
+            )
 
         judge = LLMJudgeResult(
             groundedness_score=0.0,

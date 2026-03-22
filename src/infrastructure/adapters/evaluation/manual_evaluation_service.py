@@ -15,6 +15,7 @@ from src.domain.manual_evaluation_result import (
     ManualEvaluationRetrievalQuality,
 )
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 
@@ -394,13 +395,15 @@ def manual_evaluation_result_from_rag_outputs(
         expected_sources=exp_src,
     )
 
-    def pipeline_runner(_e: QADatasetEntry) -> dict[str, Any]:
-        return {
-            "pipeline": pipeline,
-            "answer": answer,
-            "latency_ms": latency_ms,
-            "latency": full_latency_dict,
-        }
+    run = RagInspectAnswerRun(
+        pipeline=pipeline,
+        answer=answer,
+        latency_ms=latency_ms,
+        full_latency=full_latency_dict,
+    )
+
+    def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+        return run
 
     benchmark = gold_qa_benchmark.evaluate_gold_qa_dataset(
         entries=[entry],
@@ -478,13 +481,15 @@ class ManualEvaluationService:
             expected_sources=exp_src,
         )
 
-        def pipeline_runner(_e: QADatasetEntry) -> dict[str, Any]:
-            return {
-                "pipeline": pipeline,
-                "answer": answer,
-                "latency_ms": latency_ms,
-                "latency": full_latency_dict,
-            }
+        run = RagInspectAnswerRun(
+            pipeline=pipeline,
+            answer=answer,
+            latency_ms=latency_ms,
+            full_latency=full_latency_dict,
+        )
+
+        def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
+            return run
 
         benchmark = backend_client.evaluate_gold_qa_dataset_with_runner(
             entries=[entry],

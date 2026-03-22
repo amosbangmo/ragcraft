@@ -57,7 +57,7 @@ class BackendClient(Protocol):
         self,
         *,
         entries: list[QADatasetEntry],
-        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun | dict[str, Any]],
+        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun],
     ) -> BenchmarkResult: ...
 
     @property

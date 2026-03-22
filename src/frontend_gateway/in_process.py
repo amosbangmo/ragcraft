@@ -69,7 +69,7 @@ class InProcessBackendClient:
         self,
         *,
         entries: list[QADatasetEntry],
-        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun | dict[str, Any]],
+        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun],
     ) -> BenchmarkResult:
         return self._container.evaluation_service.evaluate_gold_qa_dataset(
             entries=entries,

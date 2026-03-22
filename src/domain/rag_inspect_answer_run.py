@@ -10,12 +10,7 @@ from src.domain.pipeline_payloads import PipelineBuildResult
 
 @dataclass(frozen=True)
 class RagInspectAnswerRun:
-    """
-    Result of one RAG turn used for manual or gold-QA evaluation.
-
-    Mirrors the dict shape historically passed to benchmark row processing
-    (``pipeline``, ``answer``, ``latency_ms``, ``latency``).
-    """
+    """Result of one RAG turn used for manual or gold-QA evaluation (inspect + answer + latency)."""
 
     pipeline: PipelineBuildResult | None
     answer: str
