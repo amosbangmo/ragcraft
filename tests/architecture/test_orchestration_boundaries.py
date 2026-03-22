@@ -13,11 +13,16 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COMPOSITION_DIR = REPO_ROOT / "src" / "composition"
-PIPELINE_ASSEMBLY = REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "pipeline_assembly_service.py"
+ASSEMBLE_PIPELINE = (
+    REPO_ROOT / "src" / "application" / "use_cases" / "chat" / "orchestration" / "assemble_pipeline_from_recall.py"
+)
+POST_RECALL_STAGE_ADAPTERS = (
+    REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "post_recall_stage_adapters.py"
+)
 RAG_SERVICE = REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "rag_service.py"
 
-# Ratchet: assembly service is a known hotspot; fail if it grows unbounded without splitting.
-_MAX_PIPELINE_ASSEMBLY_LINES = 450
+_MAX_ASSEMBLE_PIPELINE_LINES = 260
+_MAX_POST_RECALL_ADAPTER_LINES = 280
 
 _TRANSPORT_RAG_ADAPTER_MARKERS = (
     "from src.infrastructure.adapters.rag",
@@ -58,6 +63,23 @@ def _count_execute_calls_in_function(fn: ast.FunctionDef | ast.AsyncFunctionDef)
         if isinstance(func, ast.Attribute) and func.attr == "execute":
             count += 1
     return count
+
+
+def _assert_no_application_use_case_imports(path: Path) -> None:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    offenders: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if mod.startswith("src.application.use_cases") or mod == "src.application.use_cases":
+                offenders.append(f"from {mod} import ...")
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("src.application.use_cases"):
+                    offenders.append(f"import {alias.name}")
+    assert not offenders, (
+        f"{path.relative_to(REPO_ROOT)} must not import application use_cases:\n" + "\n".join(offenders)
+    )
 
 
 @pytest.mark.parametrize(
@@ -107,32 +129,33 @@ def test_composition_does_not_invoke_use_case_execute_except_chain_invalidation(
     assert not bad, "Unexpected use-case execute usage in composition:\n" + "\n".join(bad)
 
 
-def test_pipeline_assembly_service_does_not_depend_on_use_cases() -> None:
-    """Adapter implements PipelineAssemblyPort only; orchestration ownership stays in application layer."""
-    tree = ast.parse(PIPELINE_ASSEMBLY.read_text(encoding="utf-8"))
-    offenders: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            mod = node.module or ""
-            if mod.startswith("src.application.use_cases") or mod == "src.application.use_cases":
-                offenders.append(f"from {mod} import ...")
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                name = alias.name
-                if name.startswith("src.application.use_cases"):
-                    offenders.append(f"import {name}")
-    assert not offenders, (
-        f"{PIPELINE_ASSEMBLY.relative_to(REPO_ROOT)} must not import application use_cases:\n"
-        + "\n".join(offenders)
+def test_post_recall_stage_adapters_do_not_depend_on_use_cases() -> None:
+    """Post-recall adapters are technical only; orchestration stays in application."""
+    _assert_no_application_use_case_imports(POST_RECALL_STAGE_ADAPTERS)
+
+
+def test_post_recall_stage_adapters_size_ratchet() -> None:
+    """Fail if technical adapter module grows without splitting."""
+    lines = POST_RECALL_STAGE_ADAPTERS.read_text(encoding="utf-8").splitlines()
+    assert len(lines) <= _MAX_POST_RECALL_ADAPTER_LINES, (
+        f"{POST_RECALL_STAGE_ADAPTERS.name} has {len(lines)} lines "
+        f"(max {_MAX_POST_RECALL_ADAPTER_LINES}); split adapters into submodules"
     )
 
 
-def test_pipeline_assembly_service_size_ratchet() -> None:
-    """Fail if the god-object grows without an intentional split (see module TODO)."""
-    lines = PIPELINE_ASSEMBLY.read_text(encoding="utf-8").splitlines()
-    assert len(lines) <= _MAX_PIPELINE_ASSEMBLY_LINES, (
-        f"{PIPELINE_ASSEMBLY.name} has {len(lines)} lines (max {_MAX_PIPELINE_ASSEMBLY_LINES}); "
-        "split into src/infrastructure/adapters/rag/pipeline_assembly/ per module docstring"
+def test_assemble_pipeline_orchestration_lives_in_application() -> None:
+    """End-to-end post-recall sequencing must stay in ``assemble_pipeline_from_recall``."""
+    text = ASSEMBLE_PIPELINE.read_text(encoding="utf-8")
+    for needle in (
+        "stages.section_expansion.expand_section_pool",
+        "stages.reranking.rerank_assets",
+        "stages.prompt_render.build_answer_prompt",
+    ):
+        assert needle in text, f"expected orchestration step {needle!r} in assemble_pipeline_from_recall"
+    lines = text.splitlines()
+    assert len(lines) <= _MAX_ASSEMBLE_PIPELINE_LINES, (
+        f"assemble_pipeline_from_recall.py grew to {len(lines)} lines (max {_MAX_ASSEMBLE_PIPELINE_LINES}); "
+        "extract helpers under application/use_cases/chat/orchestration"
     )
 
 
@@ -140,19 +163,4 @@ def test_rag_service_facade_must_not_construct_use_cases_if_present() -> None:
     """Legacy compatibility module, if added back, must not own orchestration or construct use cases."""
     if not RAG_SERVICE.is_file():
         return
-    tree = ast.parse(RAG_SERVICE.read_text(encoding="utf-8"))
-    offenders: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom):
-            mod = node.module or ""
-            if mod.startswith("src.application.use_cases") or mod == "src.application.use_cases":
-                offenders.append(f"from {mod} import ...")
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.name.startswith("src.application.use_cases"):
-                    offenders.append(f"import {alias.name}")
-    assert not offenders, (
-        f"{RAG_SERVICE.relative_to(REPO_ROOT)} must not import use_cases "
-        "(compatibility façade delegates to BackendApplicationContainer / use cases only):\n"
-        + "\n".join(offenders)
-    )
+    _assert_no_application_use_case_imports(RAG_SERVICE)

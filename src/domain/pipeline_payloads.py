@@ -12,6 +12,16 @@ if TYPE_CHECKING:
     from src.domain.retrieval_settings import RetrievalSettings
 
 
+@dataclass(frozen=True)
+class SectionExpansionPoolResult:
+    """Output of section-aware pool expansion before reranking (technical stage)."""
+
+    assets: list[dict]
+    applied: bool
+    section_expansion_count: int
+    expanded_assets_count: int
+
+
 @dataclass
 class SectionExpansionStats:
     enabled: bool = False

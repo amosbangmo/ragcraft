@@ -104,6 +104,7 @@ from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
+from src.application.chat.policies.pipeline_document_selection import deduplicate_summary_doc_ids
 from src.composition.chat_rag_wiring import build_chat_rag_use_cases, build_rag_retrieval_subgraph
 from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
 
@@ -136,8 +137,12 @@ class _RagPipelineTestFacade:
         return self._sub.summary_recall_service
 
     @property
-    def pipeline_assembly_service(self):
-        return self._sub.pipeline_assembly_service
+    def pipeline_assembly(self):
+        return self._sub.pipeline_assembly
+
+    @property
+    def post_recall_stage_services(self):
+        return self._sub.post_recall_stage_services
 
     @property
     def retrieval_settings_service(self):
@@ -184,7 +189,7 @@ class TestRAGService(unittest.TestCase):
             SummaryRecallDocument(page_content="d", metadata={}),
         ]
 
-        result = service.pipeline_assembly_service.deduplicate_doc_ids(docs)
+        result = deduplicate_summary_doc_ids(docs)
 
         self.assertEqual(result, ["d1", "d2"])
 
@@ -344,17 +349,17 @@ class TestRAGService(unittest.TestCase):
                 },
             ),
             patch.object(
-                service.pipeline_assembly_service.prompt_source_service,
+                service.post_recall_stage_services.prompt_source_service,
                 "build_prompt_sources",
                 return_value=prompt_sources_objs,
             ),
             patch.object(
-                service.pipeline_assembly_service.prompt_builder_service,
+                service.post_recall_stage_services.prompt_builder_service,
                 "build_raw_context",
                 return_value="ctx",
             ),
             patch.object(
-                service.pipeline_assembly_service.prompt_builder_service,
+                service.post_recall_stage_services.prompt_builder_service,
                 "build_prompt",
                 return_value="prompt",
             ),

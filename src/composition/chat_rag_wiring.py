@@ -11,10 +11,9 @@ Orchestration lives in application use cases; this module only constructs the ob
   :class:`~src.application.use_cases.chat.orchestration.ports.SummaryRecallStagePort`; still contains
   substantial retrieval-stage sequencing (target: keep port surface stable; move policy-heavy ordering into
   application orchestration helpers if needed).
-- :class:`~src.infrastructure.adapters.rag.pipeline_assembly_service.PipelineAssemblyService` — implements
-  :class:`~src.application.use_cases.chat.orchestration.ports.PipelineAssemblyPort`; monolithic post-recall
-  assembly (target: shrink class / split into stage adapters; ordering remains driven from
-  :mod:`src.application.use_cases.chat.orchestration.recall_then_assemble_pipeline`).
+- Post-recall assembly: :class:`~src.application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
+  (application) with stage adapters in
+  :mod:`src.infrastructure.adapters.rag.post_recall_stage_adapters`.
 - Legacy ``rag_service`` module: **absent** in this repo; if reintroduced, it must be a thin compatibility
   façade over use cases (no internal use-case construction).
 
@@ -29,19 +28,52 @@ from typing import Any
 
 from src.application.use_cases.chat.ask_question import AskQuestionUseCase
 from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.use_cases.chat.orchestration.application_pipeline_assembly import (
+    ApplicationPipelineAssembly,
+)
 from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
 from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.orchestration.ports import PostRecallStagePorts
 from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.ports import QueryLogPort
 from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
-from src.infrastructure.adapters.rag.pipeline_assembly_service import PipelineAssemblyService
+from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
+    AssetRerankingAdapter,
+    ContextualCompressionAdapter,
+    DocstoreRecallReadAdapter,
+    LayoutGroupingAdapter,
+    MultimodalPromptHintAdapter,
+    PostRecallStageServices,
+    PromptRenderAdapter,
+    PromptSourceBuildAdapter,
+    RerankedConfidenceAdapter,
+    SectionExpansionStageAdapter,
+    TableQaAdjunctAdapter,
+    build_post_recall_stage_services,
+)
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
 from src.infrastructure.adapters.rag.summary_recall_service import SummaryRecallService
 from src.infrastructure.adapters.rag.table_qa_service import TableQAService
 from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
+
+
+def post_recall_stage_ports_from_services(services: PostRecallStageServices) -> PostRecallStagePorts:
+    """Bind concrete post-recall services to application port bundle (composition root)."""
+    return PostRecallStagePorts(
+        docstore_read=DocstoreRecallReadAdapter(services.docstore_service),
+        section_expansion=SectionExpansionStageAdapter(services.section_retrieval_service),
+        reranking=AssetRerankingAdapter(services.reranking_service),
+        table_qa=TableQaAdjunctAdapter(services.table_qa_service),
+        contextual_compression=ContextualCompressionAdapter(services.contextual_compression_service),
+        prompt_sources=PromptSourceBuildAdapter(services.prompt_source_service),
+        layout_grouping=LayoutGroupingAdapter(services.layout_context_service),
+        multimodal_hints=MultimodalPromptHintAdapter(services.multimodal_orchestration_service),
+        prompt_render=PromptRenderAdapter(services.prompt_builder_service),
+        confidence=RerankedConfidenceAdapter(services.confidence_service),
+    )
 
 
 @dataclass
@@ -50,7 +82,8 @@ class RagRetrievalSubgraph:
 
     table_qa_service: TableQAService
     summary_recall_service: SummaryRecallService
-    pipeline_assembly_service: PipelineAssemblyService
+    pipeline_assembly: ApplicationPipelineAssembly
+    post_recall_stage_services: PostRecallStageServices
     answer_generation_service: AnswerGenerationService
     retrieval_settings_service: RetrievalSettingsService
 
@@ -79,16 +112,20 @@ def build_rag_retrieval_subgraph(
         retrieval_settings_service=rs,
         table_qa_service=table_qa,
     )
-    pipeline = PipelineAssemblyService(
+    post_recall = build_post_recall_stage_services(
         docstore_service=docstore_service,
         reranking_service=reranking_service,
         table_qa_service=table_qa,
+    )
+    assembly = ApplicationPipelineAssembly(
+        stages=post_recall_stage_ports_from_services(post_recall),
     )
     answer = answer_generation_service or AnswerGenerationService()
     return RagRetrievalSubgraph(
         table_qa_service=table_qa,
         summary_recall_service=summary,
-        pipeline_assembly_service=pipeline,
+        pipeline_assembly=assembly,
+        post_recall_stage_services=post_recall,
         answer_generation_service=answer,
         retrieval_settings_service=rs,
     )
@@ -111,7 +148,7 @@ def build_chat_rag_use_cases(
     emitter = PipelineQueryLogEmitter(query_log)
     build_uc = BuildRagPipelineUseCase(
         summary_recall_service=subgraph.summary_recall_service,
-        pipeline_assembly_service=subgraph.pipeline_assembly_service,
+        pipeline_assembly_service=subgraph.pipeline_assembly,
         query_log_emitter=emitter,
     )
     inspect_uc = InspectRagPipelineUseCase(build_rag_pipeline=build_uc)
@@ -138,4 +175,5 @@ __all__ = [
     "RagRetrievalSubgraph",
     "build_chat_rag_use_cases",
     "build_rag_retrieval_subgraph",
+    "post_recall_stage_ports_from_services",
 ]
