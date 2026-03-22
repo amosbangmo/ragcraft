@@ -10,7 +10,7 @@ class QADatasetEntriesPort(Protocol):
     """
     Gold QA dataset operations returning domain :class:`~src.domain.qa_dataset_entry.QADatasetEntry`.
 
-    Implemented by :class:`~src.services.qa_dataset_service.QADatasetService`, which delegates
+    Implemented by :class:`~src.backend.qa_dataset_service.QADatasetService`, which delegates
     persistence to :class:`~src.domain.evaluation.qa_dataset_repository_port.QADatasetRepositoryPort`.
     """
 

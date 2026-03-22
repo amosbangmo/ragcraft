@@ -2,7 +2,7 @@
 Frontend integration seam for backend capabilities (Streamlit today; Angular/SPA via HTTP).
 
 Implementations: **HTTP** (:class:`~src.frontend_gateway.http_client.HttpBackendClient` → FastAPI) or
-**in-process** (:class:`~src.frontend_gateway.in_process.InProcessBackendClient` → :class:`~src.app.ragcraft_app.RAGCraftApp` → container). Pages should depend only on this protocol, not on ``src.services`` or the composition root.
+**in-process** (:class:`~src.frontend_gateway.in_process.InProcessBackendClient` → :class:`~src.app.ragcraft_app.RAGCraftApp` → container). Pages should depend only on this protocol, not on ``src.backend`` or the composition root.
 """
 
 from __future__ import annotations

@@ -42,6 +42,7 @@ def composition_files() -> list[Path]:
 def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> None:
     forbidden = (
         "src.infrastructure",
+        "src.backend",
         "src.services",
         "src.application",
         "streamlit",

@@ -6,12 +6,12 @@ import logging
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.multimodal_metrics import aggregate_multimodal_metrics
-from src.services.auto_debug_service import AutoDebugService
-from src.services.benchmark_aggregation_service import BenchmarkAccumulator, BenchmarkAggregationService
-from src.services.correlation_service import CorrelationService
-from src.services.explainability_service import ExplainabilityService
-from src.services.failure_analysis_service import FailureAnalysisService
-from src.services.row_evaluation_service import RowEvaluationService
+from src.backend.auto_debug_service import AutoDebugService
+from src.backend.benchmark_aggregation_service import BenchmarkAccumulator, BenchmarkAggregationService
+from src.backend.correlation_service import CorrelationService
+from src.backend.explainability_service import ExplainabilityService
+from src.backend.failure_analysis_service import FailureAnalysisService
+from src.backend.row_evaluation_service import RowEvaluationService
 
 logger = logging.getLogger(__name__)
 

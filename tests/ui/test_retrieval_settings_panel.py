@@ -1,6 +1,6 @@
 import unittest
 
-from src.services.retrieval_settings_service import RetrievalSettingsService
+from src.backend.retrieval_settings_service import RetrievalSettingsService
 from src.ui.retrieval_settings_panel import (
     PRESET_BALANCED,
     PRESET_EXPLORATORY,

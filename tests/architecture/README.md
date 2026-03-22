@@ -6,22 +6,22 @@ Pytest modules under this package scan **import statements** (via the AST) and f
 
 | Layer | Location | Must not import (prefix match) |
 |--------|-----------|----------------------------------|
-| **Domain** | `src/domain/` | `src.infrastructure`, `src.services`, `src.application`, `streamlit`, `apps` |
+| **Domain** | `src/domain/` | `src.infrastructure`, `src.backend`, `src.services`, `src.application`, `streamlit`, `apps` |
 | **Application** | `src/application/` | `streamlit`, `apps`, `src.infrastructure` |
 | **Infrastructure** | `src/infrastructure/` | `src.application`, `streamlit`, `apps` |
 | **API routers** | `apps/api/routers/` | `src.infrastructure` |
 | **Composition root** | `src/composition/` | `streamlit`, `apps` |
-| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui` |
-| **Streamlit surface** | `pages/`, `src/ui/` | `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
+| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.backend`**, **`src.services`** |
+| **Streamlit surface** | `pages/`, `src/ui/` | `src.backend`, `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
 
 Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
 
 ## Intentional exceptions / non-goals
 
 - **Domain** may import **`src.core`** (paths, config, shared exceptions) and third-party libraries (e.g. `langchain_core`).
-- **Application** may import **`src.services`** and **`src.domain`**; orchestration still lives here until more ports exist.
-- **Routers** may import **`src.services`** only for type hints / thin `Depends` wiring (e.g. `ProjectService`). Direct **`src.infrastructure`** imports are forbidden so persistence and adapters stay behind use cases and the composition root.
-- **Streamlit pages and widgets** may import **`streamlit`**, **`src.domain`** (display/DTO types), **`src.frontend_gateway`**, and **`src.auth`**; they must not wire **`src.services`** or the composition/app entrypoints directly.
+- **Application** may import **`src.backend`** and **`src.domain`**; orchestration still lives here until more ports exist.
+- **Routers** wire use cases via **`Depends`** and must not import **`src.backend`** or **`src.infrastructure`** directly.
+- **Streamlit pages and widgets** may import **`streamlit`**, **`src.domain`** (display/DTO types), **`src.frontend_gateway`**, and **`src.auth`**; they must not wire **`src.backend`**, **`src.services`**, or the composition/app entrypoints directly.
 - We do **not** assert a clean `sys.modules` after `import apps.api.main`: third-party transitive imports can load unrelated packages; the **AST scan** of `apps/api` is the stable guard for “API code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.
 

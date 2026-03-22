@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.services.project_service import ProjectService
+from src.backend.project_service import ProjectService
 
 
 class ListProjectDocumentsUseCase:

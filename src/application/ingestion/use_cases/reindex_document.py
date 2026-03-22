@@ -15,7 +15,7 @@ from .ingest_file_path import IngestFilePathUseCase
 from .replace_document_assets import replace_document_assets_for_reingest
 
 if TYPE_CHECKING:
-    from src.services.ingestion_service import IngestionService
+    from src.backend.ingestion_service import IngestionService
 
 
 class ReindexDocumentUseCase:

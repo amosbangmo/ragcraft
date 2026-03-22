@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 
-from src.services.benchmark_comparison_service import (
+from src.backend.benchmark_comparison_service import (
     BenchmarkComparisonService,
     LOWER_IS_BETTER_METRICS,
 )

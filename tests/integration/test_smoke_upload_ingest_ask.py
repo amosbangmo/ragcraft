@@ -13,8 +13,8 @@ from src.domain.rag_response import RAGResponse
 _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "src.app.ragcraft_app",
-    "src.services.qa_dataset_generation_service",
-    "src.services.qa_dataset_service",
+    "src.backend.qa_dataset_generation_service",
+    "src.backend.qa_dataset_service",
     "src.infrastructure.persistence.sqlite.qa_dataset_repository",
 )
 
@@ -52,20 +52,20 @@ def setUpModule():
         get_connection=_stub_get_connection,
     )
     _install_module("src.auth.auth_service", AuthService=_DummyService)
-    _install_module("src.services.ingestion_service", IngestionService=_DummyService)
-    _install_module("src.services.vectorstore_service", VectorStoreService=_DummyService)
-    _install_module("src.services.evaluation_service", EvaluationService=_DummyService)
+    _install_module("src.backend.ingestion_service", IngestionService=_DummyService)
+    _install_module("src.backend.vectorstore_service", VectorStoreService=_DummyService)
+    _install_module("src.backend.evaluation_service", EvaluationService=_DummyService)
     _install_module(
-        "src.services.llm_judge_service",
+        "src.backend.llm_judge_service",
         LLMJudgeService=_DummyService,
         JUDGE_FAILURE_REASON="judge_failure",
     )
-    _install_module("src.services.chat_service", ChatService=_DummyService)
-    _install_module("src.services.rag_service", RAGService=_DummyService)
-    _install_module("src.services.docstore_service", DocStoreService=_DummyService)
-    _install_module("src.services.reranking_service", RerankingService=_DummyService)
+    _install_module("src.backend.chat_service", ChatService=_DummyService)
+    _install_module("src.backend.rag_service", RAGService=_DummyService)
+    _install_module("src.backend.docstore_service", DocStoreService=_DummyService)
+    _install_module("src.backend.reranking_service", RerankingService=_DummyService)
     _install_module(
-        "src.services.retrieval_comparison_service",
+        "src.backend.retrieval_comparison_service",
         RetrievalComparisonService=_DummyService,
     )
 

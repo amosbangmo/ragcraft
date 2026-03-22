@@ -8,7 +8,7 @@ Layers (in build order):
 1. SQLite app DB (:func:`~src.infrastructure.persistence.db.init_app_db`).
 2. Core services: auth, projects, ingestion, vector store, evaluation, chat, doc store, reranking,
    QA dataset + generation, project settings, retrieval settings merge.
-3. Shared :class:`~src.services.query_log_service.QueryLogService` (injected into ``RAGService``).
+3. Shared :class:`~src.backend.query_log_service.QueryLogService` (injected into ``RAGService``).
 4. ``RAGService`` and ``RetrievalComparisonService`` — lazily instantiated on first access to break
    the dependency cycle and defer heavy LangChain wiring.
 """
@@ -23,22 +23,22 @@ from src.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.auth_service import AuthService
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.infrastructure.persistence.db import init_app_db
-from src.services.chat_service import ChatService
-from src.services.docstore_service import DocStoreService
-from src.services.evaluation_service import EvaluationService
-from src.services.llm_judge_service import LLMJudgeService
-from src.services.project_service import ProjectService
-from src.services.qa_dataset_generation_service import QADatasetGenerationService
-from src.services.qa_dataset_service import QADatasetService
-from src.services.query_log_service import QueryLogService
-from src.services.reranking_service import RerankingService
-from src.services.retrieval_settings_service import RetrievalSettingsService
+from src.backend.chat_service import ChatService
+from src.backend.docstore_service import DocStoreService
+from src.backend.evaluation_service import EvaluationService
+from src.backend.llm_judge_service import LLMJudgeService
+from src.backend.project_service import ProjectService
+from src.backend.qa_dataset_generation_service import QADatasetGenerationService
+from src.backend.qa_dataset_service import QADatasetService
+from src.backend.query_log_service import QueryLogService
+from src.backend.reranking_service import RerankingService
+from src.backend.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
-    from src.services.ingestion_service import IngestionService
-    from src.services.rag_service import RAGService
-    from src.services.retrieval_comparison_service import RetrievalComparisonService
-    from src.services.vectorstore_service import VectorStoreService
+    from src.backend.ingestion_service import IngestionService
+    from src.backend.rag_service import RAGService
+    from src.backend.retrieval_comparison_service import RetrievalComparisonService
+    from src.backend.vectorstore_service import VectorStoreService
 
 
 @dataclass
@@ -71,7 +71,7 @@ class BackendComposition:
     @property
     def rag_service(self) -> RAGService:
         if self._rag_service is None:
-            from src.services.rag_service import RAGService
+            from src.backend.rag_service import RAGService
 
             self._rag_service = RAGService(
                 vectorstore_service=self.vectorstore_service,
@@ -94,8 +94,8 @@ class BackendComposition:
 
 def build_backend_composition() -> BackendComposition:
     """Assemble the service-level composition root (no use cases)."""
-    from src.services.ingestion_service import IngestionService
-    from src.services.vectorstore_service import VectorStoreService
+    from src.backend.ingestion_service import IngestionService
+    from src.backend.vectorstore_service import VectorStoreService
 
     init_app_db()
 

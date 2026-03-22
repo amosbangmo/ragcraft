@@ -10,9 +10,9 @@ from src.application.evaluation.dtos import (
     ListQaDatasetEntriesQuery,
     RunGoldQaDatasetEvaluationCommand,
 )
-from src.services.evaluation_service import EvaluationService
-from src.services.project_service import ProjectService
-from src.services.rag_service import RAGService
+from src.backend.evaluation_service import EvaluationService
+from src.backend.project_service import ProjectService
+from src.backend.rag_service import RAGService
 
 from .list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 

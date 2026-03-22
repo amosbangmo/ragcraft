@@ -8,7 +8,7 @@ from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.application.ingestion.dtos import IngestDocumentResult, IngestFilePathCommand
 
 if TYPE_CHECKING:
-    from src.services.ingestion_service import IngestionService
+    from src.backend.ingestion_service import IngestionService
 from .ingest_common import (
     default_empty_replacement_info,
     finalize_ingestion_pipeline,

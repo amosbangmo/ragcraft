@@ -102,11 +102,11 @@ class BenchmarkResult:
     - Streamlit UI
     - future export/report layers
 
-    Optional ``correlations`` holds Pearson summaries from :class:`~src.services.correlation_service.CorrelationService`.
+    Optional ``correlations`` holds Pearson summaries from :class:`~src.backend.correlation_service.CorrelationService`.
     Optional ``failures`` holds rule-based diagnostics from
     :class:`~src.domain.benchmark_failure_analysis.FailureAnalysisService` (counts, examples, etc.).
     Optional ``multimodal_metrics`` holds aggregates from modality-aware evaluation (usage rates, conditional scores).
-    Optional ``auto_debug`` holds system-level suggestion cards from :class:`~src.services.auto_debug_service.AutoDebugService`.
+    Optional ``auto_debug`` holds system-level suggestion cards from :class:`~src.backend.auto_debug_service.AutoDebugService`.
     Optional ``run_id`` identifies this benchmark run for comparison and history (e.g. short UUID).
     """
 
