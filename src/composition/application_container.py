@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING
 from src.auth.auth_service import AuthService
 from src.composition.backend_composition import BackendComposition, build_backend_composition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.frontend_gateway.streamlit_chat_transcript import ChatService
+from src.domain.ports.chat_transcript_port import ChatTranscriptPort
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.workspace.project_service import ProjectService
@@ -115,8 +115,8 @@ class BackendApplicationContainer:
         return self.backend.evaluation_service
 
     @property
-    def chat_service(self) -> ChatService:
-        return self.backend.chat_service
+    def chat_transcript(self) -> ChatTranscriptPort:
+        return self.backend.chat_transcript
 
     @property
     def docstore_service(self) -> DocStoreService:

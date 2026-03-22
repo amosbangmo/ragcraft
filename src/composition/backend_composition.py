@@ -6,8 +6,8 @@ and use cases live in :mod:`src.composition.application_container` (and :mod:`sr
 
 Layers (in build order):
 1. SQLite app DB (:func:`~src.infrastructure.persistence.db.init_app_db`).
-2. Adapters: auth, projects, ingestion, vector store, evaluation, chat session, doc store, reranking,
-   QA dataset + generation, project settings repository, retrieval settings, query logging.
+2. Adapters: auth, projects, ingestion, vector store, evaluation, chat transcript (port implementation),
+   doc store, reranking, QA dataset + generation, project settings repository, retrieval settings, query logging.
 
 **Orchestration inventory (this module):** none. RAG pipeline sequencing is **not** built here; only shared
 technical services are. Target: keep this file free of chat/RAG flow logic — graph construction only.
@@ -23,9 +23,10 @@ from typing import TYPE_CHECKING
 from src.infrastructure.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
 from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.auth_service import AuthService
+from src.domain.ports.chat_transcript_port import ChatTranscriptPort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 from src.infrastructure.persistence.db import init_app_db
-from src.frontend_gateway.streamlit_chat_transcript import ChatService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
@@ -51,7 +52,7 @@ class BackendComposition:
     ingestion_service: IngestionService
     vectorstore_service: VectorStoreService
     evaluation_service: EvaluationService
-    chat_service: ChatService
+    chat_transcript: ChatTranscriptPort
     docstore_service: DocStoreService
     reranking_service: RerankingService
     qa_dataset_service: QADatasetService
@@ -60,8 +61,18 @@ class BackendComposition:
     retrieval_settings_service: RetrievalSettingsService
 
 
-def build_backend_composition() -> BackendComposition:
-    """Assemble technical adapters only (no application use cases)."""
+def build_backend_composition(
+    *,
+    chat_transcript: ChatTranscriptPort | None = None,
+) -> BackendComposition:
+    """
+    Assemble technical adapters only (no application use cases).
+
+    ``chat_transcript`` defaults to :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript`
+    (no Streamlit). Streamlit in-process builds pass
+    :class:`~src.frontend_gateway.streamlit_chat_transcript.StreamlitChatTranscript` via
+    :func:`src.frontend_gateway.streamlit_backend_factory.build_streamlit_backend_application_container`.
+    """
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
@@ -82,7 +93,7 @@ def build_backend_composition() -> BackendComposition:
         ingestion_service=IngestionService(),
         vectorstore_service=VectorStoreService(),
         evaluation_service=EvaluationService(llm_judge_service=LLMJudgeService()),
-        chat_service=ChatService(),
+        chat_transcript=chat_transcript if chat_transcript is not None else MemoryChatTranscript(),
         docstore_service=docstore_service,
         reranking_service=RerankingService(),
         qa_dataset_service=QADatasetService(),

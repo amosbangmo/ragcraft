@@ -48,16 +48,16 @@ class InProcessBackendClient:
         self._container = container
 
     def init_chat_session(self, project_id: str) -> None:
-        self._container.chat_service.init(project_id)
+        self._container.chat_transcript.init(project_id)
 
     def get_chat_messages(self) -> list[dict[str, Any]]:
-        return self._container.chat_service.get_messages()
+        return self._container.chat_transcript.get_messages()
 
     def add_chat_user_message(self, content: str) -> None:
-        self._container.chat_service.add_user_message(content)
+        self._container.chat_transcript.add_user_message(content)
 
     def add_chat_assistant_message(self, content: str) -> None:
-        self._container.chat_service.add_assistant_message(content)
+        self._container.chat_transcript.add_assistant_message(content)
 
     def generate_answer_from_pipeline(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
         return self._container.chat_generate_answer_from_pipeline_use_case.execute(

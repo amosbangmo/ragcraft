@@ -7,8 +7,8 @@ import streamlit as st
 from src.domain.chat_message import ChatMessage
 
 
-class ChatService:
-    """Implements :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` for Streamlit."""
+class StreamlitChatTranscript:
+    """Implements :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` via Streamlit session state."""
 
     MESSAGE_KEY = "messages"
     PROJECT_KEY = "chat_project_key"

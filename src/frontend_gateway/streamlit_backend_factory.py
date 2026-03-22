@@ -8,7 +8,9 @@ that clears both the process-scoped cache and Streamlit session chain handles.
 from __future__ import annotations
 
 from src.composition import BackendApplicationContainer, build_backend
+from src.composition.backend_composition import build_backend_composition
 from src.composition.wiring import process_scoped_chain_invalidate_key
+from src.frontend_gateway.streamlit_chat_transcript import StreamlitChatTranscript
 from src.ui.streamlit_project_chain_session_cache import invalidate_project_chain as _invalidate_streamlit_session_chain
 
 
@@ -18,4 +20,7 @@ def _invalidate_process_and_streamlit_chain_cache(project_id: str) -> None:
 
 
 def build_streamlit_backend_application_container() -> BackendApplicationContainer:
-    return build_backend(invalidate_chain_key=_invalidate_process_and_streamlit_chain_cache)
+    return build_backend(
+        invalidate_chain_key=_invalidate_process_and_streamlit_chain_cache,
+        backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()),
+    )
