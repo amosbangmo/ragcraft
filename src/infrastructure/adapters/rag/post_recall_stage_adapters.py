@@ -7,6 +7,7 @@ Orchestration order lives in :mod:`src.application.use_cases.chat.orchestration.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.pipeline_payloads import SectionExpansionPoolResult
@@ -16,12 +17,19 @@ from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
 from src.infrastructure.adapters.rag.contextual_compression_service import ContextualCompressionService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 from src.infrastructure.adapters.rag.layout_context_service import LayoutContextService
-from src.infrastructure.adapters.rag.multimodal_orchestration_service import MultimodalOrchestrationService
 from src.infrastructure.adapters.rag.prompt_builder_service import PromptBuilderService
 from src.infrastructure.adapters.rag.prompt_source_service import PromptSourceService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
 from src.infrastructure.adapters.rag.section_retrieval_service import SectionRetrievalService
 from src.infrastructure.adapters.rag.table_qa_service import TableQAService
+
+
+class MultimodalPromptHintsLike(Protocol):
+    """Structural type for :class:`~src.application.chat.multimodal_prompt_hints.MultimodalPromptHints` (wired in composition)."""
+
+    def analyze_modalities(self, prompt_context_assets: list[dict]) -> dict: ...
+
+    def build_multimodal_prompt_hint(self, multimodal_analysis: dict) -> str: ...
 
 
 class DocstoreRecallReadAdapter:
@@ -131,17 +139,6 @@ class LayoutGroupingAdapter:
         return self._layout.validate_groups(assets, groups)
 
 
-class MultimodalPromptHintAdapter:
-    def __init__(self, multimodal: MultimodalOrchestrationService) -> None:
-        self._m = multimodal
-
-    def analyze_modalities(self, prompt_context_assets: list[dict]) -> dict:
-        return self._m.analyze(prompt_context_assets)
-
-    def build_multimodal_prompt_hint(self, multimodal_analysis: dict) -> str:
-        return self._m.build_prompt_hint(multimodal_analysis)
-
-
 class PromptRenderAdapter:
     def __init__(self, builder: PromptBuilderService) -> None:
         self._b = builder
@@ -210,7 +207,7 @@ class PostRecallStageServices:
     prompt_source_service: PromptSourceService
     prompt_builder_service: PromptBuilderService
     layout_context_service: LayoutContextService
-    multimodal_orchestration_service: MultimodalOrchestrationService
+    multimodal_prompt_hints: MultimodalPromptHintsLike
     confidence_service: ConfidenceService
 
 
@@ -219,6 +216,7 @@ def build_post_recall_stage_services(
     docstore_service: DocStoreService,
     reranking_service: RerankingService,
     table_qa_service: TableQAService,
+    multimodal_prompt_hints: MultimodalPromptHintsLike,
 ) -> PostRecallStageServices:
     prompt_builder = PromptBuilderService(
         max_text_chars_per_asset=RETRIEVAL_CONFIG.max_text_chars_per_asset,
@@ -233,6 +231,6 @@ def build_post_recall_stage_services(
         prompt_source_service=PromptSourceService(),
         prompt_builder_service=prompt_builder,
         layout_context_service=LayoutContextService(),
-        multimodal_orchestration_service=MultimodalOrchestrationService(),
+        multimodal_prompt_hints=multimodal_prompt_hints,
         confidence_service=ConfidenceService(),
     )

@@ -10,8 +10,9 @@ Orchestration lives in application use cases; this module only constructs the ob
 - Summary recall sequencing: :class:`~src.application.use_cases.chat.orchestration.summary_recall_workflow.ApplicationSummaryRecallStage`
   with technical ports from :mod:`src.infrastructure.adapters.rag.summary_recall_technical_adapters`.
 - Post-recall assembly: :class:`~src.application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
-  (application) with stage adapters in
-  :mod:`src.infrastructure.adapters.rag.post_recall_stage_adapters`.
+  (application) with technical stage adapters in
+  :mod:`src.infrastructure.adapters.rag.post_recall_stage_adapters` and multimodal hints from
+  :mod:`src.application.chat.multimodal_prompt_hints`.
 
 **Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
 ``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.
@@ -37,6 +38,7 @@ from src.application.use_cases.chat.orchestration.ports import PostRecallStagePo
 from src.application.use_cases.chat.orchestration.summary_recall_ports import SummaryRecallTechnicalPorts
 from src.application.use_cases.chat.orchestration.summary_recall_workflow import ApplicationSummaryRecallStage
 from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
+from src.application.chat.multimodal_prompt_hints import MultimodalPromptHints
 from src.domain.ports import QueryLogPort
 from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
@@ -45,7 +47,6 @@ from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
     ContextualCompressionAdapter,
     DocstoreRecallReadAdapter,
     LayoutGroupingAdapter,
-    MultimodalPromptHintAdapter,
     PostRecallStageServices,
     PromptRenderAdapter,
     PromptSourceBuildAdapter,
@@ -78,7 +79,7 @@ def post_recall_stage_ports_from_services(services: PostRecallStageServices) -> 
         contextual_compression=ContextualCompressionAdapter(services.contextual_compression_service),
         prompt_sources=PromptSourceBuildAdapter(services.prompt_source_service),
         layout_grouping=LayoutGroupingAdapter(services.layout_context_service),
-        multimodal_hints=MultimodalPromptHintAdapter(services.multimodal_orchestration_service),
+        multimodal_hints=services.multimodal_prompt_hints,
         prompt_render=PromptRenderAdapter(services.prompt_builder_service),
         confidence=RerankedConfidenceAdapter(services.confidence_service),
     )
@@ -132,6 +133,7 @@ def build_rag_retrieval_subgraph(
         docstore_service=docstore_service,
         reranking_service=reranking_service,
         table_qa_service=table_qa,
+        multimodal_prompt_hints=MultimodalPromptHints(),
     )
     assembly = ApplicationPipelineAssembly(
         stages=post_recall_stage_ports_from_services(post_recall),
