@@ -2,7 +2,7 @@
 Explicit wire-shape contracts for API JSON (framework-agnostic).
 
 These :class:`typing.TypedDict` definitions document the **stable** response keys clients rely on.
-Serialization uses :func:`src.infrastructure.web.json_normalization.jsonify_value` to produce
+Normalization uses :func:`src.application.json_wire.jsonify_value` (application wire layer) to produce
 compatible ``dict`` / ``list`` trees; Pydantic response models in ``chat.py`` / ``evaluation.py``
 validate those trees.
 

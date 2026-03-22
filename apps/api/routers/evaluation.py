@@ -40,10 +40,7 @@ from apps.api.schemas.evaluation import (
     QaDatasetGenerateResponse,
     RetrievalLogsResponse,
 )
-from apps.api.schemas.serialization import (
-    benchmark_export_artifacts_to_api_dict,
-    benchmark_result_to_api_dict,
-)
+from src.application.http.wire import BenchmarkRunWirePayload
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
 from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
@@ -129,7 +126,8 @@ def post_dataset_benchmark_run(
             enable_hybrid_retrieval=body.enable_hybrid_retrieval,
         )
     )
-    return BenchmarkResultResponse.model_validate(benchmark_result_to_api_dict(result))
+    bench = BenchmarkRunWirePayload.from_benchmark_result(result)
+    return BenchmarkResultResponse.model_validate(bench.as_json_dict())
 
 
 @router.get(
@@ -329,7 +327,7 @@ def post_benchmark_export(
     )
     fmt = body.export_format
     if fmt == "all":
-        return BenchmarkExportResponse.model_validate(benchmark_export_artifacts_to_api_dict(artifacts))
+        return BenchmarkExportResponse.model_validate(artifacts.to_http_bundle_dict())
     if fmt == "json":
         return Response(
             content=artifacts.json_bytes,

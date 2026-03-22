@@ -41,9 +41,9 @@ from apps.api.schemas.projects import (
     RetrievalPresetLabelResponse,
     UpdateProjectRetrievalSettingsRequest,
 )
-from apps.api.schemas.serialization import (
-    effective_retrieval_settings_view_to_api_dict,
-    ingest_document_result_to_api_dict,
+from src.application.http.wire import (
+    EffectiveRetrievalSettingsWirePayload,
+    IngestDocumentWirePayload,
 )
 from apps.api.upload_adapter import read_upload_for_ingestion
 from src.application.ingestion.dtos import (
@@ -122,9 +122,8 @@ def get_project_retrieval_settings(
     view = use_case.execute(
         GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
     )
-    return ProjectRetrievalSettingsResponse.model_validate(
-        effective_retrieval_settings_view_to_api_dict(view)
-    )
+    wire = EffectiveRetrievalSettingsWirePayload.from_view(view)
+    return ProjectRetrievalSettingsResponse.model_validate(wire.as_json_dict())
 
 
 @router.put(
@@ -153,9 +152,8 @@ def put_project_retrieval_settings(
     view = get_uc.execute(
         GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
     )
-    return ProjectRetrievalSettingsResponse.model_validate(
-        effective_retrieval_settings_view_to_api_dict(view)
-    )
+    wire = EffectiveRetrievalSettingsWirePayload.from_view(view)
+    return ProjectRetrievalSettingsResponse.model_validate(wire.as_json_dict())
 
 
 @router.post(
@@ -191,8 +189,8 @@ async def post_document_ingest(
     result = use_case.execute(
         IngestUploadedFileCommand(project=project, uploaded_file=buffered)
     )
-    data = ingest_document_result_to_api_dict(result)
-    return IngestDocumentResponse.model_validate(data)
+    wire = IngestDocumentWirePayload.from_ingest_result(result)
+    return IngestDocumentResponse.model_validate(wire.as_json_dict())
 
 
 @router.post(
@@ -215,8 +213,8 @@ def post_document_reindex(
     """Rebuild vectors and assets from the file already stored for this project (URL-encode ``source_file`` if needed)."""
     project = project_service.get_project(user_id, project_id)
     result = use_case.execute(ReindexDocumentCommand(project=project, source_file=source_file))
-    data = ingest_document_result_to_api_dict(result)
-    return IngestDocumentResponse.model_validate(data)
+    wire = IngestDocumentWirePayload.from_ingest_result(result)
+    return IngestDocumentResponse.model_validate(wire.as_json_dict())
 
 
 @router.delete(

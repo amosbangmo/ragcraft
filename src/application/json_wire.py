@@ -1,8 +1,8 @@
 """
-Framework-aware conversion of runtime values to JSON-serializable structures.
+JSON-serializable normalization for HTTP wire payloads (application layer).
 
-**Keep in sync** with :mod:`src.application.json_wire` (same public behavior). Infrastructure must
-not import the application layer; this copy exists for non-application adapters and tests.
+Mirrors :mod:`src.infrastructure.web.json_normalization` output shape so API responses stay stable.
+The application layer must not import ``src.infrastructure`` (see architecture tests).
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from langchain_core.documents import Document
 
 
 def jsonify_value(value: Any) -> Any:
-    """Recursively normalize values for JSON responses (dicts, lists, LangChain ``Document``, etc.)."""
+    """Recursively normalize values for JSON (dicts, lists, LangChain ``Document``, etc.)."""
     if isinstance(value, Document):
         return {
             "page_content": value.page_content,

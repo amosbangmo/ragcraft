@@ -1,8 +1,8 @@
 """
 Pydantic models for chat and retrieval-debug endpoints.
 
-Aligned with :class:`~src.domain.rag_response.RAGResponse`,
-:class:`~src.domain.pipeline_payloads.PipelineBuildResult`, and the summary-recall preview dict.
+Response field shapes are produced by :mod:`src.application.http.wire` wire DTOs
+(:class:`~src.domain.rag_response.RAGResponse`, pipeline snapshots, preview dicts).
 """
 
 from __future__ import annotations

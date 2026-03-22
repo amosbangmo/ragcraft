@@ -28,10 +28,11 @@ from apps.api.schemas.chat import (
     RetrievalCompareRequest,
     RetrievalCompareResponse,
 )
-from apps.api.schemas.serialization import (
-    pipeline_build_result_to_api_dict,
-    preview_summary_recall_to_api_dict,
-    rag_response_to_api_dict,
+from src.application.http.wire import (
+    PipelineSnapshotWirePayload,
+    PreviewSummaryRecallWirePayload,
+    RagAnswerWirePayload,
+    RetrievalComparisonWirePayload,
 )
 from src.services.project_service import ProjectService
 
@@ -81,17 +82,9 @@ def post_chat_ask(
             confidence=0.0,
             latency=None,
         )
-    data = rag_response_to_api_dict(result)
-    return ChatAskResponse(
-        status="answered",
-        question=data["question"],
-        answer=data["answer"],
-        source_documents=data["source_documents"],
-        raw_assets=data["raw_assets"],
-        prompt_sources=data["prompt_sources"],
-        confidence=data["confidence"],
-        latency=data["latency"],
-    )
+    payload = RagAnswerWirePayload.from_rag_response(result)
+    data = payload.as_json_dict()
+    return ChatAskResponse(status="answered", **data)
 
 
 @router.post(
@@ -132,10 +125,11 @@ def post_pipeline_inspect(
             question=body.question,
             pipeline=None,
         )
+    snap = PipelineSnapshotWirePayload.from_build_result(pipeline)
     return PipelineInspectResponse(
         status="ok",
         question=body.question,
-        pipeline=pipeline_build_result_to_api_dict(pipeline),
+        pipeline=snap.pipeline,
     )
 
 
@@ -171,7 +165,7 @@ def post_preview_summary_recall(
         enable_query_rewrite_override=body.enable_query_rewrite_override,
         enable_hybrid_retrieval_override=body.enable_hybrid_retrieval_override,
     )
-    preview = preview_summary_recall_to_api_dict(raw)
+    preview = PreviewSummaryRecallWirePayload.from_preview_dict(raw).preview
     if preview is None:
         return PreviewSummaryRecallResponse(
             status="no_recall",
@@ -211,8 +205,10 @@ def post_retrieval_compare(
         questions=list(body.questions),
         enable_query_rewrite=bool(body.enable_query_rewrite),
     )
+    cmp_payload = RetrievalComparisonWirePayload.from_service_dict(raw)
+    rd = cmp_payload.as_json_dict()
     return RetrievalCompareResponse(
-        questions=list(raw.get("questions") or []),
-        summary=dict(raw.get("summary") or {}),
-        rows=list(raw.get("rows") or []),
+        questions=rd["questions"],
+        summary=rd["summary"],
+        rows=rd["rows"],
     )
