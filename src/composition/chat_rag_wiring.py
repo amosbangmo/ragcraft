@@ -1,6 +1,8 @@
 """
-Wires RAG retrieval infrastructure and chat use cases for :class:`~src.composition.backend_composition.BackendComposition`.
+Wires RAG retrieval infrastructure services into chat use cases.
 
+Called from :class:`~src.composition.application_container.BackendApplicationContainer` using
+technical adapters from :class:`~src.composition.backend_composition.BackendComposition`.
 Orchestration lives in application use cases; this module only constructs the object graph.
 """
 
@@ -28,7 +30,7 @@ from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreServi
 
 @dataclass
 class RagRetrievalSubgraph:
-    """Shared RAG infrastructure services (one graph per backend instance)."""
+    """Shared RAG infrastructure services (built alongside chat use-case wiring)."""
 
     table_qa_service: TableQAService
     summary_recall_service: SummaryRecallService

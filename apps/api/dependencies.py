@@ -4,8 +4,8 @@ FastAPI dependency providers (transport layer).
 **Composition root:** :func:`get_backend_application_container` returns a cached
 :class:`~src.composition.application_container.BackendApplicationContainer` built via
 :func:`~src.composition.build_backend` with :func:`~src.composition.wiring.process_scoped_chain_invalidate_key`.
-Service-level graph alone is :class:`~src.composition.backend_composition.BackendComposition` via
-:func:`~src.composition.build_backend_composition`.
+The service-level graph (:class:`~src.composition.backend_composition.BackendComposition`) contains
+technical adapters only; it is built via :func:`~src.composition.build_backend_composition`.
 
 FastAPI does not reference ``src.app`` or the legacy interactive UI shell.
 

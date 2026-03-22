@@ -1,6 +1,7 @@
 """
-Application composition root: wires :class:`~src.composition.backend_composition.BackendComposition`
-to use cases for FastAPI, headless callers, and the Streamlit façade.
+Application composition root: wires technical services from
+:class:`~src.composition.backend_composition.BackendComposition` into use cases for FastAPI,
+headless callers, and the Streamlit façade.
 
 Use :func:`build_backend` for the **full graph** (services + use cases). Use
 :func:`build_backend_composition` when you only need the service layer, then pass that instance to
@@ -224,12 +225,15 @@ class BackendApplicationContainer:
 
     @cached_property
     def _chat_rag_use_cases(self) -> ChatRagUseCases:
-        from src.composition.chat_rag_wiring import build_chat_rag_use_cases
+        from src.composition.chat_rag_wiring import build_chat_rag_use_cases, build_rag_retrieval_subgraph
 
-        return build_chat_rag_use_cases(
-            self.backend.rag_retrieval_subgraph,
-            query_log=self.query_log_service,
+        subgraph = build_rag_retrieval_subgraph(
+            vectorstore_service=self.backend.vectorstore_service,
+            docstore_service=self.backend.docstore_service,
+            reranking_service=self.backend.reranking_service,
+            retrieval_settings_service=self.backend.retrieval_settings_service,
         )
+        return build_chat_rag_use_cases(subgraph, query_log=self.query_log_service)
 
     @property
     def chat_ask_question_use_case(self) -> AskQuestionUseCase:
