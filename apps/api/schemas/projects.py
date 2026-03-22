@@ -102,19 +102,54 @@ class RetrievalPresetLabelResponse(BaseModel):
     label: str
 
 
+class ProjectDocumentDetailItem(BaseModel):
+    """Per-source-file workspace and docstore stats (transport shape for document lists)."""
+
+    model_config = {"extra": "forbid"}
+
+    name: str = Field(..., description="Source filename at project root.")
+    project_id: str
+    path: str = Field(..., description="Absolute path to the file on the API host.")
+    size_bytes: int = 0
+    asset_count: int = 0
+    text_count: int = 0
+    table_count: int = 0
+    image_count: int = 0
+    latest_ingested_at: str | None = Field(
+        default=None,
+        description="ISO-8601 latest asset created_at for this source file, if any.",
+    )
+
+
 class ProjectDocumentDetailsResponse(BaseModel):
     model_config = {"extra": "forbid"}
 
-    documents: list[dict[str, Any]] = Field(
+    documents: list[ProjectDocumentDetailItem] = Field(
         default_factory=list,
-        description="Per-file stats (name, path, asset counts, latest_ingested_at, …).",
+        description="Per-file stats for the project document list.",
     )
+
+
+class DocumentAssetRow(BaseModel):
+    """One row from the SQLite multimodal asset store for a source file."""
+
+    model_config = {"extra": "forbid"}
+
+    doc_id: str
+    user_id: str
+    project_id: str
+    source_file: str
+    content_type: str
+    raw_content: str
+    summary: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str | None = None
 
 
 class DocumentAssetsResponse(BaseModel):
     model_config = {"extra": "forbid"}
 
-    assets: list[dict[str, Any]] = Field(default_factory=list)
+    assets: list[DocumentAssetRow] = Field(default_factory=list)
 
 
 class InvalidateCacheResponse(BaseModel):

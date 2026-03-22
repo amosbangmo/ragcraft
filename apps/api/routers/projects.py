@@ -7,7 +7,7 @@ File ingest uses multipart form field ``file``; see each route's OpenAPI descrip
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
@@ -26,6 +26,7 @@ from apps.api.dependencies import (
     get_request_user_id,
     get_update_project_retrieval_settings_use_case,
 )
+from apps.api.schemas.mappers import document_asset_row_from_store, project_document_detail_item
 from apps.api.schemas.projects import (
     CreateProjectRequest,
     CreateProjectResponse,
@@ -308,7 +309,7 @@ def get_project_document_details(
 ) -> ProjectDocumentDetailsResponse:
     project = project_service.get_project(user_id, project_id)
     documents = project_service.list_project_documents(user_id, project_id)
-    details: list[dict[str, Any]] = []
+    details = []
     for doc_name in documents:
         file_path = project.path / doc_name
         asset_count = docstore.count_assets_for_source_file(
@@ -321,18 +322,19 @@ def get_project_document_details(
             project_id=project_id,
             source_file=doc_name,
         )
+        latest = asset_stats.get("latest_ingested_at")
         details.append(
-            {
-                "name": doc_name,
-                "project_id": project_id,
-                "path": str(file_path),
-                "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
-                "asset_count": asset_count,
-                "text_count": int(asset_stats.get("text_count", 0)),
-                "table_count": int(asset_stats.get("table_count", 0)),
-                "image_count": int(asset_stats.get("image_count", 0)),
-                "latest_ingested_at": asset_stats.get("latest_ingested_at"),
-            }
+            project_document_detail_item(
+                name=doc_name,
+                project_id=project_id,
+                path=str(file_path),
+                size_bytes=file_path.stat().st_size if file_path.exists() else 0,
+                asset_count=asset_count,
+                text_count=int(asset_stats.get("text_count", 0)),
+                table_count=int(asset_stats.get("table_count", 0)),
+                image_count=int(asset_stats.get("image_count", 0)),
+                latest_ingested_at=None if latest is None else str(latest),
+            )
         )
     return ProjectDocumentDetailsResponse(documents=details)
 
@@ -353,7 +355,7 @@ def get_document_assets(
         project_id=project_id,
         source_file=source_file,
     )
-    return DocumentAssetsResponse(assets=list(assets))
+    return DocumentAssetsResponse(assets=[document_asset_row_from_store(a) for a in assets])
 
 
 @router.post(

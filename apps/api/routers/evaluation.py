@@ -40,6 +40,11 @@ from apps.api.schemas.evaluation import (
     QaDatasetGenerateResponse,
     RetrievalLogsResponse,
 )
+from apps.api.schemas.mappers import (
+    manual_evaluation_result_to_response,
+    qa_dataset_entry_to_response,
+    retrieval_query_log_rows_to_entries,
+)
 from src.application.http.wire import BenchmarkRunWirePayload
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
 from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
@@ -76,10 +81,6 @@ def _content_disposition_attachment(filename: str) -> str:
     return f'attachment; filename="{safe}"'
 
 
-def _entry_to_response(entry: QADatasetEntry) -> QaDatasetEntryResponse:
-    return QaDatasetEntryResponse.model_validate(entry.to_dict())
-
-
 @router.post(
     "/manual",
     response_model=ManualEvaluationResponse,
@@ -113,7 +114,7 @@ def post_manual_evaluation(
             enable_hybrid_retrieval_override=body.enable_hybrid_retrieval_override,
         )
     )
-    return ManualEvaluationResponse.model_validate(result.to_dict())
+    return manual_evaluation_result_to_response(result)
 
 
 @router.post(
@@ -156,7 +157,7 @@ def get_dataset_entries(
     use_case: Annotated[ListQaDatasetEntriesUseCase, Depends(get_list_qa_dataset_entries_use_case)],
 ) -> QaDatasetEntryListResponse:
     rows = use_case.execute(ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id))
-    return QaDatasetEntryListResponse(entries=[_entry_to_response(e) for e in rows])
+    return QaDatasetEntryListResponse(entries=[qa_dataset_entry_to_response(e) for e in rows])
 
 
 @router.post(
@@ -180,7 +181,7 @@ def post_dataset_entry(
             expected_sources=body.expected_sources or None,
         )
     )
-    return _entry_to_response(entry)
+    return qa_dataset_entry_to_response(entry)
 
 
 @router.put(
@@ -205,7 +206,7 @@ def put_dataset_entry(
             expected_sources=body.expected_sources or None,
         )
     )
-    return _entry_to_response(entry)
+    return qa_dataset_entry_to_response(entry)
 
 
 @router.delete(
@@ -281,7 +282,7 @@ def get_retrieval_logs(
             last_n=limit,
         )
     )
-    return RetrievalLogsResponse(entries=entries)
+    return RetrievalLogsResponse(entries=retrieval_query_log_rows_to_entries(entries))
 
 
 @router.get(

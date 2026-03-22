@@ -26,6 +26,7 @@ from apps.api.schemas.evaluation import (
     QaDatasetGenerateRequest,
     QaDatasetGenerateResponse,
     RetrievalLogsResponse,
+    RetrievalQueryLogEntry,
 )
 from apps.api.schemas.projects import (
     CreateProjectRequest,
@@ -49,6 +50,7 @@ __all__ = [
     "CreateProjectResponse",
     "DatasetBenchmarkRunRequest",
     "DeleteDocumentResponse",
+    "DocumentAssetRow",
     "IngestDocumentResponse",
     "IngestionDiagnosticsPayload",
     "ManualEvaluationRequest",
@@ -57,6 +59,7 @@ __all__ = [
     "PipelineInspectResponse",
     "PreviewSummaryRecallRequest",
     "PreviewSummaryRecallResponse",
+    "ProjectDocumentDetailItem",
     "ProjectDocumentsResponse",
     "ProjectListResponse",
     "QaDatasetEntryCreateRequest",
@@ -68,4 +71,5 @@ __all__ = [
     "QaDatasetGenerateResponse",
     "RetrievalFiltersPayload",
     "RetrievalLogsResponse",
+    "RetrievalQueryLogEntry",
 ]

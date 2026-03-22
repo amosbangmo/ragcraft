@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Manual evaluation ---
@@ -34,7 +34,7 @@ class ManualEvaluationRequest(BaseModel):
 
 
 class ManualEvaluationResponse(BaseModel):
-    """Structured manual eval result (same keys as :meth:`ManualEvaluationResult.to_dict`)."""
+    """Structured manual evaluation result for HTTP clients (stable transport shape)."""
 
     model_config = {"extra": "forbid"}
 
@@ -164,12 +164,54 @@ class QaDatasetGenerateResponse(BaseModel):
 # --- Query / retrieval logs ---
 
 
+class RetrievalQueryLogEntry(BaseModel):
+    """One persisted query / retrieval observation row (SQLite-backed store)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    question: str | None = Field(default=None, description="Original user question (truncated at ingest).")
+    rewritten_query: str | None = None
+    project_id: str | None = None
+    user_id: str | None = None
+    retrieval_mode: str | None = None
+    confidence: float | None = None
+    timestamp: str | None = Field(
+        default=None,
+        description="ISO-8601 event time (same as persisted created_at).",
+    )
+    selected_doc_ids: list[str] | None = None
+    retrieved_doc_ids: list[str] | None = Field(
+        default=None,
+        description="Doc ids recalled during retrieval (persisted as recalled_doc_ids in storage).",
+    )
+    answer: str | None = Field(default=None, description="Truncated answer preview when logged.")
+    hybrid_retrieval_enabled: bool | None = None
+    query_intent: str | None = None
+    retrieval_strategy: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional k / use_hybrid / apply_filters snapshot.",
+    )
+    latency_ms: int | None = None
+    query_rewrite_ms: int | None = None
+    retrieval_ms: int | None = None
+    reranking_ms: int | None = None
+    prompt_build_ms: int | None = None
+    answer_generation_ms: int | None = None
+    total_latency_ms: int | None = None
+    context_compression_chars_before: int | None = None
+    context_compression_chars_after: int | None = None
+    context_compression_ratio: float | None = None
+    section_expansion_count: int | None = None
+    expanded_assets_count: int | None = None
+    table_aware_qa_enabled: bool | None = None
+
+
 class RetrievalLogsResponse(BaseModel):
     model_config = {"extra": "forbid"}
 
-    entries: list[dict[str, Any]] = Field(
+    entries: list[RetrievalQueryLogEntry] = Field(
         default_factory=list,
-        description="Rows from SQLite query log store (newest-first depends on repository).",
+        description="Query log rows, typically newest-first (see repository).",
     )
 
 

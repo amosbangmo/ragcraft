@@ -1,7 +1,8 @@
 """
 Backward-compatible re-exports for tests and legacy imports.
 
-Canonical mappers: :mod:`src.application.http.wire`.
+* Wire normalization: :mod:`src.application.http.wire`.
+* HTTP response assembly from domain rows: :mod:`apps.api.schemas.mappers`.
 """
 
 from __future__ import annotations
