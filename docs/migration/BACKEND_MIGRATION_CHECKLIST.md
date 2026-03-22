@@ -1,6 +1,6 @@
 # Backend migration checklist — FastAPI as primary surface
 
-This checklist marks **migration-complete** for the HTTP backend: composition, routes, errors, and tests no longer depend on the Streamlit-oriented `RAGCraftApp` façade. Last updated: **Prompt 8** (final cleanup pass).
+This checklist records **completed** HTTP backend work and **follow-ups** for non-Streamlit frontends. The authoritative runtime description is **`ARCHITECTURE_TARGET.md`**; `RAGCraftApp` remains **by design** for Streamlit in-process mode (see **`ragcraftapp-deprecation.md`**).
 
 ---
 
@@ -31,18 +31,18 @@ This checklist marks **migration-complete** for the HTTP backend: composition, r
 
 ---
 
-## Streamlit / in-process — intentionally temporary pieces
+## Streamlit / in-process — supported (not part of FastAPI)
 
-These are **not** leaks into FastAPI; they exist so the desktop UI can run without uvicorn during local development.
+These modules are **not** imported by `apps/api`. They exist so the UI can run **without uvicorn** and still share the same composition root as the HTTP API.
 
 | Piece | Role |
 |-------|------|
-| **`RAGCraftApp`** (`src/app/ragcraft_app.py`) | In-process façade over `BackendApplicationContainer`; used by `InProcessBackendClient`. |
-| **`src/core/app_state.py`** | Streamlit session singleton for `get_app()` / `get_backend_client()`. |
-| **`src/core/chain_state.py`** | Per-session LangChain cache keys tied to the Streamlit process. |
-| **`src/frontend_gateway/streamlit_*.py`** | Session/header glue; not imported by `apps/api`. |
+| **`RAGCraftApp`** (`src/app/ragcraft_app.py`) | **Strategic** in-process adapter over `BackendApplicationContainer`; used by `InProcessBackendClient`. |
+| **`src/core/app_state.py`** | Streamlit session wiring for `get_backend_client()`. |
+| **`src/core/chain_state.py`** | Session-scoped chain cache keys in the Streamlit process. |
+| **`src/frontend_gateway/streamlit_*.py`** | Auth/session/header glue for the UI. |
 
-**Direction:** A follow-up can teach `InProcessBackendClient` to hold the container directly and shrink or remove `RAGCraftApp` once no caller needs the façade shape.
+**Optional follow-up:** `InProcessBackendClient` could hold `BackendApplicationContainer` directly and move remaining helpers off `RAGCraftApp` — a refactor, not a migration blocker.
 
 ---
 
@@ -65,4 +65,4 @@ python -m pytest tests/apps_api -q
 - `docs/migration/streamlit-fastapi-dev.md` — run Streamlit against HTTP API  
 - `docs/migration/ragcraftapp-deprecation.md` — why `RAGCraftApp` still exists  
 - `docs/migration/streamlit-backend-client.md` — `BackendClient` protocol  
-- `ARCHITECTURE_TARGET.md` — target layout vs current tree  
+- `ARCHITECTURE_TARGET.md` — runtime architecture (source of truth)  

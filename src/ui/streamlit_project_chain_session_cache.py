@@ -1,8 +1,7 @@
 """
-Streamlit session_state adapter for legacy ``get_or_build_project_chain`` caching.
+Streamlit ``session_state`` cache for per-browser vector-chain handles (UI process only).
 
-**Frontend-only:** imports ``streamlit``. HTTP / FastAPI code must use
-:class:`~src.infrastructure.caching.process_project_chain_cache.ProcessProjectChainCache` instead.
+Imports ``streamlit``. FastAPI uses :class:`~src.infrastructure.caching.process_project_chain_cache.ProcessProjectChainCache` instead.
 """
 
 from __future__ import annotations

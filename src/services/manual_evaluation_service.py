@@ -407,7 +407,7 @@ class ManualEvaluationService:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> ManualEvaluationResult:
-        """Deprecated: prefer :class:`~src.application.evaluation.use_cases.run_manual_evaluation.RunManualEvaluationUseCase` (tests may still call this helper)."""
+        """Prefer :class:`~src.application.evaluation.use_cases.run_manual_evaluation.RunManualEvaluationUseCase` for new wiring; kept for tests and ``BackendClient``-based call sites."""
         q = (question or "").strip()
         exp_ans = (expected_answer or "").strip() or None
         exp_docs = list(expected_doc_ids or [])

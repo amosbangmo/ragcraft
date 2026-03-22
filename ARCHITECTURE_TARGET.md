@@ -1,77 +1,55 @@
-# Target architecture (migration)
+# Runtime architecture
 
-This document describes the **intended** layout for moving toward a FastAPI API and Clean Architecture. Existing modules are not required to live here yet; the tree is the target destination.
+This is the **source-of-truth layout** for how RAGCraft is structured today: backend boundary, clients, and where code belongs.
 
-## `apps/api`
+## Backend boundary — FastAPI
 
-HTTP delivery layer: FastAPI app factory, router mounting, and dependency wiring that adapts infrastructure to the application layer. Keeps transport concerns out of `src/`.
+- **`apps/api/`** — FastAPI application factory, routers, dependency providers, HTTP error mapping, OpenAPI.
+- **Composition** — `src/composition/` builds `BackendComposition` (services) and `BackendApplicationContainer` (services + use cases). FastAPI resolves the container via `apps.api.dependencies` (no `src.app` import).
+- **Use cases** — `src/application/**/use_cases/` are the primary entry points routers call.
 
-## `apps/api/routers`
+## Clients
 
-Route handlers only: parse requests, call application use cases, map results to HTTP responses.
+- **Streamlit** — A **UI client** only: `pages/` and `src/ui/` depend on **`BackendClient`** (`src/frontend_gateway/protocol.py`), not on `src.services` or the container directly.
+- **Angular / other SPAs** — Should use the **same HTTP API** as Streamlit in HTTP mode (`OpenAPI` at `/docs`, header `X-User-Id` for workspace identity today).
 
-## `apps/api/schemas`
+## Frontend integration seam — `BackendClient`
 
-Pydantic (or similar) request/response models and OpenAPI-facing DTOs. No business rules.
+- **`HttpBackendClient`** — Calls FastAPI over HTTP (`RAGCRAFT_BACKEND_CLIENT=http`).
+- **`InProcessBackendClient`** — Wraps **`RAGCraftApp`** (`src/app/ragcraft_app.py`), which holds a `BackendApplicationContainer` and small Streamlit-oriented helpers (e.g. chain session cache). Default for local dev without uvicorn.
 
-## `src/application`
+## Layering (Clean Architecture direction)
 
-Application services and **use cases**: orchestrate domain logic and ports, enforce workflows, stay framework-agnostic. Depends on `src/domain` and abstractions implemented in `src/infrastructure`.
+| Area | Role |
+|------|------|
+| **`src/domain/`** | Entities, value objects, invariants — no FastAPI, Streamlit, SQLite, or FAISS imports. |
+| **`src/application/`** | Use cases and orchestration; depends on domain and ports. |
+| **`src/infrastructure/`** | Adapters: SQLite, FAISS, LLM clients, extraction, etc. |
+| **`src/services/`** | Orchestration services composed by the backend graph (still central today). |
+| **`src/frontend_gateway/`** | Protocol + HTTP/in-process clients + Streamlit auth/context wiring. |
 
-## `src/application/common`
+**Dependency direction:** outer delivery (API, UI) → application/use cases → domain; infrastructure implements ports.
 
-Cross-cutting application helpers shared by multiple bounded contexts (for example, pagination, correlation IDs, shared command/result types).
+## Repository layout (high level)
 
-## `src/application/*/use_cases`
+- **`apps/api/`** — HTTP API only.
+- **`pages/`**, **`streamlit_app.py`** — Streamlit entry and multipage app.
+- **`src/app/`** — `RAGCraftApp` in-process adapter (not used by FastAPI).
+- **`src/ui/`** — Streamlit widgets and layout helpers.
 
-One folder per capability (`chat`, `ingestion`, `evaluation`, `projects`, `retrieval`): each use case is an explicit entry point for a user or system operation.
+*(An older note referred to `src/interfaces/streamlit`; the real UI roots are `pages/` and `src/ui/`.)*
 
-## `src/domain`
+## Runtime modes — strategic vs local-only conveniences
 
-Core model: entities, value objects, domain events, and invariants. No FastAPI, Streamlit, SQLite, FAISS, or LLM SDK imports.
+| Mode | Env | Behavior |
+|------|-----|----------|
+| **HTTP client** | `RAGCRAFT_BACKEND_CLIENT=http` | Streamlit → FastAPI via `HttpBackendClient`. Same contract an Angular app would use. **Strategic** for split processes and production-shaped dev. |
+| **In-process** | unset / `in_process` | Streamlit → `InProcessBackendClient(RAGCraftApp)` → shared container. **Strategic** for fast local dev without running uvicorn. |
 
-## `src/domain/chat`, `documents`, `evaluation`, `retrieval`, `shared`
+**Local / transitional (not API concerns):** Streamlit `session_state` chain cache (`src/ui/streamlit_project_chain_session_cache.py`), optional legacy JSONL query-log import — kept for dev and migration utilities, not part of the public HTTP contract.
 
-Subdomains and shared kernel: group domain types by bounded context as they are migrated from the flat `src/domain` package.
+## Further reading
 
-## `src/infrastructure`
-
-Adapters: implements interfaces defined by application/domain—databases, vector stores, file parsers, LLM clients, external HTTP, etc.
-
-## `src/infrastructure/persistence/sqlite`
-
-SQLite-specific persistence (repositories, migrations, connection handling).
-
-## `src/infrastructure/vectorstores/faiss`
-
-FAISS-backed vector store implementation details.
-
-## `src/infrastructure/llm`
-
-LLM provider clients, prompts as infrastructure, token accounting—anything that talks to model APIs.
-
-## `src/infrastructure/ingestion`
-
-Document loading, chunking, and extraction adapters (alongside or replacing pieces of the current ingestion stack as you migrate).
-
-## `src/infrastructure/web`
-
-Non-FastAPI web helpers if needed (for example, shared middleware concepts); keep FastAPI-specific wiring in `apps/api` when possible.
-
-## `src/interfaces`
-
-Delivery mechanisms other than the HTTP app: CLI, jobs, and **Streamlit**.
-
-## `src/interfaces/streamlit` and `pages`
-
-Streamlit-specific composition and page modules. This is the home for UI wiring as it is decoupled from core use cases.
-
-## Dependency rule (summary)
-
-**Domain** ← **Application** ← **Infrastructure / Interfaces / apps/api**
-
-Dependencies point inward: outer layers depend on inner abstractions, not the reverse.
-
-## Current migration status
-
-The HTTP layer under `apps/api/` is wired to the composition root without the Streamlit façade. A concise checklist (done vs remaining vs temporary UI pieces) lives in `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
+- **Operational how-to:** `docs/migration/streamlit-fastapi-dev.md`
+- **Migration outcomes and SPA checklist:** `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`
+- **In-process adapter detail:** `docs/migration/ragcraftapp-deprecation.md`

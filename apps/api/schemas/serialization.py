@@ -1,8 +1,8 @@
 """
-Backward-compatible re-exports for tests and legacy imports.
+Re-exports of wire mappers for callers that still import this module (e.g. tests).
 
-* Wire normalization: :mod:`src.application.http.wire`.
-* HTTP response assembly from domain rows: :mod:`apps.api.schemas.mappers`.
+* Canonical wire types: :mod:`src.application.http.wire`.
+* Response assembly from domain rows: :mod:`apps.api.schemas.mappers`.
 """
 
 from __future__ import annotations

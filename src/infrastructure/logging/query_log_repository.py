@@ -33,10 +33,8 @@ class QueryLogRepository:
     Append-only query log storage (newline-delimited JSON in a single file).
 
     Each line is one JSON object. Thread-safe for concurrent writers.
-    Legacy file-based store; retained for tests and optional import paths.
+    File-based store for tests and optional one-off import paths (see ``QueryLogService.import_legacy_file_logs``).
     """
-
-    # TODO(clean-arch): explicitly mark as QueryLogPersistencePort once wiring uses domain ports.
 
     def __init__(self, *, log_path: Path | None = None) -> None:
         root = log_path if log_path is not None else get_data_root() / "logs" / "query_logs.json"

@@ -1,6 +1,6 @@
 # Migration final status (FastAPI-first, Streamlit decoupling)
 
-This document summarizes what the migration achieved, what debt remains, and how a future Angular (or other) frontend should integrate. For a concise checklist, see **`BACKEND_MIGRATION_CHECKLIST.md`** in this folder. Last updated: **Prompt 8** (final cleanup / migration-complete pass).
+This document summarizes what the migration achieved, what debt remains, and how a future Angular (or other) frontend should integrate. For a concise checklist, see **`BACKEND_MIGRATION_CHECKLIST.md`**. The **current** runtime model is described in **`ARCHITECTURE_TARGET.md`** at the repo root.
 
 ---
 
@@ -33,7 +33,7 @@ This document summarizes what the migration achieved, what debt remains, and how
 
 ## Remaining limitations and debt
 
-1. **`RAGCraftApp` is still required** for Streamlit **in-process** mode. It is a thin wrapper over `BackendApplicationContainer` plus Streamlit-oriented helpers (chain cache, profile formatting). Removing it means teaching `InProcessBackendClient` to hold the container directly and relocating those helpers — a deliberate follow-up, not done here.
+1. **`RAGCraftApp` is the supported in-process adapter** for Streamlit (see `ARCHITECTURE_TARGET.md`). An optional follow-up is to fold its remaining helpers into `InProcessBackendClient` + container-only wiring; that is a refactor, not an open migration gap.
 2. **Optional / heavy Python dependencies:** Full composition (e.g. ingestion with `unstructured`) may be missing in minimal environments; `/health` and lightweight tests should still run. Full integration and UI tests need the complete dependency set from the project’s environment spec.
 3. **`BackendClient` protocol coverage vs REST:** The protocol is the Streamlit-facing contract. HTTP coverage should stay aligned when adding methods (see checklist in `streamlit-decoupling-checklist.md`).
 4. **Auth model for external frontends:** Today the API uses **`X-User-Id`** as a header. A production SPA would typically replace this with JWT/OAuth and a verified principal; that is an explicit extension point, not implemented in this migration pass.

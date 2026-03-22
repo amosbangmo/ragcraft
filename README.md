@@ -84,7 +84,10 @@ The demo allows you to:
 
 # 🏗️ Architecture Overview
 
-The **authoritative backend surface** for automation and future SPAs is the **FastAPI** app under `apps/api/` (OpenAPI at `/docs`). The Streamlit UI can call it over **HTTP** (`RAGCRAFT_BACKEND_CLIENT=http`) or run **in-process** against the same composition root via a thin façade (default local dev).
+- **FastAPI (`apps/api/`)** is the **backend HTTP boundary** — OpenAPI at `/docs`, the contract for automation and non-Streamlit frontends.
+- **Streamlit** (`streamlit_app.py`, `pages/`, `src/ui/`) is a **client/UI** — it must not import services or the composition root directly; it goes through **`BackendClient`** (`src/frontend_gateway/protocol.py`).
+- **Angular or other SPAs** should target the **same HTTP API** (plus `X-User-Id` for workspace identity as implemented today).
+- **Runtime modes:** **`RAGCRAFT_BACKEND_CLIENT=http`** → `HttpBackendClient` → FastAPI; **default / `in_process`** → `InProcessBackendClient` → `RAGCraftApp` wrapping the same `BackendApplicationContainer` (no uvicorn required for local UI dev). See `docs/migration/streamlit-fastapi-dev.md` and `ARCHITECTURE_TARGET.md`.
 
 ```text
 User (Browser)
@@ -93,7 +96,8 @@ User (Browser)
       ▼                              ▼
 Streamlit UI                  Angular / API clients
       │                              │
-      │  in-process OR HTTP          │  HTTP (+ X-User-Id)
+      │  BackendClient               │  HTTP (+ X-User-Id)
+      │  (in-process OR HTTP)      │
       ▼                              ▼
 Backend composition (services + use cases)
       │
@@ -116,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-Migration status and checklist: `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
+**Architecture reference:** `ARCHITECTURE_TARGET.md` — migration history and SPA checklist: `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
 
 ---
 
@@ -205,7 +209,7 @@ ragcraft/
 │   ├── auth/
 │   ├── core/
 │   ├── domain/
-│   ├── frontend_gateway/  # BackendClient: in-process vs HTTP
+│   ├── frontend_gateway/  # BackendClient seam: Http vs InProcess → RAGCraftApp
 │   ├── infrastructure/
 │   ├── services/
 │   └── ui/

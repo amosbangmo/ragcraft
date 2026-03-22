@@ -153,4 +153,4 @@ LLM = ChatOpenAI(
     model=_get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
     temperature=float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
 )
-# TODO(clean-arch): inject :class:`~src.infrastructure.llm.answer_generator.LLMAnswerGenerator` at the composition root instead of reading ``LLM`` here for services.
+# NOTE: module-level ``LLM`` / ``EMBEDDINGS`` singletons; moving construction behind the composition root is a separate refactor (see ARCHITECTURE_TARGET.md).

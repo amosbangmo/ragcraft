@@ -1,5 +1,13 @@
 # Running Streamlit with FastAPI (in-process vs HTTP backend)
 
+## Strategic vs local-only
+
+| Kind | What | Why keep it |
+|------|------|-------------|
+| **Strategic** | FastAPI as the HTTP backend; `BackendClient` + `HttpBackendClient` / `InProcessBackendClient` | Single composition root; Streamlit and future SPAs share the same capabilities. |
+| **Strategic** | `RAGCraftApp` + in-process mode | Fast local UI without uvicorn; thin wrapper over `BackendApplicationContainer`. |
+| **Local / transitional** | Streamlit `session_state` chain cache, optional legacy query-log file import | UX and dev utilities; not part of the public API contract. |
+
 ## Modes
 
 | Mode | `RAGCRAFT_BACKEND_CLIENT` | What calls use cases |

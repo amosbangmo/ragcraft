@@ -1,4 +1,4 @@
-"""Streamlit session adapter for optional legacy chain caching (mocked ``streamlit``)."""
+"""Streamlit session adapter for optional chain-handle caching (mocked ``streamlit``)."""
 
 from __future__ import annotations
 

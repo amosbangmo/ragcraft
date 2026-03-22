@@ -1,4 +1,4 @@
-"""Application-layer HTTP wire DTOs (parity with legacy ``apps.api.schemas.serialization`` tests)."""
+"""Application-layer HTTP wire DTOs (complements ``apps.api.schemas.serialization`` re-exports)."""
 
 from __future__ import annotations
 

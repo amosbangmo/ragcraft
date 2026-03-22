@@ -1,10 +1,10 @@
 """
-Legacy Streamlit façade over :class:`~src.composition.BackendApplicationContainer`.
+In-process backend adapter over :class:`~src.composition.BackendApplicationContainer`.
 
-**Compatibility only:** new code should depend on :class:`~src.composition.BackendApplicationContainer` /
-:func:`~src.composition.build_backend` (or FastAPI ``Depends`` from ``apps.api.dependencies``). This class remains so existing ``pages/`` and
-``src/ui`` call sites keep working until they are migrated off the façade. Scheduled for removal once
-Streamlit uses the application container or HTTP boundaries directly — see ``docs/migration/ragcraftapp-deprecation.md``.
+Used by :class:`~src.frontend_gateway.in_process.InProcessBackendClient` when Streamlit runs **without**
+uvicorn (default local dev). **FastAPI** does not import this module; it uses the same container via
+``apps.api.dependencies``. New UI code should use :class:`~src.frontend_gateway.protocol.BackendClient`,
+not ``RAGCraftApp`` directly. See ``docs/migration/ragcraftapp-deprecation.md`` and ``ARCHITECTURE_TARGET.md``.
 """
 
 from __future__ import annotations
@@ -72,7 +72,7 @@ def _invalidate_process_and_streamlit_chain_cache(project_id: str) -> None:
 
 class RAGCraftApp:
     """
-    Thin Streamlit compatibility wrapper around :class:`BackendApplicationContainer`.
+    In-process wrapper around :class:`BackendApplicationContainer` for the Streamlit process.
 
     Ingest/delete/reindex entrypoints delegate to the same container use cases as the HTTP API and
     return application DTOs (:class:`~src.application.ingestion.dtos.IngestDocumentResult`,
