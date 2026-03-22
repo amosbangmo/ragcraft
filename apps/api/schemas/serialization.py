@@ -1,36 +1,19 @@
-"""Convert domain objects (e.g. LangChain documents) to JSON-safe structures for API responses."""
+"""
+Map domain / application results to JSON-safe dicts for FastAPI response models.
+
+**Backward compatibility:** response key names and nested document shape (``page_content``,
+``metadata``) are unchanged from earlier releases. Framework-specific handling lives in
+:mod:`src.infrastructure.web.json_normalization` — this module stays free of LangChain imports.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.documents import Document
-
+from src.domain.benchmark_result import BenchmarkResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.rag_response import RAGResponse
-
-
-def jsonify_value(value: Any) -> Any:
-    if isinstance(value, Document):
-        return {
-            "page_content": value.page_content,
-            "metadata": {str(k): jsonify_value(v) for k, v in dict(value.metadata or {}).items()},
-        }
-    if isinstance(value, dict):
-        return {str(k): jsonify_value(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [jsonify_value(x) for x in value]
-    if isinstance(value, tuple):
-        return [jsonify_value(x) for x in value]
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    if hasattr(value, "value") and not isinstance(value, type):
-        inner = getattr(value, "value")
-        if isinstance(inner, (str, int, float, bool)):
-            return inner
-    if hasattr(value, "to_dict") and callable(value.to_dict):
-        return jsonify_value(value.to_dict())
-    return str(value)
+from src.infrastructure.web.json_normalization import jsonify_value
 
 
 def pipeline_build_result_to_api_dict(result: PipelineBuildResult) -> dict[str, Any]:
@@ -61,3 +44,8 @@ def ingest_document_result_to_api_dict(result: Any) -> dict[str, Any]:
         "replacement_info": jsonify_value(result.replacement_info),
         "diagnostics": result.diagnostics.to_dict(),
     }
+
+
+def benchmark_result_to_api_dict(result: BenchmarkResult) -> dict[str, Any]:
+    """Normalize benchmark payloads so row ``data`` cannot leak non-JSON types."""
+    return jsonify_value(result.to_dict())

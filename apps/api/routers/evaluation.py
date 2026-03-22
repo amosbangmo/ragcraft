@@ -21,6 +21,7 @@ from apps.api.dependencies import (
     get_run_manual_evaluation_use_case,
     get_update_qa_dataset_entry_use_case,
 )
+from apps.api.schemas.serialization import benchmark_result_to_api_dict
 from apps.api.schemas.evaluation import (
     BenchmarkExportStubResponse,
     BenchmarkResultResponse,
@@ -101,7 +102,7 @@ def post_dataset_benchmark_run(
         enable_query_rewrite=body.enable_query_rewrite,
         enable_hybrid_retrieval=body.enable_hybrid_retrieval,
     )
-    return BenchmarkResultResponse.model_validate(result.to_dict())
+    return BenchmarkResultResponse.model_validate(benchmark_result_to_api_dict(result))
 
 
 @router.get(
