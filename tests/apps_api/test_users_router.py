@@ -145,6 +145,45 @@ def test_patch_me_invalid_username(users_app: tuple[TestClient, FastAPI]) -> Non
     assert r.status_code == 400
 
 
+def test_patch_me_whitespace_only_returns_400(users_app: tuple[TestClient, FastAPI]) -> None:
+    """Strip must not turn required fields empty (Pydantic allows single-space strings)."""
+    tc, app = users_app
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
+    r = tc.patch(
+        "/users/me",
+        headers=_hdr(),
+        json={"username": "   ", "display_name": "   "},
+    )
+    assert r.status_code == 400
+    assert "required" in r.json().get("message", "").lower()
+
+
+def test_patch_me_not_found(users_app: tuple[TestClient, FastAPI]) -> None:
+    tc, app = users_app
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(None)
+    r = tc.patch(
+        "/users/me",
+        headers=_hdr(),
+        json={"username": "alice_new", "display_name": "Alice"},
+    )
+    assert r.status_code == 404
+
+
+def test_post_password_user_not_found(users_app: tuple[TestClient, FastAPI]) -> None:
+    tc, app = users_app
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(None)
+    r = tc.post(
+        "/users/me/password",
+        headers=_hdr(),
+        json={
+            "current_password": "any",
+            "new_password": "newpass12",
+            "confirm_new_password": "newpass12",
+        },
+    )
+    assert r.status_code == 404
+
+
 def test_patch_me_success(users_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = users_app
     app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
@@ -237,6 +276,64 @@ def test_post_avatar_rejects_bad_extension(
         "/users/me/avatar",
         headers=_hdr(),
         files={"file": ("evil.exe", b"xxxx", "application/octet-stream")},
+    )
+    assert r.status_code == 400
+
+
+def test_post_avatar_rejects_mime_mismatch(
+    users_app: tuple[TestClient, FastAPI],
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tc, app = users_app
+    import apps.api.routers.users as users_mod
+
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
+    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    png = b"\x89PNG\r\n\x1a\n"
+    r = tc.post(
+        "/users/me/avatar",
+        headers=_hdr(),
+        files={"file": ("pic.png", png, "text/plain")},
+    )
+    assert r.status_code == 400
+
+
+def test_post_avatar_rejects_invalid_image_bytes(
+    users_app: tuple[TestClient, FastAPI],
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tc, app = users_app
+    import apps.api.routers.users as users_mod
+
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
+    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    r = tc.post(
+        "/users/me/avatar",
+        headers=_hdr(),
+        files={"file": ("pic.png", b"not-a-real-png-file", "image/png")},
+    )
+    assert r.status_code == 400
+
+
+def test_post_avatar_rejects_oversize(
+    users_app: tuple[TestClient, FastAPI],
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tc, app = users_app
+    import apps.api.routers.users as users_mod
+
+    app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
+    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    prefix = b"\x89PNG\r\n\x1a\n"
+    over = 2 * 1024 * 1024 - len(prefix) + 1
+    raw = prefix + b"0" * over
+    r = tc.post(
+        "/users/me/avatar",
+        headers=_hdr(),
+        files={"file": ("huge.png", raw, "image/png")},
     )
     assert r.status_code == 400
 

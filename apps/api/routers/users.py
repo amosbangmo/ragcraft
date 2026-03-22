@@ -143,6 +143,7 @@ async def post_avatar(
             user_id=user_id,
             suffix=suffix,
             raw=raw,
+            content_type=file.content_type,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

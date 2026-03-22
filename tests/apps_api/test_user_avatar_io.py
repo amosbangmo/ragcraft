@@ -51,3 +51,20 @@ def test_write_avatar_respects_max_size(tmp_path, monkeypatch: pytest.MonkeyPatc
             suffix=".png",
             raw=b"123456789",
         )
+
+
+def test_validate_avatar_mime_rejects_mismatch() -> None:
+    with pytest.raises(ValueError, match="Content-Type"):
+        av.validate_avatar_mime(".png", "image/jpeg")
+
+
+def test_validate_avatar_magic_requires_real_header(tmp_path) -> None:
+    data_root = tmp_path / "data"
+    with pytest.raises(ValueError, match="not a valid image"):
+        av.write_avatar_bytes(
+            data_root=data_root,
+            user_id="u1",
+            suffix=".png",
+            raw=b"fake",
+            content_type="image/png",
+        )
