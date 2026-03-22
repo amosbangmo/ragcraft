@@ -4,7 +4,7 @@
 
 RAGCraft was refactored so that **RAG orchestration lives in the application layer** (`src/application/use_cases/chat/` and `orchestration/`), **composition only wires** services and use cases, and **infrastructure provides technical adapters** behind ports. FastAPI and the Streamlit-facing **`BackendClient`** both resolve **the same use cases** from **`BackendApplicationContainer`**.
 
-The repository **qualifies as a practical Clean Architecture implementation** for the RAG path: clear layer boundaries, enforced by tests, with a few **documented trade-offs** (retrieval-stage sequencing inside `SummaryRecallService`, some concrete adapter injection, legacy eval helpers).
+The repository **qualifies as a practical Clean Architecture implementation** for the RAG path: clear layer boundaries, enforced by tests, with a few **documented trade-offs** (retrieval-stage sequencing inside `SummaryRecallAdapter`, some concrete adapter injection, legacy eval helpers).
 
 ---
 
@@ -32,7 +32,7 @@ The repository **qualifies as a practical Clean Architecture implementation** fo
 
 | Area | Why it stays |
 |------|----------------|
-| **`SummaryRecallService`** | Implements **`SummaryRecallStagePort`**; holds query rewrite, hybrid/RRF, and related retrieval **sequencing**. Further splitting would be a separate refactor. |
+| **`SummaryRecallAdapter`** | Implements **`SummaryRecallStagePort`**; holds query rewrite, hybrid recall, and related retrieval **sequencing**. RRF merge policy is **`src.domain.summary_document_fusion`**. |
 | **`post_recall_stage_adapters.py`** | Thin wrappers around rerank, prompt build, docstore, etc. — **technical** steps only; order is in application. |
 | **`AnswerGenerationService`** | LLM invocation; injected into ask / generate use cases. |
 | **SQLite, FAISS, Unstructured, evaluation row helpers** | Persistence and model I/O. |
@@ -48,7 +48,7 @@ The repository **qualifies as a practical Clean Architecture implementation** fo
 | **Domain** | Types, ports, no framework |
 | **Application** | Use cases, RAG **post-recall** order, evaluation **use case** flows, policies |
 | **Composition** | Graph construction, **`chat_rag_wiring`**, **`post_recall_stage_ports_from_services`**, Streamlit transcript override in **`streamlit_backend_factory`** |
-| **Infrastructure** | Adapter implementations, retrieval **implementation** inside `SummaryRecallService` |
+| **Infrastructure** | Adapter implementations, retrieval **implementation** inside `SummaryRecallAdapter` |
 | **`apps/api`** | HTTP mapping → use cases |
 | **`frontend_gateway`** | **`BackendClient`** implementations only |
 
@@ -66,7 +66,7 @@ The repository **qualifies as a practical Clean Architecture implementation** fo
 
 ## Remaining debt (if any)
 
-- Narrow **`SummaryRecallService`** behind smaller ports or move policy-heavy steps toward application helpers.
+- Narrow **`SummaryRecallAdapter`** behind smaller ports if retrieval-stage sequencing should move further toward application helpers.
 - Migrate remaining **`ManualEvaluationService.evaluate_question`** call sites to **`RunManualEvaluationUseCase`** and remove duplicate sequencing.
 - Replace **`X-User-Id`** with verified principals when product requires it.
 - Optionally introduce **`AnswerGenerationPort`** and inject a single adapter implementation.

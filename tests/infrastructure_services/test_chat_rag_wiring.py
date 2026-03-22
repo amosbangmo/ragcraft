@@ -104,8 +104,8 @@ class _ChatRagWiringHarness:
         self.subgraph.config = value
 
     @property
-    def summary_recall_service(self):
-        return self.subgraph.summary_recall_service
+    def summary_recall_adapter(self):
+        return self.subgraph.summary_recall_adapter
 
     @property
     def post_recall_stage_services(self):
@@ -167,7 +167,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_adapter.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -190,7 +190,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_adapter.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -214,7 +214,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_adapter.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -238,7 +238,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = harness.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_adapter.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -252,7 +252,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
         project = Project(user_id="u1", project_id="p1")
 
         with patch.object(
-            harness.summary_recall_service,
+            harness.summary_recall_adapter,
             "retrieve_summary_docs",
             return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
         ):
@@ -295,9 +295,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
         ]
 
         with (
-            patch.object(harness.summary_recall_service, "rewrite_question", return_value="rewritten"),
+            patch.object(harness.summary_recall_adapter, "rewrite_question", return_value="rewritten"),
             patch.object(
-                harness.summary_recall_service,
+                harness.summary_recall_adapter,
                 "retrieve_summary_docs",
                 return_value={
                     "vector_summary_docs": recalled_summary_docs,

@@ -11,6 +11,7 @@
 | **Composition** | `test_composition_import_boundaries.py` — no `src.frontend_gateway` imports in `src/composition/*.py` |
 | **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `src.infrastructure.adapters.rag`; post-recall adapter rules; assemble pipeline location |
 | **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class, container exposes `chat_rag_use_cases`, rag adapters don’t import chat use case types |
+| **RAG adapter layering** | `test_rag_adapter_application_imports.py` — `src/infrastructure/adapters/rag/*.py` must not import `src.application` (except `retrieval_settings_service.py`) |
 | **UI surface** | `test_streamlit_import_guardrails.py` — pages/ui import rules |
 | **Regression flows** | `test_migration_regression_flows.py` — smoke imports for `build_backend` |
 
@@ -25,6 +26,7 @@ Shared helper: **`tests/architecture/import_scanner.py`**.
 ## Service / use case unit tests
 
 - **`tests/application/`** — use case behavior with mocks.
+- **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py` for RRF merge).
 - **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` for composition-wired RAG subgraph).
 
 ## What architecture tests do *not* prove

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from src.application.chat.policies.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.retrieval_settings import RetrievalSettings
+from src.domain.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.domain.summary_recall_document import SummaryRecallDocument
 
 

@@ -24,7 +24,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:**
 
-- **`adapters/`** — concrete implementations: RAG stack (`docstore_service`, `summary_recall_service`, `post_recall_stage_adapters`, …), evaluation, workspace, SQLite repositories, `chat_transcript/memory_chat_transcript.py` (default process-local transcript for the service graph), query logging, vector store helpers, ingestion loaders, etc.
+- **`adapters/`** — concrete implementations: RAG stack (`docstore_service`, `summary_recall_adapter`, `post_recall_stage_adapters`, …), evaluation, workspace, SQLite repositories, `chat_transcript/memory_chat_transcript.py` (default process-local transcript for the service graph), query logging, vector store helpers, ingestion loaders, etc.
 - **`persistence/`**, **`vectorstores/`**, **`caching/`**, **`logging/`** — technical subsystems.
 
 **Rule:** Adapters implement **narrow** behaviors behind ports. Post–summary-recall **sequencing** lives in application (`assemble_pipeline_from_recall`); adapters behind `PostRecallStagePorts` perform single technical steps.

@@ -22,7 +22,7 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 **File:** `src/application/use_cases/chat/orchestration/recall_then_assemble_pipeline.py`
 
-1. **`summary_recall_service.summary_recall_stage(...)`** — implements **`SummaryRecallStagePort`** (infrastructure: `SummaryRecallService`).
+1. **`SummaryRecallAdapter.summary_recall_stage(...)`** — implements **`SummaryRecallStagePort`** (infrastructure: `summary_recall_adapter.py`).
 2. **`pipeline_assembly_service.build(...)`** — implements **`PipelineAssemblyPort`**. Implementation is **`ApplicationPipelineAssembly`** in application, which calls **`assemble_pipeline_from_recall`** (`assemble_pipeline_from_recall.py`).
 
 **Post-recall assembly** (`assemble_pipeline_from_recall`): application code sequences:
@@ -53,4 +53,4 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Known sequencing still in infrastructure
 
-- **`SummaryRecallService`** still contains substantial **retrieval-stage** sequencing (rewrite, hybrid recall, RRF, etc.) behind **`SummaryRecallStagePort`**. The **post-recall** assembly order is application-owned; recall **ordering** inside that service is an acceptable trade-off unless further split.
+- **`SummaryRecallAdapter`** still contains substantial **retrieval-stage** sequencing (rewrite, hybrid recall, RRF, etc.) behind **`SummaryRecallStagePort`**. Weighted RRF merge lives in **`src.domain.summary_document_fusion`**. The **post-recall** assembly order is application-owned; recall **ordering** inside that adapter is an acceptable trade-off unless further split.

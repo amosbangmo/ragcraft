@@ -7,7 +7,7 @@ Orchestration lives in application use cases; this module only constructs the ob
 
 **Orchestration inventory (remaining hotspots adjacent to this wiring):**
 
-- :class:`~src.infrastructure.adapters.rag.summary_recall_service.SummaryRecallService` — implements
+- :class:`~src.infrastructure.adapters.rag.summary_recall_adapter.SummaryRecallAdapter` — implements
   :class:`~src.application.use_cases.chat.orchestration.ports.SummaryRecallStagePort`; still contains
   substantial retrieval-stage sequencing (target: keep port surface stable; move policy-heavy ordering into
   application orchestration helpers if needed).
@@ -56,7 +56,7 @@ from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
 )
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
-from src.infrastructure.adapters.rag.summary_recall_service import SummaryRecallService
+from src.infrastructure.adapters.rag.summary_recall_adapter import SummaryRecallAdapter
 from src.infrastructure.adapters.rag.table_qa_service import TableQAService
 from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
@@ -82,7 +82,7 @@ class RagRetrievalSubgraph:
     """Shared RAG infrastructure services (built alongside chat use-case wiring)."""
 
     table_qa_service: TableQAService
-    summary_recall_service: SummaryRecallService
+    summary_recall_adapter: SummaryRecallAdapter
     pipeline_assembly: ApplicationPipelineAssembly
     post_recall_stage_services: PostRecallStageServices
     answer_generation_service: AnswerGenerationService
@@ -107,7 +107,7 @@ def build_rag_retrieval_subgraph(
 ) -> RagRetrievalSubgraph:
     rs = retrieval_settings_service or RetrievalSettingsService()
     table_qa = TableQAService()
-    summary = SummaryRecallService(
+    summary = SummaryRecallAdapter(
         vectorstore_service=vectorstore_service,
         docstore_service=docstore_service,
         retrieval_settings_service=rs,
@@ -124,7 +124,7 @@ def build_rag_retrieval_subgraph(
     answer = answer_generation_service or AnswerGenerationService()
     return RagRetrievalSubgraph(
         table_qa_service=table_qa,
-        summary_recall_service=summary,
+        summary_recall_adapter=summary,
         pipeline_assembly=assembly,
         post_recall_stage_services=post_recall,
         answer_generation_service=answer,
@@ -148,14 +148,14 @@ def build_chat_rag_use_cases(
 ) -> ChatRagUseCases:
     emitter = PipelineQueryLogEmitter(query_log)
     build_uc = BuildRagPipelineUseCase(
-        summary_recall_service=subgraph.summary_recall_service,
+        summary_recall_service=subgraph.summary_recall_adapter,
         pipeline_assembly_service=subgraph.pipeline_assembly,
         query_log_emitter=emitter,
     )
     inspect_uc = InspectRagPipelineUseCase(
         build_pipeline=partial(build_uc.execute, emit_query_log=False),
     )
-    preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_service)
+    preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_adapter)
     generate_uc = GenerateAnswerFromPipelineUseCase(
         answer_generation_service=subgraph.answer_generation_service
     )

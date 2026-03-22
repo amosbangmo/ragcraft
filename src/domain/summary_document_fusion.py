@@ -1,7 +1,7 @@
 """
 Weighted Reciprocal Rank Fusion (RRF) over two ranked summary document lists.
 
-Used after parallel semantic (FAISS) and lexical (BM25) recall paths merge into one ordering.
+Domain policy used after parallel semantic (FAISS) and lexical (BM25) recall paths merge.
 """
 
 from __future__ import annotations

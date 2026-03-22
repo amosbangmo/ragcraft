@@ -5,7 +5,6 @@ from dataclasses import replace
 from time import perf_counter
 from typing import Any
 
-from src.application.chat.policies.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.pipeline_payloads import SummaryRecallResult
 from src.domain.project import Project
@@ -17,6 +16,7 @@ from src.domain.retrieval_filters import (
 )
 from src.domain.retrieval_settings import RetrievalSettings
 from src.domain.retrieval_strategy import RetrievalStrategy
+from src.domain.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.infrastructure.adapters.summary_recall_document_adapter import summary_recall_document_from_langchain
 from src.infrastructure.adapters.rag.adaptive_retrieval_service import AdaptiveRetrievalService
@@ -31,9 +31,10 @@ from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreServi
 logger = logging.getLogger(__name__)
 
 
-class SummaryRecallService:
+class SummaryRecallAdapter:
     """
-    Query rewrite, intent classification, adaptive retrieval strategy, hybrid recall,
+    Infrastructure adapter for :class:`~src.application.use_cases.chat.orchestration.ports.SummaryRecallStagePort`:
+    query rewrite, intent classification, adaptive retrieval strategy, hybrid recall,
     and RRF merge over summary-level documents.
     """
 
@@ -154,7 +155,6 @@ class SummaryRecallService:
         secondary_docs: list[SummaryRecallDocument],
         max_docs: int | None = None,
     ) -> list[SummaryRecallDocument]:
-        """Thin adapter over :func:`merge_summary_documents_weighted_rrf`."""
         return merge_summary_documents_weighted_rrf(
             settings=settings,
             primary_docs=primary_docs,
