@@ -7,7 +7,7 @@
 | **HTTP chat** | `apps/api/routers/chat.py` → `AskQuestionUseCase` via `apps/api/dependencies.py` |
 | **In-process UI** | `src/frontend_gateway/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
 | **Pipeline build only** | `BuildRagPipelineUseCase` (inspect/compare/eval paths) |
-| **Inspect pipeline** | `InspectRagPipelineUseCase` — injected `build_pipeline` is `partial(BuildRagPipelineUseCase.execute, emit_query_log=False)` from composition |
+| **Inspect pipeline** | `InspectRagPipelineUseCase` — depends on **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance and inspect calls **`execute(..., emit_query_log=False)`** |
 | **Preview summary recall** | `PreviewSummaryRecallUseCase` |
 | **Answer from built pipeline** | `GenerateAnswerFromPipelineUseCase` |
 
@@ -29,7 +29,7 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ### Post-recall assembly
 
-**`pipeline_assembly_service.build(...)`** implements **`PipelineAssemblyPort`**. Implementation is **`ApplicationPipelineAssembly`**, delegating to **`assemble_pipeline_from_recall`**, which sequences **`post_recall_pipeline_steps`** (`step_docstore_hydration`, `step_section_expansion`, …).
+**`ApplicationPipelineAssembly`** (bound into **`BuildRagPipelineUseCase`** as its assembly collaborator) implements **`PipelineAssemblyPort`**: **`build(...)`** delegates to **`assemble_pipeline_from_recall`**, which sequences **`post_recall_pipeline_steps`** (`step_docstore_hydration`, `step_section_expansion`, …).
 
 **Technical implementations:** `src/infrastructure/adapters/rag/post_recall_stage_adapters.py` — one thin adapter class per port, delegating to existing services.
 
@@ -50,7 +50,7 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 - **`execute_rag_inspect_then_answer_for_evaluation`** — `src/application/use_cases/evaluation/rag_pipeline_orchestration.py`; coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`** and latency merge for one question.
 - **`RagInspectAnswerRun`** — `src/domain/rag_inspect_answer_run.py`; explicit DTO crossing into benchmark row processing (`to_row_evaluation_dict()` for **`RowEvaluationService`**).
-- **`RunManualEvaluationUseCase`** / **`RunGoldQaDatasetEvaluationUseCase`** own the scenario; **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase`** still normalizes runner output via **`_coerce_gold_qa_runner_result`** so dict-based runners remain valid for legacy call sites.
+- **`RunManualEvaluationUseCase`** / **`RunGoldQaDatasetEvaluationUseCase`** own the scenario; **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
 
 ## Where answer generation happens
 

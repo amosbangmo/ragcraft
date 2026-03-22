@@ -49,7 +49,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 | `backend_composition.py` | `BackendComposition` — technical services only. Uses **`build_evaluation_service()`** from **`evaluation_wiring.py`** for the evaluation stack. |
 | `evaluation_wiring.py` | Builds **`RowEvaluationService`**, **`BenchmarkExecutionUseCase`**, **`GoldQaBenchmarkAdapter`**, **`EvaluationService`**. |
 | `application_container.py` | `BackendApplicationContainer` — memoized use cases, delegates to `chat_rag_wiring` for the RAG bundle. |
-| `chat_rag_wiring.py` | Builds `RagRetrievalSubgraph` and `ChatRagUseCases`; wires **`InspectRagPipelineUseCase`** with **`partial(build_rag_pipeline.execute, emit_query_log=False)`**. |
+| `chat_rag_wiring.py` | Builds `RagRetrievalSubgraph` and `ChatRagUseCases`; wires **`InspectRagPipelineUseCase`** with the same **`BuildRagPipelineUseCase`** instance as **`RetrievalPort`**, which calls **`execute(..., emit_query_log=False)`** (no `partial` indirection). |
 | `wiring.py` | Process-scoped chain cache invalidation hook for FastAPI. |
 
 **Does not belong:** business flow sequencing (beyond one administrative `execute` for chain invalidation), Streamlit imports.
@@ -60,13 +60,13 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`.
 
-**Rule:** Routers depend on **use cases** (or dependency callables that return them), not on `src.infrastructure.adapters.*` directly.
+**Rule:** The whole **`apps/api`** package must not import **`src.infrastructure.*`** (including **`dependencies.py`**); routers resolve **use cases** via **`Depends`** → **`BackendApplicationContainer`**. **`MemoryChatTranscript`** for the HTTP worker comes from **`src.application.frontend_support.memory_chat_transcript`**.
 
 ## `src/frontend_gateway/`
 
-**Belongs here:** `BackendClient` protocol, `HttpBackendClient`, `InProcessBackendClient`, HTTP transport/payloads, Streamlit auth glue, `StreamlitChatTranscript` (session-backed transcript), `streamlit_backend_factory`.
+**Belongs here:** `BackendClient` protocol, `HttpBackendClient`, `InProcessBackendClient`, HTTP transport/payloads, Streamlit auth glue, `StreamlitChatTranscript` (session-backed transcript), `streamlit_backend_factory`, factories under **`factories/`** (e.g. chat service wiring for Streamlit).
 
-**Rule:** No imports of `src.infrastructure`. HTTP placeholders come from `src.application.frontend_support`. Gold-QA **`pipeline_runner`** types may return **`RagInspectAnswerRun`** or a legacy dict (see **`BenchmarkExecutionUseCase`**).
+**Rule:** No imports of `src.infrastructure`. HTTP placeholders come from `src.application.frontend_support`. Gold-QA **`pipeline_runner`** must return **`RagInspectAnswerRun`** (**`BenchmarkExecutionUseCase`** raises **`TypeError`** otherwise).
 
 ## Other roots
 
@@ -75,3 +75,41 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 - **`src/ui/`**, **`pages/`**, **`streamlit_app.py`** — Streamlit UI; must use `BackendClient`, not domain/infrastructure/composition directly (enforced by tests).
 
 **Dependency direction (target):** delivery → application use cases → domain ports ← infrastructure adapters. Composition instantiates and injects.
+
+## Layer dependency diagram (runtime)
+
+```mermaid
+flowchart TB
+  subgraph delivery["Delivery"]
+    API["apps/api"]
+    GW["src/frontend_gateway"]
+    UI["pages / src/ui / streamlit_app"]
+  end
+  subgraph comp["Composition"]
+    COMP["src/composition"]
+  end
+  subgraph app["Application"]
+    UC["use_cases + orchestration"]
+    FS["frontend_support"]
+  end
+  subgraph dom["Domain"]
+    PORTS["ports + entities + DTOs"]
+  end
+  subgraph infra["Infrastructure"]
+    ADP["adapters"]
+    TECH["persistence / vectorstores / …"]
+  end
+  API --> UC
+  API --> COMP
+  GW --> UC
+  GW --> COMP
+  UI --> GW
+  COMP --> UC
+  COMP --> ADP
+  UC --> PORTS
+  ADP --> PORTS
+  TECH --> PORTS
+  FS --> PORTS
+```
+
+**Edges omitted for brevity:** **`src/auth`** and **`src/core`** are shared helpers; **`COMP`** also imports application types and domain ports when constructing the graph.

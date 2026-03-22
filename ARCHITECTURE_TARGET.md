@@ -5,7 +5,7 @@ Short form of the layout enforced in code. **Canonical detail:** `docs/architect
 ## HTTP backend — `apps/api/`
 
 - **FastAPI** (`apps/api/main.py`), routers, schemas, **`apps/api/dependencies.py`** → **`BackendApplicationContainer`** and use cases.
-- Routers use **use cases**, not `src.infrastructure` directly (tests enforce).
+- **`dependencies.py`** and routers use **composition + use cases** only; the **`apps/api`** tree must not import **`src.infrastructure.*`** (AST scan covers all modules, not only routers).
 
 ## Streamlit — reference UI client
 
@@ -33,7 +33,7 @@ See **`docs/README.md`** (local development) for env vars.
 | **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
 | **`src/auth/`** | Shared auth helpers. |
 
-**Composition chat transcript:** default **`MemoryChatTranscript`** (infrastructure) on the service graph; Streamlit overrides via **`streamlit_backend_factory`**.
+**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. An infra-local **`MemoryChatTranscript`** still exists for adapter-adjacent use but must not be imported from **`apps/api`**.
 
 ## Removed legacy paths
 

@@ -13,6 +13,7 @@
 | **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `src.infrastructure.adapters.rag`; post-recall adapter rules; assemble pipeline + steps module location |
 | **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class, container exposes `chat_rag_use_cases`, rag adapters don’t import chat use case types |
 | **Adapter → application imports** | `test_adapter_application_imports.py` — all of `src/infrastructure/adapters/**/*.py` must not import `src.application` except the explicit allowlist (today: `rag/retrieval_settings_service.py`) |
+| **Chat RAG port wiring** | `test_application_chat_rag_boundary_ports.py` — inspect / answer-generation boundaries stay on domain ports |
 | **UI surface** | `test_streamlit_import_guardrails.py` — pages/ui import rules |
 | **Regression flows** | `test_migration_regression_flows.py` — smoke imports for `build_backend` |
 

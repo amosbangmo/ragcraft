@@ -15,7 +15,7 @@ pytest tests/architecture -q
 | **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
 | **Infrastructure adapters** | **Domain** always; **`src.application`** only where the codebase explicitly allows (see below) |
 | **Composition** | Domain ports, infrastructure adapters, application use cases for typing/wiring; **not** `src.frontend_gateway` |
-| **`apps/api`** | FastAPI, `src.composition`, `src.application` (types), **not** `streamlit`, **`src.infrastructure`** in routers |
+| **`apps/api`** | FastAPI, `src.composition`, `src.application` (types + e.g. **`frontend_support`** transcript), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
 | **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
 | **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
 
@@ -40,7 +40,9 @@ pytest tests/architecture -q
 5. **Reintroducing** `src/backend`, `src/adapters`, `src/infrastructure/services` — removed; tests fail if directories or imports return.
 6. **New `rag_service.py`** orchestration façade under infrastructure that constructs chat use cases — forbidden; see **`tests/architecture/test_no_rag_service_facade.py`**.
 
-## Duplicate `MemoryChatTranscript`
+## `MemoryChatTranscript` (two modules, one port)
 
-- **`src/infrastructure/adapters/chat_transcript/memory_chat_transcript.py`** — default for **`build_backend_composition()`** (API process graph).
-- **`src/application/frontend_support/memory_chat_transcript.py`** — **`http_client_chat_service()`** so **`src/application`** does not import **`src.infrastructure`** (layer test). Same behavior; intentional small duplication.
+- **`src/application/frontend_support/memory_chat_transcript.py`** — used by **`apps/api/dependencies.py`** when calling **`build_backend_composition(chat_transcript=...)`** so the FastAPI package never imports **`src.infrastructure`**.
+- **`src/infrastructure/adapters/chat_transcript/memory_chat_transcript.py`** — same **`ChatTranscriptPort`** behavior for tests or any composition path that already lives next to other adapters; optional where callers prefer infra-local defaults.
+
+Both are thin in-memory implementations; keep API wiring on the **application** copy to satisfy layer guardrails.

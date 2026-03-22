@@ -68,7 +68,8 @@ def build_backend_composition(
     Assemble technical adapters only (no application use cases).
 
     Callers supply :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` (e.g.
-    :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript` for API workers, or a
+    :class:`~src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript` for FastAPI,
+    :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript` for tests or adapter-local defaults, or a
     gateway-built session transcript for Streamlit).
     """
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
