@@ -3,8 +3,8 @@ Gold QA evaluation, manual evaluation, QA dataset management, retrieval logs, an
 
 **Layout**
 - ``dtos`` — commands and queries for use-case entrypoints (plus ``GenerateQaDatasetCommand``).
-- ``src.application.use_cases.evaluation`` — orchestration; metric helpers stay in
-  :mod:`src.infrastructure.adapters.evaluation` behind :class:`~src.infrastructure.adapters.evaluation.evaluation_service.EvaluationService`.
+- ``src.application.use_cases.evaluation`` — orchestration; metric helpers and judges are implemented in
+  :mod:`src.infrastructure.adapters.evaluation` (wired via composition), e.g. :class:`~src.infrastructure.adapters.evaluation.evaluation_service.EvaluationService`.
 - ``benchmark_export_dtos`` / ``benchmark_report_formatter`` — portable report artifacts.
 
 **Composition** — :class:`~src.composition.application_container.BackendApplicationContainer` exposes

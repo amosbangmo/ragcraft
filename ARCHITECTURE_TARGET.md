@@ -30,11 +30,11 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 | Location | Role |
 |----------|------|
 | **`src/domain/`** | Entities, value objects, ports (protocols). No FastAPI, Streamlit, SQLite drivers, or LangChain imports. Summary recall uses **`SummaryRecallDocument`**, not LangChain `Document`. |
-| **`src/application/`** | Use cases, DTOs, HTTP wire helpers, pure policies (e.g. `application/chat/policies/`). May import **`src.infrastructure.adapters`** only (concrete runtime adapters). |
+| **`src/application/`** | Use cases, DTOs, HTTP wire helpers, pure policies (e.g. `application/chat/policies/`), retrieval tuning (`retrieval_settings_tuner`). **No** `src.infrastructure` imports — composition wires adapters. Use cases do not import `src.frontend_gateway` (stubs may, for HTTP client placeholders). |
 | **`src/infrastructure/`** | **`adapters/`** (RAG stack, evaluation, workspace I/O, **SQLite user/asset/project-settings**, etc.), **`persistence/`**, **`vectorstores/`**, **`llm/`**, and other technical implementations. |
 | **`src/infrastructure/adapters/sqlite/`** | SQLite implementations of domain ports (users, assets, project settings). |
 | **`src/composition/`** | Wires the graph; **`build_backend()`** is the single production entry for the full container. |
-| **`src/frontend_gateway/`** | `BackendClient`, HTTP client, in-process adapter, Streamlit auth/session glue. Must not import **`src.infrastructure`** (stubs live under **`src/application/frontend_support/`**). |
+| **`src/frontend_gateway/`** | `BackendClient`, HTTP client, in-process adapter, Streamlit auth/session glue, **`streamlit_chat_transcript`** (`ChatService`). Must not import **`src.infrastructure`** (stubs live under **`src/application/frontend_support/`**). |
 | **`src/auth/`** | Authentication helpers shared by Streamlit and API-oriented flows. |
 
 **Dependency direction:** delivery (API, UI) → application use cases → domain; infrastructure implements ports.

@@ -43,16 +43,16 @@ class _UnsupportedProjectSettingsRepository:
 
 def http_client_chat_service() -> ChatTranscriptPort:
     """Chat transcript lives in Streamlit ``session_state`` even when RAG runs on the API."""
-    from src.infrastructure.adapters.chat.chat_service import ChatService
+    from src.frontend_gateway.streamlit_chat_transcript import ChatService
 
     return ChatService()
 
 
 def http_client_retrieval_settings_service() -> RetrievalPresetMergePort:
     """Pure preset/merge helpers without persisting (persistence goes through the API)."""
-    from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+    from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 
-    return RetrievalSettingsService()
+    return RetrievalSettingsTuner()
 
 
 def http_client_project_settings_repository() -> ProjectSettingsRepositoryPort:

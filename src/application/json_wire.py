@@ -9,15 +9,19 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.documents import Document
+
+def _is_document_like(value: Any) -> bool:
+    return hasattr(value, "page_content") and hasattr(value, "metadata") and not isinstance(value, type)
 
 
 def jsonify_value(value: Any) -> Any:
-    """Recursively normalize values for JSON (dicts, lists, LangChain ``Document``, etc.)."""
-    if isinstance(value, Document):
+    """Recursively normalize values for JSON (dicts, lists, document-like objects with page_content/metadata, etc.)."""
+    if _is_document_like(value):
         return {
-            "page_content": value.page_content,
-            "metadata": {str(k): jsonify_value(v) for k, v in dict(value.metadata or {}).items()},
+            "page_content": getattr(value, "page_content", "") or "",
+            "metadata": {
+                str(k): jsonify_value(v) for k, v in dict(getattr(value, "metadata", None) or {}).items()
+            },
         }
     if isinstance(value, dict):
         return {str(k): jsonify_value(v) for k, v in value.items()}

@@ -74,9 +74,9 @@ def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> Non
 
 def test_application_does_not_depend_on_ui_or_infrastructure(application_files: list[Path]) -> None:
     """
-    Application use cases must not depend on Streamlit or the API package.
+    Application use cases must not depend on Streamlit, the API package, or any infrastructure code.
 
-    Only ``src.infrastructure.adapters`` is allowed among infrastructure imports.
+    Wiring and concrete adapters belong in ``src/composition`` and ``src/infrastructure``.
     """
     violations: list[str] = []
     for path in application_files:
@@ -88,12 +88,11 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
             elif mod.startswith("src.adapters") or mod == "src.adapters":
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-            elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.adapters"):
+            elif mod.startswith("src.infrastructure"):
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     msg = (
         "Application layer must not import Streamlit, apps.api, the removed ``src.adapters`` package, "
-        "or infrastructure packages (except ``src.infrastructure.adapters``). "
-        "Use ports/DTOs and the composition root instead.\n"
+        "or any ``src.infrastructure`` subtree. Use ports/DTOs; wire implementations in composition.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

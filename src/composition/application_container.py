@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from src.auth.auth_service import AuthService
 from src.composition.backend_composition import BackendComposition, build_backend_composition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.adapters.chat.chat_service import ChatService
+from src.frontend_gateway.streamlit_chat_transcript import ChatService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.workspace.project_service import ProjectService

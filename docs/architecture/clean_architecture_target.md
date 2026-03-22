@@ -32,7 +32,7 @@ Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.p
 ## Allowed dependencies (summary)
 
 - **Domain** → `src.core` only from outer layers (shared config/exceptions as already allowed by tests); **no** `src.application`, `src.infrastructure`, `apps`, Streamlit, FastAPI, LangChain, `sqlite3`.
-- **Application** → `src.domain`, `src.core`, and — in the **current** codebase — `src.infrastructure.adapters` only (not `src.infrastructure.persistence`, `vectorstores`, `llm`, etc.). *Strategic target:* depend on **ports** only; compose concrete adapters in `src/composition/`.
+- **Application** → `src.domain`, `src.core`, and (for HTTP stub factories only) `src.frontend_gateway` where needed — **no** `src.infrastructure` imports. Use cases under `src/application/use_cases/` must not import `src.frontend_gateway`. Wire concrete adapters in `src/composition/`.
 - **Infrastructure (non-adapter)** → no `src.application`, no `streamlit`, no `apps`.
 - **Infrastructure adapters** → may import `src.application` (use cases/DTOs) where an adapter deliberately orchestrates around a use case; must not host **cross–use-case** application workflow.
 - **Composition** → application, domain, infrastructure, auth; no Streamlit/`apps`.
@@ -64,6 +64,9 @@ Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.p
 
 | Finding | Action |
 |---------|--------|
+| Retrieval preset/merge/validate logic in `RetrievalSettingsService` | **Moved** to `src/application/settings/retrieval_settings_tuner.py`; infrastructure keeps a thin subclass for composition typing. |
+| Streamlit `ChatService` under `infrastructure/adapters/chat` | **Moved** to `src/frontend_gateway/streamlit_chat_transcript.py`; composition imports it from the gateway. |
+| LangChain `Document` in ingestion / JSON wire | **Removed** from application; duck-typed summaries and document-like JSON normalization. |
 | `src/infrastructure/services/` | **Already absent** from the tree (logic lives in `src/infrastructure/adapters/` and `src/application/`). **Guard tests** prevent the package or imports from returning. |
 | SQLite port implementations lived under `src/adapters/sqlite/` | **Moved** to `src/infrastructure/adapters/sqlite/`; `src/adapters/` removed. |
 | `failure_analysis_service.py` only re-exported domain | **Removed**; callers import `FailureAnalysisService` from `src.domain.benchmark_failure_analysis`. |
@@ -74,9 +77,9 @@ Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.p
 These are **documented** as follow-up; not moved in this pass to avoid risky rewires:
 
 - **`PipelineAssemblyService`** (`src/infrastructure/adapters/rag/pipeline_assembly_service.py`) — coordinates many RAG adapters; ideal home is an application-layer pipeline orchestrator behind narrow ports, with adapters injected from composition.
-- **Application imports of `src.infrastructure.adapters`** in a few modules (e.g. `frontend_support`, `settings/retrieval_merge_default.py`) — strategic direction is to replace with ports + composition-only wiring.
+- **Pipeline assembly** and other RAG orchestration still concentrated in some infrastructure adapter modules — further extraction behind application ports as needed.
 - **`EvaluationService`** and similar **façades** in infrastructure — acceptable as adapter bundles while use cases own orchestration; further split can move pure orchestration into application and leave thin delegating adapters.
 
 ## Tests
 
-Boundary enforcement: `pytest tests/architecture -q`. Full suite: `pytest` from repo root.
+Boundary enforcement: `pytest tests/architecture -q` (includes `test_application_orchestration_purity` for application/use-case purity and router persistence guards). Full suite: `pytest` from repo root.

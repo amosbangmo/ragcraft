@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from pathlib import Path
-
-from langchain_core.documents import Document
+from typing import Any
 
 from src.application.ingestion.ingestion_diagnostics_log import log_ingestion_diagnostics
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
@@ -21,7 +20,7 @@ def finalize_ingestion_pipeline(
     user_id: str,
     project_id: str,
     source_file: str,
-    summary_documents: list[Document],
+    summary_documents: Sequence[Any],
     raw_assets: list[dict],
     diagnostics: IngestionDiagnostics,
     replacement_info: dict,
