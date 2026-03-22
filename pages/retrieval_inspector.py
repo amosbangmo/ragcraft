@@ -8,8 +8,12 @@ from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.retrieval_presets import PRESET_UI_LABELS, parse_retrieval_preset
 from src.domain.retrieval_settings import RetrievalSettings
 from src.auth.guards import require_authentication
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.frontend_gateway.ui_errors import (
+    DocStoreError,
+    LLMServiceError,
+    VectorStoreError,
+    get_user_error_message,
+)
 from src.ui.confidence_display import format_confidence_with_band
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header

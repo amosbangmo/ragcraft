@@ -15,7 +15,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.services.benchmark_comparison_service import LOWER_IS_BETTER_METRICS
+from src.domain.benchmark_comparison import LOWER_IS_BETTER_METRICS
+from src.domain.benchmark_failure_analysis import FailureAnalysisService
 from src.ui.evaluation_summary_metrics import (
     coerce_float_for_summary_metric as _coerce_float,
     render_summary_metric_from_mapping as _summary_metric,
@@ -176,7 +177,6 @@ def _resolve_failure_payload(
         return failures
     if not rows:
         return None
-    from src.services.failure_analysis_service import FailureAnalysisService
 
     analysis = FailureAnalysisService().analyze(list(rows))
     analysis.pop("row_failures", None)
@@ -718,8 +718,6 @@ def _render_health_overview(
     ):
         fail_payload = failures if isinstance(failures, dict) and failures else None
         if fail_payload is None and rows:
-            from src.services.failure_analysis_service import FailureAnalysisService
-
             full = FailureAnalysisService().analyze(list(rows))
             fail_payload = {k: v for k, v in full.items() if k != "row_failures"}
         counts = fail_payload.get("counts") if isinstance(fail_payload, dict) else None

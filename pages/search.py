@@ -9,8 +9,11 @@ from src.ui.retrieval_settings_panel import (
     retrieval_settings_to_request_dict,
 )
 from src.auth.guards import require_authentication
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, VectorStoreError
+from src.frontend_gateway.ui_errors import (
+    DocStoreError,
+    VectorStoreError,
+    get_user_error_message,
+)
 
 
 st.set_page_config(

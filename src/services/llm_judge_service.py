@@ -5,10 +5,8 @@ import re
 from typing import Any
 
 from src.core.config import LLM
+from src.domain.llm_judge_constants import JUDGE_FAILURE_REASON
 from src.domain.llm_judge_result import LLMJudgeResult
-
-# Sentinel for :meth:`LLMJudgeService._failure_result` (evaluation layer sets ``judge_failed`` from this).
-JUDGE_FAILURE_REASON = "judge_failure"
 
 
 class LLMJudgeService:

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from src.application.settings.dtos import UpdateProjectRetrievalSettingsCommand
 from src.domain.retrieval_presets import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -15,7 +14,11 @@ from src.domain.retrieval_presets import (
     parse_retrieval_preset,
 )
 from src.domain.retrieval_settings import RetrievalSettings
-from src.services.retrieval_settings_service import RetrievalSettingsService
+from src.frontend_gateway.retrieval_settings_merge import (
+    RetrievalPresetMergePort,
+    default_retrieval_preset_merge_port,
+)
+from src.frontend_gateway.settings_dtos import UpdateProjectRetrievalSettingsCommand
 
 if TYPE_CHECKING:
     from src.frontend_gateway.protocol import BackendClient
@@ -46,14 +49,14 @@ def build_ui_retrieval_settings(
     preset: str,
     enable_query_rewrite: bool | None = None,
     enable_hybrid_retrieval: bool | None = None,
-    service: RetrievalSettingsService | None = None,
+    service: RetrievalPresetMergePort | None = None,
 ) -> RetrievalSettings:
     """
     Preset-backed settings, optionally merged with advanced toggle overrides.
 
     Exposed for unit tests (preset mapping and merge behavior).
     """
-    svc = service or RetrievalSettingsService()
+    svc = service or default_retrieval_preset_merge_port()
     settings = svc.from_preset(preset)
     overrides: dict = {}
     if enable_query_rewrite is not None:
@@ -84,7 +87,7 @@ def _sync_retrieval_panel_from_backend(
     if st.session_state.get(_RETRIEVAL_PANEL_BOUND_PROJECT) == target:
         return
 
-    view = app.get_effective_retrieval_settings(user_id, project_id)
+    view = backend_client.get_effective_retrieval_settings(user_id, project_id)
     ps = view.preferences
     st.session_state["retrieval_preset"] = parse_retrieval_preset(ps.retrieval_preset).value
     st.session_state["retrieval_advanced"] = ps.retrieval_advanced
@@ -166,14 +169,14 @@ def render_retrieval_settings_panel(
     - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — used when advanced is on
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
 
-    When ``user_id``, ``project_id``, and ``app`` are set, loads/saves go through
-    :class:`~src.application.settings.use_cases.get_effective_retrieval_settings.GetEffectiveRetrievalSettingsUseCase`
+    When ``user_id``, ``project_id``, and ``backend_client`` are set, loads/saves use
+    :meth:`~src.frontend_gateway.protocol.BackendClient.get_effective_retrieval_settings`
     and
-    :class:`~src.application.settings.use_cases.update_project_retrieval_settings.UpdateProjectRetrievalSettingsUseCase`.
+    :meth:`~src.frontend_gateway.protocol.BackendClient.update_project_retrieval_settings`.
     """
     svc = service or (
         backend_client.retrieval_settings_service if backend_client is not None else None
-    ) or RetrievalSettingsService()
+    ) or default_retrieval_preset_merge_port()
 
     if "retrieval_preset" not in st.session_state:
         st.session_state["retrieval_preset"] = RetrievalPreset.BALANCED.value

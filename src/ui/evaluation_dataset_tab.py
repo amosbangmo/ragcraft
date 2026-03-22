@@ -11,11 +11,16 @@ import uuid
 
 import streamlit as st
 
-from src.frontend_gateway.protocol import BackendClient
-from src.core.error_utils import get_user_error_message
-from src.core.evaluation_flow_errors import map_evaluation_flow_exception
+from src.domain.benchmark_comparison import (
+    compare_benchmark_failure_counts,
+    compare_benchmark_summaries,
+)
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
-from src.services.benchmark_comparison_service import BenchmarkComparisonService
+from src.frontend_gateway.protocol import BackendClient
+from src.frontend_gateway.ui_errors import (
+    get_user_error_message,
+    map_evaluation_flow_exception,
+)
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_history_labels import (
@@ -260,7 +265,6 @@ def _render_dataset_evaluation_run_and_results(
     hist = _benchmark_history_for_project(project_id)
     if len(hist) >= 2:
         rev = list(reversed(hist))
-        cmp_svc = BenchmarkComparisonService()
         st.caption(
             "**A** is the baseline run; **B** is the candidate. Numeric deltas in the dashboard are **B − A** "
             "(positive usually means B is higher; latency and failure-type rates invert — see the comparison card)."
@@ -286,10 +290,10 @@ def _render_dataset_evaluation_run_and_results(
             sa = rev[ia].get("summary")
             sb = rev[ib].get("summary")
             if isinstance(sa, dict) and isinstance(sb, dict):
-                comparison_rows = cmp_svc.compare(sa, sb)
+                comparison_rows = compare_benchmark_summaries(sa, sb)
             fa = rev[ia].get("failures")
             fb = rev[ib].get("failures")
-            failure_comparison_rows = cmp_svc.compare_failure_counts(
+            failure_comparison_rows = compare_benchmark_failure_counts(
                 fa if isinstance(fa, dict) else None,
                 fb if isinstance(fb, dict) else None,
             )

@@ -1,9 +1,13 @@
 import streamlit as st
 
-from src.frontend_gateway.protocol import BackendClient
 from src.auth.guards import require_authentication
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
+from src.frontend_gateway.protocol import BackendClient
+from src.frontend_gateway.ui_errors import (
+    DocStoreError,
+    LLMServiceError,
+    VectorStoreError,
+    get_user_error_message,
+)
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.request_runner import (

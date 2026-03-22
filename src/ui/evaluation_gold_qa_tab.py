@@ -9,8 +9,11 @@ from typing import Any, cast
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient
-from src.core.error_utils import get_user_error_message
-from src.core.exceptions import DocStoreError, LLMServiceError
+from src.frontend_gateway.ui_errors import (
+    DocStoreError,
+    LLMServiceError,
+    get_user_error_message,
+)
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
 from src.ui.metric_help import render_metric_with_help
 from src.ui.request_runner import is_request_running, render_result_payload, run_request_action
