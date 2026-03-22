@@ -85,7 +85,7 @@ class RAGService:
         self._ask_question = AskQuestionUseCase(
             build_pipeline=lambda *args, **kwargs: self.build_pipeline(*args, **kwargs),
             answer_generation_service=self.answer_generation_service,
-            query_log_service=self.query_log_service,
+            query_log=self.query_log_service,
         )
 
     @property

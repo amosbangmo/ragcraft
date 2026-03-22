@@ -51,6 +51,7 @@ def _normalize_id_list(value: object) -> list[str] | None:
 
 
 class QueryLogService:
+    """Application query-log façade; implements :class:`~src.domain.ports.query_log_port.QueryLogPort`."""
     def __init__(self, repository: QueryLogStore | None = None) -> None:
         self._repository = repository or SQLiteQueryLogRepository()
 

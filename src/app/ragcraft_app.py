@@ -227,16 +227,16 @@ class RAGCraftApp:
             user_id=user_id,
             project_id=project_id,
             source_file=source_file,
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
 
     def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
         project = self.get_project(user_id, project_id)
         uc = DeleteDocumentUseCase(
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
         return uc.execute(
@@ -247,8 +247,8 @@ class RAGCraftApp:
         project = self.get_project(user_id, project_id)
         uc = IngestUploadedFileUseCase(
             ingestion_service=self.ingestion_service,
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
         return uc.execute(project, uploaded_file).as_payload()
@@ -257,8 +257,8 @@ class RAGCraftApp:
         project = self.get_project(user_id, project_id)
         uc = ReindexDocumentUseCase(
             ingestion_service=self.ingestion_service,
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
         return uc.execute(

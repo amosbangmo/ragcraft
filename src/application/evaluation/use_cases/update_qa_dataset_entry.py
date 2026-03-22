@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.services.qa_dataset_service import QADatasetService
+from src.domain.ports import QADatasetEntriesPort
 
 
 class UpdateQaDatasetEntryUseCase:
     """Update an existing QA row scoped to user and project."""
 
-    def __init__(self, *, qa_dataset_service: QADatasetService) -> None:
-        self._qa = qa_dataset_service
+    def __init__(self, *, qa_dataset: QADatasetEntriesPort) -> None:
+        self._qa = qa_dataset
 
     def execute(
         self,

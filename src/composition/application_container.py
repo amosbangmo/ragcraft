@@ -5,7 +5,7 @@ This is the primary integration boundary for FastAPI and for headless callers. U
 should not need to import this module if it goes through :class:`~src.app.ragcraft_app.RAGCraftApp`
 (legacy Streamlit façade), which delegates to a container built with the same
 :class:`~src.composition.backend_composition.BackendComposition` instance where shared singletons
-must align (for example ``QueryLogService``).
+must align (for example the :class:`~src.domain.ports.QueryLogPort` implementation).
 """
 
 from __future__ import annotations
@@ -152,8 +152,8 @@ class BackendApplicationContainer:
 
         return IngestUploadedFileUseCase(
             ingestion_service=self.ingestion_service,
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
 
@@ -163,8 +163,8 @@ class BackendApplicationContainer:
 
         return ReindexDocumentUseCase(
             ingestion_service=self.ingestion_service,
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
 
@@ -173,8 +173,8 @@ class BackendApplicationContainer:
         from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
 
         return DeleteDocumentUseCase(
-            docstore_service=self.docstore_service,
-            vectorstore_service=self.vectorstore_service,
+            asset_repository=self.docstore_service,
+            vector_index=self.vectorstore_service,
             invalidate_project_chain=self.invalidate_project_chain,
         )
 
@@ -186,7 +186,7 @@ class BackendApplicationContainer:
             CreateQaDatasetEntryUseCase,
         )
 
-        return CreateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service)
+        return CreateQaDatasetEntryUseCase(qa_dataset=self.qa_dataset_service)
 
     @cached_property
     def evaluation_list_qa_dataset_entries_use_case(self):
@@ -194,7 +194,7 @@ class BackendApplicationContainer:
             ListQaDatasetEntriesUseCase,
         )
 
-        return ListQaDatasetEntriesUseCase(qa_dataset_service=self.qa_dataset_service)
+        return ListQaDatasetEntriesUseCase(qa_dataset=self.qa_dataset_service)
 
     @cached_property
     def evaluation_run_manual_evaluation_use_case(self):
@@ -225,7 +225,7 @@ class BackendApplicationContainer:
             UpdateQaDatasetEntryUseCase,
         )
 
-        return UpdateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service)
+        return UpdateQaDatasetEntryUseCase(qa_dataset=self.qa_dataset_service)
 
     @cached_property
     def evaluation_delete_qa_dataset_entry_use_case(self):
@@ -233,14 +233,14 @@ class BackendApplicationContainer:
             DeleteQaDatasetEntryUseCase,
         )
 
-        return DeleteQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service)
+        return DeleteQaDatasetEntryUseCase(qa_dataset=self.qa_dataset_service)
 
     @cached_property
     def evaluation_generate_qa_dataset_use_case(self):
         from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
 
         return GenerateQaDatasetUseCase(
-            qa_dataset_service=self.qa_dataset_service,
+            qa_dataset=self.qa_dataset_service,
             qa_dataset_generation_service=self.qa_dataset_generation_service,
         )
 
@@ -260,7 +260,7 @@ class BackendApplicationContainer:
             ListRetrievalQueryLogsUseCase,
         )
 
-        return ListRetrievalQueryLogsUseCase(query_log_service=self.query_log_service)
+        return ListRetrievalQueryLogsUseCase(query_log=self.query_log_service)
 
 
 def build_backend_application_container(

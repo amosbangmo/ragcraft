@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from src.domain.evaluation.qa_question_key import normalized_qa_question_key
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
-from src.services.qa_dataset_service import QADatasetService
+from src.domain.ports import QADatasetEntriesPort
 
 from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from .delete_all_qa_dataset_entries import DeleteAllQaDatasetEntriesUseCase
@@ -19,10 +19,10 @@ class GenerateQaDatasetUseCase:
     def __init__(
         self,
         *,
-        qa_dataset_service: QADatasetService,
+        qa_dataset: QADatasetEntriesPort,
         qa_dataset_generation_service: QADatasetGenerationService,
     ) -> None:
-        self._qa = qa_dataset_service
+        self._qa = qa_dataset
         self._gen = qa_dataset_generation_service
 
     def execute(self, command: GenerateQaDatasetCommand) -> dict:
@@ -54,7 +54,7 @@ class GenerateQaDatasetUseCase:
             source_files=command.source_files,
         )
 
-        create_uc = CreateQaDatasetEntryUseCase(qa_dataset_service=self._qa)
+        create_uc = CreateQaDatasetEntryUseCase(qa_dataset=self._qa)
         created_entries = []
         skipped_duplicates = []
 

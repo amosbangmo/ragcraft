@@ -8,9 +8,8 @@ from langchain_core.documents import Document
 
 from src.application.ingestion.ingestion_diagnostics_log import log_ingestion_diagnostics
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
+from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.domain.project import Project
-from src.services.docstore_service import DocStoreService
-from src.services.vectorstore_service import VectorStoreService
 
 from src.application.ingestion.dtos import IngestDocumentResult
 
@@ -25,19 +24,19 @@ def finalize_ingestion_pipeline(
     raw_assets: list[dict],
     diagnostics: IngestionDiagnostics,
     replacement_info: dict,
-    docstore_service: DocStoreService,
-    vectorstore_service: VectorStoreService,
+    asset_repository: AssetRepositoryPort,
+    vector_index: VectorStorePort,
     invalidate_project_chain: Callable[[str, str], None],
 ) -> IngestDocumentResult:
     if not raw_assets:
         raise ValueError(f"No raw assets generated for file: {source_file}")
 
     for asset in raw_assets:
-        docstore_service.save_asset(**asset)
+        asset_repository.upsert_asset(**asset)
 
     indexing_ms = 0.0
     if summary_documents:
-        _, indexing_ms = vectorstore_service.index_documents(project, summary_documents)
+        _, indexing_ms = vector_index.index_documents(project, summary_documents)
 
     diagnostics = replace(
         diagnostics,

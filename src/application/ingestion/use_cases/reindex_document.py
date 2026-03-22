@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from src.services.docstore_service import DocStoreService
+from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.services.ingestion_service import IngestionService
-from src.services.vectorstore_service import VectorStoreService
 
 from src.application.ingestion.dtos import (
     IngestDocumentResult,
@@ -26,17 +25,17 @@ class ReindexDocumentUseCase:
         self,
         *,
         ingestion_service: IngestionService,
-        docstore_service: DocStoreService,
-        vectorstore_service: VectorStoreService,
+        asset_repository: AssetRepositoryPort,
+        vector_index: VectorStorePort,
         invalidate_project_chain: Callable[[str, str], None],
     ) -> None:
-        self._docstore = docstore_service
-        self._vectorstore = vectorstore_service
+        self._assets = asset_repository
+        self._vectors = vector_index
         self._invalidate_chain = invalidate_project_chain
         self._ingest_path = IngestFilePathUseCase(
             ingestion_service=ingestion_service,
-            docstore_service=docstore_service,
-            vectorstore_service=vectorstore_service,
+            asset_repository=asset_repository,
+            vector_index=vector_index,
             invalidate_project_chain=invalidate_project_chain,
         )
 
@@ -53,8 +52,8 @@ class ReindexDocumentUseCase:
             user_id=project.user_id,
             project_id=project.project_id,
             source_file=source_file,
-            docstore_service=self._docstore,
-            vectorstore_service=self._vectorstore,
+            asset_repository=self._assets,
+            vector_index=self._vectors,
             invalidate_project_chain=self._invalidate_chain,
         )
 

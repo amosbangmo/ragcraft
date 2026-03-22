@@ -12,12 +12,9 @@ from src.infrastructure.vectorstores.faiss.vector_store import (
 from src.core.exceptions import VectorStoreError
 
 
-# TODO(clean-arch): implement VectorStorePort; keep FAISS details behind this façade.
-
 class VectorStoreService:
     """
-    Service responsible for loading, indexing and querying
-    project-specific vector stores.
+    FAISS-backed implementation of :class:`~src.domain.retrieval.vector_store_port.VectorStorePort`.
     """
 
     def load(self, project: Project):

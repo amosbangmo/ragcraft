@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from src.services.docstore_service import DocStoreService
+from src.domain.ports import AssetRepositoryPort
 from src.services.project_service import ProjectService
 
 
 class GetProjectDocumentDetailsUseCase:
     """Build document listing rows (paths, sizes, asset stats) for a project root directory."""
 
-    def __init__(self, *, project_service: ProjectService, docstore_service: DocStoreService) -> None:
+    def __init__(self, *, project_service: ProjectService, asset_repository: AssetRepositoryPort) -> None:
         self._project_service = project_service
-        self._docstore = docstore_service
+        self._assets = asset_repository
 
     def execute(self, *, user_id: str, project_id: str, document_names: list[str]) -> list[dict]:
         project = self._project_service.get_project(user_id, project_id)
@@ -17,12 +17,12 @@ class GetProjectDocumentDetailsUseCase:
 
         for doc_name in document_names:
             file_path = project.path / doc_name
-            asset_count = self._docstore.count_assets_for_source_file(
+            asset_count = self._assets.count_assets_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
                 source_file=doc_name,
             )
-            asset_stats = self._docstore.get_asset_stats_for_source_file(
+            asset_stats = self._assets.get_asset_stats_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
                 source_file=doc_name,

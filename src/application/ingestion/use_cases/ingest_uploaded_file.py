@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.domain.project import Project
-from src.services.docstore_service import DocStoreService
 from src.services.ingestion_service import IngestionService
-from src.services.vectorstore_service import VectorStoreService
 
 from src.application.ingestion.dtos import IngestDocumentResult
 from .ingest_common import finalize_ingestion_pipeline
@@ -22,13 +21,13 @@ class IngestUploadedFileUseCase:
         self,
         *,
         ingestion_service: IngestionService,
-        docstore_service: DocStoreService,
-        vectorstore_service: VectorStoreService,
+        asset_repository: AssetRepositoryPort,
+        vector_index: VectorStorePort,
         invalidate_project_chain: Callable[[str, str], None],
     ) -> None:
         self._ingestion = ingestion_service
-        self._docstore = docstore_service
-        self._vectorstore = vectorstore_service
+        self._assets = asset_repository
+        self._vectors = vector_index
         self._invalidate_chain = invalidate_project_chain
 
     def execute(self, project: Project, uploaded_file) -> IngestDocumentResult:
@@ -37,8 +36,8 @@ class IngestUploadedFileUseCase:
             user_id=project.user_id,
             project_id=project.project_id,
             source_file=uploaded_file.name,
-            docstore_service=self._docstore,
-            vectorstore_service=self._vectorstore,
+            asset_repository=self._assets,
+            vector_index=self._vectors,
             invalidate_project_chain=self._invalidate_chain,
         )
 
@@ -56,7 +55,7 @@ class IngestUploadedFileUseCase:
             raw_assets=raw_assets,
             diagnostics=diagnostics,
             replacement_info=replacement_info,
-            docstore_service=self._docstore,
-            vectorstore_service=self._vectorstore,
+            asset_repository=self._assets,
+            vector_index=self._vectors,
             invalidate_project_chain=self._invalidate_chain,
         )

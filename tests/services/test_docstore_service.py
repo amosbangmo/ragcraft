@@ -29,6 +29,23 @@ class TestDocStoreService(unittest.TestCase):
         mock_store.upsert_asset.assert_called_once()
 
     @patch("src.services.docstore_service.SQLiteDocStore")
+    def test_upsert_asset_alias_calls_save_asset(self, mock_store_cls):
+        mock_store = MagicMock()
+        mock_store_cls.return_value = mock_store
+        service = DocStoreService()
+        service.upsert_asset(
+            doc_id="d1",
+            user_id="u1",
+            project_id="p1",
+            source_file="file.pdf",
+            content_type="text",
+            raw_content="raw",
+            summary="sum",
+            metadata=None,
+        )
+        mock_store.upsert_asset.assert_called_once()
+
+    @patch("src.services.docstore_service.SQLiteDocStore")
     def test_get_asset_by_doc_id_wraps_errors(self, mock_store_cls):
         mock_store = MagicMock()
         mock_store.get_asset_by_doc_id.side_effect = RuntimeError("sqlite fail")

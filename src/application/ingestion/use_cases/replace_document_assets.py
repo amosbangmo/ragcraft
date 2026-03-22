@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.domain.project import Project
-from src.services.docstore_service import DocStoreService
-from src.services.vectorstore_service import VectorStoreService
 
 
 def replace_document_assets_for_reingest(
@@ -13,15 +12,15 @@ def replace_document_assets_for_reingest(
     user_id: str,
     project_id: str,
     source_file: str,
-    docstore_service: DocStoreService,
-    vectorstore_service: VectorStoreService,
+    asset_repository: AssetRepositoryPort,
+    vector_index: VectorStorePort,
     invalidate_project_chain: Callable[[str, str], None],
 ) -> dict:
     """
     Remove existing vectors and SQLite assets for ``source_file``, then invalidate the
     retrieval cache when anything was removed.
     """
-    existing_doc_ids = docstore_service.get_doc_ids_for_source_file(
+    existing_doc_ids = asset_repository.get_doc_ids_for_source_file(
         user_id=user_id,
         project_id=project_id,
         source_file=source_file,
@@ -31,10 +30,10 @@ def replace_document_assets_for_reingest(
     deleted_assets = 0
 
     if existing_doc_ids:
-        vectorstore_service.delete_documents(project, existing_doc_ids)
+        vector_index.delete_documents(project, existing_doc_ids)
         deleted_vectors = len(existing_doc_ids)
 
-        deleted_assets = docstore_service.delete_assets_for_source_file(
+        deleted_assets = asset_repository.delete_assets_for_source_file(
             user_id=user_id,
             project_id=project_id,
             source_file=source_file,

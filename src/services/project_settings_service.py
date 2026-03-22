@@ -7,10 +7,8 @@ from src.domain.retrieval_presets import PRESET_UI_LABELS, RetrievalPreset, pars
 from src.infrastructure.persistence.db import get_connection
 
 
-# TODO(clean-arch): split SQLite persistence into a class implementing ProjectSettingsRepositoryPort.
-
 class ProjectSettingsService:
-    """Load and persist per-project retrieval UI state (preset and optional advanced toggles)."""
+    """SQLite-backed :class:`~src.domain.shared.project_settings_repository_port.ProjectSettingsRepositoryPort`."""
 
     @staticmethod
     def default_for(user_id: str, project_id: str) -> ProjectSettings:

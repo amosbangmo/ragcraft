@@ -5,6 +5,7 @@ from src.infrastructure.persistence.sqlite.qa_dataset_repository import QADatase
 
 
 class QADatasetService:
+    """Implements :class:`~src.domain.ports.qa_dataset_entries_port.QADatasetEntriesPort` via SQLite."""
     def __init__(self, repository: QADatasetRepositoryPort | None = None):
         self.repository: QADatasetRepositoryPort = (
             repository if repository is not None else QADatasetRepository()

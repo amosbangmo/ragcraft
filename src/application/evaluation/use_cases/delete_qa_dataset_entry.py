@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from src.services.qa_dataset_service import QADatasetService
+from src.domain.ports import QADatasetEntriesPort
 
 
 class DeleteQaDatasetEntryUseCase:
     """Delete a single QA row; raises if the row is not found in scope."""
 
-    def __init__(self, *, qa_dataset_service: QADatasetService) -> None:
-        self._qa = qa_dataset_service
+    def __init__(self, *, qa_dataset: QADatasetEntriesPort) -> None:
+        self._qa = qa_dataset
 
     def execute(
         self,

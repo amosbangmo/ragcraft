@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from src.services.docstore_service import DocStoreService
-from src.services.vectorstore_service import VectorStoreService
+from src.domain.ports import AssetRepositoryPort, VectorStorePort
 
 from src.application.ingestion.dtos import DeleteDocumentCommand, DeleteDocumentResult
 from .ingest_common import resolve_project_file_path
@@ -15,12 +14,12 @@ class DeleteDocumentUseCase:
     def __init__(
         self,
         *,
-        docstore_service: DocStoreService,
-        vectorstore_service: VectorStoreService,
+        asset_repository: AssetRepositoryPort,
+        vector_index: VectorStorePort,
         invalidate_project_chain: Callable[[str, str], None],
     ) -> None:
-        self._docstore = docstore_service
-        self._vectorstore = vectorstore_service
+        self._assets = asset_repository
+        self._vectors = vector_index
         self._invalidate_chain = invalidate_project_chain
 
     def execute(self, command: DeleteDocumentCommand) -> DeleteDocumentResult:
@@ -30,7 +29,7 @@ class DeleteDocumentUseCase:
         project_id = project.project_id
         file_path = resolve_project_file_path(project, source_file)
 
-        existing_doc_ids = self._docstore.get_doc_ids_for_source_file(
+        existing_doc_ids = self._assets.get_doc_ids_for_source_file(
             user_id=user_id,
             project_id=project_id,
             source_file=source_file,
@@ -41,10 +40,10 @@ class DeleteDocumentUseCase:
         file_deleted = False
 
         if existing_doc_ids:
-            self._vectorstore.delete_documents(project, existing_doc_ids)
+            self._vectors.delete_documents(project, existing_doc_ids)
             deleted_vectors = len(existing_doc_ids)
 
-            deleted_assets = self._docstore.delete_assets_for_source_file(
+            deleted_assets = self._assets.delete_assets_for_source_file(
                 user_id=user_id,
                 project_id=project_id,
                 source_file=source_file,

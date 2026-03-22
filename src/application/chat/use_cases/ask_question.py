@@ -11,8 +11,8 @@ from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.ports import QueryLogPort
 from src.services.answer_generation_service import AnswerGenerationService
-from src.services.query_log_service import QueryLogService
 
 
 class AskQuestionUseCase:
@@ -28,11 +28,11 @@ class AskQuestionUseCase:
         *,
         build_pipeline: Callable[..., PipelineBuildResult | None],
         answer_generation_service: AnswerGenerationService,
-        query_log_service: QueryLogService | None,
+        query_log: QueryLogPort | None,
     ) -> None:
         self._build_pipeline = build_pipeline
         self._answer_generation = answer_generation_service
-        self._query_log_service = query_log_service
+        self._query_log = query_log
 
     def execute(
         self,
@@ -46,7 +46,7 @@ class AskQuestionUseCase:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> RAGResponse | None:
         ask_started = perf_counter()
-        defer_log = self._query_log_service is not None
+        defer_log = self._query_log is not None
         pipeline = self._build_pipeline(
             project,
             question,
@@ -75,7 +75,7 @@ class AskQuestionUseCase:
 
         if defer_log:
             log_query_safely(
-                self._query_log_service,
+                self._query_log,
                 build_query_log_ingress_payload(
                     project=project,
                     question=question,

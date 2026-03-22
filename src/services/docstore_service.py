@@ -3,6 +3,8 @@ from src.core.exceptions import DocStoreError
 
 
 class DocStoreService:
+    """SQLite-backed implementation of :class:`~src.domain.documents.asset_repository_port.AssetRepositoryPort`."""
+
     def __init__(self):
         self.docstore = SQLiteDocStore()
 
@@ -34,6 +36,30 @@ class DocStoreService:
                 f"Failed to save asset '{doc_id}' in SQLite docstore: {exc}",
                 user_message="Unable to save extracted assets in the SQLite document store.",
             ) from exc
+
+    def upsert_asset(
+        self,
+        *,
+        doc_id: str,
+        user_id: str,
+        project_id: str,
+        source_file: str,
+        content_type: str,
+        raw_content: str,
+        summary: str,
+        metadata: dict | None = None,
+    ) -> None:
+        """Port-aligned name for :meth:`save_asset` (same behavior)."""
+        self.save_asset(
+            doc_id=doc_id,
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+            content_type=content_type,
+            raw_content=raw_content,
+            summary=summary,
+            metadata=metadata,
+        )
 
     def get_asset_by_doc_id(self, doc_id: str):
         try:

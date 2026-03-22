@@ -143,7 +143,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         )
 
         self.assertEqual(ingest_result["raw_assets"], raw_assets)
-        app.docstore_service.save_asset.assert_called_once_with(**raw_assets[0])
+        app.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
         app.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
         self.assertIsNotNone(ask_result)
         self.assertTrue(ask_result.prompt_sources)

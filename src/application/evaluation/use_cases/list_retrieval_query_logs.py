@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.services.query_log_service import QueryLogService
+from src.domain.ports import QueryLogPort
 
 
 def _parse_iso_utc(value: str | None) -> datetime | None:
@@ -23,8 +23,8 @@ def _parse_iso_utc(value: str | None) -> datetime | None:
 class ListRetrievalQueryLogsUseCase:
     """List persisted query / retrieval logs (SQLite), optionally filtered by time and limit."""
 
-    def __init__(self, *, query_log_service: QueryLogService) -> None:
-        self._logs = query_log_service
+    def __init__(self, *, query_log: QueryLogPort) -> None:
+        self._logs = query_log
 
     def execute(
         self,
