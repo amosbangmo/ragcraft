@@ -21,7 +21,6 @@ from src.services.chat_service import ChatService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.project_service import ProjectService
-from src.services.project_settings_service import ProjectSettingsService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.query_log_service import QueryLogService
@@ -118,10 +117,6 @@ class BackendApplicationContainer:
         return self.backend.qa_dataset_generation_service
 
     @property
-    def project_settings_service(self) -> ProjectSettingsService:
-        return self.backend.project_settings_service
-
-    @property
     def query_log_service(self) -> QueryLogService:
         return self.backend.query_log_service
 
@@ -135,7 +130,7 @@ class BackendApplicationContainer:
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
-        return self.backend.project_settings_service
+        return self.backend.project_settings_repository
 
     @property
     def retrieval_settings_service(self) -> RetrievalSettingsService:

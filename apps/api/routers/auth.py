@@ -15,11 +15,11 @@ from apps.api.dependencies import get_user_repository
 from apps.api.schemas.auth import AuthSuccessResponse, LoginRequest, RegisterRequest
 from apps.api.schemas.users import UserMeResponse
 from src.auth.auth_credentials import try_login, try_register
-from src.auth.user_repository import UserRepository
+from src.domain.ports.user_repository_port import UserRepositoryPort
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
+UserRepositoryDep = Annotated[UserRepositoryPort, Depends(get_user_repository)]
 
 
 def _to_me(user: dict) -> UserMeResponse:

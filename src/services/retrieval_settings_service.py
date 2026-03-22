@@ -11,7 +11,7 @@ from src.domain.retrieval_presets import (
     parse_retrieval_preset,
 )
 from src.domain.retrieval_settings import RetrievalSettings
-from src.services.project_settings_service import ProjectSettingsService
+from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 
 
 class RetrievalSettingsService:
@@ -26,12 +26,12 @@ class RetrievalSettingsService:
         self,
         config_source: RetrievalConfig | Any | None = None,
         *,
-        project_settings_service: ProjectSettingsService | None = None,
+        project_settings_repository: ProjectSettingsRepositoryPort | None = None,
     ) -> None:
         self._config_source: RetrievalConfig | Any = (
             RETRIEVAL_CONFIG if config_source is None else config_source
         )
-        self._project_settings_service = project_settings_service
+        self._project_settings_repository = project_settings_repository
 
     @property
     def config_source(self) -> RetrievalConfig | Any:
@@ -60,14 +60,14 @@ class RetrievalSettingsService:
         """
         Effective retrieval settings for a workspace when the UI does not pass overrides.
 
-        Without a ``ProjectSettingsService``, returns ``get_default()`` so standalone
+        Without a ``ProjectSettingsRepositoryPort``, returns ``get_default()`` so standalone
         ``RAGService`` construction matches the pre–per-project merge base. With a
-        service, missing rows use **Balanced** preset semantics via ``load`` defaults.
+        repository, missing rows use **Balanced** preset semantics via ``load`` defaults.
         """
-        pss = self._project_settings_service
-        if pss is None:
+        repo = self._project_settings_repository
+        if repo is None:
             return self.get_default()
-        return self.retrieval_settings_for_saved_project(pss.load(user_id, project_id))
+        return self.retrieval_settings_for_saved_project(repo.load(user_id, project_id))
 
     def from_preset(self, preset: str | RetrievalPreset) -> RetrievalSettings:
         """

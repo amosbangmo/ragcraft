@@ -1,26 +1,15 @@
+"""SQLite adapter for :class:`~src.domain.shared.project_settings_repository_port.ProjectSettingsRepositoryPort`."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.domain.project_settings import ProjectSettings
-from src.domain.retrieval_presets import PRESET_UI_LABELS, RetrievalPreset, parse_retrieval_preset
+from src.domain.project_settings import ProjectSettings, default_project_settings
+from src.domain.retrieval_presets import parse_retrieval_preset
 from src.infrastructure.persistence.db import get_connection
 
 
-class ProjectSettingsService:
-    """SQLite-backed :class:`~src.domain.shared.project_settings_repository_port.ProjectSettingsRepositoryPort`."""
-
-    @staticmethod
-    def default_for(user_id: str, project_id: str) -> ProjectSettings:
-        return ProjectSettings(
-            user_id=user_id,
-            project_id=project_id,
-            retrieval_preset=RetrievalPreset.BALANCED.value,
-            retrieval_advanced=False,
-            enable_query_rewrite=True,
-            enable_hybrid_retrieval=True,
-        )
-
+class SqliteProjectSettingsRepository:
     def load(self, user_id: str, project_id: str) -> ProjectSettings:
         conn = get_connection()
         row = conn.execute(
@@ -34,7 +23,7 @@ class ProjectSettingsService:
         conn.close()
 
         if row is None:
-            return self.default_for(user_id, project_id)
+            return default_project_settings(user_id, project_id)
 
         preset = parse_retrieval_preset(row["retrieval_preset"]).value
         advanced = bool(row["retrieval_advanced"])
@@ -81,9 +70,3 @@ class ProjectSettingsService:
         )
         conn.commit()
         conn.close()
-
-    def preset_label_for_project(self, user_id: str, project_id: str) -> str:
-        """Human-readable preset name for listings (e.g. projects page)."""
-        ps = self.load(user_id, project_id)
-        p = parse_retrieval_preset(ps.retrieval_preset)
-        return PRESET_UI_LABELS[p]

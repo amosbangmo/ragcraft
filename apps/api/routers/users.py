@@ -29,14 +29,14 @@ from apps.api.user_avatar_io import (
     write_avatar_bytes,
 )
 from src.auth.password_utils import hash_password, verify_password
-from src.auth.user_repository import UserRepository
+from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.core.paths import get_data_root
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 DATA_ROOT = get_data_root()
 
-UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
+UserRepositoryDep = Annotated[UserRepositoryPort, Depends(get_user_repository)]
 RequestUserIdDep = Annotated[str, Depends(get_request_user_id)]
 
 

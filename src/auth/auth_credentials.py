@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 
 from src.auth.password_utils import hash_password, verify_password
-from src.auth.user_repository import UserRepository
+from src.domain.ports.user_repository_port import UserRepositoryPort
 
 
 def _session_payload_from_row(row) -> dict:
@@ -24,7 +24,7 @@ def _session_payload_from_row(row) -> dict:
 
 
 def try_login(
-    repo: UserRepository,
+    repo: UserRepositoryPort,
     username: str,
     password: str,
 ) -> tuple[bool, str, dict | None]:
@@ -42,7 +42,7 @@ def try_login(
 
 
 def try_register(
-    repo: UserRepository,
+    repo: UserRepositoryPort,
     *,
     username: str,
     password: str,

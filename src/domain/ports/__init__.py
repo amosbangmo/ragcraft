@@ -13,6 +13,7 @@ from src.domain.ports.query_log_port import QueryLogPort
 from src.domain.retrieval.vector_store_port import VectorStorePort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.shared.query_log_port import QueryLogPersistencePort
+from src.domain.ports.user_repository_port import UserRepositoryPort
 
 __all__ = [
     "AssetRepositoryPort",
@@ -22,5 +23,6 @@ __all__ = [
     "QueryLogPersistencePort",
     "QueryLogPort",
     "ProjectSettingsRepositoryPort",
+    "UserRepositoryPort",
     "VectorStorePort",
 ]

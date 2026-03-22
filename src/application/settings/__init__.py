@@ -3,7 +3,7 @@ Project-scoped retrieval preferences and effective retrieval tuning (merged pres
 
 Use cases live in ``use_cases``; DTOs in ``dtos``. Persistence is the
 :class:`~src.domain.shared.project_settings_repository_port.ProjectSettingsRepositoryPort`
-(``ProjectSettingsService`` in infrastructure).
+(typically :class:`~src.adapters.sqlite.project_settings_repository.SqliteProjectSettingsRepository`).
 """
 
 from __future__ import annotations

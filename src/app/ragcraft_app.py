@@ -22,7 +22,7 @@ from src.application.settings.dtos import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
-from src.domain.project_settings import ProjectSettings
+from src.domain.project_settings import ProjectSettings, ui_label_for_project_settings
 from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
     DeleteQaDatasetEntryCommand,
@@ -113,13 +113,13 @@ class RAGCraftApp:
         self.reranking_service = self._container.reranking_service
         self.qa_dataset_service = self._container.qa_dataset_service
         self.qa_dataset_generation_service = self._container.qa_dataset_generation_service
-        self.project_settings_service = self._container.project_settings_service
+        self._project_settings_repository = self._container.project_settings_repository
         self.retrieval_settings_service = self._container.retrieval_settings_service
         self.query_log_service = self._container.query_log_service
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
-        return self.project_settings_service
+        return self._project_settings_repository
 
     def get_effective_retrieval_settings(
         self, user_id: str, project_id: str
@@ -197,7 +197,8 @@ class RAGCraftApp:
         return self.project_service.list_projects(user_id)
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
-        return self.project_settings_service.preset_label_for_project(user_id, project_id)
+        ps = self.project_settings_repository.load(user_id, project_id)
+        return ui_label_for_project_settings(ps)
 
     def list_retrieval_query_logs(
         self,

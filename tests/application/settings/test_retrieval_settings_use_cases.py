@@ -12,9 +12,8 @@ from src.application.settings.use_cases.get_effective_retrieval_settings import 
 from src.application.settings.use_cases.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from src.domain.project_settings import ProjectSettings
+from src.domain.project_settings import ProjectSettings, default_project_settings
 from src.domain.retrieval_presets import RetrievalPreset
-from src.services.project_settings_service import ProjectSettingsService
 from src.services.retrieval_settings_service import RetrievalSettingsService
 
 
@@ -27,7 +26,7 @@ class _MemoryProjectSettingsRepo:
     def load(self, user_id: str, project_id: str) -> ProjectSettings:
         key = (user_id, project_id)
         if key not in self._rows:
-            return ProjectSettingsService.default_for(user_id, project_id)
+            return default_project_settings(user_id, project_id)
         return self._rows[key]
 
     def save(self, settings: ProjectSettings) -> None:
@@ -36,7 +35,7 @@ class _MemoryProjectSettingsRepo:
 
 def test_get_effective_precise_preset_semantics_match_service() -> None:
     repo = _MemoryProjectSettingsRepo()
-    retrieval = RetrievalSettingsService(project_settings_service=repo)  # type: ignore[arg-type]
+    retrieval = RetrievalSettingsService(project_settings_repository=repo)
     repo._rows[("u", "p")] = ProjectSettings(
         user_id="u",
         project_id="p",
@@ -59,7 +58,7 @@ def test_get_effective_precise_preset_semantics_match_service() -> None:
 
 def test_get_effective_advanced_overrides_merge() -> None:
     repo = _MemoryProjectSettingsRepo()
-    retrieval = RetrievalSettingsService(project_settings_service=repo)  # type: ignore[arg-type]
+    retrieval = RetrievalSettingsService(project_settings_repository=repo)
     repo._rows[("u", "p")] = ProjectSettings(
         user_id="u",
         project_id="p",

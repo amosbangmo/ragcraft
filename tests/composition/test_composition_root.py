@@ -29,7 +29,7 @@ def test_build_backend_composition_returns_typed_service_graph() -> None:
     assert backend.query_log_service is not None
     assert backend.vectorstore_service is not None
     assert backend.evaluation_service is not None
-    assert backend.project_settings_service is not None
+    assert backend.project_settings_repository is not None
     assert backend.retrieval_settings_service is not None
 
 

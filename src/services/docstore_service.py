@@ -1,4 +1,4 @@
-from src.infrastructure.persistence.sqlite.asset_repository import SQLiteAssetRepository as SQLiteDocStore
+from src.adapters.sqlite.asset_repository import SQLiteAssetRepository as SQLiteDocStore
 from src.core.exceptions import DocStoreError
 
 

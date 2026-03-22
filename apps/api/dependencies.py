@@ -62,7 +62,8 @@ from src.application.settings.use_cases.get_effective_retrieval_settings import 
 from src.application.settings.use_cases.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from src.auth.user_repository import UserRepository
+from src.adapters.sqlite.user_repository import SqliteUserRepository
+from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.composition.application_container import BackendApplicationContainer
 
 
@@ -234,5 +235,5 @@ def ensure_auth_database() -> bool:
 
 def get_user_repository(
     _: Annotated[bool, Depends(ensure_auth_database)],
-) -> UserRepository:
-    return UserRepository()
+) -> UserRepositoryPort:
+    return SqliteUserRepository()

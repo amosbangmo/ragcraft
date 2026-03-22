@@ -73,9 +73,9 @@ class TestRetrievalSettingsService(unittest.TestCase):
         s = svc.from_project("any", "project")
         self.assertEqual(s, svc.get_default())
 
-    def test_from_project_uses_project_settings_service(self) -> None:
-        pss = MagicMock()
-        pss.load.return_value = ProjectSettings(
+    def test_from_project_uses_project_settings_repository(self) -> None:
+        repo = MagicMock()
+        repo.load.return_value = ProjectSettings(
             user_id="u",
             project_id="p",
             retrieval_preset=RetrievalPreset.PRECISE.value,
@@ -83,9 +83,9 @@ class TestRetrievalSettingsService(unittest.TestCase):
             enable_query_rewrite=True,
             enable_hybrid_retrieval=False,
         )
-        svc = RetrievalSettingsService(project_settings_service=pss)
+        svc = RetrievalSettingsService(project_settings_repository=repo)
         s = svc.from_project("u", "p")
-        pss.load.assert_called_once_with("u", "p")
+        repo.load.assert_called_once_with("u", "p")
         self.assertFalse(s.enable_hybrid_retrieval)
         self.assertEqual(s.similarity_search_k, PRECISE_SEARCH_K)
 

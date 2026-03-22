@@ -18,14 +18,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from src.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
+from src.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.auth_service import AuthService
+from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.infrastructure.persistence.db import init_app_db
 from src.services.chat_service import ChatService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.project_service import ProjectService
-from src.services.project_settings_service import ProjectSettingsService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.query_log_service import QueryLogService
@@ -59,7 +61,7 @@ class BackendComposition:
     reranking_service: RerankingService
     qa_dataset_service: QADatasetService
     qa_dataset_generation_service: QADatasetGenerationService
-    project_settings_service: ProjectSettingsService
+    project_settings_repository: ProjectSettingsRepositoryPort
     retrieval_settings_service: RetrievalSettingsService
     _rag_service: RAGService | None = field(default=None, init=False, repr=False)
     _retrieval_comparison_service: RetrievalComparisonService | None = field(
@@ -100,14 +102,14 @@ def build_backend_composition() -> BackendComposition:
     query_log_service = QueryLogService()
     project_service = ProjectService()
     docstore_service = DocStoreService()
-    project_settings_service = ProjectSettingsService()
+    project_settings_repository = SqliteProjectSettingsRepository()
     retrieval_settings_service = RetrievalSettingsService(
-        project_settings_service=project_settings_service,
+        project_settings_repository=project_settings_repository,
     )
 
     return BackendComposition(
         query_log_service=query_log_service,
-        auth_service=AuthService(),
+        auth_service=AuthService(user_repository=SqliteUserRepository()),
         project_service=project_service,
         ingestion_service=IngestionService(),
         vectorstore_service=VectorStoreService(),
@@ -120,7 +122,7 @@ def build_backend_composition() -> BackendComposition:
             docstore_service=docstore_service,
             project_service=project_service,
         ),
-        project_settings_service=project_settings_service,
+        project_settings_repository=project_settings_repository,
         retrieval_settings_service=retrieval_settings_service,
     )
 
