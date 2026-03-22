@@ -320,7 +320,7 @@ class BackendApplicationContainer:
             project_service=self.project_service,
             inspect_pipeline=self.chat_inspect_pipeline_use_case,
             generate_answer_from_pipeline=self.chat_generate_answer_from_pipeline_use_case,
-            evaluation_service=self.evaluation_service,
+            manual_evaluation=self.evaluation_service,
         )
 
     @cached_property
@@ -334,7 +334,7 @@ class BackendApplicationContainer:
             project_service=self.project_service,
             inspect_pipeline=self.chat_inspect_pipeline_use_case,
             generate_answer_from_pipeline=self.chat_generate_answer_from_pipeline_use_case,
-            evaluation_service=self.evaluation_service,
+            gold_benchmark=self.evaluation_service,
         )
 
     @cached_property

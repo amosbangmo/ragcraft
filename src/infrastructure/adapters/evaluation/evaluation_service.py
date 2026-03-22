@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from src.application.use_cases.evaluation.benchmark_execution import BenchmarkExecutionUseCase
+from src.domain.benchmark_result import BenchmarkResult
+from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.pipeline_payloads import PipelineBuildResult
 from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
 from src.infrastructure.adapters.evaluation.auto_debug_service import AutoDebugService
+from src.infrastructure.adapters.evaluation.benchmark_aggregation_service import BenchmarkAggregationService
 from src.infrastructure.adapters.evaluation.correlation_service import CorrelationService
 from src.infrastructure.adapters.evaluation.explainability_service import ExplainabilityService
 from src.infrastructure.adapters.evaluation.failure_analysis_service import FailureAnalysisService
@@ -65,11 +69,12 @@ class EvaluationService:
             llm_judge_service=self._llm_judge_service,
         )
         self._benchmark_execution = BenchmarkExecutionUseCase(
-            row_evaluation_service=self._row_evaluation,
-            correlation_service=self._correlation_service,
-            failure_analysis_service=self._failure_analysis_service,
-            explainability_service=self._explainability_service,
-            auto_debug_service=self._auto_debug_service,
+            row_evaluation=self._row_evaluation,
+            aggregation=BenchmarkAggregationService(),
+            correlation=self._correlation_service,
+            failure_analysis=self._failure_analysis_service,
+            explainability=self._explainability_service,
+            auto_debug=self._auto_debug_service,
         )
 
     def evaluate_gold_qa_dataset(
@@ -77,10 +82,42 @@ class EvaluationService:
         *,
         entries,
         pipeline_runner,
-    ):
+    ) -> BenchmarkResult:
         return self._benchmark_execution.execute(
             entries=entries,
             pipeline_runner=pipeline_runner,
+        )
+
+    def build_manual_evaluation_result(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        question: str,
+        expected_answer: str | None,
+        expected_doc_ids: list[str],
+        expected_sources: list[str],
+        pipeline: PipelineBuildResult | None,
+        answer: str,
+        latency_ms: float,
+        full_latency_dict: dict[str, float] | None,
+    ) -> ManualEvaluationResult:
+        from src.infrastructure.adapters.evaluation.manual_evaluation_service import (
+            manual_evaluation_result_from_rag_outputs,
+        )
+
+        return manual_evaluation_result_from_rag_outputs(
+            user_id=user_id,
+            project_id=project_id,
+            q=question,
+            exp_ans=expected_answer,
+            exp_docs=list(expected_doc_ids),
+            exp_src=list(expected_sources),
+            pipeline=pipeline,
+            answer=answer,
+            latency_ms=latency_ms,
+            full_latency_dict=full_latency_dict,
+            evaluation_service=self,
         )
 
     def _retrieval(self) -> RetrievalMetricsService:

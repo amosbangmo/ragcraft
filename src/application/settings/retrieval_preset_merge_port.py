@@ -1,20 +1,8 @@
-"""Port for preset → :class:`~src.domain.retrieval_settings.RetrievalSettings` merge (UI + HTTP paths)."""
+"""Re-exports retrieval preset merge port (canonical definition lives in ``src.domain.ports``)."""
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Protocol, runtime_checkable
+from src.application.settings.retrieval_merge_default import default_retrieval_preset_merge_port
+from src.domain.ports.retrieval_preset_merge_port import RetrievalPresetMergePort
 
-from src.domain.retrieval_presets import RetrievalPreset
-from src.domain.retrieval_settings import RetrievalSettings
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
-
-
-@runtime_checkable
-class RetrievalPresetMergePort(Protocol):
-    def from_preset(self, preset: str | RetrievalPreset) -> RetrievalSettings: ...
-
-    def merge(self, base: RetrievalSettings, overrides: Mapping[str, Any]) -> RetrievalSettings: ...
-
-
-def default_retrieval_preset_merge_port() -> RetrievalPresetMergePort:
-    return RetrievalSettingsService()
+__all__ = ["RetrievalPresetMergePort", "default_retrieval_preset_merge_port"]

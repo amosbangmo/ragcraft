@@ -5,13 +5,16 @@ from __future__ import annotations
 import logging
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
 from src.domain.multimodal_metrics import aggregate_multimodal_metrics
-from src.infrastructure.adapters.evaluation.auto_debug_service import AutoDebugService
-from src.infrastructure.adapters.evaluation.benchmark_aggregation_service import BenchmarkAccumulator, BenchmarkAggregationService
-from src.infrastructure.adapters.evaluation.correlation_service import CorrelationService
-from src.infrastructure.adapters.evaluation.explainability_service import ExplainabilityService
-from src.infrastructure.adapters.evaluation.failure_analysis_service import FailureAnalysisService
-from src.infrastructure.adapters.evaluation.row_evaluation_service import RowEvaluationService
+from src.domain.ports.benchmark_orchestration_ports import (
+    AutoDebugSuggestionsPort,
+    BenchmarkFailureAnalysisPort,
+    BenchmarkRowProcessingPort,
+    BenchmarkSummaryAggregationPort,
+    CorrelationComputePort,
+    ExplainabilityBuildPort,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,19 +23,19 @@ class BenchmarkExecutionUseCase:
     def __init__(
         self,
         *,
-        row_evaluation_service: RowEvaluationService,
-        aggregation_service: BenchmarkAggregationService | None = None,
-        correlation_service: CorrelationService | None = None,
-        failure_analysis_service: FailureAnalysisService | None = None,
-        explainability_service: ExplainabilityService | None = None,
-        auto_debug_service: AutoDebugService | None = None,
+        row_evaluation: BenchmarkRowProcessingPort,
+        aggregation: BenchmarkSummaryAggregationPort,
+        correlation: CorrelationComputePort,
+        failure_analysis: BenchmarkFailureAnalysisPort,
+        explainability: ExplainabilityBuildPort,
+        auto_debug: AutoDebugSuggestionsPort,
     ) -> None:
-        self._row_eval = row_evaluation_service
-        self._aggregation = aggregation_service or BenchmarkAggregationService()
-        self._correlation_service = correlation_service or CorrelationService()
-        self._failure_analysis_service = failure_analysis_service or FailureAnalysisService()
-        self._explainability_service = explainability_service or ExplainabilityService()
-        self._auto_debug_service = auto_debug_service or AutoDebugService()
+        self._row_eval = row_evaluation
+        self._aggregation = aggregation
+        self._correlation_service = correlation
+        self._failure_analysis_service = failure_analysis
+        self._explainability_service = explainability
+        self._auto_debug_service = auto_debug
 
     def _attach_explainability(self, row_payload: dict) -> None:
         explain = self._explainability_service.build_explanation(row_payload)

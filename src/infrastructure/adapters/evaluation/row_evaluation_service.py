@@ -11,7 +11,7 @@ from src.domain.multimodal_metrics import (
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.infrastructure.adapters.evaluation.answer_citation_metrics_service import answer_cited_doc_ids
 from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
-from src.infrastructure.adapters.evaluation.benchmark_aggregation_service import BenchmarkAccumulator
+from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
 from src.domain.evaluation.benchmark_math import latency_stage_row_fields, r2
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 from src.infrastructure.adapters.evaluation.retrieval_metrics_service import RetrievalMetricsService

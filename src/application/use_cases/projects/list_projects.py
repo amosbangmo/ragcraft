@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
 
 class ListProjectsUseCase:
     """List project directory names for a user workspace."""
 
-    def __init__(self, *, project_service: ProjectService) -> None:
+    def __init__(self, *, project_service: ProjectWorkspacePort) -> None:
         self._project_service = project_service
 
     def execute(self, user_id: str) -> list[str]:

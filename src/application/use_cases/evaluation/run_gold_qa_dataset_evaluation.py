@@ -10,8 +10,8 @@ from src.application.evaluation.dtos import (
 from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
 from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
-from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
-from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
+from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
 from .list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 
@@ -21,16 +21,16 @@ class RunGoldQaDatasetEvaluationUseCase:
         self,
         *,
         list_qa_dataset_entries: ListQaDatasetEntriesUseCase,
-        project_service: ProjectService,
+        project_service: ProjectWorkspacePort,
         inspect_pipeline: InspectRagPipelineUseCase,
         generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
-        evaluation_service: EvaluationService,
+        gold_benchmark: GoldQaBenchmarkPort,
     ) -> None:
         self._list_qa = list_qa_dataset_entries
         self._project_service = project_service
         self._inspect_pipeline = inspect_pipeline
         self._generate_answer_from_pipeline = generate_answer_from_pipeline
-        self._evaluation = evaluation_service
+        self._gold_benchmark = gold_benchmark
 
     def execute(self, command: RunGoldQaDatasetEvaluationCommand) -> BenchmarkResult:
         entries = self._list_qa.execute(
@@ -51,7 +51,7 @@ class RunGoldQaDatasetEvaluationUseCase:
                 enable_hybrid_retrieval=command.enable_hybrid_retrieval,
             )
 
-        return self._evaluation.evaluate_gold_qa_dataset(
+        return self._gold_benchmark.evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=pipeline_runner,
         )

@@ -1,0 +1,18 @@
+"""Run a full gold QA benchmark (per-row pipeline + aggregate report)."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
+
+from src.domain.benchmark_result import BenchmarkResult
+
+
+@runtime_checkable
+class GoldQaBenchmarkPort(Protocol):
+    def evaluate_gold_qa_dataset(
+        self,
+        *,
+        entries: list[Any],
+        pipeline_runner: Callable[[Any], dict[str, Any]],
+    ) -> BenchmarkResult: ...

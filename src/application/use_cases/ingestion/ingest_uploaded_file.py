@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 from src.domain.ports import AssetRepositoryPort, VectorStorePort
+from src.domain.ports.document_ingestion_port import DocumentIngestionPort
 
 from src.application.ingestion.dtos import IngestDocumentResult, IngestUploadedFileCommand
 
-if TYPE_CHECKING:
-    from src.infrastructure.adapters.document.ingestion_service import IngestionService
 from .ingest_common import finalize_ingestion_pipeline
 from .replace_document_assets import replace_document_assets_for_reingest
 
@@ -22,7 +20,7 @@ class IngestUploadedFileUseCase:
     def __init__(
         self,
         *,
-        ingestion_service: IngestionService,
+        ingestion_service: DocumentIngestionPort,
         asset_repository: AssetRepositoryPort,
         vector_index: VectorStorePort,
         invalidate_project_chain: Callable[[str, str], None],

@@ -12,7 +12,7 @@ from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.ports import QueryLogPort
-from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
+from src.domain.ports.answer_generation_port import AnswerGenerationPort
 
 
 class AskQuestionUseCase:
@@ -27,7 +27,7 @@ class AskQuestionUseCase:
         self,
         *,
         build_pipeline: Callable[..., PipelineBuildResult | None],
-        answer_generation_service: AnswerGenerationService,
+        answer_generation_service: AnswerGenerationPort,
         query_log: QueryLogPort | None,
     ) -> None:
         self._build_pipeline = build_pipeline

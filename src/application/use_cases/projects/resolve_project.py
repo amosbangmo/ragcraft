@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from src.domain.project import Project
-from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
 
 class ResolveProjectUseCase:
-    """Thin application entry for :meth:`~src.infrastructure.adapters.workspace.project_service.ProjectService.get_project`."""
+    """Thin application entry for workspace project resolution."""
 
-    def __init__(self, *, project_service: ProjectService) -> None:
+    def __init__(self, *, project_service: ProjectWorkspacePort) -> None:
         self._projects = project_service
 
     def execute(self, user_id: str, project_id: str) -> Project:

@@ -11,9 +11,9 @@ from __future__ import annotations
 from typing import Any
 
 from src.domain.project_settings import ProjectSettings
+from src.domain.ports.chat_transcript_port import ChatTranscriptPort
+from src.domain.ports.retrieval_preset_merge_port import RetrievalPresetMergePort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.adapters.chat.chat_service import ChatService
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 class _UnsupportedBackendAttribute:
@@ -41,13 +41,17 @@ class _UnsupportedProjectSettingsRepository:
         )
 
 
-def http_client_chat_service() -> ChatService:
+def http_client_chat_service() -> ChatTranscriptPort:
     """Chat transcript lives in Streamlit ``session_state`` even when RAG runs on the API."""
+    from src.infrastructure.adapters.chat.chat_service import ChatService
+
     return ChatService()
 
 
-def http_client_retrieval_settings_service() -> RetrievalSettingsService:
+def http_client_retrieval_settings_service() -> RetrievalPresetMergePort:
     """Pure preset/merge helpers without persisting (persistence goes through the API)."""
+    from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+
     return RetrievalSettingsService()
 
 

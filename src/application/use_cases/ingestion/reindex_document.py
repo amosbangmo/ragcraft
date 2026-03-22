@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 from src.domain.ports import AssetRepositoryPort, VectorStorePort
+from src.domain.ports.document_ingestion_port import DocumentIngestionPort
 
 from src.application.ingestion.dtos import (
     IngestDocumentResult,
@@ -13,9 +13,6 @@ from src.application.ingestion.dtos import (
 from .ingest_common import resolve_project_file_path
 from .ingest_file_path import IngestFilePathUseCase
 from .replace_document_assets import replace_document_assets_for_reingest
-
-if TYPE_CHECKING:
-    from src.infrastructure.adapters.document.ingestion_service import IngestionService
 
 
 class ReindexDocumentUseCase:
@@ -27,7 +24,7 @@ class ReindexDocumentUseCase:
     def __init__(
         self,
         *,
-        ingestion_service: IngestionService,
+        ingestion_service: DocumentIngestionPort,
         asset_repository: AssetRepositoryPort,
         vector_index: VectorStorePort,
         invalidate_project_chain: Callable[[str, str], None],

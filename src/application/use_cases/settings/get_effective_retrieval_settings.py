@@ -5,7 +5,7 @@ from src.application.settings.dtos import (
     GetEffectiveRetrievalSettingsQuery,
 )
 from src.domain.ports import ProjectSettingsRepositoryPort
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.domain.ports.retrieval_settings_resolution_port import RetrievalSettingsResolutionPort
 
 
 class GetEffectiveRetrievalSettingsUseCase:
@@ -15,7 +15,7 @@ class GetEffectiveRetrievalSettingsUseCase:
         self,
         *,
         project_settings: ProjectSettingsRepositoryPort,
-        retrieval_settings: RetrievalSettingsService,
+        retrieval_settings: RetrievalSettingsResolutionPort,
     ) -> None:
         self._project_settings = project_settings
         self._retrieval = retrieval_settings

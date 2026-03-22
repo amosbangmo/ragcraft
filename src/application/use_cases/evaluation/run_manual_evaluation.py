@@ -7,24 +7,23 @@ from src.application.evaluation.dtos import RunManualEvaluationCommand
 from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
 from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
-from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
-from src.infrastructure.adapters.evaluation.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
-from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.domain.ports.manual_evaluation_from_rag_port import ManualEvaluationFromRagPort
+from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
 
 class RunManualEvaluationUseCase:
     def __init__(
         self,
         *,
-        project_service: ProjectService,
+        project_service: ProjectWorkspacePort,
         inspect_pipeline: InspectRagPipelineUseCase,
         generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
-        evaluation_service: EvaluationService,
+        manual_evaluation: ManualEvaluationFromRagPort,
     ) -> None:
         self._project_service = project_service
         self._inspect_pipeline = inspect_pipeline
         self._generate_answer_from_pipeline = generate_answer_from_pipeline
-        self._evaluation = evaluation_service
+        self._manual_evaluation = manual_evaluation
 
     def execute(self, command: RunManualEvaluationCommand) -> ManualEvaluationResult:
         q = (command.question or "").strip()
@@ -47,16 +46,15 @@ class RunManualEvaluationUseCase:
         latency_ms = run["latency_ms"]
         full_latency_dict = run["latency"]
 
-        return manual_evaluation_result_from_rag_outputs(
+        return self._manual_evaluation.build_manual_evaluation_result(
             user_id=command.user_id,
             project_id=command.project_id,
-            q=q,
-            exp_ans=exp_ans,
-            exp_docs=exp_docs,
-            exp_src=exp_src,
+            question=q,
+            expected_answer=exp_ans,
+            expected_doc_ids=exp_docs,
+            expected_sources=exp_src,
             pipeline=pipeline,
             answer=answer,
             latency_ms=latency_ms,
             full_latency_dict=full_latency_dict,
-            evaluation_service=self._evaluation,
         )
