@@ -120,13 +120,13 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** `ARCHITECTURE_TARGET.md` (source of truth) · `docs/migration/MIGRATION_COMPLETE_REPORT.md` (status + history) · `tests/architecture/README.md` (import guardrails).
+**Architecture reference:** `ARCHITECTURE_TARGET.md` (short) · **`docs/README.md`** (index) · **`docs/migration_report_final.md`** (closure report) · `tests/architecture/README.md` (import guardrails).
 
 ### Migration status (short)
 
 | Done | Transitional / deprecated |
 |------|---------------------------|
-| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** removed — use **`src.infrastructure.adapters`** (or application use cases) |
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Legacy **`src/backend/`**, **`src/adapters/`** removed — use **`src.infrastructure.adapters`** |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
 | Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **`X-User-Id`** trust model — replace with real auth for production browsers |
 
@@ -218,7 +218,6 @@ ragcraft/
 ├── streamlit_app.py             # Streamlit entry
 ├── pages/                       # Streamlit multipage app
 ├── src/
-│   ├── adapters/sqlite/         # Port implementations (users, assets, project settings)
 │   ├── application/             # Use cases, policies, HTTP wire helpers, frontend_support stubs
 │   ├── auth/
 │   ├── composition/             # build_backend(), BackendApplicationContainer
@@ -226,14 +225,16 @@ ragcraft/
 │   ├── domain/                  # Entities, ports, SummaryRecallDocument, no framework imports
 │   ├── frontend_gateway/        # BackendClient, HttpBackendClient, InProcessBackendClient
 │   ├── infrastructure/          # adapters/, persistence/, vectorstores/, …
+│   │   └── adapters/sqlite/     # SQLite port implementations (users, assets, settings)
 │   └── ui/                      # Streamlit widgets (no direct domain/infra imports)
+├── docs/                        # Architecture, RAG flow, dependency rules, testing, final migration report
 ├── tests/
-│   ├── architecture/            # Layer boundary + migration guardrails
+│   ├── architecture/            # Layer boundary + orchestration guardrails
 │   ├── apps_api/                # FastAPI contract tests
-│   └── infrastructure_services/  # Unit tests for src.infrastructure.adapters
+│   └── infrastructure_services/ # Unit tests for src.infrastructure.adapters
 ├── data/
 ├── requirements.txt
-├── ARCHITECTURE_TARGET.md       # Current runtime layout (read this)
+├── ARCHITECTURE_TARGET.md       # Short runtime layout (read this first)
 └── README.md
 ```
 
@@ -276,7 +277,7 @@ python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
 PowerShell: `$env:PYTHONPATH = (Get-Location).Path` then the same `uvicorn` command.
 
 - **Docs:** http://127.0.0.1:8000/docs  
-- **Streamlit + API:** set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (see `docs/migration/streamlit-fastapi-dev.md`).
+- **Streamlit + API:** set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (see **`docs/README.md`** — local development).
 
 ### Environment variables
 

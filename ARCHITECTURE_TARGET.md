@@ -1,65 +1,46 @@
 # Runtime architecture (source of truth)
 
-This document matches the **current** repository layout after the FastAPI-first migration. For orchestration closure and legacy-path verification, see **`docs/migration/ORCHESTRATION_MIGRATION_FINAL_REPORT.md`**. Older narrative: `docs/migration/MIGRATION_COMPLETE_REPORT.md`.
+Short form of the layout enforced in code. **Canonical detail:** `docs/architecture.md`, `docs/rag_orchestration.md`, `docs/migration_report_final.md`.
 
 ## HTTP backend — `apps/api/`
 
-- **FastAPI** application (`apps/api/main.py`), routers, Pydantic schemas, dependency injection.
-- **Composition** — `src/composition/` builds `BackendComposition` (service graph) and `BackendApplicationContainer` (services + memoized use cases). FastAPI resolves the container in `apps/api/dependencies.py`.
-- **Routers** call **use cases** from `src/application/**/use_cases/`, not concrete SQLite/FAISS modules (enforced by architecture tests).
+- **FastAPI** (`apps/api/main.py`), routers, schemas, **`apps/api/dependencies.py`** → **`BackendApplicationContainer`** and use cases.
+- Routers use **use cases**, not `src.infrastructure` directly (tests enforce).
 
 ## Streamlit — reference UI client
 
-- **Entry:** `streamlit_app.py`, multipage **`pages/`**, widgets **`src/ui/`**.
-- **Rule:** No direct imports of `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api`. Use **`BackendClient`** (`src/frontend_gateway/protocol.py`) and **`src.frontend_gateway.view_models`** for display shapes.
-- **Session helpers:** `src/core/app_state.py` (`get_backend_client`) and optional in-process **`BackendApplicationContainer`** in Streamlit session state (`streamlit_backend_factory`).
-
-**Role today:** Primary demo UI and internal tooling. **Strategic API consumers** should use **HTTP** + OpenAPI the same way `HttpBackendClient` does.
+- **Entry:** `streamlit_app.py`, **`pages/`**, **`src/ui/`**.
+- **Rule:** Use **`BackendClient`** (`src/frontend_gateway/protocol.py`) and **`view_models`** — no direct `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api`.
+- **In-process backend:** `src/frontend_gateway/streamlit_backend_factory.py` → **`build_backend(..., backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()))`**.
 
 ## Client modes (`RAGCRAFT_BACKEND_CLIENT`)
 
 | Mode | Behavior |
 |------|----------|
-| **`http`** (default if `RAGCRAFT_BACKEND_CLIENT` unset) | `HttpBackendClient` → FastAPI (`RAGCRAFT_API_BASE_URL`). Matches how a SPA or automation would integrate. |
-| **`in_process`** | `InProcessBackendClient` → shared **`BackendApplicationContainer`** built in the Streamlit process (no uvicorn). Same use cases as the API; transport only differs. |
+| **`http`** (default if unset) | `HttpBackendClient` → FastAPI (`RAGCRAFT_API_BASE_URL`). |
+| **`in_process`** | `InProcessBackendClient` → **`BackendApplicationContainer`** in the Streamlit process. |
 
-Details: `docs/migration/streamlit-fastapi-dev.md`.
+See **`docs/README.md`** (local development) for env vars.
 
-## Layering
+## Layering (summary)
 
 | Location | Role |
 |----------|------|
-| **`src/domain/`** | Entities, value objects, ports (protocols). No FastAPI, Streamlit, SQLite drivers, or LangChain imports. Summary recall uses **`SummaryRecallDocument`**, not LangChain `Document`. |
-| **`src/application/`** | Use cases, DTOs, HTTP wire helpers, pure policies (e.g. `application/chat/policies/`), retrieval tuning (`retrieval_settings_tuner`). **No** `src.infrastructure` imports — composition wires adapters. Use cases do not import `src.frontend_gateway` (stubs may, for HTTP client placeholders). |
-| **`src/infrastructure/`** | **`adapters/`** (RAG stack, evaluation, workspace I/O, **SQLite user/asset/project-settings**, etc.), **`persistence/`**, **`vectorstores/`**, **`llm/`**, and other technical implementations. |
-| **`src/infrastructure/adapters/sqlite/`** | SQLite implementations of domain ports (users, assets, project settings). |
-| **`src/composition/`** | Wires the graph; **`build_backend()`** is the single production entry for the full container. |
-| **`src/frontend_gateway/`** | `BackendClient`, HTTP client, in-process adapter, Streamlit auth/session glue, **`streamlit_chat_transcript`** (`ChatService`). Must not import **`src.infrastructure`** (stubs live under **`src/application/frontend_support/`**). |
-| **`src/auth/`** | Authentication helpers shared by Streamlit and API-oriented flows. |
+| **`src/domain/`** | Entities, ports, payloads. No framework imports (see tests). |
+| **`src/application/`** | Use cases, orchestration (`use_cases/chat/orchestration/`), policies, DTOs, `frontend_support` stubs. No `src.infrastructure`. |
+| **`src/infrastructure/`** | Adapters, persistence, vector stores, caching. |
+| **`src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**. No `src.frontend_gateway` imports. |
+| **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
+| **`src/auth/`** | Shared auth helpers. |
 
-**Dependency direction:** delivery (API, UI) → application use cases → domain; infrastructure implements ports.
+**Composition chat transcript:** default **`MemoryChatTranscript`** (infrastructure) on the service graph; Streamlit overrides via **`streamlit_backend_factory`**.
 
-## Deprecated / transitional
+## Removed legacy paths
 
-| Item | Status |
-|------|--------|
-| **`src/backend/`** | **Removed.** Import **`src.infrastructure.adapters`** (or application use cases); do not reintroduce. Tests fail if the directory exists or if **`src.backend`** is imported from `src/`, `apps/`, `pages/`, `tests/`, or **`streamlit_app.py`**. |
-| **`src/adapters/`** | **Removed.** SQLite and similar live under **`src/infrastructure/adapters/`**; do not reintroduce. |
-| **`src/infrastructure/services/`** | **Removed.** Use **`src/infrastructure/adapters/`** and **`src/application/`**; tests fail if the directory or **`src.infrastructure.services`** imports return. |
-| **`src/services/`** | **Removed** as a package name; do not reintroduce. |
-| **`src/app/ragcraft_app.py`** | **Removed**; in-process mode uses **`InProcessBackendClient`** + **`BackendApplicationContainer`** directly. |
-
-## Tests
-
-- **`tests/architecture/`** — Import-boundary and migration guardrails.
-- **`tests/infrastructure_services/`** — Unit tests for **`src.infrastructure.adapters`** (historically named; renamed from `tests/backend` to avoid confusion with `apps/api`).
-- **`tests/apps_api/`** — FastAPI contract and E2E-style HTTP tests.
+**Do not reintroduce:** `src/backend/`, `src/adapters/`, `src/infrastructure/services/`, `src/services/` as a package, or `RAGService` / `rag_service.py` as an orchestration façade. Tests guard these.
 
 ## Further reading
 
-- `README.md` — install, run, high-level diagram, **migration status**.
-- `docs/architecture/clean_architecture_target.md` — canonical Clean Architecture map and dependency rules.
-- `docs/migration/final_clean_architecture_report.md` — closure narrative, candid assessment, and out-of-scope items.
-- `tests/architecture/README.md` — enforced import rules matrix.
-- `docs/migration/streamlit-fastapi-dev.md` — env vars and local dev.
-- `docs/migration/MIGRATION_COMPLETE_REPORT.md` — closure narrative and SPA readiness notes.
+- **`docs/README.md`** — doc index + local dev notes.
+- **`docs/dependency_rules.md`** — import rules.
+- **`tests/architecture/README.md`** — what pytest enforces.

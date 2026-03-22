@@ -1,6 +1,6 @@
 # Architecture boundary tests
 
-Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`ARCHITECTURE_TARGET.md`** at the repo root and in **`docs/architecture/clean_architecture_target.md`**.
+Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`ARCHITECTURE_TARGET.md`** (repo root), **`docs/architecture.md`**, and **`docs/dependency_rules.md`**.
 
 ## Rules enforced
 

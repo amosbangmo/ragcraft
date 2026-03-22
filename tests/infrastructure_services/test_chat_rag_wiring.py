@@ -58,29 +58,6 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         section_expansion_global_max=64,
     )
 
-if "src.infrastructure.adapters.rag.hybrid_retrieval_service" not in sys.modules:
-    hybrid_module = types.ModuleType("src.infrastructure.adapters.rag.hybrid_retrieval_service")
-
-    class HybridRetrievalService:
-        def __init__(self, *, k1=1.5, b=0.75, epsilon=0.25):
-            pass
-
-        def lexical_search(
-            self,
-            *,
-            query: str,
-            assets: list[dict],
-            k: int,
-            filters=None,
-            k1=None,
-            b=None,
-            epsilon=None,
-        ):
-            return []
-
-    hybrid_module.HybridRetrievalService = HybridRetrievalService
-    sys.modules["src.infrastructure.adapters.rag.hybrid_retrieval_service"] = hybrid_module
-
 if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     faiss_store_module = types.ModuleType("src.infrastructure.vectorstores.faiss.vector_store")
 
