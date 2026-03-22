@@ -1,3 +1,18 @@
+"""
+Post–summary-recall assembly: technical stages (expand, rerank, compress, prompt build).
+
+**Orchestration inventory:** one large ``build`` method sequences many infrastructure services. Application
+layer already owns *when* assembly runs via ``PipelineAssemblyPort`` and ``run_recall_then_assemble_pipeline``
+(see chat orchestration ports / helpers under ``application/use_cases/chat/orchestration``).
+
+**Target:** keep the public port shape (``build`` only for orchestration entry); split internal stages into
+focused modules under ``src/infrastructure/adapters/rag/`` so this class stays a thin coordinator.
+
+TODO: extract cohesive stage helpers (e.g. section expansion + rerank bundle, prompt assembly bundle) into
+``src/infrastructure/adapters/rag/pipeline_assembly/`` submodules and leave ``PipelineAssemblyService.build`` as
+the single delegating entry implementing ``PipelineAssemblyPort``.
+"""
+
 from __future__ import annotations
 
 from time import perf_counter

@@ -8,6 +8,11 @@ Layers (in build order):
 1. SQLite app DB (:func:`~src.infrastructure.persistence.db.init_app_db`).
 2. Adapters: auth, projects, ingestion, vector store, evaluation, chat session, doc store, reranking,
    QA dataset + generation, project settings repository, retrieval settings, query logging.
+
+**Orchestration inventory (this module):** none. RAG pipeline sequencing is **not** built here; only shared
+technical services are. Target: keep this file free of chat/RAG flow logic — graph construction only.
+
+**Target ownership:** RAG orchestration stays in application use cases (e.g. :class:`~src.application.use_cases.chat.build_rag_pipeline.BuildRagPipelineUseCase`, :class:`~src.application.use_cases.chat.ask_question.AskQuestionUseCase`); this module never calls those use cases.
 """
 
 from __future__ import annotations

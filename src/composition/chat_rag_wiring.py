@@ -4,6 +4,22 @@ Wires RAG retrieval infrastructure services into chat use cases.
 Called from :class:`~src.composition.application_container.BackendApplicationContainer` using
 technical adapters from :class:`~src.composition.backend_composition.BackendComposition`.
 Orchestration lives in application use cases; this module only constructs the object graph.
+
+**Orchestration inventory (remaining hotspots adjacent to this wiring):**
+
+- :class:`~src.infrastructure.adapters.rag.summary_recall_service.SummaryRecallService` — implements
+  :class:`~src.application.use_cases.chat.orchestration.ports.SummaryRecallStagePort`; still contains
+  substantial retrieval-stage sequencing (target: keep port surface stable; move policy-heavy ordering into
+  application orchestration helpers if needed).
+- :class:`~src.infrastructure.adapters.rag.pipeline_assembly_service.PipelineAssemblyService` — implements
+  :class:`~src.application.use_cases.chat.orchestration.ports.PipelineAssemblyPort`; monolithic post-recall
+  assembly (target: shrink class / split into stage adapters; ordering remains driven from
+  :mod:`src.application.use_cases.chat.orchestration.recall_then_assemble_pipeline`).
+- Legacy ``rag_service`` module: **absent** in this repo; if reintroduced, it must be a thin compatibility
+  façade over use cases (no internal use-case construction).
+
+**Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
+``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.
 """
 
 from __future__ import annotations

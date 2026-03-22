@@ -6,6 +6,18 @@ headless callers, and the Streamlit façade.
 Use :func:`build_backend` for the **full graph** (services + use cases). Use
 :func:`build_backend_composition` when you only need the service layer, then pass that instance to
 :func:`build_backend_application_container` (or :func:`build_backend`) to attach use cases.
+
+**Orchestration inventory (this module):**
+
+- Lazy construction of use cases and injection of ports (e.g. chat/RAG subgraph from
+  :mod:`src.composition.chat_rag_wiring`).
+- Single allowed direct ``execute`` call: :meth:`BackendApplicationContainer.invalidate_project_chain`
+  delegates to :class:`~src.application.use_cases.projects.invalidate_project_chain_cache.InvalidateProjectChainCacheUseCase`
+  (cache lifecycle, not RAG sequencing).
+
+**Target ownership:** no multi-step RAG or evaluation flow logic here — only ``UseCase(...)`` wiring and
+passing references (e.g. ``inspect_pipeline`` into evaluation use cases). Compare-retrieval and gold-QA
+orchestration live in their respective use cases under ``src/application/use_cases``.
 """
 
 from __future__ import annotations

@@ -7,6 +7,19 @@ Backend composition root (no DI framework).
 * :mod:`src.composition.wiring` — shared hooks (e.g. process-scoped chain eviction for FastAPI).
 
 FastAPI should obtain a process-wide :class:`BackendApplicationContainer` via ``apps.api.dependencies``.
+
+**Final orchestration target (locked for migration):**
+
+- **Application** ``src/application/use_cases`` owns RAG/chat orchestration (sequence of recall → assembly →
+  answer, retrieval comparison, evaluation runners calling inspect + generate).
+- **Application services** (``src/application/...`` outside ``use_cases``) hold only framework-agnostic helpers
+  (policies, DTOs, pure orchestration snippets), not transport or adapter construction.
+- **Infrastructure** ``src/infrastructure/adapters`` implements ports and technical services; adapters must not
+  construct use cases or own end-user flow sequencing where a use case already exists.
+- **Composition** (this package + :mod:`src.composition.chat_rag_wiring`) wires instances only — no business
+  sequencing beyond delegating to a single use case ``execute`` for cache invalidation on the container.
+- **Transport** (``apps/api``, ``src/frontend_gateway``) resolves use cases from the container / dependencies;
+  it must not import RAG orchestration adapters under ``src.infrastructure.adapters.rag`` directly.
 """
 
 from src.composition.application_container import (
