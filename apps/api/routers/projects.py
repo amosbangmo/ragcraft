@@ -31,7 +31,11 @@ from apps.api.schemas.projects import (
 )
 from apps.api.schemas.serialization import ingest_document_result_to_api_dict
 from apps.api.upload_adapter import read_upload_for_ingestion
-from src.application.ingestion.dtos import DeleteDocumentCommand, ReindexDocumentCommand
+from src.application.ingestion.dtos import (
+    DeleteDocumentCommand,
+    IngestUploadedFileCommand,
+    ReindexDocumentCommand,
+)
 from src.services.project_service import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -115,7 +119,9 @@ async def post_document_ingest(
     """
     buffered = await read_upload_for_ingestion(file)
     project = project_service.get_project(user_id, project_id)
-    result = use_case.execute(project, buffered)
+    result = use_case.execute(
+        IngestUploadedFileCommand(project=project, uploaded_file=buffered)
+    )
     data = ingest_document_result_to_api_dict(result)
     return IngestDocumentResponse.model_validate(data)
 

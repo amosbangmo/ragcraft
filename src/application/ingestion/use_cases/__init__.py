@@ -4,6 +4,7 @@ from src.application.ingestion.dtos import (
     DeleteDocumentResult,
     IngestDocumentResult,
     IngestFilePathCommand,
+    IngestUploadedFileCommand,
     ReindexDocumentCommand,
 )
 from src.application.ingestion.use_cases.ingest_file_path import IngestFilePathUseCase
@@ -19,6 +20,7 @@ __all__ = [
     "DeleteDocumentUseCase",
     "IngestDocumentResult",
     "IngestFilePathCommand",
+    "IngestUploadedFileCommand",
     "IngestFilePathUseCase",
     "IngestUploadedFileUseCase",
     "ReindexDocumentCommand",

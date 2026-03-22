@@ -17,10 +17,13 @@ from src.composition.application_container import (
 )
 from src.composition import BackendComposition, build_backend_composition
 from src.application.evaluation.dtos import GenerateQaDatasetCommand
-from src.application.ingestion.dtos import DeleteDocumentCommand, ReindexDocumentCommand
-from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
-from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
-from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
+from src.application.ingestion.dtos import (
+    DeleteDocumentCommand,
+    DeleteDocumentResult,
+    IngestDocumentResult,
+    IngestUploadedFileCommand,
+    ReindexDocumentCommand,
+)
 from src.application.ingestion.use_cases.replace_document_assets import (
     replace_document_assets_for_reingest,
 )
@@ -45,6 +48,10 @@ from src.core.chain_state import (
 class RAGCraftApp:
     """
     Thin Streamlit compatibility wrapper around :class:`BackendApplicationContainer`.
+
+    Ingest/delete/reindex entrypoints delegate to the same container use cases as the HTTP API and
+    return application DTOs (:class:`~src.application.ingestion.dtos.IngestDocumentResult`,
+    :class:`~src.application.ingestion.dtos.DeleteDocumentResult`).
 
     Prefer constructing via ``application_container=`` when sharing a process-wide graph (FastAPI);
     the no-arg constructor builds a fresh composition (typical Streamlit session).
@@ -232,38 +239,29 @@ class RAGCraftApp:
             invalidate_project_chain=self.invalidate_project_chain,
         )
 
-    def delete_project_document(self, user_id: str, project_id: str, source_file: str) -> dict:
+    def delete_project_document(
+        self, user_id: str, project_id: str, source_file: str
+    ) -> DeleteDocumentResult:
         project = self.get_project(user_id, project_id)
-        uc = DeleteDocumentUseCase(
-            asset_repository=self.docstore_service,
-            vector_index=self.vectorstore_service,
-            invalidate_project_chain=self.invalidate_project_chain,
-        )
-        return uc.execute(
+        return self._container.ingestion_delete_document_use_case.execute(
             DeleteDocumentCommand(project=project, source_file=source_file)
-        ).as_payload()
-
-    def ingest_uploaded_file(self, user_id: str, project_id: str, uploaded_file):
-        project = self.get_project(user_id, project_id)
-        uc = IngestUploadedFileUseCase(
-            ingestion_service=self.ingestion_service,
-            asset_repository=self.docstore_service,
-            vector_index=self.vectorstore_service,
-            invalidate_project_chain=self.invalidate_project_chain,
         )
-        return uc.execute(project, uploaded_file).as_payload()
 
-    def reindex_project_document(self, user_id: str, project_id: str, source_file: str):
+    def ingest_uploaded_file(
+        self, user_id: str, project_id: str, uploaded_file
+    ) -> IngestDocumentResult:
         project = self.get_project(user_id, project_id)
-        uc = ReindexDocumentUseCase(
-            ingestion_service=self.ingestion_service,
-            asset_repository=self.docstore_service,
-            vector_index=self.vectorstore_service,
-            invalidate_project_chain=self.invalidate_project_chain,
+        return self._container.ingestion_ingest_uploaded_file_use_case.execute(
+            IngestUploadedFileCommand(project=project, uploaded_file=uploaded_file)
         )
-        return uc.execute(
+
+    def reindex_project_document(
+        self, user_id: str, project_id: str, source_file: str
+    ) -> IngestDocumentResult:
+        project = self.get_project(user_id, project_id)
+        return self._container.ingestion_reindex_document_use_case.execute(
             ReindexDocumentCommand(project=project, source_file=source_file)
-        ).as_payload()
+        )
 
     def ask_question(
         self,

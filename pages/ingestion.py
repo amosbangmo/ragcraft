@@ -69,25 +69,11 @@ def _run_ingestion():
 
     for uploaded_file in uploaded_files:
         result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
-
-        assets = result["raw_assets"]
-        replacement_info = result["replacement_info"]
-
-        type_counts: dict[str, int] = {}
-        for asset in assets:
-            asset_type = asset["content_type"]
-            type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
-
-        diag = result.get("diagnostics")
-        diagnostics_dict = diag.to_dict() if diag is not None and hasattr(diag, "to_dict") else (diag or {})
-
         results.append(
             {
                 "file_name": uploaded_file.name,
-                "asset_count": len(assets),
-                "type_counts": type_counts,
-                "replacement_info": replacement_info,
-                "diagnostics": diagnostics_dict,
+                "success_message": result.format_ingestion_success_message(uploaded_file.name),
+                "diagnostics": result.diagnostics.to_dict(),
             }
         )
 
@@ -113,23 +99,7 @@ def _render_ingestion_result(results: list[dict]):
 
     for item in results:
         file_name = item["file_name"]
-        asset_count = item["asset_count"]
-        type_counts = item["type_counts"]
-        replacement_info = item["replacement_info"]
-
-        deleted_assets = replacement_info.get("deleted_assets", 0)
-        deleted_vectors = replacement_info.get("deleted_vectors", 0)
-
-        if deleted_assets or deleted_vectors:
-            st.success(
-                f"{file_name}: replaced previous ingestion "
-                f"({deleted_assets} SQLite asset(s) removed, {deleted_vectors} FAISS vector(s) removed), "
-                f"then processed {asset_count} multimodal asset(s) {type_counts}"
-            )
-        else:
-            st.success(
-                f"{file_name}: processed {asset_count} multimodal asset(s) {type_counts}"
-            )
+        st.success(item["success_message"])
 
         diagnostics = item.get("diagnostics") or {}
         if diagnostics:

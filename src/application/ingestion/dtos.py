@@ -33,11 +33,57 @@ class DeleteDocumentCommand:
     source_file: str
 
 
+@dataclass(frozen=True)
+class IngestUploadedFileCommand:
+    """Ingest a browser/API upload (object must expose ``name`` like Streamlit ``UploadedFile``)."""
+
+    project: Project
+    uploaded_file: object
+
+
 @dataclass
 class IngestDocumentResult:
     raw_assets: list[dict]
     replacement_info: dict
     diagnostics: IngestionDiagnostics
+
+    def content_type_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for asset in self.raw_assets:
+            ct = asset.get("content_type") or "unknown"
+            counts[ct] = counts.get(ct, 0) + 1
+        return counts
+
+    def _replacement_deleted_assets(self) -> int:
+        return int((self.replacement_info or {}).get("deleted_assets", 0) or 0)
+
+    def _replacement_deleted_vectors(self) -> int:
+        return int((self.replacement_info or {}).get("deleted_vectors", 0) or 0)
+
+    def format_ingestion_success_message(self, file_name: str) -> str:
+        """User-facing summary after upload ingest (matches prior Streamlit copy)."""
+        type_counts = self.content_type_counts()
+        asset_count = len(self.raw_assets)
+        da = self._replacement_deleted_assets()
+        dv = self._replacement_deleted_vectors()
+        if da or dv:
+            return (
+                f"{file_name}: replaced previous ingestion "
+                f"({da} SQLite asset(s) removed, {dv} FAISS vector(s) removed), "
+                f"then processed {asset_count} multimodal asset(s) {type_counts}"
+            )
+        return f"{file_name}: processed {asset_count} multimodal asset(s) {type_counts}"
+
+    def format_reindex_success_message(self, file_name: str) -> str:
+        """User-facing summary after reindex (matches prior Streamlit copy)."""
+        type_counts = self.content_type_counts()
+        da = self._replacement_deleted_assets()
+        dv = self._replacement_deleted_vectors()
+        return (
+            f"{file_name}: reindexed successfully "
+            f"({da} SQLite asset(s) replaced, {dv} FAISS vector(s) replaced), "
+            f"generated {len(self.raw_assets)} multimodal asset(s) {type_counts}."
+        )
 
     def as_payload(self) -> dict:
         return {
@@ -53,6 +99,14 @@ class DeleteDocumentResult:
     file_deleted: bool
     deleted_vectors: int
     deleted_assets: int
+
+    def format_delete_summary(self, doc_name: str) -> str:
+        """User-facing line after delete (matches prior Streamlit copy)."""
+        return (
+            f"{doc_name}: file deleted={self.file_deleted}, "
+            f"SQLite assets removed={self.deleted_assets}, "
+            f"FAISS vectors removed={self.deleted_vectors}."
+        )
 
     def as_payload(self) -> dict:
         return {

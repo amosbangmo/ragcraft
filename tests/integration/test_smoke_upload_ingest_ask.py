@@ -102,6 +102,18 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         app._backend._rag_service = MagicMock()
         app.invalidate_project_chain = MagicMock()
 
+        # Container-cached ingestion use cases read services from the backend graph.
+        backend = app._backend
+        backend.ingestion_service = app.ingestion_service
+        backend.vectorstore_service = app.vectorstore_service
+        backend.docstore_service = app.docstore_service
+        for _uc_key in (
+            "ingestion_ingest_uploaded_file_use_case",
+            "ingestion_reindex_document_use_case",
+            "ingestion_delete_document_use_case",
+        ):
+            app._container.__dict__.pop(_uc_key, None)
+
         app.project_service.get_project.return_value = project
         app.docstore_service.get_doc_ids_for_source_file.return_value = []
 
@@ -142,7 +154,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
             chat_history=[],
         )
 
-        self.assertEqual(ingest_result["raw_assets"], raw_assets)
+        self.assertEqual(ingest_result.raw_assets, raw_assets)
         app.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
         app.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
         self.assertIsNotNone(ask_result)

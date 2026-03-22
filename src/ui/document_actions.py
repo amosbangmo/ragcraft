@@ -197,11 +197,7 @@ def confirm_delete_document_dialog(
                     project_id=project_id,
                     source_file=doc_name,
                 )
-                st.session_state[success_message_key] = (
-                    f"{doc_name}: file deleted={result['file_deleted']}, "
-                    f"SQLite assets removed={result['deleted_assets']}, "
-                    f"FAISS vectors removed={result['deleted_vectors']}."
-                )
+                st.session_state[success_message_key] = result.format_delete_summary(doc_name)
             except Exception as exc:
                 st.session_state[error_message_key] = _get_user_error_message(
                     exc,
@@ -242,21 +238,8 @@ def confirm_reindex_document_dialog(
             f"Failed to reindex '{doc_name}'.",
         )
 
-    def _render_reindex_result(result: dict):
-        assets = result["raw_assets"]
-        replacement_info = result["replacement_info"]
-
-        type_counts: dict[str, int] = {}
-        for asset in assets:
-            asset_type = asset["content_type"]
-            type_counts[asset_type] = type_counts.get(asset_type, 0) + 1
-
-        st.session_state[success_message_key] = (
-            f"{doc_name}: reindexed successfully "
-            f"({replacement_info.get('deleted_assets', 0)} SQLite asset(s) replaced, "
-            f"{replacement_info.get('deleted_vectors', 0)} FAISS vector(s) replaced), "
-            f"generated {len(assets)} multimodal asset(s) {type_counts}."
-        )
+    def _render_reindex_result(result):
+        st.session_state[success_message_key] = result.format_reindex_success_message(doc_name)
 
         clear_result_payload(result_key)
         clear_document_reindexing()
