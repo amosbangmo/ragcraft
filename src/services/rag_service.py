@@ -23,7 +23,7 @@ from src.services.vectorstore_service import VectorStoreService
 
 
 class RAGService:
-    """Compatibility façade over retrieval / pipeline use cases and shared services."""
+    """Coordinates retrieval and chat use cases with shared services (Streamlit and legacy callers)."""
 
     def __init__(
         self,

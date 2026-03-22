@@ -3,13 +3,13 @@ import unittest
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.services.evaluation_service import (
-    EvaluationService,
-    _latency_stage_row_fields,
-    _mean_round,
-    _r2,
-    _rate,
+from src.services.benchmark_math import (
+    latency_stage_row_fields,
+    mean_round,
+    r2,
+    rate,
 )
+from src.services.evaluation_service import EvaluationService
 from src.services.llm_judge_service import LLMJudgeService
 
 
@@ -29,7 +29,7 @@ class _StubSemanticSimilarity:
 class TestEvaluationServiceModuleHelpers(unittest.TestCase):
     def test_latency_stage_row_fields_empty(self) -> None:
         self.assertEqual(
-            _latency_stage_row_fields(None),
+            latency_stage_row_fields(None),
             {
                 "query_rewrite_ms": 0.0,
                 "retrieval_ms": 0.0,
@@ -40,7 +40,7 @@ class TestEvaluationServiceModuleHelpers(unittest.TestCase):
         )
 
     def test_latency_stage_row_fields_rounds(self) -> None:
-        out = _latency_stage_row_fields(
+        out = latency_stage_row_fields(
             {
                 "query_rewrite_ms": 1.234,
                 "retrieval_ms": 2.0,
@@ -53,22 +53,22 @@ class TestEvaluationServiceModuleHelpers(unittest.TestCase):
         self.assertEqual(out["prompt_build_ms"], 3.46)
 
     def test_r2_none(self) -> None:
-        self.assertIsNone(_r2(None))
+        self.assertIsNone(r2(None))
 
     def test_r2_rounds(self) -> None:
-        self.assertEqual(_r2(0.123456), 0.12)
+        self.assertEqual(r2(0.123456), 0.12)
 
     def test_mean_round_empty(self) -> None:
-        self.assertIsNone(_mean_round([], 2))
+        self.assertIsNone(mean_round([], 2))
 
     def test_mean_round(self) -> None:
-        self.assertEqual(_mean_round([1.0, 2.0], 1), 1.5)
+        self.assertEqual(mean_round([1.0, 2.0], 1), 1.5)
 
     def test_rate_zero_denominator(self) -> None:
-        self.assertIsNone(_rate(1, 0))
+        self.assertIsNone(rate(1, 0))
 
     def test_rate(self) -> None:
-        self.assertEqual(_rate(1, 4), 0.25)
+        self.assertEqual(rate(1, 4), 0.25)
 
 
 class TestEvaluationServiceMetrics(unittest.TestCase):

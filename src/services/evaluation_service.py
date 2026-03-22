@@ -11,19 +11,6 @@ from src.services.row_evaluation_service import RowEvaluationService
 from src.services.semantic_similarity_service import SemanticSimilarityService
 from src.services.llm_judge_service import LLMJudgeService
 
-from src.services.benchmark_math import (
-    latency_stage_row_fields,
-    mean_round,
-    r2,
-    rate,
-)
-
-# Backward-compatible re-exports for tests and callers.
-_latency_stage_row_fields = latency_stage_row_fields
-_mean_round = mean_round
-_r2 = r2
-_rate = rate
-
 _DEFAULT_RETRIEVAL = RetrievalMetricsService()
 _DEFAULT_ANSWER = AnswerQualityAggregationService()
 

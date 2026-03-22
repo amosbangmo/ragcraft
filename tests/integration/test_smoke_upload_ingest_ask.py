@@ -15,7 +15,6 @@ _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "src.app.ragcraft_app",
     "src.services.qa_dataset_generation_service",
     "src.services.qa_dataset_service",
-    "src.infrastructure.evaluation.qa_dataset_repository",
     "src.infrastructure.persistence.sqlite.qa_dataset_repository",
 )
 
@@ -56,7 +55,11 @@ def setUpModule():
     _install_module("src.services.ingestion_service", IngestionService=_DummyService)
     _install_module("src.services.vectorstore_service", VectorStoreService=_DummyService)
     _install_module("src.services.evaluation_service", EvaluationService=_DummyService)
-    _install_module("src.services.llm_judge_service", LLMJudgeService=_DummyService)
+    _install_module(
+        "src.services.llm_judge_service",
+        LLMJudgeService=_DummyService,
+        JUDGE_FAILURE_REASON="judge_failure",
+    )
     _install_module("src.services.chat_service", ChatService=_DummyService)
     _install_module("src.services.rag_service", RAGService=_DummyService)
     _install_module("src.services.docstore_service", DocStoreService=_DummyService)
@@ -96,7 +99,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         app.ingestion_service = MagicMock()
         app.vectorstore_service = MagicMock()
         app.docstore_service = MagicMock()
-        app._rag_service = MagicMock()
+        app._backend._rag_service = MagicMock()
         app.invalidate_project_chain = MagicMock()
 
         app.project_service.get_project.return_value = project
