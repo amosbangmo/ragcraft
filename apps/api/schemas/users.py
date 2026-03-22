@@ -33,9 +33,9 @@ class ProfileUpdateResponse(BaseModel):
 class PasswordChangeRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    current_password: str
-    new_password: str
-    confirm_new_password: str
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8)
+    confirm_new_password: str = Field(..., min_length=8)
 
 
 class SimpleStatusResponse(BaseModel):
@@ -48,4 +48,4 @@ class SimpleStatusResponse(BaseModel):
 class DeleteAccountRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    current_password: str
+    current_password: str = Field(..., min_length=1)

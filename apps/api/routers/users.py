@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
@@ -23,14 +23,21 @@ from apps.api.schemas.users import (
     SimpleStatusResponse,
     UserMeResponse,
 )
+from apps.api.user_avatar_io import (
+    avatar_suffix_from_upload_filename,
+    safe_remove_stored_avatar_file,
+    write_avatar_bytes,
+)
 from src.auth.password_utils import hash_password, verify_password
+from src.auth.user_repository import UserRepository
 from src.core.paths import get_data_root
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 DATA_ROOT = get_data_root()
-_MAX_AVATAR_MB = 2
-_ALLOWED_AVATAR_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+
+UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
+RequestUserIdDep = Annotated[str, Depends(get_request_user_id)]
 
 
 def _row_to_user(row) -> UserMeResponse | None:
@@ -51,8 +58,8 @@ def _user_root(user_id: str) -> Path:
 
 @router.get("/me", response_model=UserMeResponse, summary="Current user profile (by X-User-Id)")
 def get_me(
-    user_id: Annotated[str, Depends(get_request_user_id)],
-    repo: Annotated[Any, Depends(get_user_repository)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
 ) -> UserMeResponse:
     row = repo.get_by_user_id(user_id)
     if row is None:
@@ -65,24 +72,30 @@ def get_me(
 @router.patch("/me", response_model=ProfileUpdateResponse, summary="Update username and display name")
 def patch_me(
     body: ProfileUpdateRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
-    repo: Annotated[Any, Depends(get_user_repository)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
 ) -> ProfileUpdateResponse:
     new_username = body.username.strip().lower()
     new_display_name = body.display_name.strip()
     if not new_username or not new_display_name:
-        raise HTTPException(status_code=400, detail="Username and display name are required.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username and display name are required.",
+        )
     if not re.fullmatch(r"[a-z0-9._-]{3,30}", new_username):
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens.",
         )
     current = repo.get_by_user_id(user_id)
     if not current:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     existing = repo.get_by_username(new_username)
     if existing and str(existing["user_id"]) != user_id:
-        raise HTTPException(status_code=400, detail="This username is already taken.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This username is already taken.",
+        )
     repo.update_profile(user_id=user_id, username=new_username, display_name=new_display_name)
     updated = repo.get_by_user_id(user_id)
     u = _row_to_user(updated)
@@ -93,68 +106,63 @@ def patch_me(
 @router.post("/me/password", response_model=SimpleStatusResponse, summary="Change password")
 def post_password(
     body: PasswordChangeRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
 ) -> SimpleStatusResponse:
-    if not body.current_password or not body.new_password or not body.confirm_new_password:
-        raise HTTPException(status_code=400, detail="All password fields are required.")
-    if len(body.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must contain at least 8 characters.")
     if body.new_password != body.confirm_new_password:
-        raise HTTPException(status_code=400, detail="New passwords do not match.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New passwords do not match.",
+        )
     user = repo.get_by_user_id(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if not verify_password(body.current_password, user["password_hash"]):
-        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect.",
+        )
     repo.update_password(user_id, hash_password(body.new_password))
     return SimpleStatusResponse(success=True, message="Password updated successfully.")
 
 
-def _validate_avatar(upload: UploadFile) -> tuple[bool, str]:
-    if upload.filename is None or not str(upload.filename).strip():
-        return False, "Please choose an image."
-    suffix = Path(upload.filename).suffix.lower()
-    if suffix not in _ALLOWED_AVATAR_EXT:
-        return False, "Unsupported format. Use PNG, JPG, JPEG, or WEBP."
-    return True, ""
-
-
 @router.post("/me/avatar", response_model=SimpleStatusResponse, summary="Upload avatar image")
 async def post_avatar(
-    user_id: Annotated[str, Depends(get_request_user_id)],
-    repo: Annotated[Any, Depends(get_user_repository)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
     file: UploadFile = File(..., description="PNG, JPG, JPEG, or WEBP (max 2 MB)."),
 ) -> SimpleStatusResponse:
-    ok, msg = _validate_avatar(file)
-    if not ok:
-        raise HTTPException(status_code=400, detail=msg)
+    try:
+        suffix = avatar_suffix_from_upload_filename(file.filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     raw = await file.read()
-    if len(raw) > _MAX_AVATAR_MB * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Avatar exceeds maximum size.")
-    suffix = Path(file.filename or "avatar.png").suffix.lower()
-    avatar_dir = _user_root(user_id) / "profile"
-    avatar_dir.mkdir(parents=True, exist_ok=True)
-    avatar_path = avatar_dir / f"avatar{suffix}"
-    for existing in avatar_dir.glob("avatar.*"):
-        if existing != avatar_path:
-            existing.unlink(missing_ok=True)
-    avatar_path.write_bytes(raw)
-    repo = _repo()
+    try:
+        avatar_path = write_avatar_bytes(
+            data_root=DATA_ROOT,
+            user_id=user_id,
+            suffix=suffix,
+            raw=raw,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     repo.update_avatar_path(user_id, str(avatar_path))
     return SimpleStatusResponse(success=True, message="Avatar updated successfully.")
 
 
 @router.delete("/me/avatar", response_model=SimpleStatusResponse, summary="Remove avatar")
 def delete_avatar(
-    user_id: Annotated[str, Depends(get_request_user_id)],
-    repo: Annotated[Any, Depends(get_user_repository)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
 ) -> SimpleStatusResponse:
     user = repo.get_by_user_id(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    ap = user["avatar_path"]
-    if ap:
-        Path(str(ap)).unlink(missing_ok=True)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    safe_remove_stored_avatar_file(
+        data_root=DATA_ROOT,
+        user_id=user_id,
+        avatar_path_str=user["avatar_path"],
+    )
     repo.update_avatar_path(user_id, None)
     return SimpleStatusResponse(success=True, message="Avatar removed successfully.")
 
@@ -162,16 +170,17 @@ def delete_avatar(
 @router.delete("/me", response_model=SimpleStatusResponse, summary="Delete account")
 def delete_me(
     body: DeleteAccountRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
-    repo: Annotated[Any, Depends(get_user_repository)],
+    user_id: RequestUserIdDep,
+    repo: UserRepositoryDep,
 ) -> SimpleStatusResponse:
     user = repo.get_by_user_id(user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-    if not body.current_password:
-        raise HTTPException(status_code=400, detail="Please enter your current password.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     if not verify_password(body.current_password, user["password_hash"]):
-        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect.",
+        )
     repo.delete_user(user_id)
     root = _user_root(user_id)
     if root.exists():
