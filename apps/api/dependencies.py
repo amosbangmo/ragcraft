@@ -3,12 +3,11 @@ FastAPI dependency providers (transport layer).
 
 **Composition root:** :func:`get_backend_application_container` returns a cached
 :class:`~src.composition.application_container.BackendApplicationContainer` built via
-:func:`~src.composition.build_backend`. Service-level graph alone is
-:class:`~src.composition.backend_composition.BackendComposition` via
+:func:`~src.composition.build_backend` with :func:`~src.composition.wiring.process_scoped_chain_invalidate_key`.
+Service-level graph alone is :class:`~src.composition.backend_composition.BackendComposition` via
 :func:`~src.composition.build_backend_composition`.
 
-FastAPI does not reference ``src.app`` or the legacy interactive UI shell. Retrieval handle eviction uses
-:class:`~src.infrastructure.caching.process_project_chain_cache.ProcessProjectChainCache`.
+FastAPI does not reference ``src.app`` or the legacy interactive UI shell.
 
 Importing this module loads the composition package (typed service + use-case graph) so dependency
 signatures stay explicit; the container **instance** is still created lazily on first
@@ -70,12 +69,9 @@ from src.composition.application_container import BackendApplicationContainer
 @lru_cache(maxsize=1)
 def get_backend_application_container() -> BackendApplicationContainer:
     from src.composition import build_backend
-    from src.infrastructure.caching.process_project_chain_cache import (
-        get_default_process_project_chain_cache,
-    )
+    from src.composition.wiring import process_scoped_chain_invalidate_key
 
-    process_chain_cache = get_default_process_project_chain_cache()
-    return build_backend(invalidate_chain_key=process_chain_cache.drop)
+    return build_backend(invalidate_chain_key=process_scoped_chain_invalidate_key())
 
 
 BackendContainerDep = Annotated[BackendApplicationContainer, Depends(get_backend_application_container)]
@@ -233,7 +229,14 @@ def ensure_auth_database() -> bool:
     return True
 
 
+@lru_cache(maxsize=1)
+def _default_sqlite_user_repository() -> SqliteUserRepository:
+    """Process-wide user repository (single-worker SQLite; tests override ``get_user_repository``)."""
+
+    return SqliteUserRepository()
+
+
 def get_user_repository(
     _: Annotated[bool, Depends(ensure_auth_database)],
 ) -> UserRepositoryPort:
-    return SqliteUserRepository()
+    return _default_sqlite_user_repository()

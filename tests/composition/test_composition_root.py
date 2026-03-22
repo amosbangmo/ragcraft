@@ -16,6 +16,8 @@ from src.composition import (
 )
 import src.composition.application_container as application_container_module
 
+from tests.support.backend_container import build_backend_container_for_tests, noop_chain_invalidate
+
 
 def test_build_backend_composition_returns_typed_service_graph() -> None:
     try:
@@ -34,14 +36,11 @@ def test_build_backend_composition_returns_typed_service_graph() -> None:
 
 
 def test_build_backend_wires_application_container() -> None:
-    def _noop_invalidate(_key: str) -> None:
-        return None
-
     try:
         backend = build_backend_composition()
         container = build_backend_application_container(
             backend=backend,
-            invalidate_chain_key=_noop_invalidate,
+            invalidate_chain_key=noop_chain_invalidate,
         )
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Composition unavailable in this environment: {exc}")
@@ -56,11 +55,8 @@ def test_build_backend_reexported_from_package_matches_module() -> None:
 
 
 def test_key_use_cases_resolve() -> None:
-    def _noop_invalidate(_key: str) -> None:
-        return None
-
     try:
-        container = build_backend(invalidate_chain_key=_noop_invalidate)
+        container = build_backend_container_for_tests()
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Composition unavailable in this environment: {exc}")
 
