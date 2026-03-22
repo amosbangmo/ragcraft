@@ -11,8 +11,8 @@ class RAGPipelineQueryContext:
     """
     Cross-layer inputs shared by RAG preview, pipeline build, and ask flows.
 
-    Bundles the optional knobs that were previously passed as parallel kwargs on
-    :class:`~src.services.rag_service.RAGService`.
+    Bundles the optional knobs passed as parallel kwargs on chat / RAG entrypoints
+    (for example :class:`~src.services.rag_service.RAGService` and chat use cases).
     """
 
     chat_history: tuple[str, ...]

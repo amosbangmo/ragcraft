@@ -1,11 +1,19 @@
+"""
+RAG transport-facing shell: vector store loading, retrieval settings, and chat use-case wiring.
+
+Orchestration lives under ``src.application.chat`` (use cases + ``orchestration``). This class keeps
+a stable object graph for :class:`~src.composition.backend_composition.BackendComposition`, Streamlit,
+and code that still expects ``rag_service.inspect_pipeline`` / ``.ask`` / ``.build_pipeline``.
+"""
+
 from typing import Any
 
+from src.application.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from src.application.chat.use_cases.ask_question import AskQuestionUseCase
-from src.application.retrieval.use_cases import (
-    BuildPipelineUseCase,
-    InspectPipelineUseCase,
-    PreviewSummaryRecallUseCase,
-)
+from src.application.chat.use_cases.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.chat.use_cases.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
+from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -23,7 +31,7 @@ from src.services.vectorstore_service import VectorStoreService
 
 
 class RAGService:
-    """Coordinates retrieval and chat use cases with shared services (Streamlit and legacy callers)."""
+    """Wires shared retrieval services to chat-layer use cases (not an orchestration god-object)."""
 
     def __init__(
         self,
@@ -59,16 +67,20 @@ class RAGService:
             answer_generation_service or AnswerGenerationService()
         )
 
-        self._build_pipeline_uc = BuildPipelineUseCase(
+        self._pipeline_query_log_emitter = PipelineQueryLogEmitter(query_log_service)
+        self._build_rag_pipeline_uc = BuildRagPipelineUseCase(
             summary_recall_service=self.summary_recall_service,
             pipeline_assembly_service=self.pipeline_assembly_service,
-            query_log_service=self.query_log_service,
+            query_log_emitter=self._pipeline_query_log_emitter,
         )
-        self._inspect_pipeline_uc = InspectPipelineUseCase(
-            build_pipeline=self._build_pipeline_uc,
+        self._inspect_pipeline_uc = InspectRagPipelineUseCase(
+            build_rag_pipeline=self._build_rag_pipeline_uc,
         )
         self._preview_summary_recall_uc = PreviewSummaryRecallUseCase(
             summary_recall_service=self.summary_recall_service,
+        )
+        self._generate_answer_from_pipeline_uc = GenerateAnswerFromPipelineUseCase(
+            answer_generation_service=self.answer_generation_service,
         )
         self._ask_question = AskQuestionUseCase(
             build_pipeline=lambda *args, **kwargs: self.build_pipeline(*args, **kwargs),
@@ -81,12 +93,21 @@ class RAGService:
         return self._ask_question
 
     @property
-    def inspect_pipeline_use_case(self) -> InspectPipelineUseCase:
+    def inspect_pipeline_use_case(self) -> InspectRagPipelineUseCase:
         return self._inspect_pipeline_uc
 
     @property
     def preview_summary_recall_use_case(self) -> PreviewSummaryRecallUseCase:
         return self._preview_summary_recall_uc
+
+    @property
+    def build_rag_pipeline_use_case(self) -> BuildRagPipelineUseCase:
+        """Explicit access for callers that need the pipeline builder without ``RAGService`` shortcuts."""
+        return self._build_rag_pipeline_uc
+
+    @property
+    def generate_answer_from_pipeline_use_case(self) -> GenerateAnswerFromPipelineUseCase:
+        return self._generate_answer_from_pipeline_uc
 
     @property
     def config(self) -> Any:
@@ -133,7 +154,7 @@ class RAGService:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> PipelineBuildResult | None:
-        return self._build_pipeline_uc.execute(
+        return self._build_rag_pipeline_uc.execute(
             project,
             question,
             chat_history,
@@ -168,7 +189,7 @@ class RAGService:
     def generate_answer_from_pipeline(
         self, *, project: Project, pipeline: PipelineBuildResult
     ) -> str:
-        return self.answer_generation_service.generate_answer(
+        return self._generate_answer_from_pipeline_uc.execute(
             project=project, pipeline=pipeline
         )
 

@@ -17,8 +17,10 @@ from src.services.query_log_service import QueryLogService
 
 class AskQuestionUseCase:
     """
-    End-to-end RAG ask: build pipeline (optional deferred query log), generate answer,
-    merge latency, emit query log when deferred, return :class:`~src.domain.rag_response.RAGResponse`.
+    End-to-end RAG ask: build pipeline via injected callable (typically
+    :meth:`src.services.rag_service.RAGService.build_pipeline` → :class:`BuildRagPipelineUseCase`),
+    generate answer, merge latency, emit deferred query log with answer payload, return
+    :class:`~src.domain.rag_response.RAGResponse`.
     """
 
     def __init__(

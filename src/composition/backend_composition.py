@@ -5,7 +5,8 @@ Construction order (high level):
 1. Persistence bootstrap (SQLite app DB).
 2. Core adapters: project paths, doc store, vector store, ingestion, auth.
 3. Shared ``QueryLogService`` (single instance per composition; injected into ``RAGService``).
-4. ``RAGService`` (lazy): retrieval settings, pipeline / ask use cases, query logging.
+4. ``RAGService`` (lazy): retrieval settings surface and wiring to chat-layer use cases under
+   ``src.application.chat`` (pipeline build, inspect, preview, ask).
 5. ``RetrievalComparisonService`` (lazy): depends on ``RAGService``.
 
 Application use cases are composed in :class:`~src.composition.application_container.BackendApplicationContainer`
