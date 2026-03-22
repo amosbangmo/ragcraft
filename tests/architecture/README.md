@@ -1,18 +1,18 @@
 # Architecture boundary tests
 
-Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`ARCHITECTURE_TARGET.md`** at the repo root.
+Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`ARCHITECTURE_TARGET.md`** at the repo root and in **`docs/architecture/clean_architecture_target.md`**.
 
 ## Rules enforced
 
 | Layer | Location | Must not import (prefix match) |
 |--------|-----------|----------------------------------|
 | **Domain** | `src/domain/` | `src.infrastructure`, `src.backend`, `src.services`, `src.application`, `src.ui`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `apps` |
-| **Application** | `src/application/` | `streamlit`, `apps`, `src.infrastructure` except the **`src.infrastructure.adapters`** subtree |
+| **Application** | `src/application/` | `streamlit`, `apps`, **`src.adapters`** (removed), `src.infrastructure` except the **`src.infrastructure.adapters`** subtree |
 | **Infrastructure** | `src/infrastructure/` | **`src.application`**, `streamlit`, `apps` — **except** `src/infrastructure/adapters/`, which may import `src.application` and `streamlit` |
 | **API routers** | `apps/api/routers/` | `src.infrastructure` |
 | **Composition root** | `src/composition/` | `streamlit`, `apps` |
-| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.services`**, **`src.infrastructure.adapters`**, **`src.backend`** |
-| **Streamlit surface** | `pages/`, `src/ui/` | `src.backend`, `src.domain`, `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
+| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.services`**, **`src.infrastructure.adapters`**, **`src.backend`**, **`src.adapters`** |
+| **Streamlit surface** | `pages/`, `src/ui/` | `src.backend`, `src.adapters`, `src.domain`, `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
 
 Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
 
@@ -24,6 +24,7 @@ Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **beha
 - **Streamlit pages and widgets** may import **`streamlit`**, **`src.frontend_gateway`** (including **`view_models`** for display types), and **`src.auth`**; they must not import **`src.domain`** directly, nor **`src.backend`**, **`src.infrastructure`**, **`src.services`**, or the composition/app entrypoints.
 - **`src.frontend_gateway`** must not import **`src.infrastructure`** (use **`src.application.frontend_support`** for HTTP stub factories that need **`src.infrastructure.adapters`**).
 - **Production `src/`** must not import **`src.backend`** (package removed; directory must not exist).
+- **`src/adapters/`** must not exist; use **`src/infrastructure/adapters`** (see guardrails in `test_deprecated_backend_and_gateway_guardrails.py`).
 - We do **not** assert a clean `sys.modules` after `import apps.api.main`: third-party transitive imports can load unrelated packages; the **AST scan** of `apps/api` is the stable guard for “API code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.
 

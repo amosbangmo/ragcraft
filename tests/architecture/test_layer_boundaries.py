@@ -86,11 +86,14 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
             elif mod.startswith("apps") or mod == "apps":
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
+            elif mod.startswith("src.adapters") or mod == "src.adapters":
+                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
             elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.adapters"):
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     msg = (
-        "Application layer must not import Streamlit, apps.api, or infrastructure packages "
-        "(except ``src.infrastructure.adapters``). Use ports/DTOs and the composition root instead.\n"
+        "Application layer must not import Streamlit, apps.api, the removed ``src.adapters`` package, "
+        "or infrastructure packages (except ``src.infrastructure.adapters``). "
+        "Use ports/DTOs and the composition root instead.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

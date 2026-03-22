@@ -61,7 +61,6 @@ from src.application.use_cases.settings.get_effective_retrieval_settings import 
 from src.application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from src.adapters.sqlite.user_repository import SqliteUserRepository
 from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.composition.application_container import BackendApplicationContainer
 
@@ -221,18 +220,10 @@ def get_delete_document_use_case(container: BackendContainerDep) -> DeleteDocume
     return container.ingestion_delete_document_use_case
 
 
-@lru_cache(maxsize=1)
-def _default_sqlite_user_repository() -> SqliteUserRepository:
-    """Process-wide user repository (single-worker SQLite; tests override ``get_user_repository``)."""
-
-    return SqliteUserRepository()
-
-
-def get_user_repository(_container: BackendContainerDep) -> UserRepositoryPort:
+def get_user_repository(container: BackendContainerDep) -> UserRepositoryPort:
     """
-    SQLite user persistence for auth routes.
+    User persistence for auth routes (same instance as :class:`~src.auth.auth_service.AuthService`).
 
-    Depends on the application container so :func:`~src.infrastructure.persistence.db.init_app_db`
-    runs exactly once via :func:`build_backend_composition` — not via a separate FastAPI bootstrap hook.
+    Resolved from the composition root so FastAPI does not import concrete SQLite adapters.
     """
-    return _default_sqlite_user_repository()
+    return container.backend.auth_service.user_repository

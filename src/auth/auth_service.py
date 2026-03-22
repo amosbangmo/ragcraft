@@ -5,7 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.adapters.sqlite.user_repository import SqliteUserRepository
+from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.auth_credentials import try_login, try_register
 from src.auth.password_utils import hash_password, verify_password
 from src.core.paths import get_data_root

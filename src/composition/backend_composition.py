@@ -15,8 +15,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from src.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
-from src.adapters.sqlite.user_repository import SqliteUserRepository
+from src.infrastructure.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
+from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.auth_service import AuthService
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.infrastructure.persistence.db import init_app_db

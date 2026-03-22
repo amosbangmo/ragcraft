@@ -15,6 +15,15 @@ from tests.architecture.import_scanner import collect_import_violations, importe
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_legacy_src_adapters_package_directory_is_absent() -> None:
+    """The old ``src/adapters`` tree was folded into ``src/infrastructure/adapters`` (e.g. sqlite)."""
+    adapters_dir = REPO_ROOT / "src" / "adapters"
+    assert not adapters_dir.exists(), (
+        "``src/adapters`` was removed; SQLite and other port implementations live under "
+        f"``src/infrastructure/adapters``. Remove leftover directory: {adapters_dir}"
+    )
+
+
 def test_legacy_backend_package_directory_is_absent() -> None:
     """The removed shim tree ``src/backend`` must not exist (canonical code lives under ``src.infrastructure.adapters``)."""
     backend_dir = REPO_ROOT / "src" / "backend"
@@ -22,6 +31,21 @@ def test_legacy_backend_package_directory_is_absent() -> None:
         "``src/backend`` was removed; use ``src.infrastructure.adapters`` and application use cases. "
         f"Delete leftover directory: {backend_dir}"
     )
+
+
+def test_src_tree_does_not_import_legacy_adapters_package() -> None:
+    """No module under ``src/`` may import ``src.adapters`` (package removed; use ``src.infrastructure.adapters``)."""
+    src_root = REPO_ROOT / "src"
+    violations: list[str] = []
+    for path in iter_python_files(src_root):
+        for mod in imported_top_level_modules(path):
+            if mod == "src.adapters" or mod.startswith("src.adapters."):
+                rel = path.relative_to(REPO_ROOT)
+                violations.append(f"{rel}: imports {mod}")
+    msg = (
+        "``src.adapters`` was removed. Import concrete adapters from ``src.infrastructure.adapters``.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_src_tree_does_not_import_removed_backend_package() -> None:

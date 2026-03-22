@@ -1,5 +1,5 @@
-"""Shim: implementation lives in :mod:`src.adapters.sqlite.asset_repository`."""
+"""Shim: implementation lives in :mod:`src.infrastructure.adapters.sqlite.asset_repository`."""
 
-from src.adapters.sqlite.asset_repository import SQLiteAssetRepository, SQLiteDocStore
+from src.infrastructure.adapters.sqlite.asset_repository import SQLiteAssetRepository, SQLiteDocStore
 
 __all__ = ["SQLiteAssetRepository", "SQLiteDocStore"]

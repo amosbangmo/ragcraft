@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
+from src.infrastructure.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
 from src.domain.project_settings import ProjectSettings, ui_label_for_project_settings
 from src.domain.retrieval_presets import RetrievalPreset
 from src.infrastructure.persistence.db import init_app_db

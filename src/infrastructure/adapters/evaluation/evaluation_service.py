@@ -9,7 +9,7 @@ from src.infrastructure.adapters.evaluation.auto_debug_service import AutoDebugS
 from src.infrastructure.adapters.evaluation.benchmark_aggregation_service import BenchmarkAggregationService
 from src.infrastructure.adapters.evaluation.correlation_service import CorrelationService
 from src.infrastructure.adapters.evaluation.explainability_service import ExplainabilityService
-from src.infrastructure.adapters.evaluation.failure_analysis_service import FailureAnalysisService
+from src.domain.benchmark_failure_analysis import FailureAnalysisService
 from src.infrastructure.adapters.evaluation.retrieval_metrics_service import RetrievalMetricsService
 from src.infrastructure.adapters.evaluation.row_evaluation_service import RowEvaluationService
 from src.infrastructure.adapters.evaluation.semantic_similarity_service import SemanticSimilarityService

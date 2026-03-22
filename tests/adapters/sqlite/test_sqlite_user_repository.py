@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.adapters.sqlite.user_repository import SqliteUserRepository
+from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
 from src.auth.password_utils import hash_password, verify_password
 from src.infrastructure.persistence.db import init_app_db
 

@@ -137,7 +137,7 @@ LLM
 | Business rules, entities, ports | `src/domain/` |
 | Orchestration, commands, HTTP wire DTOs | `src/application/use_cases/**` (and `application/http/wire.py` for JSON shapes) |
 | RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`adapters/`, `persistence/`, `vectorstores/`, …) |
-| SQLite port implementations | `src/adapters/sqlite/` |
+| SQLite port implementations | `src/infrastructure/adapters/sqlite/` |
 | Wiring the graph | `src/composition/` |
 | Streamlit/HTTP client seam | `src/frontend_gateway/` (stubs that need `infrastructure.adapters` → `src/application/frontend_support/`) |
 
