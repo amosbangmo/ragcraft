@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any, Protocol, runtime_checkable
 
 from src.domain.benchmark_result import BenchmarkResult
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 
 
 @runtime_checkable
@@ -14,5 +15,5 @@ class GoldQaBenchmarkPort(Protocol):
         self,
         *,
         entries: list[Any],
-        pipeline_runner: Callable[[Any], dict[str, Any]],
+        pipeline_runner: Callable[[Any], RagInspectAnswerRun | dict[str, Any]],
     ) -> BenchmarkResult: ...

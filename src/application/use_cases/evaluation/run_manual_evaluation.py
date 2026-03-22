@@ -8,7 +8,9 @@ from src.application.use_cases.chat.pipeline_use_case_ports import (
     GenerateAnswerFromPipelinePort,
     InspectRagPipelinePort,
 )
-from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
+from src.application.use_cases.evaluation.rag_pipeline_orchestration import (
+    execute_rag_inspect_then_answer_for_evaluation,
+)
 from src.domain.ports.manual_evaluation_from_rag_port import ManualEvaluationFromRagPort
 from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
@@ -35,7 +37,7 @@ class RunManualEvaluationUseCase:
 
         project = self._project_service.get_project(command.user_id, command.project_id)
 
-        run = run_rag_inspect_and_answer_for_eval(
+        run = execute_rag_inspect_then_answer_for_evaluation(
             inspect_pipeline=self._inspect_pipeline,
             generate_answer_from_pipeline=self._generate_answer_from_pipeline,
             project=project,
@@ -43,10 +45,6 @@ class RunManualEvaluationUseCase:
             enable_query_rewrite=command.enable_query_rewrite_override,
             enable_hybrid_retrieval=command.enable_hybrid_retrieval_override,
         )
-        pipeline = run["pipeline"]
-        answer = run["answer"]
-        latency_ms = run["latency_ms"]
-        full_latency_dict = run["latency"]
 
         return self._manual_evaluation.build_manual_evaluation_result(
             user_id=command.user_id,
@@ -55,8 +53,8 @@ class RunManualEvaluationUseCase:
             expected_answer=exp_ans,
             expected_doc_ids=exp_docs,
             expected_sources=exp_src,
-            pipeline=pipeline,
-            answer=answer,
-            latency_ms=latency_ms,
-            full_latency_dict=full_latency_dict,
+            pipeline=run.pipeline,
+            answer=run.answer,
+            latency_ms=run.latency_ms,
+            full_latency_dict=run.full_latency,
         )

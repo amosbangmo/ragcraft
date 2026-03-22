@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
 from src.domain.multimodal_metrics import aggregate_multimodal_metrics
 from src.domain.ports.benchmark_orchestration_ports import (
@@ -17,6 +19,13 @@ from src.domain.ports.benchmark_orchestration_ports import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_gold_qa_runner_result(result: Any) -> dict[str, Any]:
+    """Accept :class:`~src.domain.rag_inspect_answer_run.RagInspectAnswerRun` or legacy dict rows."""
+    if isinstance(result, RagInspectAnswerRun):
+        return result.to_row_evaluation_dict()
+    return result
 
 
 class BenchmarkExecutionUseCase:
@@ -46,8 +55,8 @@ class BenchmarkExecutionUseCase:
         acc = BenchmarkAccumulator()
 
         for entry in entries:
-            result = pipeline_runner(entry)
-            self._row_eval.process_row(entry, result, acc)
+            raw = pipeline_runner(entry)
+            self._row_eval.process_row(entry, _coerce_gold_qa_runner_result(raw), acc)
 
         summary_payload = self._aggregation.build_summary_payload(acc)
         rows = acc.rows

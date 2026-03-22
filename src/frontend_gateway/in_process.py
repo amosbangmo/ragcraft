@@ -35,6 +35,7 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.qa_dataset_entry import QADatasetEntry
+from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
@@ -68,7 +69,7 @@ class InProcessBackendClient:
         self,
         *,
         entries: list[QADatasetEntry],
-        pipeline_runner: Callable[[QADatasetEntry], dict[str, Any]],
+        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun | dict[str, Any]],
     ) -> BenchmarkResult:
         return self._container.evaluation_service.evaluate_gold_qa_dataset(
             entries=entries,

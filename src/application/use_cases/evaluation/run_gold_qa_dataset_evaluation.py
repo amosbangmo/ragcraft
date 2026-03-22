@@ -11,7 +11,9 @@ from src.application.use_cases.chat.pipeline_use_case_ports import (
     GenerateAnswerFromPipelinePort,
     InspectRagPipelinePort,
 )
-from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
+from src.application.use_cases.evaluation.rag_pipeline_orchestration import (
+    execute_rag_inspect_then_answer_for_evaluation,
+)
 from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.domain.ports.project_workspace_port import ProjectWorkspacePort
 
@@ -44,7 +46,7 @@ class RunGoldQaDatasetEvaluationUseCase:
         project = self._project_service.get_project(command.user_id, command.project_id)
 
         def pipeline_runner(entry):
-            return run_rag_inspect_and_answer_for_eval(
+            return execute_rag_inspect_then_answer_for_evaluation(
                 inspect_pipeline=self._inspect_pipeline,
                 generate_answer_from_pipeline=self._generate_answer_from_pipeline,
                 project=project,

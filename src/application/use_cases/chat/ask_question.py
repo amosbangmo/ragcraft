@@ -19,8 +19,8 @@ class AskQuestionUseCase:
     """
     End-to-end RAG ask: build pipeline via injected callable (typically
     :meth:`src.application.use_cases.chat.build_rag_pipeline.BuildRagPipelineUseCase.execute`),
-    generate answer, merge latency, emit deferred query log with answer payload, return
-    :class:`~src.domain.rag_response.RAGResponse`.
+    generate answer, merge latency, emit deferred query log (application side effect via
+    :class:`~src.domain.ports.QueryLogPort`), return :class:`~src.domain.rag_response.RAGResponse`.
     """
 
     def __init__(
