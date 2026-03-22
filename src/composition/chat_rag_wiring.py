@@ -16,14 +16,13 @@ Orchestration lives in application use cases; this module only constructs the ob
 
 **Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
 ``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.
-``InspectRagPipelineUseCase`` receives ``partial(build_rag_pipeline.execute, emit_query_log=False)`` so inspect
-never writes query logs without the inspect use case importing the build class.
+``InspectRagPipelineUseCase`` shares the same :class:`~src.domain.ports.RetrievalPort` as ask but always calls
+``execute(..., emit_query_log=False)``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import partial
 from typing import Any
 
 from src.application.use_cases.chat.ask_question import AskQuestionUseCase
@@ -169,16 +168,14 @@ def build_chat_rag_use_cases(
         pipeline_assembly_service=subgraph.pipeline_assembly,
         query_log_emitter=emitter,
     )
-    inspect_uc = InspectRagPipelineUseCase(
-        build_pipeline=partial(build_uc.execute, emit_query_log=False),
-    )
+    inspect_uc = InspectRagPipelineUseCase(retrieval=build_uc)
     preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_stage)
     generate_uc = GenerateAnswerFromPipelineUseCase(
-        answer_generation_service=subgraph.answer_generation_service
+        generation=subgraph.answer_generation_service,
     )
     ask_uc = AskQuestionUseCase(
-        build_pipeline=build_uc.execute,
-        answer_generation_service=subgraph.answer_generation_service,
+        retrieval=build_uc,
+        generation=subgraph.answer_generation_service,
         query_log=query_log,
     )
     return ChatRagUseCases(

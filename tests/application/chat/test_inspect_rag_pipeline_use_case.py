@@ -6,14 +6,14 @@ from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipeli
 from src.domain.project import Project
 
 
-def test_inspect_delegates_to_injected_build_pipeline() -> None:
-    build_pipeline = MagicMock(return_value=None)
-    inspect = InspectRagPipelineUseCase(build_pipeline=build_pipeline)
+def test_inspect_delegates_to_retrieval_port_with_query_log_disabled() -> None:
+    retrieval = MagicMock(return_value=None)
+    inspect = InspectRagPipelineUseCase(retrieval=retrieval)
     project = Project(user_id="u", project_id="p")
 
     inspect.execute(project, "question", ["h"])
 
-    build_pipeline.assert_called_once()
-    ca = build_pipeline.call_args
+    retrieval.execute.assert_called_once()
+    ca = retrieval.execute.call_args
     assert ca.args == (project, "question", ["h"])
-    assert "emit_query_log" not in ca.kwargs
+    assert ca.kwargs.get("emit_query_log") is False

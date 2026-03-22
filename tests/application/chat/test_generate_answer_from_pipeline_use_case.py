@@ -10,7 +10,7 @@ from src.domain.project import Project
 def test_execute_delegates_to_answer_service() -> None:
     ag = MagicMock()
     ag.generate_answer.return_value = "answer text"
-    uc = GenerateAnswerFromPipelineUseCase(answer_generation_service=ag)
+    uc = GenerateAnswerFromPipelineUseCase(generation=ag)
     project = Project(user_id="u", project_id="p")
     pipeline = MagicMock(spec=PipelineBuildResult)
 

@@ -402,7 +402,8 @@ class TestChatRagWiringComposition(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
-        with patch.object(harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline):
+        with patch.object(harness.use_cases.ask_question, "_retrieval") as mock_retrieval:
+            mock_retrieval.execute.return_value = pipeline
             response = harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
         self.assertEqual(response.answer, "final answer")
@@ -424,7 +425,8 @@ class TestChatRagWiringComposition(unittest.TestCase):
             confidence=0.0,
         )
 
-        with patch.object(harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline):
+        with patch.object(harness.use_cases.ask_question, "_retrieval") as mock_retrieval:
+            mock_retrieval.execute.return_value = pipeline
             with self.assertRaises(LLMServiceError):
                 harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
@@ -448,13 +450,12 @@ class TestChatRagWiringComposition(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
-        with patch.object(
-            harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline
-        ) as build_pipeline_fn:
+        with patch.object(harness.use_cases.ask_question, "_retrieval") as retrieval_mock:
+            retrieval_mock.execute.return_value = pipeline
             harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
-        build_pipeline_fn.assert_called_once()
-        _, kwargs = build_pipeline_fn.call_args
+        retrieval_mock.execute.assert_called_once()
+        _, kwargs = retrieval_mock.execute.call_args
         self.assertFalse(kwargs.get("emit_query_log"))
         log_service.log_query.assert_called_once()
         payload = log_service.log_query.call_args.kwargs["payload"]
