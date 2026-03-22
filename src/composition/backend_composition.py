@@ -57,6 +57,9 @@ class BackendComposition:
             project_service=self.project_service,
         )
         self.project_settings_service = ProjectSettingsService()
+        self.retrieval_settings_service = RetrievalSettingsService(
+            project_settings_service=self.project_settings_service,
+        )
 
         self._rag_service: RAGService | None = None
         self._retrieval_comparison_service: RetrievalComparisonService | None = None
@@ -70,9 +73,7 @@ class BackendComposition:
                 docstore_service=self.docstore_service,
                 reranking_service=self.reranking_service,
                 query_log_service=self.query_log_service,
-                retrieval_settings_service=RetrievalSettingsService(
-                    project_settings_service=self.project_settings_service,
-                ),
+                retrieval_settings_service=self.retrieval_settings_service,
             )
         return self._rag_service
 

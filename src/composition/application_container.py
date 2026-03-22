@@ -98,6 +98,31 @@ class BackendApplicationContainer:
         """Port for retrieval preset persistence (same object as ``project_settings_service``)."""
         return self._backend.project_settings_service
 
+    @property
+    def retrieval_settings_service(self):
+        return self._backend.retrieval_settings_service
+
+    @cached_property
+    def settings_get_effective_retrieval_use_case(self):
+        from src.application.settings.use_cases.get_effective_retrieval_settings import (
+            GetEffectiveRetrievalSettingsUseCase,
+        )
+
+        return GetEffectiveRetrievalSettingsUseCase(
+            project_settings=self.project_settings_repository,
+            retrieval_settings=self.retrieval_settings_service,
+        )
+
+    @cached_property
+    def settings_update_project_retrieval_use_case(self):
+        from src.application.settings.use_cases.update_project_retrieval_settings import (
+            UpdateProjectRetrievalSettingsUseCase,
+        )
+
+        return UpdateProjectRetrievalSettingsUseCase(
+            project_settings=self.project_settings_repository,
+        )
+
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
         from src.application.projects.use_cases.invalidate_project_chain_cache import (
             InvalidateProjectChainCacheUseCase,

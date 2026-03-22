@@ -12,7 +12,7 @@ Canonical import path: `src.domain.ports`. Protocols remain defined next to thei
 | **QueryLogPersistencePort** | `src.domain.shared.query_log_port` | `SQLiteQueryLogRepository` | Injected into `QueryLogService`; file-based legacy reader |
 | **QADatasetEntriesPort** | `src.domain.ports.qa_dataset_entries_port` | `QADatasetService` | Gold QA CRUD/generate use cases |
 | **QADatasetRepositoryPort** | `src.domain.evaluation.qa_dataset_repository_port` | `QADatasetRepository` | `QADatasetService` internally |
-| **ProjectSettingsRepositoryPort** | `src.domain.shared.project_settings_repository_port` | `ProjectSettingsService` | `RAGCraftApp.project_settings_repository`, `GetProjectRetrievalPresetLabelUseCase` |
+| **ProjectSettingsRepositoryPort** | `src.domain.shared.project_settings_repository_port` | `ProjectSettingsService` | `RAGCraftApp.project_settings_repository`, `GetProjectRetrievalPresetLabelUseCase`, `GetEffectiveRetrievalSettingsUseCase`, `UpdateProjectRetrievalSettingsUseCase` |
 
 ## Wiring
 

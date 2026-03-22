@@ -14,12 +14,14 @@ from fastapi import APIRouter, Depends, File, UploadFile, status
 from apps.api.dependencies import (
     get_create_project_use_case,
     get_delete_document_use_case,
+    get_get_effective_retrieval_settings_use_case,
     get_ingest_uploaded_file_use_case,
     get_list_project_documents_use_case,
     get_list_projects_use_case,
     get_project_service,
     get_reindex_document_use_case,
     get_request_user_id,
+    get_update_project_retrieval_settings_use_case,
 )
 from apps.api.schemas.projects import (
     CreateProjectRequest,
@@ -28,8 +30,13 @@ from apps.api.schemas.projects import (
     IngestDocumentResponse,
     ProjectDocumentsResponse,
     ProjectListResponse,
+    ProjectRetrievalSettingsResponse,
+    UpdateProjectRetrievalSettingsRequest,
 )
-from apps.api.schemas.serialization import ingest_document_result_to_api_dict
+from apps.api.schemas.serialization import (
+    effective_retrieval_settings_view_to_api_dict,
+    ingest_document_result_to_api_dict,
+)
 from apps.api.upload_adapter import read_upload_for_ingestion
 from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
@@ -87,6 +94,56 @@ def get_project_documents(
 ) -> ProjectDocumentsResponse:
     """Sorted filenames at the project root (not including ``faiss_index`` or ``logs.json``)."""
     return ProjectDocumentsResponse(documents=use_case.execute(user_id, project_id))
+
+
+@router.get(
+    "/{project_id}/retrieval-settings",
+    response_model=ProjectRetrievalSettingsResponse,
+    summary="Get effective retrieval settings for a project",
+)
+def get_project_retrieval_settings(
+    project_id: str,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    use_case: Annotated[Any, Depends(get_get_effective_retrieval_settings_use_case)],
+) -> ProjectRetrievalSettingsResponse:
+    """Returns persisted preferences and merged :class:`~src.domain.retrieval_settings.RetrievalSettings` (as dict)."""
+    view = use_case.execute(
+        GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+    )
+    return ProjectRetrievalSettingsResponse.model_validate(
+        effective_retrieval_settings_view_to_api_dict(view)
+    )
+
+
+@router.put(
+    "/{project_id}/retrieval-settings",
+    response_model=ProjectRetrievalSettingsResponse,
+    summary="Update persisted retrieval settings for a project",
+)
+def put_project_retrieval_settings(
+    project_id: str,
+    body: UpdateProjectRetrievalSettingsRequest,
+    user_id: Annotated[str, Depends(get_request_user_id)],
+    update_uc: Annotated[Any, Depends(get_update_project_retrieval_settings_use_case)],
+    get_uc: Annotated[Any, Depends(get_get_effective_retrieval_settings_use_case)],
+) -> ProjectRetrievalSettingsResponse:
+    """Saves preset / advanced toggles then returns the same shape as GET."""
+    update_uc.execute(
+        UpdateProjectRetrievalSettingsCommand(
+            user_id=user_id,
+            project_id=project_id,
+            retrieval_preset=body.retrieval_preset,
+            retrieval_advanced=body.retrieval_advanced,
+            enable_query_rewrite=body.enable_query_rewrite,
+            enable_hybrid_retrieval=body.enable_hybrid_retrieval,
+        )
+    )
+    view = get_uc.execute(
+        GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+    )
+    return ProjectRetrievalSettingsResponse.model_validate(
+        effective_retrieval_settings_view_to_api_dict(view)
+    )
 
 
 @router.post(

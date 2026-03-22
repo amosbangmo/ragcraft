@@ -78,3 +78,21 @@ class DeleteDocumentResponse(BaseModel):
     file_deleted: bool
     deleted_vectors: int
     deleted_assets: int
+
+
+class ProjectRetrievalSettingsResponse(BaseModel):
+    """Persisted preferences plus merged effective tuning (same semantics as Streamlit panel)."""
+
+    model_config = {"extra": "forbid"}
+
+    preferences: dict[str, Any] = Field(default_factory=dict)
+    effective_retrieval: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateProjectRetrievalSettingsRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    retrieval_preset: str = Field(..., min_length=1, description="precise | balanced | exploratory")
+    retrieval_advanced: bool = False
+    enable_query_rewrite: bool = True
+    enable_hybrid_retrieval: bool = True

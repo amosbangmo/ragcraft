@@ -11,7 +11,10 @@ from __future__ import annotations
 import base64
 from typing import Any
 
+from dataclasses import asdict
+
 from src.application.evaluation.benchmark_export_dtos import BenchmarkExportArtifacts
+from src.application.settings.dtos import EffectiveRetrievalSettingsView
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.rag_response import RAGResponse
@@ -51,6 +54,13 @@ def ingest_document_result_to_api_dict(result: Any) -> dict[str, Any]:
 def benchmark_result_to_api_dict(result: BenchmarkResult) -> dict[str, Any]:
     """Normalize benchmark payloads so row ``data`` cannot leak non-JSON types."""
     return jsonify_value(result.to_dict())
+
+
+def effective_retrieval_settings_view_to_api_dict(view: EffectiveRetrievalSettingsView) -> dict[str, Any]:
+    return {
+        "preferences": asdict(view.preferences),
+        "effective_retrieval": asdict(view.effective_retrieval),
+    }
 
 
 def benchmark_export_artifacts_to_api_dict(artifacts: BenchmarkExportArtifacts) -> dict[str, Any]:

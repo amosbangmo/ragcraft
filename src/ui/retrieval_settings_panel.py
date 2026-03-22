@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from src.domain.project_settings import ProjectSettings
-from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from src.application.settings.dtos import UpdateProjectRetrievalSettingsCommand
 from src.domain.retrieval_presets import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -16,6 +16,9 @@ from src.domain.retrieval_presets import (
 )
 from src.domain.retrieval_settings import RetrievalSettings
 from src.services.retrieval_settings_service import RetrievalSettingsService
+
+if TYPE_CHECKING:
+    from src.app.ragcraft_app import RAGCraftApp
 
 _RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
 
@@ -71,17 +74,18 @@ def _retrieval_persist_signature_key(user_id: str, project_id: str) -> str:
     return f"_retrieval_persist_sig_{user_id}_{project_id}"
 
 
-def _sync_retrieval_panel_from_project(
+def _sync_retrieval_panel_from_backend(
     *,
     user_id: str,
     project_id: str,
-    settings_repository: ProjectSettingsRepositoryPort,
+    app: RAGCraftApp,
 ) -> None:
     target = f"{user_id}:{project_id}"
     if st.session_state.get(_RETRIEVAL_PANEL_BOUND_PROJECT) == target:
         return
 
-    ps = project_settings_service.load(user_id, project_id)
+    view = app.get_effective_retrieval_settings(user_id, project_id)
+    ps = view.preferences
     st.session_state["retrieval_preset"] = parse_retrieval_preset(ps.retrieval_preset).value
     st.session_state["retrieval_advanced"] = ps.retrieval_advanced
     if ps.retrieval_advanced:
@@ -108,7 +112,7 @@ def _maybe_persist_retrieval_project_settings(
     *,
     user_id: str,
     project_id: str,
-    settings_repository: ProjectSettingsRepositoryPort,
+    app: RAGCraftApp,
 ) -> None:
     sig_key = _retrieval_persist_signature_key(user_id, project_id)
     sig = json.dumps(
@@ -121,8 +125,8 @@ def _maybe_persist_retrieval_project_settings(
     )
     if st.session_state.get(sig_key) == sig:
         return
-    settings_repository.save(
-        ProjectSettings(
+    app.update_project_retrieval_settings(
+        UpdateProjectRetrievalSettingsCommand(
             user_id=user_id,
             project_id=project_id,
             retrieval_preset=str(st.session_state["retrieval_preset"]),
@@ -151,7 +155,7 @@ def render_retrieval_settings_panel(
     service: RetrievalSettingsService | None = None,
     user_id: str | None = None,
     project_id: str | None = None,
-    project_settings_service: ProjectSettingsService | None = None,
+    app: RAGCraftApp | None = None,
 ) -> RetrievalSettings:
     """
     Render retrieval preset (and optional advanced overrides) and persist merged settings.
@@ -162,10 +166,12 @@ def render_retrieval_settings_panel(
     - ``retrieval_query_rewrite`` / ``retrieval_hybrid`` — used when advanced is on
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
 
-    When ``user_id``, ``project_id``, and ``settings_repository`` are provided,
-    the panel loads stored preferences for that project and saves changes automatically.
+    When ``user_id``, ``project_id``, and ``app`` are set, loads/saves go through
+    :class:`~src.application.settings.use_cases.get_effective_retrieval_settings.GetEffectiveRetrievalSettingsUseCase`
+    and
+    :class:`~src.application.settings.use_cases.update_project_retrieval_settings.UpdateProjectRetrievalSettingsUseCase`.
     """
-    svc = service or RetrievalSettingsService()
+    svc = service or (app.retrieval_settings_service if app is not None else None) or RetrievalSettingsService()
 
     if "retrieval_preset" not in st.session_state:
         st.session_state["retrieval_preset"] = RetrievalPreset.BALANCED.value
@@ -182,12 +188,8 @@ def render_retrieval_settings_panel(
     if "retrieval_hybrid" not in st.session_state:
         st.session_state["retrieval_hybrid"] = True
 
-    if user_id and project_id and settings_repository:
-        _sync_retrieval_panel_from_project(
-            user_id=user_id,
-            project_id=project_id,
-            settings_repository=settings_repository,
-        )
+    if user_id and project_id and app is not None:
+        _sync_retrieval_panel_from_backend(user_id=user_id, project_id=project_id, app=app)
 
     with st.expander(title, expanded=expanded):
         st.selectbox(
@@ -232,11 +234,11 @@ def render_retrieval_settings_panel(
     else:
         settings = svc.from_preset(str(st.session_state["retrieval_preset"]))
 
-    if user_id and project_id and settings_repository:
+    if user_id and project_id and app is not None:
         _maybe_persist_retrieval_project_settings(
             user_id=user_id,
             project_id=project_id,
-            settings_repository=settings_repository,
+            app=app,
         )
 
     st.session_state["retrieval_settings"] = settings

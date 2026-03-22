@@ -16,6 +16,12 @@ from src.composition.application_container import (
     build_backend_application_container,
 )
 from src.composition import BackendComposition, build_backend_composition
+from src.application.settings.dtos import (
+    EffectiveRetrievalSettingsView,
+    GetEffectiveRetrievalSettingsQuery,
+    UpdateProjectRetrievalSettingsCommand,
+)
+from src.domain.project_settings import ProjectSettings
 from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
     DeleteQaDatasetEntryCommand,
@@ -97,11 +103,24 @@ class RAGCraftApp:
         self.qa_dataset_service = self._container.qa_dataset_service
         self.qa_dataset_generation_service = self._container.qa_dataset_generation_service
         self.project_settings_service = self._container.project_settings_service
+        self.retrieval_settings_service = self._container.retrieval_settings_service
         self.query_log_service = self._container.query_log_service
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
         return self.project_settings_service
+
+    def get_effective_retrieval_settings(
+        self, user_id: str, project_id: str
+    ) -> EffectiveRetrievalSettingsView:
+        return self._container.settings_get_effective_retrieval_use_case.execute(
+            GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+        )
+
+    def update_project_retrieval_settings(
+        self, command: UpdateProjectRetrievalSettingsCommand
+    ) -> ProjectSettings:
+        return self._container.settings_update_project_retrieval_use_case.execute(command)
 
     @property
     def rag_service(self):

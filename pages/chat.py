@@ -108,7 +108,7 @@ retrieval_settings = render_retrieval_settings_panel(
     expanded=False,
     user_id=user_id,
     project_id=project_id,
-    settings_repository=app.project_settings_repository,
+    app=app,
 )
 
 app.chat_service.init(project.project_id)

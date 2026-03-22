@@ -92,6 +92,18 @@ def get_create_project_use_case(
     return container.projects_create_project_use_case
 
 
+def get_get_effective_retrieval_settings_use_case(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.settings_get_effective_retrieval_use_case
+
+
+def get_update_project_retrieval_settings_use_case(
+    container: Annotated[Any, Depends(get_backend_application_container)],
+) -> Any:
+    return container.settings_update_project_retrieval_use_case
+
+
 def get_list_project_documents_use_case(
     container: Annotated[Any, Depends(get_backend_application_container)],
 ) -> Any:
