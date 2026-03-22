@@ -1,4 +1,10 @@
-"""Compare FAISS-only vs hybrid retrieval for a set of questions (no LLM answer)."""
+"""
+Compare FAISS-only vs hybrid retrieval for a set of questions (no LLM answer).
+
+Application-layer orchestration: resolves the project, runs pipeline inspection under both
+hybrid toggles via :class:`~src.application.use_cases.chat.inspect_rag_pipeline.InspectRagPipelineUseCase`,
+and delegates aggregation to :mod:`src.application.use_cases.retrieval.retrieval_mode_comparison`.
+"""
 
 from __future__ import annotations
 

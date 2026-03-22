@@ -66,10 +66,6 @@ def setUpModule():
     _install_module("src.infrastructure.adapters.chat.chat_service", ChatService=_DummyService)
     _install_module("src.infrastructure.adapters.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("src.infrastructure.adapters.rag.reranking_service", RerankingService=_DummyService)
-    _install_module(
-        "src.infrastructure.adapters.rag.retrieval_comparison_service",
-        RetrievalComparisonService=_DummyService,
-    )
 
     from src.frontend_gateway.in_process import InProcessBackendClient as _IPC
     from src.frontend_gateway.streamlit_backend_factory import (

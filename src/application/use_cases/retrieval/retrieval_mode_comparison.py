@@ -1,4 +1,4 @@
-"""Pure retrieval-mode comparison workflow (no LLM answer). Shared by use case and infra adapter."""
+"""Pure retrieval-mode comparison workflow (no LLM answer). Invoked from the application use case."""
 
 from __future__ import annotations
 

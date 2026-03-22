@@ -1,9 +1,9 @@
 import unittest
 
+from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.domain.project import Project
-from src.infrastructure.adapters.rag.retrieval_comparison_service import RetrievalComparisonService
 
 
 def _fake_pipeline(
@@ -27,8 +27,8 @@ def _fake_pipeline(
     )
 
 
-class _FakeRAGService:
-    def __init__(self):
+class _FakeInspectRagPipelineUseCase:
+    def __init__(self) -> None:
         self._pipelines = {
             ("invoice total", False): _fake_pipeline(
                 rewritten_question="invoice total",
@@ -64,28 +64,40 @@ class _FakeRAGService:
             ),
         }
 
-    def inspect_pipeline(
+    def execute(
         self,
         project,
         question,
         chat_history=None,
         *,
+        filters=None,
+        retrieval_settings=None,
         enable_query_rewrite_override=None,
         enable_hybrid_retrieval_override=None,
-        filters=None,
     ):
         return self._pipelines[(question, bool(enable_hybrid_retrieval_override))]
+
+
+class _StubResolveProject:
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    def execute(self, user_id: str, project_id: str) -> Project:
+        return self._project
 
 
 class TestRetrievalQualityGate(unittest.TestCase):
     def test_baseline_gate_hybrid_should_not_regress(self):
         project = Project(user_id="u1", project_id="p1")
-        fake = _FakeRAGService()
-        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
+        use_case = CompareRetrievalModesUseCase(
+            resolve_project=_StubResolveProject(project),
+            inspect_pipeline=_FakeInspectRagPipelineUseCase(),
+        )
         questions = ["invoice total", "payment terms"]
 
-        report = service.compare(
-            project=project,
+        report = use_case.execute(
+            user_id="u1",
+            project_id="p1",
             questions=questions,
             enable_query_rewrite=False,
         )

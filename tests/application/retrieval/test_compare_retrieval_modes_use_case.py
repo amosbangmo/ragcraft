@@ -1,9 +1,11 @@
+"""Tests for :class:`~src.application.use_cases.retrieval.compare_retrieval_modes.CompareRetrievalModesUseCase`."""
+
 import unittest
 
+from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
 from src.domain.pipeline_payloads import PipelineBuildResult
-from src.domain.summary_recall_document import SummaryRecallDocument
 from src.domain.project import Project
-from src.infrastructure.adapters.rag.retrieval_comparison_service import RetrievalComparisonService
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 def _fake_pipeline(
@@ -27,24 +29,35 @@ def _fake_pipeline(
     )
 
 
-class _FakeRAGService:
-    def __init__(self, pipelines):
-        self.pipelines = pipelines
+class _FakeInspectRagPipelineUseCase:
+    """Mimics :class:`~src.application.use_cases.chat.inspect_rag_pipeline.InspectRagPipelineUseCase`."""
 
-    def inspect_pipeline(
+    def __init__(self, pipelines: dict) -> None:
+        self._pipelines = pipelines
+
+    def execute(
         self,
         project,
         question,
         chat_history=None,
         *,
+        filters=None,
+        retrieval_settings=None,
         enable_query_rewrite_override=None,
         enable_hybrid_retrieval_override=None,
-        filters=None,
     ):
-        return self.pipelines.get((question, bool(enable_hybrid_retrieval_override)))
+        return self._pipelines.get((question, bool(enable_hybrid_retrieval_override)))
 
 
-class TestRetrievalComparisonService(unittest.TestCase):
+class _StubResolveProject:
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    def execute(self, user_id: str, project_id: str) -> Project:
+        return self._project
+
+
+class TestCompareRetrievalModesUseCase(unittest.TestCase):
     def setUp(self):
         self.project = Project(user_id="u1", project_id="p1")
 
@@ -67,11 +80,14 @@ class TestRetrievalComparisonService(unittest.TestCase):
                 confidence=0.7,
             ),
         }
-        fake = _FakeRAGService(pipelines)
-        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
+        use_case = CompareRetrievalModesUseCase(
+            resolve_project=_StubResolveProject(self.project),
+            inspect_pipeline=_FakeInspectRagPipelineUseCase(pipelines),
+        )
 
-        report = service.compare(
-            project=self.project,
+        report = use_case.execute(
+            user_id="u1",
+            project_id="p1",
             questions=[" q1 ", "   "],  # blank input must be ignored
             enable_query_rewrite=False,
         )
@@ -89,11 +105,14 @@ class TestRetrievalComparisonService(unittest.TestCase):
         self.assertEqual(summary["hybrid_wins_on_confidence"], 1)
 
     def test_compare_handles_missing_pipelines(self):
-        fake = _FakeRAGService({})
-        service = RetrievalComparisonService(inspect_pipeline=fake.inspect_pipeline)
+        use_case = CompareRetrievalModesUseCase(
+            resolve_project=_StubResolveProject(self.project),
+            inspect_pipeline=_FakeInspectRagPipelineUseCase({}),
+        )
 
-        report = service.compare(
-            project=self.project,
+        report = use_case.execute(
+            user_id="u1",
+            project_id="p1",
             questions=["q-missing"],
             enable_query_rewrite=False,
         )
