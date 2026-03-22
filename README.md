@@ -120,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** `ARCHITECTURE_TARGET.md` — migration history and SPA checklist: `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
+**Architecture reference:** `ARCHITECTURE_TARGET.md` — migration closure report: `docs/migration/MIGRATION_COMPLETE_REPORT.md` — history and SPA checklist: `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
 
 ---
 

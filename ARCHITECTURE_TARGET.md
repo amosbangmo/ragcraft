@@ -50,6 +50,7 @@ This is the **source-of-truth layout** for how RAGCraft is structured today: bac
 
 ## Further reading
 
+- **Verification summary (migration closure):** `docs/migration/MIGRATION_COMPLETE_REPORT.md`
 - **Operational how-to:** `docs/migration/streamlit-fastapi-dev.md`
 - **Migration outcomes and SPA checklist:** `docs/migration/final-status.md`, `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`
 - **In-process adapter detail:** `docs/migration/ragcraftapp-deprecation.md`

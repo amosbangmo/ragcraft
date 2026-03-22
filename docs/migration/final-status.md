@@ -53,6 +53,7 @@ This document summarizes what the migration achieved, what debt remains, and how
 
 ## Related documents
 
+- `docs/migration/MIGRATION_COMPLETE_REPORT.md` — verification summary and honest SPA readiness  
 - `docs/migration/BACKEND_MIGRATION_CHECKLIST.md` — done / remaining / temporary Streamlit pieces  
 - `docs/migration/streamlit-decoupling-checklist.md`
 - `docs/migration/streamlit-backend-client.md`
