@@ -1,11 +1,10 @@
 """
 Backend application container: explicit composition root for use cases and shared services.
 
-This is the primary integration boundary for FastAPI and for headless callers. UI-specific code
-should not need to import this module if it goes through :class:`~src.app.ragcraft_app.RAGCraftApp`
-(legacy Streamlit façade), which delegates to a container built with the same
-:class:`~src.composition.backend_composition.BackendComposition` instance where shared singletons
-must align (for example the :class:`~src.domain.ports.QueryLogPort` implementation).
+This is the primary integration boundary for FastAPI and for headless callers. Streamlit may still
+use :class:`~src.app.ragcraft_app.RAGCraftApp` (legacy façade), which holds a container built with
+the same :class:`~src.composition.backend_composition.BackendComposition` instance so shared
+singletons align (for example the :class:`~src.domain.ports.QueryLogPort` implementation).
 """
 
 from __future__ import annotations

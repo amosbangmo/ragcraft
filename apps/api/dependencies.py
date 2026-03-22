@@ -2,13 +2,17 @@
 FastAPI dependency providers.
 
 **Primary entrypoint:** :func:`get_backend_application_container` — process-wide
-:class:`~src.composition.backend_composition.BackendComposition` plus named use cases and services.
+:class:`~src.composition.application_container.BackendApplicationContainer` plus named use cases
+and services from :class:`~src.composition.backend_composition.BackendComposition`.
 
-:class:`~src.app.ragcraft_app.RAGCraftApp` is used only by Streamlit in-process mode
-(``InProcessBackendClient``); FastAPI routes must depend on this module's container getters, not the façade.
+Streamlit in-process mode may still use the legacy UI façade; FastAPI wiring does not import or
+construct that module.
 
-Use-case imports stay deferred inside getters where needed so ``import apps.api.dependencies`` does
-not load FAISS / LangChain (keeps ``/health`` importable in minimal environments).
+``build_backend_composition`` / ``build_backend_application_container`` stay inside cached getters so
+``import apps.api.dependencies`` does not load FAISS, LangChain, or the Streamlit chain cache until
+a route resolves a dependency. Service return types below are explicit where imports stay cheap;
+chat and evaluation use cases that sit behind :class:`~src.services.rag_service.RAGService` remain
+``Any`` at the annotation layer to avoid eager heavy imports.
 """
 
 from __future__ import annotations
@@ -18,7 +22,11 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Header, HTTPException
 
+from src.auth.user_repository import UserRepository
+from src.services.docstore_service import DocStoreService
 from src.services.project_service import ProjectService
+from src.services.project_settings_service import ProjectSettingsService
+from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 
 @lru_cache(maxsize=1)
@@ -39,9 +47,10 @@ def get_backend_application_container() -> Any:
     )
 
 
-def get_project_service(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> ProjectService:
+BackendContainerDep = Annotated[Any, Depends(get_backend_application_container)]
+
+
+def get_project_service(container: BackendContainerDep) -> ProjectService:
     return container.project_service
 
 
@@ -65,147 +74,99 @@ def get_request_user_id(
     return str(x_user_id).strip()
 
 
-def get_list_projects_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_list_projects_use_case(container: BackendContainerDep) -> Any:
     return container.projects_list_projects_use_case
 
 
-def get_create_project_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_create_project_use_case(container: BackendContainerDep) -> Any:
     return container.projects_create_project_use_case
 
 
-def get_get_effective_retrieval_settings_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_get_effective_retrieval_settings_use_case(container: BackendContainerDep) -> Any:
     return container.settings_get_effective_retrieval_use_case
 
 
-def get_update_project_retrieval_settings_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_update_project_retrieval_settings_use_case(container: BackendContainerDep) -> Any:
     return container.settings_update_project_retrieval_use_case
 
 
-def get_list_project_documents_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_list_project_documents_use_case(container: BackendContainerDep) -> Any:
     return container.projects_list_project_documents_use_case
 
 
-def get_rag_service(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_rag_service(container: BackendContainerDep) -> Any:
     return container.rag_service
 
 
-def get_ask_question_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_ask_question_use_case(container: BackendContainerDep) -> Any:
     return container.chat_ask_question_use_case
 
 
-def get_inspect_pipeline_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_inspect_pipeline_use_case(container: BackendContainerDep) -> Any:
     return container.chat_inspect_pipeline_use_case
 
 
-def get_preview_summary_recall_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_preview_summary_recall_use_case(container: BackendContainerDep) -> Any:
     return container.chat_preview_summary_recall_use_case
 
 
-def get_create_qa_dataset_entry_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_create_qa_dataset_entry_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_create_qa_dataset_entry_use_case
 
 
-def get_list_qa_dataset_entries_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_list_qa_dataset_entries_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_list_qa_dataset_entries_use_case
 
 
-def get_build_benchmark_export_artifacts_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_build_benchmark_export_artifacts_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_build_benchmark_export_artifacts_use_case
 
 
-def get_run_manual_evaluation_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_run_manual_evaluation_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_run_manual_evaluation_use_case
 
 
-def get_run_gold_qa_dataset_evaluation_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_run_gold_qa_dataset_evaluation_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_run_gold_qa_dataset_evaluation_use_case
 
 
-def get_update_qa_dataset_entry_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_update_qa_dataset_entry_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_update_qa_dataset_entry_use_case
 
 
-def get_delete_qa_dataset_entry_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_delete_qa_dataset_entry_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_delete_qa_dataset_entry_use_case
 
 
-def get_generate_qa_dataset_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_generate_qa_dataset_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_generate_qa_dataset_use_case
 
 
-def get_list_retrieval_query_logs_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_list_retrieval_query_logs_use_case(container: BackendContainerDep) -> Any:
     return container.evaluation_list_retrieval_query_logs_use_case
 
 
-def get_ingest_uploaded_file_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_ingest_uploaded_file_use_case(container: BackendContainerDep) -> Any:
     return container.ingestion_ingest_uploaded_file_use_case
 
 
-def get_reindex_document_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_reindex_document_use_case(container: BackendContainerDep) -> Any:
     return container.ingestion_reindex_document_use_case
 
 
-def get_delete_document_use_case(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_delete_document_use_case(container: BackendContainerDep) -> Any:
     return container.ingestion_delete_document_use_case
 
 
-def get_docstore_service(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_docstore_service(container: BackendContainerDep) -> DocStoreService:
     return container.docstore_service
 
 
-def get_project_settings_service(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_project_settings_service(container: BackendContainerDep) -> ProjectSettingsService:
     return container.project_settings_service
 
 
-def get_retrieval_comparison_service(
-    container: Annotated[Any, Depends(get_backend_application_container)],
-) -> Any:
+def get_retrieval_comparison_service(container: BackendContainerDep) -> RetrievalComparisonService:
     return container.retrieval_comparison_service
 
 
@@ -219,7 +180,5 @@ def ensure_auth_database() -> bool:
 
 def get_user_repository(
     _: Annotated[bool, Depends(ensure_auth_database)],
-) -> Any:
-    from src.auth.user_repository import UserRepository
-
+) -> UserRepository:
     return UserRepository()

@@ -12,7 +12,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from apps.api.dependencies import (
-    get_backend_application_container,
+    BackendContainerDep,
     get_create_project_use_case,
     get_delete_document_use_case,
     get_docstore_service,
@@ -346,7 +346,7 @@ def get_document_assets(
 def post_invalidate_retrieval_cache(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    container: Annotated[Any, Depends(get_backend_application_container)],
+    container: BackendContainerDep,
 ) -> InvalidateCacheResponse:
     container.invalidate_project_chain(user_id, project_id)
     return InvalidateCacheResponse(ok=True)
