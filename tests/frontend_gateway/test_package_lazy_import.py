@@ -7,7 +7,7 @@ def test_importing_streamlit_context_does_not_load_in_process_client() -> None:
     """
     ``src.frontend_gateway.__init__`` uses lazy exports so lightweight UI imports
     (protocol + streamlit_context) avoid pulling :mod:`src.frontend_gateway.in_process`
-    and :class:`~src.app.ragcraft_app.RAGCraftApp`.
+    until something requests an in-process symbol.
     """
     prefix = "src.frontend_gateway."
     for key in list(sys.modules):

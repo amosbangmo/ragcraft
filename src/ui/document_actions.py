@@ -1,6 +1,6 @@
 """
 Document row actions (delete / reindex / inspect). All I/O goes through the injected
-:class:`~src.frontend_gateway.protocol.BackendClient` — never :class:`~src.app.ragcraft_app.RAGCraftApp`
+:class:`~src.frontend_gateway.protocol.BackendClient` — never the composition root or legacy app façade
 or service containers directly.
 """
 

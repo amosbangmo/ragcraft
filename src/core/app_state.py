@@ -3,30 +3,32 @@ Streamlit session singletons for the backend boundary.
 
 Pages and ``src/ui`` must call :func:`get_backend_client` (via
 :mod:`src.frontend_gateway.streamlit_api_client` / :mod:`src.frontend_gateway.streamlit_context`).
-:class:`~src.app.ragcraft_app.RAGCraftApp` is only constructed here for the default in-process adapter.
+In-process mode caches a :class:`~src.composition.BackendApplicationContainer` built by
+:func:`~src.frontend_gateway.streamlit_backend_factory.build_streamlit_backend_application_container`.
 """
 
+from __future__ import annotations
+
 import streamlit as st
-from src.app.ragcraft_app import RAGCraftApp
+
+from src.composition import BackendApplicationContainer
 from src.frontend_gateway.protocol import BackendClient
 from src.frontend_gateway.settings import load_frontend_backend_settings, use_http_backend_client
 
 
-APP_KEY = "ragcraft_app"
+BACKEND_CONTAINER_KEY = "streamlit_backend_application_container"
 HTTP_BACKEND_CLIENT_KEY = "ragcraft_http_backend_client"
 
 
-def get_app() -> RAGCraftApp:
-    """
-    Singleton in-process façade used exclusively to build :class:`~src.frontend_gateway.in_process.InProcessBackendClient`.
+def _get_streamlit_backend_container() -> BackendApplicationContainer:
+    if BACKEND_CONTAINER_KEY not in st.session_state:
+        from src.frontend_gateway.streamlit_backend_factory import (
+            build_streamlit_backend_application_container,
+        )
 
-    Feature code should not call this; use :func:`get_backend_client` instead.
-    """
+        st.session_state[BACKEND_CONTAINER_KEY] = build_streamlit_backend_application_container()
 
-    if APP_KEY not in st.session_state:
-        st.session_state[APP_KEY] = RAGCraftApp()
-
-    return st.session_state[APP_KEY]
+    return st.session_state[BACKEND_CONTAINER_KEY]
 
 
 def get_backend_client() -> BackendClient:
@@ -52,7 +54,7 @@ def get_backend_client() -> BackendClient:
 
     from src.frontend_gateway.in_process import InProcessBackendClient
 
-    return InProcessBackendClient(get_app())
+    return InProcessBackendClient(_get_streamlit_backend_container())
 
 
 def reset_app():
@@ -61,6 +63,6 @@ def reset_app():
     Useful for debugging or resetting state.
     """
 
-    if APP_KEY in st.session_state:
-        del st.session_state[APP_KEY]
+    if BACKEND_CONTAINER_KEY in st.session_state:
+        del st.session_state[BACKEND_CONTAINER_KEY]
     st.session_state.pop(HTTP_BACKEND_CLIENT_KEY, None)

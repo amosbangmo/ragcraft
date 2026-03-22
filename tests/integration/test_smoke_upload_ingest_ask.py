@@ -12,13 +12,15 @@ from src.domain.rag_response import RAGResponse
 # leak into other test modules (which may be collected / run in any order).
 _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
-    "src.app.ragcraft_app",
+    "src.frontend_gateway.in_process",
+    "src.frontend_gateway.streamlit_backend_factory",
     "src.backend.qa_dataset_generation_service",
     "src.backend.qa_dataset_service",
     "src.infrastructure.persistence.sqlite.qa_dataset_repository",
 )
 
-RAGCraftApp = None  # type: ignore[misc, assignment]
+_build_streamlit_container = None  # type: ignore[misc, assignment]
+_InProcessBackendClient = None  # type: ignore[misc, assignment]
 
 
 def _install_module(module_name: str, **attributes):
@@ -44,7 +46,7 @@ def _stub_get_connection():
 
 
 def setUpModule():
-    global RAGCraftApp
+    global _build_streamlit_container, _InProcessBackendClient
 
     _install_module(
         "src.infrastructure.persistence.db",
@@ -69,15 +71,20 @@ def setUpModule():
         RetrievalComparisonService=_DummyService,
     )
 
-    from src.app.ragcraft_app import RAGCraftApp as _RAGCraftApp
+    from src.frontend_gateway.in_process import InProcessBackendClient as _IPC
+    from src.frontend_gateway.streamlit_backend_factory import (
+        build_streamlit_backend_application_container as _build,
+    )
 
-    RAGCraftApp = _RAGCraftApp
+    _build_streamlit_container = _build
+    _InProcessBackendClient = _IPC
 
 
 def tearDownModule():
-    global RAGCraftApp
+    global _build_streamlit_container, _InProcessBackendClient
 
-    RAGCraftApp = None
+    _build_streamlit_container = None
+    _InProcessBackendClient = None
     for name in _MODULES_TO_RELOAD_AFTER_SMOKE:
         sys.modules.pop(name, None)
     for name in _STUBBED_MODULE_NAMES:
@@ -87,35 +94,34 @@ def tearDownModule():
 
 class TestSmokeUploadIngestAsk(unittest.TestCase):
     def test_upload_to_ask_flow_returns_prompt_sources(self):
-        app = RAGCraftApp()
+        assert _build_streamlit_container is not None
+        assert _InProcessBackendClient is not None
+
+        container = _build_streamlit_container()
+        backend = container.backend
+        client = _InProcessBackendClient(container)
 
         user_id = "u1"
         project_id = "p1"
         uploaded_file = SimpleNamespace(name="sample.pdf")
         project = Project(user_id=user_id, project_id=project_id)
 
-        # Swap service instances with mocks to run a deterministic smoke flow.
-        app.project_service = MagicMock()
-        app.ingestion_service = MagicMock()
-        app.vectorstore_service = MagicMock()
-        app.docstore_service = MagicMock()
-        app._backend._rag_service = MagicMock()
-        app.invalidate_project_chain = MagicMock()
+        backend.project_service = MagicMock()
+        backend.ingestion_service = MagicMock()
+        backend.vectorstore_service = MagicMock()
+        backend.docstore_service = MagicMock()
+        backend._rag_service = MagicMock()
+        client.invalidate_project_chain = MagicMock()  # type: ignore[method-assign]
 
-        # Container-cached ingestion use cases read services from the backend graph.
-        backend = app._backend
-        backend.ingestion_service = app.ingestion_service
-        backend.vectorstore_service = app.vectorstore_service
-        backend.docstore_service = app.docstore_service
         for _uc_key in (
             "ingestion_ingest_uploaded_file_use_case",
             "ingestion_reindex_document_use_case",
             "ingestion_delete_document_use_case",
         ):
-            app._container.__dict__.pop(_uc_key, None)
+            container.__dict__.pop(_uc_key, None)
 
-        app.project_service.get_project.return_value = project
-        app.docstore_service.get_doc_ids_for_source_file.return_value = []
+        backend.project_service.get_project.return_value = project
+        backend.docstore_service.get_doc_ids_for_source_file.return_value = []
 
         summary_documents = [SimpleNamespace(page_content="summary")]
         raw_assets = [
@@ -130,12 +136,12 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
                 "metadata": {"page_number": 1},
             }
         ]
-        app.ingestion_service.ingest_uploaded_file.return_value = (
+        backend.ingestion_service.ingest_uploaded_file.return_value = (
             summary_documents,
             raw_assets,
             IngestionDiagnostics(),
         )
-        app.vectorstore_service.index_documents.return_value = (MagicMock(), 0.0)
+        backend.vectorstore_service.index_documents.return_value = (MagicMock(), 0.0)
 
         response = RAGResponse(
             question="What is in the document?",
@@ -144,10 +150,10 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
             raw_assets=raw_assets,
             confidence=0.9,
         )
-        app.rag_service.ask.return_value = response
+        backend._rag_service.ask.return_value = response
 
-        ingest_result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
-        ask_result = app.ask_question(
+        ingest_result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
+        ask_result = client.ask_question(
             user_id=user_id,
             project_id=project_id,
             question="What is in the document?",
@@ -155,8 +161,8 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         )
 
         self.assertEqual(ingest_result.raw_assets, raw_assets)
-        app.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
-        app.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
+        backend.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
+        backend.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
         self.assertIsNotNone(ask_result)
         self.assertTrue(ask_result.prompt_sources)
         self.assertEqual(ask_result.prompt_sources[0]["doc_id"], "doc-1")

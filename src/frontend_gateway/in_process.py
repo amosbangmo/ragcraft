@@ -1,55 +1,74 @@
-"""In-process :class:`~src.frontend_gateway.protocol.BackendClient` backed by :class:`~src.app.ragcraft_app.RAGCraftApp`."""
+"""In-process :class:`~src.frontend_gateway.protocol.BackendClient` backed by :class:`~src.composition.BackendApplicationContainer`."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
 
-from src.app.ragcraft_app import RAGCraftApp
+from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
+from src.application.evaluation.dtos import (
+    CreateQaDatasetEntryCommand,
+    DeleteQaDatasetEntryCommand,
+    GenerateQaDatasetCommand,
+    ListQaDatasetEntriesQuery,
+    ListRetrievalQueryLogsQuery,
+    RunGoldQaDatasetEvaluationCommand,
+    RunManualEvaluationCommand,
+    UpdateQaDatasetEntryCommand,
+)
+from src.application.ingestion.dtos import (
+    DeleteDocumentCommand,
+    DeleteDocumentResult,
+    IngestDocumentResult,
+    IngestUploadedFileCommand,
+    ReindexDocumentCommand,
+)
 from src.application.settings.dtos import (
     EffectiveRetrievalSettingsView,
+    GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
+from src.composition import BackendApplicationContainer
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
-from src.domain.project_settings import ProjectSettings
+from src.domain.project_settings import ProjectSettings, ui_label_for_project_settings
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.application.ingestion.dtos import DeleteDocumentResult, IngestDocumentResult
+from src.ui.streamlit_project_chain_session_cache import (
+    invalidate_project_chain as _invalidate_streamlit_session_chain,
+)
 
 
 class InProcessBackendClient:
-    __slots__ = ("_app",)
-
-    def __init__(self, app: RAGCraftApp) -> None:
-        self._app = app
+    def __init__(self, container: BackendApplicationContainer) -> None:
+        self._container = container
 
     @property
     def chat_service(self) -> Any:
-        return self._app.chat_service
+        return self._container.chat_service
 
     @property
     def retrieval_settings_service(self) -> Any:
-        return self._app.retrieval_settings_service
+        return self._container.retrieval_settings_service
 
     @property
     def rag_service(self) -> Any:
-        return self._app.rag_service
+        return self._container.rag_service
 
     @property
     def evaluation_service(self) -> Any:
-        return self._app.evaluation_service
+        return self._container.evaluation_service
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
-        return self._app.project_settings_repository
+        return self._container.project_settings_repository
 
     def get_current_user_record(self) -> Any:
-        return self._app.get_current_user_record()
+        return self._container.auth_service.get_current_user_record()
 
     def format_created_at(self, created_at: str | None) -> str:
-        return self._app.format_created_at(created_at)
+        return self._container.auth_service.format_created_at(created_at)
 
     def update_profile(
         self,
@@ -58,7 +77,7 @@ class InProcessBackendClient:
         new_username: str,
         new_display_name: str,
     ) -> tuple[bool, str]:
-        return self._app.update_profile(
+        return self._container.auth_service.update_profile(
             user_id=user_id,
             new_username=new_username,
             new_display_name=new_display_name,
@@ -72,7 +91,7 @@ class InProcessBackendClient:
         new_password: str,
         confirm_new_password: str,
     ) -> tuple[bool, str]:
-        return self._app.change_password(
+        return self._container.auth_service.change_password(
             user_id=user_id,
             current_password=current_password,
             new_password=new_password,
@@ -80,52 +99,99 @@ class InProcessBackendClient:
         )
 
     def save_avatar(self, user_id: str, uploaded_file: Any) -> tuple[bool, str]:
-        return self._app.save_avatar(user_id, uploaded_file)
+        return self._container.auth_service.save_avatar(user_id, uploaded_file)
 
     def remove_avatar(self, user_id: str) -> tuple[bool, str]:
-        return self._app.remove_avatar(user_id)
+        return self._container.auth_service.remove_avatar(user_id)
 
     def delete_account(self, *, user_id: str, current_password: str) -> tuple[bool, str]:
-        return self._app.delete_account(user_id=user_id, current_password=current_password)
+        return self._container.auth_service.delete_account(
+            user_id=user_id,
+            current_password=current_password,
+        )
 
     def list_projects(self, user_id: str) -> list[str]:
-        return self._app.list_projects(user_id)
+        return self._container.project_service.list_projects(user_id)
 
     def create_project(self, user_id: str, project_id: str) -> Any:
-        return self._app.create_project(user_id, project_id)
+        return self._container.project_service.create_project(user_id, project_id)
 
     def get_project(self, user_id: str, project_id: str) -> Any:
-        return self._app.get_project(user_id, project_id)
+        return self._container.project_service.get_project(user_id, project_id)
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
-        return self._app.retrieval_preset_label_for_project(user_id, project_id)
+        ps = self._container.project_settings_repository.load(user_id, project_id)
+        return ui_label_for_project_settings(ps)
 
     def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
-        return self._app.list_project_documents(user_id, project_id)
+        return self._container.project_service.list_project_documents(user_id, project_id)
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
-        return self._app.get_project_document_details(user_id, project_id)
+        project = self.get_project(user_id, project_id)
+        documents = self.list_project_documents(user_id, project_id)
+
+        details = []
+        for doc_name in documents:
+            file_path = project.path / doc_name
+            asset_count = self._container.docstore_service.count_assets_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+            asset_stats = self._container.docstore_service.get_asset_stats_for_source_file(
+                user_id=user_id,
+                project_id=project_id,
+                source_file=doc_name,
+            )
+            details.append(
+                {
+                    "name": doc_name,
+                    "project_id": project_id,
+                    "path": str(file_path),
+                    "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
+                    "asset_count": asset_count,
+                    "text_count": int(asset_stats.get("text_count", 0)),
+                    "table_count": int(asset_stats.get("table_count", 0)),
+                    "image_count": int(asset_stats.get("image_count", 0)),
+                    "latest_ingested_at": asset_stats.get("latest_ingested_at"),
+                }
+            )
+        return details
 
     def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]:
-        return self._app.get_document_assets(user_id, project_id, source_file)
+        return self._container.docstore_service.list_assets_for_source_file(
+            user_id=user_id,
+            project_id=project_id,
+            source_file=source_file,
+        )
 
     def delete_project_document(
         self, user_id: str, project_id: str, source_file: str
     ) -> DeleteDocumentResult:
-        return self._app.delete_project_document(user_id, project_id, source_file)
+        project = self.get_project(user_id, project_id)
+        return self._container.ingestion_delete_document_use_case.execute(
+            DeleteDocumentCommand(project=project, source_file=source_file)
+        )
 
     def ingest_uploaded_file(
         self, user_id: str, project_id: str, uploaded_file: Any
     ) -> IngestDocumentResult:
-        return self._app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+        project = self.get_project(user_id, project_id)
+        return self._container.ingestion_ingest_uploaded_file_use_case.execute(
+            IngestUploadedFileCommand(project=project, uploaded_file=uploaded_file)
+        )
 
     def reindex_project_document(
         self, user_id: str, project_id: str, source_file: str
     ) -> IngestDocumentResult:
-        return self._app.reindex_project_document(user_id, project_id, source_file)
+        project = self.get_project(user_id, project_id)
+        return self._container.ingestion_reindex_document_use_case.execute(
+            ReindexDocumentCommand(project=project, source_file=source_file)
+        )
 
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
-        return self._app.invalidate_project_chain(user_id, project_id)
+        self._container.invalidate_project_chain(user_id, project_id)
+        _invalidate_streamlit_session_chain(project_id)
 
     def ask_question(
         self,
@@ -139,9 +205,9 @@ class InProcessBackendClient:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
-        return self._app.ask_question(
-            user_id,
-            project_id,
+        project = self.get_project(user_id, project_id)
+        return self._container.rag_service.ask(
+            project,
             question,
             chat_history,
             filters=filters,
@@ -153,12 +219,14 @@ class InProcessBackendClient:
     def get_effective_retrieval_settings(
         self, user_id: str, project_id: str
     ) -> EffectiveRetrievalSettingsView:
-        return self._app.get_effective_retrieval_settings(user_id, project_id)
+        return self._container.settings_get_effective_retrieval_use_case.execute(
+            GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+        )
 
     def update_project_retrieval_settings(
         self, command: UpdateProjectRetrievalSettingsCommand
     ) -> ProjectSettings:
-        return self._app.update_project_retrieval_settings(command)
+        return self._container.settings_update_project_retrieval_use_case.execute(command)
 
     def search_project_summaries(
         self,
@@ -172,9 +240,9 @@ class InProcessBackendClient:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
-        return self._app.search_project_summaries(
-            user_id,
-            project_id,
+        project = self.get_project(user_id, project_id)
+        return self._container.rag_service.preview_summary_recall(
+            project,
             query,
             chat_history,
             filters=filters,
@@ -195,9 +263,9 @@ class InProcessBackendClient:
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict | None = None,
     ) -> PipelineBuildResult | None:
-        return self._app.inspect_retrieval(
-            user_id,
-            project_id,
+        project = self.get_project(user_id, project_id)
+        return self._container.rag_service.inspect_pipeline(
+            project,
             question,
             chat_history,
             enable_query_rewrite_override=enable_query_rewrite_override,
@@ -214,9 +282,9 @@ class InProcessBackendClient:
         questions: list[str],
         enable_query_rewrite: bool,
     ) -> dict:
-        return self._app.compare_retrieval_modes(
-            user_id=user_id,
-            project_id=project_id,
+        project = self.get_project(user_id, project_id)
+        return self._container.backend.retrieval_comparison_service.compare(
+            project=project,
             questions=questions,
             enable_query_rewrite=enable_query_rewrite,
         )
@@ -233,15 +301,17 @@ class InProcessBackendClient:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> ManualEvaluationResult:
-        return self._app.evaluate_manual_question(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
-            enable_query_rewrite_override=enable_query_rewrite_override,
-            enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+        return self._container.evaluation_run_manual_evaluation_use_case.execute(
+            RunManualEvaluationCommand(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=expected_answer,
+                expected_doc_ids=expected_doc_ids,
+                expected_sources=expected_sources,
+                enable_query_rewrite_override=enable_query_rewrite_override,
+                enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
+            )
         )
 
     def evaluate_gold_qa_dataset(
@@ -252,11 +322,13 @@ class InProcessBackendClient:
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
     ) -> Any:
-        return self._app.evaluate_gold_qa_dataset(
-            user_id=user_id,
-            project_id=project_id,
-            enable_query_rewrite=enable_query_rewrite,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
+        return self._container.evaluation_run_gold_qa_dataset_evaluation_use_case.execute(
+            RunGoldQaDatasetEvaluationCommand(
+                user_id=user_id,
+                project_id=project_id,
+                enable_query_rewrite=enable_query_rewrite,
+                enable_hybrid_retrieval=enable_hybrid_retrieval,
+            )
         )
 
     def build_benchmark_export_artifacts(
@@ -268,12 +340,14 @@ class InProcessBackendClient:
         enable_hybrid_retrieval: bool,
         generated_at: datetime | None = None,
     ) -> Any:
-        return self._app.build_benchmark_export_artifacts(
-            project_id=project_id,
-            result=result,
-            enable_query_rewrite=enable_query_rewrite,
-            enable_hybrid_retrieval=enable_hybrid_retrieval,
-            generated_at=generated_at,
+        return self._container.evaluation_build_benchmark_export_artifacts_use_case.execute(
+            BuildBenchmarkExportCommand(
+                project_id=project_id,
+                result=result,
+                enable_query_rewrite=enable_query_rewrite,
+                enable_hybrid_retrieval=enable_hybrid_retrieval,
+                generated_at=generated_at,
+            )
         )
 
     def create_qa_dataset_entry(
@@ -286,17 +360,21 @@ class InProcessBackendClient:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> Any:
-        return self._app.create_qa_dataset_entry(
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
+        return self._container.evaluation_create_qa_dataset_entry_use_case.execute(
+            CreateQaDatasetEntryCommand(
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=expected_answer,
+                expected_doc_ids=expected_doc_ids,
+                expected_sources=expected_sources,
+            )
         )
 
     def list_qa_dataset_entries(self, *, user_id: str, project_id: str) -> Any:
-        return self._app.list_qa_dataset_entries(user_id=user_id, project_id=project_id)
+        return self._container.evaluation_list_qa_dataset_entries_use_case.execute(
+            ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id)
+        )
 
     def update_qa_dataset_entry(
         self,
@@ -309,14 +387,16 @@ class InProcessBackendClient:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> Any:
-        return self._app.update_qa_dataset_entry(
-            entry_id=entry_id,
-            user_id=user_id,
-            project_id=project_id,
-            question=question,
-            expected_answer=expected_answer,
-            expected_doc_ids=expected_doc_ids,
-            expected_sources=expected_sources,
+        return self._container.evaluation_update_qa_dataset_entry_use_case.execute(
+            UpdateQaDatasetEntryCommand(
+                entry_id=entry_id,
+                user_id=user_id,
+                project_id=project_id,
+                question=question,
+                expected_answer=expected_answer,
+                expected_doc_ids=expected_doc_ids,
+                expected_sources=expected_sources,
+            )
         )
 
     def delete_qa_dataset_entry(
@@ -326,10 +406,12 @@ class InProcessBackendClient:
         user_id: str,
         project_id: str,
     ) -> bool:
-        return self._app.delete_qa_dataset_entry(
-            entry_id=entry_id,
-            user_id=user_id,
-            project_id=project_id,
+        return self._container.evaluation_delete_qa_dataset_entry_use_case.execute(
+            DeleteQaDatasetEntryCommand(
+                entry_id=entry_id,
+                user_id=user_id,
+                project_id=project_id,
+            )
         )
 
     def generate_qa_dataset_entries(
@@ -341,12 +423,14 @@ class InProcessBackendClient:
         source_files: list[str] | None = None,
         generation_mode: str = "append",
     ) -> dict:
-        return self._app.generate_qa_dataset_entries(
-            user_id=user_id,
-            project_id=project_id,
-            num_questions=num_questions,
-            source_files=source_files,
-            generation_mode=generation_mode,
+        return self._container.evaluation_generate_qa_dataset_use_case.execute(
+            GenerateQaDatasetCommand(
+                user_id=user_id,
+                project_id=project_id,
+                num_questions=num_questions,
+                source_files=source_files,
+                generation_mode=generation_mode,
+            )
         )
 
     def list_retrieval_query_logs(
@@ -358,10 +442,12 @@ class InProcessBackendClient:
         until_iso: str | None = None,
         last_n: int | None = None,
     ) -> list[dict]:
-        return self._app.list_retrieval_query_logs(
-            user_id=user_id,
-            project_id=project_id,
-            since_iso=since_iso,
-            until_iso=until_iso,
-            last_n=last_n,
+        return self._container.evaluation_list_retrieval_query_logs_use_case.execute(
+            ListRetrievalQueryLogsQuery(
+                user_id=user_id,
+                project_id=project_id,
+                since_iso=since_iso,
+                until_iso=until_iso,
+                last_n=last_n,
+            )
         )

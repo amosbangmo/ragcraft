@@ -42,4 +42,4 @@ jobs:
 
       - name: Basic app boot check
         run: |
-          python -c "from src.app.ragcraft_app import RAGCraftApp; RAGCraftApp(); print('boot-ok')"
+          python -c "from src.frontend_gateway.streamlit_backend_factory import build_streamlit_backend_application_container; build_streamlit_backend_application_container(); print('boot-ok')"

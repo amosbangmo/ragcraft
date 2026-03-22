@@ -3,7 +3,7 @@ Streamlit ↔ backend boundary: one entrypoint for :class:`~src.frontend_gateway
 
 Pages and ``src/ui`` obtain the client via :func:`get_backend_client` from this module or
 :mod:`src.frontend_gateway.streamlit_context` (same implementation). Do not import
-:class:`~src.app.ragcraft_app.RAGCraftApp` or service containers from feature code.
+the composition root or service containers from feature code.
 
 Modes (environment)
 -------------------
@@ -43,8 +43,8 @@ Streamlit pages gateway checklist (business I/O via :func:`get_backend_client` /
 * ``pages/evaluation.py`` + ``src/ui/evaluation_*.py`` — manual/dataset/gold/retrieval tabs via client.
 * ``pages/profile.py`` — client profile/password/avatar/delete + session refresh helper.
 
-In-process mode still builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient` over
-:class:`~src.app.ragcraft_app.RAGCraftApp` inside :mod:`src.core.app_state` only — pages never import the façade.
+In-process mode still builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient` over a
+cached :class:`~src.composition.BackendApplicationContainer` inside :mod:`src.core.app_state` only.
 """
 
 from __future__ import annotations

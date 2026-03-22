@@ -40,6 +40,6 @@ def invalidate_all_project_chains_session() -> None:
         st.session_state[CHAIN_CACHE_KEY] = {}
 
 
-# Backward-compatible names for ``RAGCraftApp`` call sites.
+# Backward-compatible aliases for modules that imported the old session helpers by these names.
 invalidate_project_chain = invalidate_project_chain_session
 invalidate_all_project_chains = invalidate_all_project_chains_session
