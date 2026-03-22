@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.domain.project import Project
-from src.infrastructure.services.project_service import ProjectService
+from src.infrastructure.adapters.workspace.project_service import ProjectService
 
 
 class CreateProjectUseCase:

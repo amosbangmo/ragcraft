@@ -16,10 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_legacy_backend_package_directory_is_absent() -> None:
-    """The removed shim tree ``src/backend`` must not exist (canonical code is ``src.infrastructure.services``)."""
+    """The removed shim tree ``src/backend`` must not exist (canonical code lives under ``src.infrastructure.adapters``)."""
     backend_dir = REPO_ROOT / "src" / "backend"
     assert not backend_dir.exists(), (
-        "``src/backend`` was removed; use ``src.infrastructure.services`` and application use cases. "
+        "``src/backend`` was removed; use ``src.infrastructure.adapters`` and application use cases. "
         f"Delete leftover directory: {backend_dir}"
     )
 
@@ -34,7 +34,7 @@ def test_src_tree_does_not_import_removed_backend_package() -> None:
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
     msg = (
-        "``src.backend`` was removed. Use ``src.infrastructure.services`` (or the composition root).\n"
+        "``src.backend`` was removed. Use ``src.infrastructure.adapters`` (or the composition root).\n"
     )
     assert not violations, msg + "\n".join(violations)
 
@@ -42,7 +42,7 @@ def test_src_tree_does_not_import_removed_backend_package() -> None:
 def test_frontend_gateway_does_not_import_infrastructure_internals() -> None:
     """
     The gateway sits between Streamlit and HTTP/in-process backends; it must not reach adapters
-    (SQLite, FAISS, etc.) directly. Use ``src.application`` (+ allowed ``src.infrastructure.services``
+    (SQLite, FAISS, etc.) directly. Use ``src.application`` (+ allowed ``src.infrastructure.adapters``
     from application helpers such as ``frontend_support``) instead.
     """
     root = REPO_ROOT / "src" / "frontend_gateway"

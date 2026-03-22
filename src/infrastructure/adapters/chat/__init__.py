@@ -1,0 +1,1 @@
+"""Chat-related adapter implementations."""

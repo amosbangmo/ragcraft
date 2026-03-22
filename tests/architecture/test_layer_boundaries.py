@@ -76,7 +76,7 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
     """
     Application use cases must not depend on Streamlit or the API package.
 
-    Only ``src.infrastructure.services`` is allowed among infrastructure imports.
+    Only ``src.infrastructure.adapters`` is allowed among infrastructure imports.
     """
     violations: list[str] = []
     for path in application_files:
@@ -86,11 +86,11 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
             elif mod.startswith("apps") or mod == "apps":
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-            elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.services"):
+            elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.adapters"):
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     msg = (
-        "Application layer must not import Streamlit, apps.api, or infrastructure adapters "
-        "(except ``src.infrastructure.services``). Use ports/DTOs and the composition root instead.\n"
+        "Application layer must not import Streamlit, apps.api, or infrastructure packages "
+        "(except ``src.infrastructure.adapters``). Use ports/DTOs and the composition root instead.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
@@ -101,19 +101,19 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
     """
     Core infrastructure (adapters, persistence, vector stores) must not call into ``src.application``.
 
-    ``src/infrastructure/services`` hosts runtime services; those modules may import application
-    use cases and DTOs by design.
+    ``src/infrastructure/adapters`` hosts concrete runtime adapters; those modules may import
+    application use cases and DTOs by design.
     """
     violations: list[str] = []
     infra_root = REPO_ROOT / "src" / "infrastructure"
-    services_root = infra_root / "services"
+    adapters_root = infra_root / "adapters"
     for path in infrastructure_files:
         mods = imported_top_level_modules(path)
         try:
-            under_services = services_root in path.parents or path.parent == services_root
+            under_adapters = adapters_root in path.parents or path.parent == adapters_root
         except ValueError:
-            under_services = False
-        if under_services:
+            under_adapters = False
+        if under_adapters:
             forbidden = ("apps",)
         else:
             forbidden = ("src.application", "streamlit", "apps")
@@ -121,8 +121,8 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
     msg = (
-        "Non-service infrastructure must not import application use cases or Streamlit. "
-        "Service modules under ``src/infrastructure/services`` may import ``src.application`` by design.\n"
+        "Non-adapter infrastructure must not import application use cases or Streamlit. "
+        "Adapter modules under ``src/infrastructure/adapters`` may import ``src.application`` by design.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

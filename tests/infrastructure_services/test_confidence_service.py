@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.confidence_service import ConfidenceService
+from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
 
 
 class TestConfidenceService(unittest.TestCase):

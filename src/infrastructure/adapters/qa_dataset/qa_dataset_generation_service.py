@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from src.infrastructure.llm.qa_dataset_llm_gateway import QADatasetLlmGateway
-from src.infrastructure.services.docstore_service import DocStoreService
-from src.infrastructure.services.project_service import ProjectService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.workspace.project_service import ProjectService
 
 
 MAX_ASSETS_PER_GENERATION = 12

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
-from src.infrastructure.services.answer_generation_service import AnswerGenerationService
+from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
 
 
 class GenerateAnswerFromPipelineUseCase:

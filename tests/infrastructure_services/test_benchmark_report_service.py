@@ -3,7 +3,7 @@ import unittest
 from datetime import datetime, timezone
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from src.infrastructure.services.benchmark_report_service import (
+from src.infrastructure.adapters.evaluation.benchmark_report_service import (
     BenchmarkReportService,
     coerce_generated_at,
     safe_filename_segment,

@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 from src.core.exceptions import DocStoreError
-from src.infrastructure.services.docstore_service import DocStoreService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 
 
 class TestDocStoreService(unittest.TestCase):
-    @patch("src.infrastructure.services.docstore_service.SQLiteDocStore")
+    @patch("src.infrastructure.adapters.rag.docstore_service.SQLiteDocStore")
     def test_save_asset_delegates_to_docstore(self, mock_store_cls):
         mock_store = MagicMock()
         mock_store_cls.return_value = mock_store
@@ -28,7 +28,7 @@ class TestDocStoreService(unittest.TestCase):
 
         mock_store.upsert_asset.assert_called_once()
 
-    @patch("src.infrastructure.services.docstore_service.SQLiteDocStore")
+    @patch("src.infrastructure.adapters.rag.docstore_service.SQLiteDocStore")
     def test_upsert_asset_alias_calls_save_asset(self, mock_store_cls):
         mock_store = MagicMock()
         mock_store_cls.return_value = mock_store
@@ -45,7 +45,7 @@ class TestDocStoreService(unittest.TestCase):
         )
         mock_store.upsert_asset.assert_called_once()
 
-    @patch("src.infrastructure.services.docstore_service.SQLiteDocStore")
+    @patch("src.infrastructure.adapters.rag.docstore_service.SQLiteDocStore")
     def test_get_asset_by_doc_id_wraps_errors(self, mock_store_cls):
         mock_store = MagicMock()
         mock_store.get_asset_by_doc_id.side_effect = RuntimeError("sqlite fail")
@@ -55,7 +55,7 @@ class TestDocStoreService(unittest.TestCase):
         with self.assertRaises(DocStoreError):
             service.get_asset_by_doc_id("d1")
 
-    @patch("src.infrastructure.services.docstore_service.SQLiteDocStore")
+    @patch("src.infrastructure.adapters.rag.docstore_service.SQLiteDocStore")
     def test_wrapper_methods_delegate_calls(self, mock_store_cls):
         mock_store = MagicMock()
         mock_store_cls.return_value = mock_store

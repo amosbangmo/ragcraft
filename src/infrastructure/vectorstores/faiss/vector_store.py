@@ -1,7 +1,7 @@
 """
 FAISS + LangChain vector index lifecycle.
 
-Used by :class:`~src.infrastructure.services.vectorstore_service.VectorStoreService`.
+Used by :class:`~src.infrastructure.adapters.rag.vectorstore_service.VectorStoreService`.
 """
 
 from __future__ import annotations

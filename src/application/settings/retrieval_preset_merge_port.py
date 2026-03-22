@@ -6,7 +6,7 @@ from typing import Any, Mapping, Protocol, runtime_checkable
 
 from src.domain.retrieval_presets import RetrievalPreset
 from src.domain.retrieval_settings import RetrievalSettings
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 @runtime_checkable

@@ -18,16 +18,16 @@ from src.domain.pipeline_payloads import (
 from src.domain.project import Project
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
-from src.infrastructure.services.confidence_service import ConfidenceService
-from src.infrastructure.services.contextual_compression_service import ContextualCompressionService
-from src.infrastructure.services.docstore_service import DocStoreService
-from src.infrastructure.services.layout_context_service import LayoutContextService
-from src.infrastructure.services.multimodal_orchestration_service import MultimodalOrchestrationService
-from src.infrastructure.services.prompt_builder_service import PromptBuilderService
-from src.infrastructure.services.reranking_service import RerankingService
-from src.infrastructure.services.section_retrieval_service import SectionRetrievalService
-from src.infrastructure.services.prompt_source_service import PromptSourceService
-from src.infrastructure.services.table_qa_service import TableQAService
+from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
+from src.infrastructure.adapters.rag.contextual_compression_service import ContextualCompressionService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.rag.layout_context_service import LayoutContextService
+from src.infrastructure.adapters.rag.multimodal_orchestration_service import MultimodalOrchestrationService
+from src.infrastructure.adapters.rag.prompt_builder_service import PromptBuilderService
+from src.infrastructure.adapters.rag.reranking_service import RerankingService
+from src.infrastructure.adapters.rag.section_retrieval_service import SectionRetrievalService
+from src.infrastructure.adapters.rag.prompt_source_service import PromptSourceService
+from src.infrastructure.adapters.rag.table_qa_service import TableQAService
 
 
 class PipelineAssemblyService:

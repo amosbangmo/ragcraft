@@ -3,7 +3,7 @@ import unittest
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.domain.project import Project
-from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
+from src.infrastructure.adapters.rag.retrieval_comparison_service import RetrievalComparisonService
 
 
 def _fake_pipeline(

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from src.application.use_cases.evaluation.benchmark_execution import BenchmarkExecutionUseCase
-from src.infrastructure.services.answer_quality_aggregation_service import AnswerQualityAggregationService
-from src.infrastructure.services.auto_debug_service import AutoDebugService
-from src.infrastructure.services.correlation_service import CorrelationService
-from src.infrastructure.services.explainability_service import ExplainabilityService
-from src.infrastructure.services.failure_analysis_service import FailureAnalysisService
-from src.infrastructure.services.retrieval_metrics_service import RetrievalMetricsService
-from src.infrastructure.services.row_evaluation_service import RowEvaluationService
-from src.infrastructure.services.semantic_similarity_service import SemanticSimilarityService
-from src.infrastructure.services.llm_judge_service import LLMJudgeService
+from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
+from src.infrastructure.adapters.evaluation.auto_debug_service import AutoDebugService
+from src.infrastructure.adapters.evaluation.correlation_service import CorrelationService
+from src.infrastructure.adapters.evaluation.explainability_service import ExplainabilityService
+from src.infrastructure.adapters.evaluation.failure_analysis_service import FailureAnalysisService
+from src.infrastructure.adapters.evaluation.retrieval_metrics_service import RetrievalMetricsService
+from src.infrastructure.adapters.evaluation.row_evaluation_service import RowEvaluationService
+from src.infrastructure.adapters.evaluation.semantic_similarity_service import SemanticSimilarityService
+from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 
 _DEFAULT_RETRIEVAL = RetrievalMetricsService()
 _DEFAULT_ANSWER = AnswerQualityAggregationService()

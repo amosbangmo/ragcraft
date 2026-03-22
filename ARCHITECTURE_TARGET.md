@@ -30,8 +30,8 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 | Location | Role |
 |----------|------|
 | **`src/domain/`** | Entities, value objects, ports (protocols). No FastAPI, Streamlit, SQLite drivers, or LangChain imports. Summary recall uses **`SummaryRecallDocument`**, not LangChain `Document`. |
-| **`src/application/`** | Use cases, DTOs, HTTP wire helpers, pure policies (e.g. `application/chat/policies/`). May import **`src.infrastructure.services`** only (orchestration services). |
-| **`src/infrastructure/`** | Adapters: **`services/`** (runtime orchestration, LLM, FAISS, etc.), **`persistence/`**, **`vectorstores/`**, **`adapters/`** cross-cutting SQLite repos where used. |
+| **`src/application/`** | Use cases, DTOs, HTTP wire helpers, pure policies (e.g. `application/chat/policies/`). May import **`src.infrastructure.adapters`** only (concrete runtime adapters). |
+| **`src/infrastructure/`** | **`adapters/`** (RAG stack, evaluation, workspace I/O, etc.), **`persistence/`**, **`vectorstores/`**, **`llm/`**, and other technical implementations. |
 | **`src/adapters/sqlite/`** | SQLite implementations of domain ports (users, assets, project settings). |
 | **`src/composition/`** | Wires the graph; **`build_backend()`** is the single production entry for the full container. |
 | **`src/frontend_gateway/`** | `BackendClient`, HTTP client, in-process adapter, Streamlit auth/session glue. Must not import **`src.infrastructure`** (stubs live under **`src/application/frontend_support/`**). |
@@ -43,14 +43,14 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 
 | Item | Status |
 |------|--------|
-| **`src/backend/`** | **Removed.** Import **`src.infrastructure.services`** (or application use cases); do not reintroduce. |
+| **`src/backend/`** | **Removed.** Import **`src.infrastructure.adapters`** (or application use cases); do not reintroduce. |
 | **`src/services/`** | **Removed** as a package name; do not reintroduce. |
 | **`src/app/ragcraft_app.py`** | **Removed**; in-process mode uses **`InProcessBackendClient`** + **`BackendApplicationContainer`** directly. |
 
 ## Tests
 
 - **`tests/architecture/`** — Import-boundary and migration guardrails.
-- **`tests/infrastructure_services/`** — Unit tests for **`src.infrastructure.services`** (renamed from `tests/backend` to avoid confusion with `apps/api`).
+- **`tests/infrastructure_services/`** — Unit tests for **`src.infrastructure.adapters`** (historically named; renamed from `tests/backend` to avoid confusion with `apps/api`).
 - **`tests/apps_api/`** — FastAPI contract and E2E-style HTTP tests.
 
 ## Further reading

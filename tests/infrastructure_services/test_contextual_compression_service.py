@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.contextual_compression_service import ContextualCompressionService
+from src.infrastructure.adapters.rag.contextual_compression_service import ContextualCompressionService
 
 
 class TestContextualCompressionService(unittest.TestCase):

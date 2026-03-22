@@ -143,7 +143,7 @@ This document inventories **application-flow orchestration** that still lives ou
 2. **Orchestration inside infrastructure:** `RAGService`, `RetrievalComparisonService`, and `EvaluationService` **construct or encode** multi-step workflows that belong in `src/application` or the composition root.
 3. **Duplicated evaluation pipeline:** Manual and gold dataset use cases both encode inspect → answer → latency merge; should be one internal application helper.
 4. **Docs:** `src/application/evaluation/__init__.py` may still reference a **non-existent** `src/services` tree in prose.
-5. **`src/backend/`** — **removed** (canonical: `src.infrastructure.services`).
+5. **`src/backend/`** — **removed** (canonical: `src.infrastructure.adapters`).
 
 ---
 

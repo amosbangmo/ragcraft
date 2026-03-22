@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.benchmark_comparison_service import BenchmarkComparisonService
+from src.infrastructure.adapters.evaluation.benchmark_comparison_service import BenchmarkComparisonService
 
 
 class TestBenchmarkComparisonService(unittest.TestCase):

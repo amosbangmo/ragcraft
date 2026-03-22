@@ -41,17 +41,17 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
     """
     FastAPI wires use cases from the composition root; it must not import the legacy ``src.services``
     namespace, the removed ``src.backend`` package, or the concrete runtime service package
-    (``src.infrastructure.services``) directly.
+    (``src.infrastructure.adapters``) directly.
     """
     api_root = REPO_ROOT / "apps" / "api"
     violations = collect_import_violations(
         [api_root],
-        forbidden=("src.services", "src.backend", "src.infrastructure.services"),
+        forbidden=("src.services", "src.backend", "src.infrastructure.adapters"),
         repo_root=REPO_ROOT,
     )
     msg = (
         "FastAPI should depend on use cases from ``apps.api.dependencies`` / the composition root, "
-        "not on ``src.infrastructure.services``, ``src.backend`` (removed), or ``src.services`` directly.\n"
+        "not on ``src.infrastructure.adapters``, ``src.backend`` (removed), or ``src.services`` directly.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
@@ -65,7 +65,6 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     forbidden = (
         "src.backend",
         "src.domain",
-        "src.infrastructure.services",
         "src.services",
         "src.composition",
         "src.infrastructure",

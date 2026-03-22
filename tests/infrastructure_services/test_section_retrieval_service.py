@@ -2,7 +2,7 @@ import unittest
 from dataclasses import replace
 
 from src.core.config import RETRIEVAL_CONFIG
-from src.infrastructure.services.section_retrieval_service import SectionRetrievalService
+from src.infrastructure.adapters.rag.section_retrieval_service import SectionRetrievalService
 
 
 def _cfg(**kwargs):

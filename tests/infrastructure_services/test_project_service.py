@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.infrastructure.services.project_service import ProjectService
+from src.infrastructure.adapters.workspace.project_service import ProjectService
 
 
 class TestProjectService(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.failure_analysis_service import FailureAnalysisService
+from src.infrastructure.adapters.evaluation.failure_analysis_service import FailureAnalysisService
 
 
 class TestFailureAnalysisService(unittest.TestCase):

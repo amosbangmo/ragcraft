@@ -18,16 +18,16 @@ from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import RetrievalFilters
-from src.infrastructure.services.answer_generation_service import AnswerGenerationService
-from src.infrastructure.services.docstore_service import DocStoreService
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.pipeline_assembly_service import PipelineAssemblyService
-from src.infrastructure.services.query_log_service import QueryLogService
-from src.infrastructure.services.reranking_service import RerankingService
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
-from src.infrastructure.services.summary_recall_service import SummaryRecallService
-from src.infrastructure.services.table_qa_service import TableQAService
-from src.infrastructure.services.vectorstore_service import VectorStoreService
+from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.rag.pipeline_assembly_service import PipelineAssemblyService
+from src.infrastructure.adapters.query_logging.query_log_service import QueryLogService
+from src.infrastructure.adapters.rag.reranking_service import RerankingService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.summary_recall_service import SummaryRecallService
+from src.infrastructure.adapters.rag.table_qa_service import TableQAService
+from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 
 class RAGService:

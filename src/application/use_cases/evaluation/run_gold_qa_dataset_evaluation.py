@@ -8,9 +8,9 @@ from src.application.evaluation.dtos import (
     RunGoldQaDatasetEvaluationCommand,
 )
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.project_service import ProjectService
-from src.infrastructure.services.rag_service import RAGService
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.infrastructure.adapters.rag.rag_service import RAGService
 
 from .list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 

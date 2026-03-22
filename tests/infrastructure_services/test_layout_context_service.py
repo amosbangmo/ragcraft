@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.layout_context_service import (
+from src.infrastructure.adapters.rag.layout_context_service import (
     LayoutContextService,
     describe_layout_group,
 )

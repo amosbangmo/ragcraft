@@ -9,8 +9,8 @@ from src.domain.evaluation.benchmark_math import (
     r2,
     rate,
 )
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.llm_judge_service import LLMJudgeService
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 
 
 class _StubJudge:

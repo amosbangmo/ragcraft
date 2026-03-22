@@ -14,7 +14,7 @@ from src.domain.project import Project
 from src.infrastructure.ingestion.loader import save_uploaded_file
 from src.infrastructure.ingestion.unstructured_extractor import extract_elements
 from src.infrastructure.ingestion.summarizer import ElementSummarizer
-from src.infrastructure.services.table_parsing_service import TableParsingService
+from src.infrastructure.adapters.document.table_parsing_service import TableParsingService
 
 
 def _is_ocr_dependency_error(exc: Exception) -> bool:

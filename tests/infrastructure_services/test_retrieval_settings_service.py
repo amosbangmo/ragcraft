@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_presets import PRECISE_SEARCH_K, RetrievalPreset
 from src.domain.retrieval_settings import RetrievalSettings
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 class TestRetrievalSettingsService(unittest.TestCase):

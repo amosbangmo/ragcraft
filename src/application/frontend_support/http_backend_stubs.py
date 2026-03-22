@@ -12,8 +12,8 @@ from typing import Any
 
 from src.domain.project_settings import ProjectSettings
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.services.chat_service import ChatService
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.chat.chat_service import ChatService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 class _UnsupportedBackendAttribute:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.infrastructure.services.llm_judge_service import JUDGE_FAILURE_REASON
+from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 
 
 def _is_score(value: object) -> bool:

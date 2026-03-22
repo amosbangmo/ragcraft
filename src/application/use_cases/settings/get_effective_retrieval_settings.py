@@ -5,7 +5,7 @@ from src.application.settings.dtos import (
     GetEffectiveRetrievalSettingsQuery,
 )
 from src.domain.ports import ProjectSettingsRepositoryPort
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 class GetEffectiveRetrievalSettingsUseCase:

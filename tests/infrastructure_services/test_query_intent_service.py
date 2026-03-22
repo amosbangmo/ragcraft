@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from src.domain.query_intent import QueryIntent
-from src.infrastructure.services.query_intent_service import QueryIntentService
+from src.infrastructure.adapters.rag.query_intent_service import QueryIntentService
 
 
 class TestQueryIntentService(unittest.TestCase):

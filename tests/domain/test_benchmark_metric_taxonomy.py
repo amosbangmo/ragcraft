@@ -1,7 +1,7 @@
 import unittest
 
 from src.domain import benchmark_metric_taxonomy as bmt
-from src.infrastructure.services.benchmark_comparison_service import (
+from src.infrastructure.adapters.evaluation.benchmark_comparison_service import (
     BenchmarkComparisonService,
     LOWER_IS_BETTER_METRICS,
 )

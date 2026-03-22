@@ -17,15 +17,15 @@ from typing import TYPE_CHECKING
 from src.auth.auth_service import AuthService
 from src.composition.backend_composition import BackendComposition, build_backend_composition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.services.chat_service import ChatService
-from src.infrastructure.services.docstore_service import DocStoreService
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.project_service import ProjectService
-from src.infrastructure.services.qa_dataset_generation_service import QADatasetGenerationService
-from src.infrastructure.services.qa_dataset_service import QADatasetService
-from src.infrastructure.services.query_log_service import QueryLogService
-from src.infrastructure.services.reranking_service import RerankingService
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.chat.chat_service import ChatService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service import QADatasetGenerationService
+from src.infrastructure.adapters.qa_dataset.qa_dataset_service import QADatasetService
+from src.infrastructure.adapters.query_logging.query_log_service import QueryLogService
+from src.infrastructure.adapters.rag.reranking_service import RerankingService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
     from src.application.use_cases.chat.ask_question import AskQuestionUseCase
@@ -57,9 +57,9 @@ if TYPE_CHECKING:
     from src.application.use_cases.settings.update_project_retrieval_settings import (
         UpdateProjectRetrievalSettingsUseCase,
     )
-    from src.infrastructure.services.ingestion_service import IngestionService
-    from src.infrastructure.services.rag_service import RAGService
-    from src.infrastructure.services.vectorstore_service import VectorStoreService
+    from src.infrastructure.adapters.document.ingestion_service import IngestionService
+    from src.infrastructure.adapters.rag.rag_service import RAGService
+    from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 
 @dataclass

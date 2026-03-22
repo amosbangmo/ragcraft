@@ -19,14 +19,14 @@ from src.domain.retrieval_settings import RetrievalSettings
 from src.domain.retrieval_strategy import RetrievalStrategy
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.infrastructure.adapters.summary_recall_document_adapter import summary_recall_document_from_langchain
-from src.infrastructure.services.adaptive_retrieval_service import AdaptiveRetrievalService
-from src.infrastructure.services.docstore_service import DocStoreService
-from src.infrastructure.services.hybrid_retrieval_service import HybridRetrievalService
-from src.infrastructure.services.query_intent_service import QueryIntentService
-from src.infrastructure.services.query_rewrite_service import QueryRewriteService
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
-from src.infrastructure.services.table_qa_service import TableQAService
-from src.infrastructure.services.vectorstore_service import VectorStoreService
+from src.infrastructure.adapters.rag.adaptive_retrieval_service import AdaptiveRetrievalService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.rag.hybrid_retrieval_service import HybridRetrievalService
+from src.infrastructure.adapters.rag.query_intent_service import QueryIntentService
+from src.infrastructure.adapters.rag.query_rewrite_service import QueryRewriteService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.table_qa_service import TableQAService
+from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 logger = logging.getLogger(__name__)
 

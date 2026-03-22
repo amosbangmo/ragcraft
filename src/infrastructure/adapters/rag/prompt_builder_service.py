@@ -1,6 +1,6 @@
 from src.domain.prompt_source import PromptSource
-from src.infrastructure.services.image_context_service import ImageContextService
-from src.infrastructure.services.layout_context_service import describe_layout_group
+from src.infrastructure.adapters.rag.image_context_service import ImageContextService
+from src.infrastructure.adapters.rag.layout_context_service import describe_layout_group
 
 
 _MAX_STRUCTURED_TABLE_ROWS = 14

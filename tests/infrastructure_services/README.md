@@ -1,6 +1,6 @@
 # Infrastructure service tests
 
-Unit tests for **`src.infrastructure.services`** (RAG orchestration, docstore, vector store, evaluation, ingestion service, etc.).
+Unit tests for **`src.infrastructure.adapters`** (RAG orchestration, docstore, vector store, evaluation, ingestion, etc.).
 
 This package was renamed from **`tests/backend`** so it is not confused with the **HTTP API** (`apps/api/`). The legacy **`src/backend/`** Python package has been removed from the tree.
 

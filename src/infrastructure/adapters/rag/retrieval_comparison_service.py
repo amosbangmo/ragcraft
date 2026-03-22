@@ -8,7 +8,7 @@ from src.application.use_cases.retrieval.retrieval_mode_comparison import compar
 from src.domain.project import Project
 
 if TYPE_CHECKING:
-    from src.infrastructure.services.rag_service import RAGService
+    from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 class RetrievalComparisonService:

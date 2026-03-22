@@ -3,7 +3,7 @@ import unittest
 from src.core.config import RetrievalConfig
 from src.domain.query_intent import QueryIntent
 from src.domain.retrieval_settings import RetrievalSettings
-from src.infrastructure.services.adaptive_retrieval_service import AdaptiveRetrievalService
+from src.infrastructure.adapters.rag.adaptive_retrieval_service import AdaptiveRetrievalService
 
 
 class TestAdaptiveRetrievalService(unittest.TestCase):

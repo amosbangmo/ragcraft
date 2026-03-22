@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.services.answer_citation_metrics_service import (
+from src.infrastructure.adapters.evaluation.answer_citation_metrics_service import (
     answer_cited_doc_ids,
     extract_cited_source_numbers,
 )

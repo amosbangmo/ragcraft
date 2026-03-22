@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from src.infrastructure.llm.qa_dataset_llm_gateway import extract_json_array
-from src.infrastructure.services.qa_dataset_generation_service import (
+from src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service import (
     MAX_CONTEXT_CHARS,
     QADatasetGenerationService,
 )

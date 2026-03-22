@@ -5,10 +5,10 @@ from __future__ import annotations
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.application.evaluation.dtos import RunManualEvaluationCommand
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
-from src.infrastructure.services.project_service import ProjectService
-from src.infrastructure.services.rag_service import RAGService
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.evaluation.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
+from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 class RunManualEvaluationUseCase:

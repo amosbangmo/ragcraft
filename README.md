@@ -126,7 +126,7 @@ LLM
 
 | Done | Transitional / deprecated |
 |------|---------------------------|
-| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** removed — use **`src.infrastructure.services`** (or application use cases) |
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** removed — use **`src.infrastructure.adapters`** (or application use cases) |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
 | Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **`X-User-Id`** trust model — replace with real auth for production browsers |
 
@@ -136,10 +136,10 @@ LLM
 |----------------|--------|
 | Business rules, entities, ports | `src/domain/` |
 | Orchestration, commands, HTTP wire DTOs | `src/application/use_cases/**` (and `application/http/wire.py` for JSON shapes) |
-| RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`services/`, `persistence/`, `vectorstores/`, …) |
+| RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`adapters/`, `persistence/`, `vectorstores/`, …) |
 | SQLite port implementations | `src/adapters/sqlite/` |
 | Wiring the graph | `src/composition/` |
-| Streamlit/HTTP client seam | `src/frontend_gateway/` (stubs that need `infrastructure.services` → `src/application/frontend_support/`) |
+| Streamlit/HTTP client seam | `src/frontend_gateway/` (stubs that need `infrastructure.adapters` → `src/application/frontend_support/`) |
 
 ---
 
@@ -225,13 +225,12 @@ ragcraft/
 │   ├── core/                    # config, paths, shared errors (Streamlit session helpers here)
 │   ├── domain/                  # Entities, ports, SummaryRecallDocument, no framework imports
 │   ├── frontend_gateway/        # BackendClient, HttpBackendClient, InProcessBackendClient
-│   ├── infrastructure/          # services/, persistence/, vectorstores/, adapters
-│   ├── backend/               # DEPRECATED: re-export shims → infrastructure.services
+│   ├── infrastructure/          # adapters/, persistence/, vectorstores/, …
 │   └── ui/                      # Streamlit widgets (no direct domain/infra imports)
 ├── tests/
 │   ├── architecture/            # Layer boundary + migration guardrails
 │   ├── apps_api/                # FastAPI contract tests
-│   └── infrastructure_services/  # Unit tests for src.infrastructure.services
+│   └── infrastructure_services/  # Unit tests for src.infrastructure.adapters
 ├── data/
 ├── requirements.txt
 ├── ARCHITECTURE_TARGET.md       # Current runtime layout (read this)

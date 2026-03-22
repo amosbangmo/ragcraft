@@ -10,7 +10,7 @@
 
 The **structural** migration goals are **largely achieved**: FastAPI is the HTTP integration surface, use cases live in `src/application/`, long-running orchestration lives in `src/infrastructure/services/`, Streamlit is isolated behind `BackendClient`, and automated tests enforce several boundaries.
 
-This is **not** a claim of “production-complete SaaS backend.” Identity is still header-based for scoped routes, and some API modules intentionally touch `src.infrastructure.persistence` for SQLite bootstrap. The legacy **`src/backend/`** shim package has been **removed** (canonical code is `src.infrastructure.services`). An **Angular (or other) SPA can start integration now** against OpenAPI, but **must plan** for real auth, CORS, and hardening—called out explicitly below.
+This is **not** a claim of “production-complete SaaS backend.” Identity is still header-based for scoped routes, and some API modules intentionally touch `src.infrastructure.persistence` for SQLite bootstrap. The legacy **`src/backend/`** shim package has been **removed** (canonical concrete runtime code lives under `src.infrastructure.adapters`). An **Angular (or other) SPA can start integration now** against OpenAPI, but **must plan** for real auth, CORS, and hardening—called out explicitly below.
 
 **Verdict:** Migration is **substantively complete for architecture and API-first development**; **product hardening** remains.
 
@@ -111,7 +111,7 @@ So: **integration work can start immediately**; **launching a public SPA** requi
 3. **P1 — Optional: lifespan DB init** — Move `init_app_db` out of router-adjacent `Depends` into FastAPI `lifespan` or an explicit migration command.
 4. **P2 — Align `HttpBackendClient` / OpenAPI** — When adding `BackendClient` methods, add routes + client methods + contract tests in the same change.
 5. **P2 — Consolidate persistence layout** — Reduce split between `adapters/sqlite` and `infrastructure/persistence` where redundant.
-6. **P3 — Further split large services** — Continue extracting policies/use cases from the biggest `infrastructure.services` modules.
+6. **P3 — Further split large adapters** — Continue extracting policies/use cases from the biggest `infrastructure.adapters` modules.
 7. **P3 — CI guarantee for full graph** — Ensure CI always installs `requirements.txt` so composition regression tests are not skipped.
 
 ---

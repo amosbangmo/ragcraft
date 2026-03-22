@@ -6,7 +6,7 @@ from time import perf_counter
 
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.project import Project
-from src.infrastructure.services.rag_service import RAGService
+from src.infrastructure.adapters.rag.rag_service import RAGService
 
 
 def run_rag_inspect_and_answer_for_eval(

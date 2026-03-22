@@ -14,7 +14,7 @@ from src.application.use_cases.settings.update_project_retrieval_settings import
 )
 from src.domain.project_settings import ProjectSettings, default_project_settings
 from src.domain.retrieval_presets import RetrievalPreset
-from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 
 
 class _MemoryProjectSettingsRepo:

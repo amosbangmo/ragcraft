@@ -15,8 +15,8 @@ from src.domain.manual_evaluation_result import (
     ManualEvaluationRetrievalQuality,
 )
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.infrastructure.services.evaluation_service import EvaluationService
-from src.infrastructure.services.llm_judge_service import JUDGE_FAILURE_REASON
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 
 if TYPE_CHECKING:
     from src.frontend_gateway.protocol import BackendClient

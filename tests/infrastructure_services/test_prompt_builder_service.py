@@ -1,7 +1,7 @@
 import unittest
 
 from src.domain.prompt_source import PromptSource
-from src.infrastructure.services.prompt_builder_service import PromptBuilderService
+from src.infrastructure.adapters.rag.prompt_builder_service import PromptBuilderService
 
 
 class TestPromptBuilderService(unittest.TestCase):

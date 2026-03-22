@@ -21,7 +21,7 @@ def _norm_content_type(raw: object) -> str:
 
 
 def analyze_prompt_asset_modalities(assets: list[Any]) -> dict[str, Any]:
-    """Mirror logic from :class:`~src.infrastructure.services.multimodal_orchestration_service.MultimodalOrchestrationService`."""
+    """Mirror logic from :class:`~src.infrastructure.adapters.rag.multimodal_orchestration_service.MultimodalOrchestrationService`."""
     has_text = False
     has_table = False
     has_image = False
