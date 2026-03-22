@@ -69,10 +69,9 @@ def build_backend_composition(
     """
     Assemble technical adapters only (no application use cases).
 
-    ``chat_transcript`` defaults to :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript`
-    (no Streamlit). Streamlit in-process builds pass
-    :class:`~src.frontend_gateway.streamlit_chat_transcript.StreamlitChatTranscript` via
-    :func:`src.frontend_gateway.streamlit_backend_factory.build_streamlit_backend_application_container`.
+    ``chat_transcript`` defaults to :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript`.
+    In-process UIs that need session-scoped history pass a :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort`
+    implementation via this parameter (constructed outside composition, e.g. in the gateway layer).
     """
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService

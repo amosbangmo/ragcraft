@@ -13,6 +13,8 @@ from src.domain.summary_recall_document import SummaryRecallDocument
 # leak into other test modules (which may be collected / run in any order).
 _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
+    "src.frontend_gateway.factories.chat_service_factory",
+    "src.frontend_gateway.factories",
     "src.frontend_gateway.in_process",
     "src.frontend_gateway.streamlit_backend_factory",
     "src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service",
