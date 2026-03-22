@@ -1,7 +1,6 @@
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.domain.retrieval_filters import RetrievalFilters
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
@@ -31,28 +30,26 @@ header = render_page_header(
     selector_label="Project for search",
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
 if not project_id:
     st.stop()
 
-project = app.get_project(user_id, project_id)
-
 retrieval_settings = render_retrieval_settings_panel(
     title="Retrieval settings",
     expanded=False,
     user_id=user_id,
     project_id=project_id,
-    app=app,
+    backend_client=client,
 )
 
 query = st.text_input("Search query", placeholder="Type a semantic query...")
 
 with st.expander("Metadata filters (optional)", expanded=False):
     use_filters = st.toggle("Apply metadata filters", value=False)
-    doc_names = app.list_project_documents(user_id, project_id)
+    doc_names = client.list_project_documents(user_id, project_id)
     sel_sources = st.multiselect("Source files", options=doc_names, default=[])
     sel_types = st.multiselect("Content types", options=["text", "table", "image"], default=[])
     c1, c2 = st.columns(2)
@@ -86,7 +83,7 @@ if query:
     try:
         filters = _search_filters()
         with st.spinner("Searching summaries..."):
-            preview = app.search_project_summaries(
+            preview = client.search_project_summaries(
                 user_id=user_id,
                 project_id=project_id,
                 query=query,

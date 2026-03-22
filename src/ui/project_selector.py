@@ -1,17 +1,17 @@
 import streamlit as st
 
 from src.core.session import get_user_id
-from src.core.app_state import get_app
+from src.core.app_state import get_backend_client
 
 
 def render_project_selector(
     label: str = "Select a project",
     show_create_button: bool = True,
 ):
-    app = get_app()
+    backend_client = get_backend_client()
     user_id = get_user_id()
 
-    projects = app.list_projects(user_id)
+    projects = backend_client.list_projects(user_id)
 
     if not projects:
 

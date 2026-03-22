@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import streamlit as st
 
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
@@ -62,7 +62,7 @@ def _render_dataset_generation_result(payload: dict[str, Any]) -> None:
 
 
 def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
-    app = cast(RAGCraftApp, payload["app"])
+    backend_client = cast(BackendClient, payload["backend_client"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
     wk = str(payload["widget_key_suffix"])
@@ -119,7 +119,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
         )
 
         def _run_dataset_generation():
-            return app.generate_qa_dataset_entries(
+            return backend_client.generate_qa_dataset_entries(
                 user_id=user_id,
                 project_id=project_id,
                 num_questions=int(generation_num_questions),
@@ -196,7 +196,7 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
 
         if add_entry_clicked:
             try:
-                entry = app.create_qa_dataset_entry(
+                entry = backend_client.create_qa_dataset_entry(
                     user_id=user_id,
                     project_id=project_id,
                     question=dataset_question,

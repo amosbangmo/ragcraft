@@ -1,8 +1,8 @@
 import streamlit as st
 
-from typing import Any, cast
+from typing import Any
 
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.domain.benchmark_result import BenchmarkResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
@@ -90,7 +90,7 @@ header = render_page_header(
     selector_label="Project for evaluation",
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -99,7 +99,7 @@ if not project_id:
 
 eval_widget_suffix = _reset_evaluation_context_if_project_changed(project_id)
 
-project_documents = app.list_project_documents(user_id, project_id)
+project_documents = client.list_project_documents(user_id, project_id)
 
 if "qa_dataset_success_message" in st.session_state:
     st.success(st.session_state.pop("qa_dataset_success_message"))
@@ -107,7 +107,7 @@ if "qa_dataset_success_message" in st.session_state:
 if "qa_dataset_error_message" in st.session_state:
     st.error(st.session_state.pop("qa_dataset_error_message"))
 
-entries = app.list_qa_dataset_entries(
+entries = client.list_qa_dataset_entries(
     user_id=user_id,
     project_id=project_id,
 )
@@ -140,7 +140,7 @@ render_evaluation_tabs(
         "evaluation_result_key": EVALUATION_RESULT_KEY,
     },
     dataset_payload={
-        "app": app,
+        "backend_client": client,
         "user_id": user_id,
         "project_id": project_id,
         "widget_key_suffix": eval_widget_suffix,
@@ -155,7 +155,7 @@ render_evaluation_tabs(
         "auto_debug": auto_debug,
     },
     gold_qa_payload={
-        "app": app,
+        "backend_client": client,
         "user_id": user_id,
         "project_id": project_id,
         "widget_key_suffix": eval_widget_suffix,
@@ -165,6 +165,8 @@ render_evaluation_tabs(
         "entry_count": len(entries),
     },
     retrieval_payload={
+        "user_id": user_id,
+        "backend_client": client,
         "project_id": project_id,
         "widget_key_suffix": eval_widget_suffix,
     },

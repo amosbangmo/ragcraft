@@ -27,6 +27,7 @@ from src.application.evaluation.dtos import (
     DeleteQaDatasetEntryCommand,
     GenerateQaDatasetCommand,
     ListQaDatasetEntriesQuery,
+    ListRetrievalQueryLogsQuery,
     RunGoldQaDatasetEvaluationCommand,
     RunManualEvaluationCommand,
     UpdateQaDatasetEntryCommand,
@@ -184,6 +185,28 @@ class RAGCraftApp:
 
     def list_projects(self, user_id: str):
         return self.project_service.list_projects(user_id)
+
+    def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
+        return self.project_settings_service.preset_label_for_project(user_id, project_id)
+
+    def list_retrieval_query_logs(
+        self,
+        *,
+        user_id: str,
+        project_id: str,
+        since_iso: str | None = None,
+        until_iso: str | None = None,
+        last_n: int | None = None,
+    ) -> list[dict]:
+        return self._container.evaluation_list_retrieval_query_logs_use_case.execute(
+            ListRetrievalQueryLogsQuery(
+                user_id=user_id,
+                project_id=project_id,
+                since_iso=since_iso,
+                until_iso=until_iso,
+                last_n=last_n,
+            )
+        )
 
     def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
         return self.project_service.list_project_documents(user_id, project_id)

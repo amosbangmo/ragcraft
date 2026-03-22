@@ -11,7 +11,7 @@ import uuid
 
 import streamlit as st
 
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.core.error_utils import get_user_error_message
 from src.core.evaluation_flow_errors import map_evaluation_flow_exception
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
@@ -147,7 +147,7 @@ def _render_dataset_overview(
 
 def _render_dataset_evaluation_run_and_results(
     *,
-    app: RAGCraftApp,
+    backend_client: BackendClient,
     user_id: str,
     project_id: str,
     wk: str,
@@ -184,7 +184,7 @@ def _render_dataset_evaluation_run_and_results(
         )
 
     def _run_dataset_evaluation():
-        raw_result = app.evaluate_gold_qa_dataset(
+        raw_result = backend_client.evaluate_gold_qa_dataset(
             user_id=user_id,
             project_id=project_id,
             enable_query_rewrite=dataset_enable_query_rewrite,
@@ -327,7 +327,7 @@ def _render_dataset_evaluation_run_and_results(
 
 def _resolve_benchmark_export_artifacts(
     *,
-    app: RAGCraftApp,
+    backend_client: BackendClient,
     project_id: str,
     dataset_evaluation_result_key: str,
     summary: dict[str, Any],
@@ -361,7 +361,7 @@ def _resolve_benchmark_export_artifacts(
     if result is None:
         return None
 
-    return app.build_benchmark_export_artifacts(
+    return backend_client.build_benchmark_export_artifacts(
         project_id=project_id,
         result=result,
         enable_query_rewrite=enable_query_rewrite,
@@ -372,7 +372,7 @@ def _resolve_benchmark_export_artifacts(
 
 def _render_reports_exports_and_benchmark_json(
     *,
-    app: RAGCraftApp,
+    backend_client: BackendClient,
     project_id: str,
     dataset_evaluation_result_key: str,
     summary: dict[str, Any],
@@ -380,7 +380,7 @@ def _render_reports_exports_and_benchmark_json(
 ) -> None:
     st.markdown("---")
     export = _resolve_benchmark_export_artifacts(
-        app=app,
+        backend_client=backend_client,
         project_id=project_id,
         dataset_evaluation_result_key=dataset_evaluation_result_key,
         summary=summary,
@@ -402,7 +402,7 @@ def _rows_by_entry_id(rows: list[dict[str, Any]]) -> dict[Any, dict[str, Any]]:
 
 
 def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
-    app = cast(RAGCraftApp, payload["app"])
+    backend_client = cast(BackendClient, payload["backend_client"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
     wk = str(payload["widget_key_suffix"])
@@ -431,7 +431,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             rows=rows,
         )
         _render_dataset_evaluation_run_and_results(
-            app=app,
+            backend_client=backend_client,
             user_id=user_id,
             project_id=project_id,
             wk=wk,
@@ -446,7 +446,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
             auto_debug=auto_debug,
         )
         _render_reports_exports_and_benchmark_json(
-            app=app,
+            backend_client=backend_client,
             project_id=project_id,
             dataset_evaluation_result_key=dataset_evaluation_result_key,
             summary=summary,
@@ -505,7 +505,7 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                         use_container_width=True,
                     ):
                         try:
-                            app.delete_qa_dataset_entry(
+                            backend_client.delete_qa_dataset_entry(
                                 entry_id=entry.id,
                                 user_id=user_id,
                                 project_id=project_id,

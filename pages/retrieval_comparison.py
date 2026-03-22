@@ -1,7 +1,6 @@
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
@@ -38,7 +37,7 @@ header = render_page_header(
     selector_label="Project for retrieval comparison",
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -65,7 +64,7 @@ questions = _parse_questions(questions_text)
 
 
 def _run_comparison():
-    return app.compare_retrieval_modes(
+    return client.compare_retrieval_modes(
         user_id=user_id,
         project_id=project_id,
         questions=questions,

@@ -19,7 +19,7 @@ from src.services.evaluation_service import EvaluationService
 from src.services.llm_judge_service import JUDGE_FAILURE_REASON
 
 if TYPE_CHECKING:
-    from src.app.ragcraft_app import RAGCraftApp
+    from src.frontend_gateway.protocol import BackendClient
 
 _MANUAL_EVAL_ENTRY_ID = 0
 
@@ -399,7 +399,7 @@ class ManualEvaluationService:
     @staticmethod
     def evaluate_question(
         *,
-        app: RAGCraftApp,
+        backend_client: BackendClient,
         user_id: str,
         project_id: str,
         question: str,
@@ -413,10 +413,10 @@ class ManualEvaluationService:
         exp_docs = list(expected_doc_ids or [])
         exp_src = list(expected_sources or [])
 
-        project = app.get_project(user_id, project_id)
+        project = backend_client.get_project(user_id, project_id)
 
         started = perf_counter()
-        pipeline = app.inspect_retrieval(
+        pipeline = backend_client.inspect_retrieval(
             user_id=user_id,
             project_id=project_id,
             question=q,
@@ -426,7 +426,7 @@ class ManualEvaluationService:
         answer_generation_ms = 0.0
         if pipeline is not None:
             gen_started = perf_counter()
-            answer = app.rag_service.generate_answer_from_pipeline(
+            answer = backend_client.rag_service.generate_answer_from_pipeline(
                 project=project,
                 pipeline=pipeline,
             )
@@ -455,5 +455,5 @@ class ManualEvaluationService:
             answer=answer,
             latency_ms=latency_ms,
             full_latency_dict=full_latency_dict,
-            evaluation_service=app.evaluation_service,
+            evaluation_service=backend_client.evaluation_service,
         )

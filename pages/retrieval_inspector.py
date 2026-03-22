@@ -2,8 +2,7 @@ import json
 
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.retrieval_presets import PRESET_UI_LABELS, parse_retrieval_preset
@@ -234,7 +233,7 @@ header = render_page_header(
     selector_label="Project for retrieval inspection",
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -290,7 +289,7 @@ chat_history_mode = st.toggle("Include current chat history context", value=Fals
 
 chat_history = []
 if chat_history_mode:
-    chat_history = app.chat_service.get_messages()
+    chat_history = client.chat_service.get_messages()
     chat_history = [f"{msg['role']}: {msg['content']}" for msg in chat_history[-6:]]
 
 with st.expander("Advanced metadata filters (optional)", expanded=False):
@@ -299,7 +298,7 @@ with st.expander("Advanced metadata filters (optional)", expanded=False):
         value=False,
         help="Narrows FAISS over-fetch and BM25 corpus to matching assets. Main chat is unchanged.",
     )
-    project_doc_names = app.list_project_documents(user_id, project_id)
+    project_doc_names = client.list_project_documents(user_id, project_id)
     filter_sources = st.multiselect(
         "Source files",
         options=project_doc_names,
@@ -351,7 +350,7 @@ def _optional_retrieval_filters() -> RetrievalFilters | None:
 
 
 def _run_inspection():
-    return app.inspect_retrieval(
+    return client.inspect_retrieval(
         user_id=user_id,
         project_id=project_id,
         question=question,

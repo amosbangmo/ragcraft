@@ -8,7 +8,7 @@ from typing import Any, cast
 
 import streamlit as st
 
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.core.evaluation_flow_errors import map_evaluation_flow_exception
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
@@ -25,7 +25,7 @@ from src.ui.request_runner import (
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
-    app = cast(RAGCraftApp, payload["app"])
+    backend_client = cast(BackendClient, payload["backend_client"])
     user_id = str(payload["user_id"])
     project_id = str(payload["project_id"])
     wk = str(payload["widget_key_suffix"])
@@ -80,7 +80,7 @@ def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:
         return str(st.session_state.get(q_key) or "")
 
     def _run_evaluation():
-        return app.evaluate_manual_question(
+        return backend_client.evaluate_manual_question(
             user_id=user_id,
             project_id=project_id,
             question=_current_question(),

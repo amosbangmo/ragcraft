@@ -5,15 +5,17 @@ Evaluation — retrieval analytics tab: query log filters and dashboard.
 from __future__ import annotations
 
 from datetime import datetime, time, timezone
-from typing import Any
+from typing import Any, cast
 
 import streamlit as st
 
-from src.services.query_log_service import QueryLogService
+from src.frontend_gateway.protocol import BackendClient
 from src.ui.retrieval_dashboard import render_retrieval_dashboard
 
 
 def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
+    user_id = str(payload["user_id"])
+    backend_client = cast(BackendClient, payload["backend_client"])
     project_id = str(payload["project_id"])
     wk = str(payload["widget_key_suffix"])
 
@@ -28,8 +30,6 @@ def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
         '<div class="card-subtitle">Monitor latency and confidence for this project over recent queries.</div>',
         unsafe_allow_html=True,
     )
-
-    svc = QueryLogService()
 
     with st.expander("Filters", expanded=True):
         limit = int(
@@ -62,10 +62,13 @@ def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
                 st.markdown("</div>", unsafe_allow_html=True)
                 return
 
-    logs = svc.load_logs(
+    since_iso = since_utc.isoformat() if since_utc is not None else None
+    until_iso = until_utc.isoformat() if until_utc is not None else None
+    logs = backend_client.list_retrieval_query_logs(
+        user_id=user_id,
         project_id=project_id,
-        since_utc=since_utc,
-        until_utc=until_utc,
+        since_iso=since_iso,
+        until_iso=until_iso,
         last_n=limit,
     )
 

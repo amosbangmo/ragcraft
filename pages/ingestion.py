@@ -1,7 +1,6 @@
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.document_table import render_document_table
@@ -34,7 +33,7 @@ header = render_page_header(
     selector_label="Project for ingestion",
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -68,7 +67,7 @@ def _run_ingestion():
     results: list[dict] = []
 
     for uploaded_file in uploaded_files:
-        result = app.ingest_uploaded_file(user_id, project_id, uploaded_file)
+        result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
         results.append(
             {
                 "file_name": uploaded_file.name,
@@ -156,7 +155,7 @@ document_action = render_document_table(
 )
 
 handle_document_action(
-    app,
+    client,
     action_payload=document_action,
     user_id=user_id,
     project_id=project_id,

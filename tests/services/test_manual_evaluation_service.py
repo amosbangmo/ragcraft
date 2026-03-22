@@ -227,7 +227,7 @@ def test_evaluate_question_without_pipeline():
         ],
     )
     r = ManualEvaluationService.evaluate_question(
-        app=app,
+        backend_client=app,
         user_id="u1",
         project_id="p1",
         question="  What?  ",
@@ -274,7 +274,7 @@ def test_evaluate_question_with_pipeline_and_judge_branches():
         ],
     )
     r = ManualEvaluationService.evaluate_question(
-        app=app,
+        backend_client=app,
         user_id="u1",
         project_id="p1",
         question="Q",
@@ -309,7 +309,7 @@ def test_evaluate_question_judge_failure_default_message():
         ],
     )
     r = ManualEvaluationService.evaluate_question(
-        app=app, user_id="u", project_id="p", question="Q"
+        backend_client=app, user_id="u", project_id="p", question="Q"
     )
     assert any("LLM judge could not score" in i for i in r.detected_issues)
     assert not any("rate limited" in i for i in r.detected_issues)
@@ -335,6 +335,6 @@ def test_evaluate_question_pipeline_failed_banner():
         ],
     )
     r = ManualEvaluationService.evaluate_question(
-        app=app, user_id="u", project_id="p", question="Q"
+        backend_client=app, user_id="u", project_id="p", question="Q"
     )
     assert any("pipeline" in i.lower() for i in r.detected_issues)

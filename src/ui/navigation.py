@@ -1,7 +1,7 @@
 import streamlit as st
 
 from src.core.session import get_user_id
-from src.core.app_state import get_app
+from src.core.app_state import get_backend_client
 from src.auth.auth_service import AuthService
 from src.ui.avatar import render_user_avatar
 
@@ -42,7 +42,6 @@ def render_navigation(hide_sidebar: bool = False):
             project_id = projects[0]
             st.session_state["project_id"] = project_id
     else:
-        app = None
         user_id = None
         project_id = None
         projects = []

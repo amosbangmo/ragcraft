@@ -1,6 +1,6 @@
 import streamlit as st
 
-from src.core.app_state import get_app
+from src.core.app_state import get_backend_client
 from src.core.session import get_user_id
 from src.ui.project_selector import render_project_selector
 
@@ -97,7 +97,7 @@ def render_page_header(
         render_metrics(metrics)
 
     return {
-        "app": app,
+        "backend_client": backend_client,
         "user_id": user_id,
         "project_id": project_id,
         "refresh_clicked": refresh_clicked,

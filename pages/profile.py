@@ -1,7 +1,6 @@
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.ui.avatar import render_user_avatar
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
@@ -20,8 +19,8 @@ header = render_page_header(
     show_project_selector=False
 )
 
-app = cast(RAGCraftApp, header["app"])
-user = app.get_current_user_record()
+client: BackendClient = header["backend_client"]
+user = client.get_current_user_record()
 
 if user is None:
     st.error("Unable to load user profile.")
@@ -41,7 +40,7 @@ def confirm_profile_update_dialog(user_id: str, username: str, display_name: str
 
     with col2:
         if st.button("Confirm update", use_container_width=True, key="confirm_profile_update"):
-            success, message = app.update_profile(
+            success, message = client.update_profile(
                 user_id=user_id,
                 new_username=username,
                 new_display_name=display_name,
@@ -69,7 +68,7 @@ def confirm_password_change_dialog(
 
     with col2:
         if st.button("Confirm change", use_container_width=True, key="confirm_password_change"):
-            success, message = app.change_password(
+            success, message = client.change_password(
                 user_id=user_id,
                 current_password=current_password,
                 new_password=new_password,
@@ -93,7 +92,7 @@ def confirm_avatar_removal_dialog(user_id: str):
 
     with col2:
         if st.button("Remove avatar", use_container_width=True, key="confirm_avatar_removal"):
-            success, message = app.remove_avatar(user_id)
+            success, message = client.remove_avatar(user_id)
             if success:
                 st.session_state["profile_success_message"] = message
             else:
@@ -112,7 +111,7 @@ def confirm_delete_account_dialog(user_id: str, current_password: str):
 
     with col2:
         if st.button("Delete account", use_container_width=True, key="confirm_delete_account"):
-            success, message = app.delete_account(
+            success, message = client.delete_account(
                 user_id=user_id,
                 current_password=current_password,
             )
@@ -210,7 +209,7 @@ with row_2_col_1:
         col_a, col_b = st.columns(2)
         with col_a:
             if st.button("Save avatar", use_container_width=True):
-                success, message = app.save_avatar(user["user_id"], avatar_file)
+                success, message = client.save_avatar(user["user_id"], avatar_file)
                 if success:
                     st.session_state["profile_success_message"] = message
                 else:
@@ -253,4 +252,4 @@ with section_card(
     with m3:
         st.metric("User ID", user["user_id"])
     with m4:
-        st.metric("Created", app.format_created_at(user["created_at"]))
+        st.metric("Created", client.format_created_at(user["created_at"]))

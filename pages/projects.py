@@ -1,7 +1,6 @@
 import streamlit as st
 
-from typing import cast
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.project_selector import render_project_selector
@@ -27,7 +26,7 @@ header = render_page_header(
     show_project_selector=False
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -54,7 +53,7 @@ if create_clicked:
     if not normalized_name:
         st.warning("Please enter a project name.")
     else:
-        app.create_project(user_id, normalized_name)
+        client.create_project(user_id, normalized_name)
         st.session_state["project_id"] = normalized_name
         st.success(f"Project '{normalized_name}' created.")
 st.markdown("</div>", unsafe_allow_html=True)
@@ -70,9 +69,9 @@ if selected_project:
     st.caption(f"Current selected project: **{selected_project}**")
 st.markdown("</div>", unsafe_allow_html=True)
 
-projects = app.list_projects(user_id)
+projects = client.list_projects(user_id)
 active_docs = (
-    len(app.list_project_documents(user_id, selected_project))
+    len(client.list_project_documents(user_id, selected_project))
     if selected_project
     else 0
 )
@@ -92,9 +91,9 @@ if not projects:
     st.stop()
 
 for project_id in projects:
-    documents = app.get_project_document_details(user_id, project_id)
+    documents = client.get_project_document_details(user_id, project_id)
     is_current = project_id == st.session_state.get("project_id")
-    retrieval_label = app.retrieval_preset_label_for_project(user_id, project_id)
+    retrieval_label = client.retrieval_preset_label_for_project(user_id, project_id)
 
     with st.expander(
         f"{'✅ ' if is_current else '📂 '}{project_id} — {len(documents)} document(s) · retrieval: {retrieval_label}",
@@ -107,7 +106,7 @@ for project_id in projects:
         )
 
         handle_document_action(
-            app,
+            client,
             action_payload=document_action,
             user_id=user_id,
             project_id=project_id,

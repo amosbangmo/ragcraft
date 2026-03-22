@@ -1,8 +1,6 @@
 import streamlit as st
 
-from typing import cast
-
-from src.app.ragcraft_app import RAGCraftApp
+from src.frontend_gateway.protocol import BackendClient
 from src.auth.guards import require_authentication
 from src.core.error_utils import get_user_error_message
 from src.core.exceptions import DocStoreError, LLMServiceError, VectorStoreError
@@ -56,7 +54,7 @@ header = render_page_header(
     refresh_button_disabled=is_request_running(CHAT_REFRESH_REQUEST_KEY),
 )
 
-app = cast(RAGCraftApp, header["app"])
+client: BackendClient = header["backend_client"]
 user_id = str(header["user_id"])
 project_id = str(header["project_id"]) if header["project_id"] else None
 
@@ -65,7 +63,7 @@ if not project_id:
 
 
 def _run_refresh():
-    app.invalidate_project_chain(user_id, project_id)
+    client.invalidate_project_chain(user_id, project_id)
     return {"success": "Project retrieval cache cleared."}
 
 
@@ -94,8 +92,8 @@ render_result_payload(
     on_success=_render_refresh_result,
 )
 
-project = app.get_project(user_id, project_id)
-documents = app.list_project_documents(user_id, project_id)
+project = client.get_project(user_id, project_id)
+documents = client.list_project_documents(user_id, project_id)
 
 col1, col2 = st.columns(2)
 with col1:
@@ -108,12 +106,12 @@ retrieval_settings = render_retrieval_settings_panel(
     expanded=False,
     user_id=user_id,
     project_id=project_id,
-    app=app,
+    backend_client=client,
 )
 
-app.chat_service.init(project.project_id)
+client.chat_service.init(project.project_id)
 
-messages = app.chat_service.get_messages()
+messages = client.chat_service.get_messages()
 render_chat_history(messages)
 
 question = st.chat_input("Ask a question about your documents")
@@ -121,7 +119,7 @@ question = st.chat_input("Ask a question about your documents")
 if not question:
     st.stop()
 
-app.chat_service.add_user_message(question)
+client.chat_service.add_user_message(question)
 
 with st.chat_message("user"):
     st.markdown(question)
@@ -129,7 +127,7 @@ with st.chat_message("user"):
 with st.chat_message("assistant"):
     try:
         with st.spinner("Thinking..."):
-            messages = app.chat_service.get_messages()
+            messages = client.chat_service.get_messages()
             chat_history = build_chat_history(messages)
 
             response = app.ask_question(
@@ -157,7 +155,7 @@ with st.chat_message("assistant"):
             mode="chat",
         )
 
-        app.chat_service.add_assistant_message(response.answer)
+        client.chat_service.add_assistant_message(response.answer)
 
     except VectorStoreError as exc:
         st.error(get_user_error_message(exc, "Unable to query the FAISS index for this question."))

@@ -18,7 +18,7 @@ from src.domain.retrieval_settings import RetrievalSettings
 from src.services.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
-    from src.app.ragcraft_app import RAGCraftApp
+    from src.frontend_gateway.protocol import BackendClient
 
 _RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
 
@@ -78,7 +78,7 @@ def _sync_retrieval_panel_from_backend(
     *,
     user_id: str,
     project_id: str,
-    app: RAGCraftApp,
+    backend_client: BackendClient,
 ) -> None:
     target = f"{user_id}:{project_id}"
     if st.session_state.get(_RETRIEVAL_PANEL_BOUND_PROJECT) == target:
@@ -112,7 +112,7 @@ def _maybe_persist_retrieval_project_settings(
     *,
     user_id: str,
     project_id: str,
-    app: RAGCraftApp,
+    backend_client: BackendClient,
 ) -> None:
     sig_key = _retrieval_persist_signature_key(user_id, project_id)
     sig = json.dumps(
@@ -125,7 +125,7 @@ def _maybe_persist_retrieval_project_settings(
     )
     if st.session_state.get(sig_key) == sig:
         return
-    app.update_project_retrieval_settings(
+    backend_client.update_project_retrieval_settings(
         UpdateProjectRetrievalSettingsCommand(
             user_id=user_id,
             project_id=project_id,
@@ -155,7 +155,7 @@ def render_retrieval_settings_panel(
     service: RetrievalSettingsService | None = None,
     user_id: str | None = None,
     project_id: str | None = None,
-    app: RAGCraftApp | None = None,
+    backend_client: BackendClient | None = None,
 ) -> RetrievalSettings:
     """
     Render retrieval preset (and optional advanced overrides) and persist merged settings.
@@ -171,7 +171,9 @@ def render_retrieval_settings_panel(
     and
     :class:`~src.application.settings.use_cases.update_project_retrieval_settings.UpdateProjectRetrievalSettingsUseCase`.
     """
-    svc = service or (app.retrieval_settings_service if app is not None else None) or RetrievalSettingsService()
+    svc = service or (
+        backend_client.retrieval_settings_service if backend_client is not None else None
+    ) or RetrievalSettingsService()
 
     if "retrieval_preset" not in st.session_state:
         st.session_state["retrieval_preset"] = RetrievalPreset.BALANCED.value
@@ -188,8 +190,10 @@ def render_retrieval_settings_panel(
     if "retrieval_hybrid" not in st.session_state:
         st.session_state["retrieval_hybrid"] = True
 
-    if user_id and project_id and app is not None:
-        _sync_retrieval_panel_from_backend(user_id=user_id, project_id=project_id, app=app)
+    if user_id and project_id and backend_client is not None:
+        _sync_retrieval_panel_from_backend(
+            user_id=user_id, project_id=project_id, backend_client=backend_client
+        )
 
     with st.expander(title, expanded=expanded):
         st.selectbox(
@@ -234,11 +238,11 @@ def render_retrieval_settings_panel(
     else:
         settings = svc.from_preset(str(st.session_state["retrieval_preset"]))
 
-    if user_id and project_id and app is not None:
+    if user_id and project_id and backend_client is not None:
         _maybe_persist_retrieval_project_settings(
             user_id=user_id,
             project_id=project_id,
-            app=app,
+            backend_client=backend_client,
         )
 
     st.session_state["retrieval_settings"] = settings

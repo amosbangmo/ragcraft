@@ -162,7 +162,7 @@ def clear_pending_reindex_dialog():
 
 @st.dialog("Delete document")
 def confirm_delete_document_dialog(
-    app,
+    backend_client,
     *,
     user_id: str,
     project_id: str,
@@ -192,7 +192,7 @@ def confirm_delete_document_dialog(
             key=f"confirm_delete_{project_id}_{doc_name}_{success_message_key}",
         ):
             try:
-                result = app.delete_project_document(
+                result = backend_client.delete_project_document(
                     user_id=user_id,
                     project_id=project_id,
                     source_file=doc_name,
@@ -226,7 +226,7 @@ def confirm_reindex_document_dialog(
     )
 
     def _run_reindex():
-        return app.reindex_project_document(
+        return backend_client.reindex_project_document(
             user_id=user_id,
             project_id=project_id,
             source_file=doc_name,
@@ -309,7 +309,7 @@ def confirm_reindex_document_dialog(
 
 @st.dialog("Inspect document")
 def inspect_document_dialog(
-    app,
+    backend_client,
     *,
     user_id: str,
     project_id: str,
@@ -318,7 +318,7 @@ def inspect_document_dialog(
     _inject_document_dialog_styles()
 
     try:
-        assets = app.get_document_assets(
+        assets = backend_client.get_document_assets(
             user_id=user_id,
             project_id=project_id,
             source_file=doc_name,
@@ -452,7 +452,7 @@ def handle_document_action(
     pending_reindex = get_pending_reindex_dialog()
     if pending_reindex:
         confirm_reindex_document_dialog(
-            app,
+            backend_client,
             user_id=pending_reindex["user_id"],
             project_id=pending_reindex["project_id"],
             doc_name=pending_reindex["doc_name"],
@@ -472,7 +472,7 @@ def handle_document_action(
 
     if action == "delete":
         confirm_delete_document_dialog(
-            app,
+            backend_client,
             user_id=user_id,
             project_id=project_id,
             doc_name=doc_name,
@@ -494,7 +494,7 @@ def handle_document_action(
 
     if action == "inspect":
         inspect_document_dialog(
-            app,
+            backend_client,
             user_id=user_id,
             project_id=project_id,
             doc_name=doc_name,
