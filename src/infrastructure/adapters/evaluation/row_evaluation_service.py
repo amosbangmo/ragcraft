@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.application.common.evaluation_judge_metrics import EvaluationJudgeMetricsRow
+from src.domain.evaluation.judge_metrics_row import EvaluationJudgeMetricsRow
 from src.domain.benchmark_result import BenchmarkRow
 from src.domain.multimodal_metrics import (
     empty_modality_row_fields,

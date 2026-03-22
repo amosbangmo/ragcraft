@@ -2,7 +2,7 @@ import unittest
 
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.composition.evaluation_wiring import build_evaluation_service
 
 from tests.quality.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
@@ -90,7 +90,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             answer_correctness_score=1.0,
             reason=None,
         )
-        result = EvaluationService(
+        result = build_evaluation_service(
             llm_judge_service=StubLLMJudgeService(judge),
             semantic_similarity_service=StubSemanticSimilarityService(),
         ).evaluate_gold_qa_dataset(
@@ -149,7 +149,7 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             answer_correctness_score=0.0,
             reason=None,
         )
-        result = EvaluationService(
+        result = build_evaluation_service(
             llm_judge_service=StubLLMJudgeService(judge),
             semantic_similarity_service=StubSemanticSimilarityService(),
         ).evaluate_gold_qa_dataset(

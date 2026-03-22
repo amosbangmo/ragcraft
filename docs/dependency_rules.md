@@ -19,15 +19,17 @@ pytest tests/architecture -q
 | **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
 | **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
 
-### RAG adapters (`src/infrastructure/adapters/rag/`)
+### Infrastructure adapters (`src/infrastructure/adapters/`)
 
-- Must **not** import **`src.application`**, except **`retrieval_settings_service.py`** (subclasses **`RetrievalSettingsTuner`**).
-- Must **not** import chat **use case classes** from `src.application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
-- Enforced by **`test_rag_adapter_application_imports.py`**.
+- Must **not** import **`src.application`** except files on the **explicit allowlist** in **`tests/architecture/test_adapter_application_imports.py`**.
+- Today the only allowlisted file is **`rag/retrieval_settings_service.py`** (thin subclass of application **`RetrievalSettingsTuner`**).
+- RAG adapters must **not** import chat **use case classes** from `src.application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
 
-### Other adapters
+### Shared boundary types (query log, evaluation rows)
 
-- **Evaluation**, **query logging**, and similar adapters may still import **application** DTOs or small helpers (documented as acceptable debt in **`docs/migration_report_final.md`** until refactored).
+- **`QueryLogIngressPayload`** lives in **`src/domain/query_log_ingress_payload.py`** so query logging adapters accept the same typed shape the application builds without importing application modules.
+- **`EvaluationJudgeMetricsRow`** lives in **`src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
+- Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
 
 ## Anti-patterns
 

@@ -28,6 +28,7 @@ from src.domain.shared.project_settings_repository_port import ProjectSettingsRe
 from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 from src.infrastructure.persistence.db import init_app_db
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.composition.evaluation_wiring import build_evaluation_service
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 from src.infrastructure.adapters.workspace.project_service import ProjectService
@@ -92,7 +93,7 @@ def build_backend_composition(
         project_service=project_service,
         ingestion_service=IngestionService(),
         vectorstore_service=VectorStoreService(),
-        evaluation_service=EvaluationService(llm_judge_service=LLMJudgeService()),
+        evaluation_service=build_evaluation_service(llm_judge_service=LLMJudgeService()),
         chat_transcript=chat_transcript if chat_transcript is not None else MemoryChatTranscript(),
         docstore_service=docstore_service,
         reranking_service=RerankingService(),

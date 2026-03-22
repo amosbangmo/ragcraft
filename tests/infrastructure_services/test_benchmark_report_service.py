@@ -2,12 +2,12 @@ import json
 import unittest
 from datetime import datetime, timezone
 
-from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from src.infrastructure.adapters.evaluation.benchmark_report_service import (
-    BenchmarkReportService,
-    coerce_generated_at,
-    safe_filename_segment,
+from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
+from src.application.evaluation.benchmark_report_formatter import coerce_generated_at, safe_filename_segment
+from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
 )
+from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 
 
 class TestCoerceGeneratedAt(unittest.TestCase):
@@ -44,9 +44,9 @@ class TestSafeFilenameSegment(unittest.TestCase):
         self.assertEqual(safe_filename_segment("   "), "project")
 
 
-class TestBenchmarkReportService(unittest.TestCase):
+class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.svc = BenchmarkReportService()
+        self.uc = BuildBenchmarkExportArtifactsUseCase()
 
     def _minimal_result(
         self,
@@ -71,12 +71,14 @@ class TestBenchmarkReportService(unittest.TestCase):
 
     def test_markdown_includes_notes_section(self) -> None:
         result = self._minimal_result()
-        art = self.svc.build_export_artifacts(
-            project_id="p1",
-            result=result,
-            enable_query_rewrite=True,
-            enable_hybrid_retrieval=False,
-            generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p1",
+                result=result,
+                enable_query_rewrite=True,
+                enable_hybrid_retrieval=False,
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            )
         )
         md = art.markdown_bytes.decode("utf-8")
         self.assertIn("## Notes", md)
@@ -86,24 +88,28 @@ class TestBenchmarkReportService(unittest.TestCase):
 
     def test_build_accepts_iso_string_generated_at(self) -> None:
         result = self._minimal_result()
-        art = self.svc.build_export_artifacts(
-            project_id="p1",
-            result=result,
-            enable_query_rewrite=True,
-            enable_hybrid_retrieval=False,
-            generated_at="2025-06-15T12:00:00+00:00",
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p1",
+                result=result,
+                enable_query_rewrite=True,
+                enable_hybrid_retrieval=False,
+                generated_at="2025-06-15T12:00:00+00:00",
+            )
         )
         self.assertTrue(art.json_filename.endswith(".json"))
         self.assertIn("2025-06-15", art.metadata.generated_at_utc)
 
     def test_markdown_includes_run_id_when_present(self) -> None:
         result = self._minimal_result(run_id="abc123runid")
-        art = self.svc.build_export_artifacts(
-            project_id="p1",
-            result=result,
-            enable_query_rewrite=False,
-            enable_hybrid_retrieval=True,
-            generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p1",
+                result=result,
+                enable_query_rewrite=False,
+                enable_hybrid_retrieval=True,
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            )
         )
         md = art.markdown_bytes.decode("utf-8")
         self.assertIn("## Run context", md)
@@ -119,12 +125,14 @@ class TestBenchmarkReportService(unittest.TestCase):
                 "critical_count": 0,
             },
         )
-        art = self.svc.build_export_artifacts(
-            project_id="p1",
-            result=result,
-            enable_query_rewrite=True,
-            enable_hybrid_retrieval=True,
-            generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p1",
+                result=result,
+                enable_query_rewrite=True,
+                enable_hybrid_retrieval=True,
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+            )
         )
         md = art.markdown_bytes.decode("utf-8")
         self.assertIn("## Auto-debug suggestions", md)
@@ -143,12 +151,14 @@ class TestBenchmarkReportService(unittest.TestCase):
             auto_debug=[{"title": "T", "description": "D"}],
             run_id="run-json",
         )
-        art = self.svc.build_export_artifacts(
-            project_id="proj",
-            result=result,
-            enable_query_rewrite=False,
-            enable_hybrid_retrieval=False,
-            generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="proj",
+                result=result,
+                enable_query_rewrite=False,
+                enable_hybrid_retrieval=False,
+                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            )
         )
         payload = json.loads(art.json_bytes.decode("utf-8"))
         self.assertEqual(payload["run_id"], "run-json")
@@ -168,12 +178,14 @@ class TestBenchmarkReportService(unittest.TestCase):
                 )
             ],
         )
-        art = self.svc.build_export_artifacts(
-            project_id="p",
-            result=result,
-            enable_query_rewrite=True,
-            enable_hybrid_retrieval=False,
-            generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p",
+                result=result,
+                enable_query_rewrite=True,
+                enable_hybrid_retrieval=False,
+                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            )
         )
         raw = art.csv_bytes
         self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
@@ -188,12 +200,14 @@ class TestBenchmarkReportService(unittest.TestCase):
             summary=BenchmarkSummary(data={"total_entries": 0}),
             rows=[],
         )
-        art = self.svc.build_export_artifacts(
-            project_id="p",
-            result=result,
-            enable_query_rewrite=False,
-            enable_hybrid_retrieval=False,
-            generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p",
+                result=result,
+                enable_query_rewrite=False,
+                enable_hybrid_retrieval=False,
+                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            )
         )
         md = art.markdown_bytes.decode("utf-8")
         self.assertIn("_No benchmark rows._", md)
@@ -210,12 +224,14 @@ class TestBenchmarkReportService(unittest.TestCase):
                 {"title": "Keep", "description": "Yes"},
             ],
         )
-        art = self.svc.build_export_artifacts(
-            project_id="p",
-            result=result,
-            enable_query_rewrite=False,
-            enable_hybrid_retrieval=False,
-            generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+        art = self.uc.execute(
+            BuildBenchmarkExportCommand(
+                project_id="p",
+                result=result,
+                enable_query_rewrite=False,
+                enable_hybrid_retrieval=False,
+                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+            )
         )
         md = art.markdown_bytes.decode("utf-8")
         self.assertIn("Keep", md)

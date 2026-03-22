@@ -15,7 +15,7 @@ from src.domain.manual_evaluation_result import (
     ManualEvaluationRetrievalQuality,
 )
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 
 if TYPE_CHECKING:
@@ -382,7 +382,7 @@ def manual_evaluation_result_from_rag_outputs(
     answer: str,
     latency_ms: float,
     full_latency_dict: dict[str, float] | None,
-    evaluation_service: EvaluationService,
+    gold_qa_benchmark: GoldQaBenchmarkPort,
 ) -> ManualEvaluationResult:
     entry = QADatasetEntry(
         id=_MANUAL_EVAL_ENTRY_ID,
@@ -402,7 +402,7 @@ def manual_evaluation_result_from_rag_outputs(
             "latency": full_latency_dict,
         }
 
-    benchmark = evaluation_service.evaluate_gold_qa_dataset(
+    benchmark = gold_qa_benchmark.evaluate_gold_qa_dataset(
         entries=[entry],
         pipeline_runner=pipeline_runner,
     )

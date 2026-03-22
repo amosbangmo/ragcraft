@@ -9,8 +9,7 @@ class QueryLogPort(Protocol):
     """
     Application-level query observability (structured ingest + listing).
 
-    ``payload`` is a plain dict or :class:`~src.application.common.query_log_payload.QueryLogIngressPayload`
-    (avoid importing that type here to keep domain free of application dependencies).
+    ``payload`` is a plain dict or :class:`~src.domain.query_log_ingress_payload.QueryLogIngressPayload`.
 
     Implemented by :class:`~src.infrastructure.adapters.query_logging.query_log_service.QueryLogService`; SQLite persistence
     remains behind :class:`~src.domain.shared.query_log_port.QueryLogPersistencePort`.

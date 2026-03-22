@@ -1,19 +1,11 @@
 from __future__ import annotations
 
-from src.application.use_cases.evaluation.benchmark_execution import BenchmarkExecutionUseCase
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
-from src.infrastructure.adapters.evaluation.auto_debug_service import AutoDebugService
-from src.infrastructure.adapters.evaluation.benchmark_aggregation_service import BenchmarkAggregationService
-from src.infrastructure.adapters.evaluation.correlation_service import CorrelationService
-from src.infrastructure.adapters.evaluation.explainability_service import ExplainabilityService
-from src.domain.benchmark_failure_analysis import FailureAnalysisService
 from src.infrastructure.adapters.evaluation.retrieval_metrics_service import RetrievalMetricsService
-from src.infrastructure.adapters.evaluation.row_evaluation_service import RowEvaluationService
-from src.infrastructure.adapters.evaluation.semantic_similarity_service import SemanticSimilarityService
-from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 
 _DEFAULT_RETRIEVAL = RetrievalMetricsService()
 _DEFAULT_ANSWER = AnswerQualityAggregationService()
@@ -21,61 +13,20 @@ _DEFAULT_ANSWER = AnswerQualityAggregationService()
 
 class EvaluationService:
     """
-    Façade for gold QA benchmark evaluation. Delegates orchestration to
-    :class:`~src.application.use_cases.evaluation.benchmark_execution.BenchmarkExecutionUseCase`
-    and composes focused metric / row services.
+    Evaluation façade: gold-QA runs via injected :class:`~src.domain.ports.gold_qa_benchmark_port.GoldQaBenchmarkPort`
+    (wired in :mod:`src.composition.evaluation_wiring`), manual-eval assembly, and shared metric helpers.
     """
 
     def __init__(
         self,
-        llm_judge_service: object | None = None,
-        correlation_service: CorrelationService | None = None,
-        failure_analysis_service: FailureAnalysisService | None = None,
-        semantic_similarity_service: object | None = None,
-        explainability_service: ExplainabilityService | None = None,
-        auto_debug_service: AutoDebugService | None = None,
-    ):
-        self._llm_judge_service = (
-            llm_judge_service if llm_judge_service is not None else LLMJudgeService()
-        )
-        self._correlation_service = (
-            correlation_service if correlation_service is not None else CorrelationService()
-        )
-        self._failure_analysis_service = (
-            failure_analysis_service
-            if failure_analysis_service is not None
-            else FailureAnalysisService()
-        )
-        self._semantic_similarity_service = (
-            semantic_similarity_service
-            if semantic_similarity_service is not None
-            else SemanticSimilarityService()
-        )
-        self._explainability_service = (
-            explainability_service
-            if explainability_service is not None
-            else ExplainabilityService()
-        )
-        self._auto_debug_service = (
-            auto_debug_service if auto_debug_service is not None else AutoDebugService()
-        )
-
-        self._retrieval_metrics = RetrievalMetricsService()
-        self._answer_quality = AnswerQualityAggregationService()
-        self._row_evaluation = RowEvaluationService(
-            retrieval_metrics_service=self._retrieval_metrics,
-            answer_quality_service=self._answer_quality,
-            semantic_similarity_service=self._semantic_similarity_service,
-            llm_judge_service=self._llm_judge_service,
-        )
-        self._benchmark_execution = BenchmarkExecutionUseCase(
-            row_evaluation=self._row_evaluation,
-            aggregation=BenchmarkAggregationService(),
-            correlation=self._correlation_service,
-            failure_analysis=self._failure_analysis_service,
-            explainability=self._explainability_service,
-            auto_debug=self._auto_debug_service,
-        )
+        *,
+        gold_qa_benchmark: GoldQaBenchmarkPort,
+        retrieval_metrics_service: RetrievalMetricsService | None = None,
+        answer_quality_service: AnswerQualityAggregationService | None = None,
+    ) -> None:
+        self._gold_qa_benchmark = gold_qa_benchmark
+        self._retrieval_metrics = retrieval_metrics_service or RetrievalMetricsService()
+        self._answer_quality = answer_quality_service or AnswerQualityAggregationService()
 
     def evaluate_gold_qa_dataset(
         self,
@@ -83,7 +34,7 @@ class EvaluationService:
         entries,
         pipeline_runner,
     ) -> BenchmarkResult:
-        return self._benchmark_execution.execute(
+        return self._gold_qa_benchmark.evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=pipeline_runner,
         )
@@ -117,7 +68,7 @@ class EvaluationService:
             answer=answer,
             latency_ms=latency_ms,
             full_latency_dict=full_latency_dict,
-            evaluation_service=self,
+            gold_qa_benchmark=self._gold_qa_benchmark,
         )
 
     def _retrieval(self) -> RetrievalMetricsService:

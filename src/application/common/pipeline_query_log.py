@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.application.common.query_log_payload import QueryLogIngressPayload
+from src.domain.query_log_ingress_payload import QueryLogIngressPayload
 from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project

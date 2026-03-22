@@ -124,7 +124,9 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
     msg = (
         "Non-adapter infrastructure must not import application use cases or Streamlit. "
-        "Adapter modules under ``src/infrastructure/adapters`` may import ``src.application`` by design.\n"
+        "Adapter modules under ``src/infrastructure/adapters`` are further restricted: only an explicit "
+        "allowlist in ``test_adapter_application_imports.py`` may import ``src.application`` "
+        "(today: ``rag/retrieval_settings_service.py``).\n"
     )
     assert not violations, msg + "\n".join(violations)
 

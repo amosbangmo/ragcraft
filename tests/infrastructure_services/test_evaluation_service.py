@@ -9,6 +9,7 @@ from src.domain.evaluation.benchmark_math import (
     r2,
     rate,
 )
+from src.composition.evaluation_wiring import build_evaluation_service
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 
@@ -185,7 +186,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             has_hallucination=False,
             reason=None,
         )
-        result = EvaluationService(
+        result = build_evaluation_service(
             llm_judge_service=_StubJudge(judge),
         ).evaluate_gold_qa_dataset(entries=[entry], pipeline_runner=runner)
 
@@ -238,7 +239,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             answer_correctness_score=0.95,
             reason=None,
         )
-        result = EvaluationService(
+        result = build_evaluation_service(
             llm_judge_service=_StubJudge(judge),
             semantic_similarity_service=_StubSemanticSimilarity(),
         ).evaluate_gold_qa_dataset(entries=[entry], pipeline_runner=runner)
@@ -307,7 +308,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
                 "latency_ms": 1.0,
             }
 
-        result = EvaluationService(
+        result = build_evaluation_service(
             llm_judge_service=_SwitchJudge(),
             semantic_similarity_service=_StubSemanticSimilarity(),
         ).evaluate_gold_qa_dataset(

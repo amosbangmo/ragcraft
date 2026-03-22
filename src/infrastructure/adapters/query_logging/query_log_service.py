@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.application.common.query_log_payload import QueryLogIngressPayload
+from src.domain.query_log_ingress_payload import QueryLogIngressPayload
 from src.domain.query_intent import QueryIntent
 from src.domain.query_log_timestamp import parse_query_log_timestamp
 from src.infrastructure.logging.query_log_repository import QueryLogRepository, QueryLogStore

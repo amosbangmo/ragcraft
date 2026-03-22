@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.application.common.query_log_payload import QueryLogIngressPayload
+from src.domain.query_log_ingress_payload import QueryLogIngressPayload
 
 
 def log_query_safely(
