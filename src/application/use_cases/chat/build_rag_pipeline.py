@@ -3,11 +3,14 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any
 
-from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from src.application.use_cases.chat.orchestration.recall_then_assemble_pipeline import (
     run_recall_then_assemble_pipeline,
 )
-from src.application.use_cases.chat.orchestration.ports import PipelineAssemblyPort, SummaryRecallStagePort
+from src.application.use_cases.chat.orchestration.ports import (
+    PipelineAssemblyPort,
+    PipelineBuildQueryLogEmitterPort,
+    SummaryRecallStagePort,
+)
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
@@ -26,7 +29,7 @@ class BuildRagPipelineUseCase:
         *,
         summary_recall_service: SummaryRecallStagePort,
         pipeline_assembly_service: PipelineAssemblyPort,
-        query_log_emitter: PipelineQueryLogEmitter,
+        query_log_emitter: PipelineBuildQueryLogEmitterPort,
     ) -> None:
         self._summary_recall = summary_recall_service
         self._pipeline_assembly = pipeline_assembly_service

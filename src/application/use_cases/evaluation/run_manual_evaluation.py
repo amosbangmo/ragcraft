@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.application.evaluation.dtos import RunManualEvaluationCommand
-from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
-from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.pipeline_use_case_ports import (
+    GenerateAnswerFromPipelinePort,
+    InspectRagPipelinePort,
+)
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
 from src.domain.ports.manual_evaluation_from_rag_port import ManualEvaluationFromRagPort
 from src.domain.ports.project_workspace_port import ProjectWorkspacePort
@@ -16,8 +18,8 @@ class RunManualEvaluationUseCase:
         self,
         *,
         project_service: ProjectWorkspacePort,
-        inspect_pipeline: InspectRagPipelineUseCase,
-        generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
+        inspect_pipeline: InspectRagPipelinePort,
+        generate_answer_from_pipeline: GenerateAnswerFromPipelinePort,
         manual_evaluation: ManualEvaluationFromRagPort,
     ) -> None:
         self._project_service = project_service

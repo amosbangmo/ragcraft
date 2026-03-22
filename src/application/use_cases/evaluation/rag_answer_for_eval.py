@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
-from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.pipeline_use_case_ports import (
+    GenerateAnswerFromPipelinePort,
+    InspectRagPipelinePort,
+)
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.domain.project import Project
 
 
 def run_rag_inspect_and_answer_for_eval(
     *,
-    inspect_pipeline: InspectRagPipelineUseCase,
-    generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
+    inspect_pipeline: InspectRagPipelinePort,
+    generate_answer_from_pipeline: GenerateAnswerFromPipelinePort,
     project: Project,
     question: str,
     enable_query_rewrite: bool | None,

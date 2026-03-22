@@ -12,7 +12,8 @@ class PipelineQueryLogEmitter:
     """
     Optional query-log write after a pipeline build.
 
-    Keeps ``BuildRagPipelineUseCase`` free of inline logging branches; swallow errors via
+    Implements :class:`~src.application.use_cases.chat.orchestration.ports.PipelineBuildQueryLogEmitterPort`.
+    Keeps pipeline build use case free of inline logging branches; swallow errors via
     :func:`~src.application.common.safe_query_log.log_query_safely`.
     """
 

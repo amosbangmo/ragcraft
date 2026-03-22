@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from src.application.use_cases.chat.orchestration.ports import PipelineAssemblyPort, SummaryRecallStagePort
-from src.application.common.pipeline_query_context import RAGPipelineQueryContext
+from src.application.use_cases.chat.orchestration.summary_recall_from_request import (
+    run_summary_recall_from_chat_request,
+)
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
@@ -27,21 +29,15 @@ def run_recall_then_assemble_pipeline(
 
     Latency accounting starts at ``pipeline_started_monotonic`` (``time.perf_counter()``).
     """
-    ctx = RAGPipelineQueryContext.from_legacy(
-        chat_history,
+    bundle = run_summary_recall_from_chat_request(
+        summary_recall_service=summary_recall_service,
+        project=project,
+        question=question,
+        chat_history=chat_history,
         filters=filters,
         retrieval_settings=retrieval_settings,
         enable_query_rewrite_override=enable_query_rewrite_override,
         enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
-    )
-    bundle = summary_recall_service.summary_recall_stage(
-        project,
-        question,
-        list(ctx.chat_history),
-        enable_query_rewrite_override=ctx.enable_query_rewrite_override,
-        enable_hybrid_retrieval_override=ctx.enable_hybrid_retrieval_override,
-        filters=ctx.filters,
-        retrieval_settings=ctx.retrieval_settings,
     )
     return pipeline_assembly_service.build(
         project=project,

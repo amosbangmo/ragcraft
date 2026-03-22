@@ -7,8 +7,10 @@ from src.application.evaluation.dtos import (
     ListQaDatasetEntriesQuery,
     RunGoldQaDatasetEvaluationCommand,
 )
-from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
-from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.pipeline_use_case_ports import (
+    GenerateAnswerFromPipelinePort,
+    InspectRagPipelinePort,
+)
 from src.application.use_cases.evaluation.rag_answer_for_eval import run_rag_inspect_and_answer_for_eval
 from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.domain.ports.project_workspace_port import ProjectWorkspacePort
@@ -22,8 +24,8 @@ class RunGoldQaDatasetEvaluationUseCase:
         *,
         list_qa_dataset_entries: ListQaDatasetEntriesUseCase,
         project_service: ProjectWorkspacePort,
-        inspect_pipeline: InspectRagPipelineUseCase,
-        generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase,
+        inspect_pipeline: InspectRagPipelinePort,
+        generate_answer_from_pipeline: GenerateAnswerFromPipelinePort,
         gold_benchmark: GoldQaBenchmarkPort,
     ) -> None:
         self._list_qa = list_qa_dataset_entries

@@ -134,6 +134,19 @@ class RerankedConfidencePort(Protocol):
     def compute_confidence(self, *, reranked_raw_assets: list[dict]) -> float: ...
 
 
+class PipelineBuildQueryLogEmitterPort(Protocol):
+    """Optional retrieval-stage query log after a pipeline build (no answer payload)."""
+
+    def emit_after_pipeline_build(
+        self,
+        *,
+        enabled: bool,
+        project: Project,
+        question: str,
+        payload: PipelineBuildResult,
+    ) -> None: ...
+
+
 @dataclass(frozen=True)
 class PostRecallStagePorts:
     """Injected technical ports for post-recall assembly (see ``assemble_pipeline_from_recall``)."""

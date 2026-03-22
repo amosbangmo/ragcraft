@@ -16,11 +16,15 @@ COMPOSITION_DIR = REPO_ROOT / "src" / "composition"
 ASSEMBLE_PIPELINE = (
     REPO_ROOT / "src" / "application" / "use_cases" / "chat" / "orchestration" / "assemble_pipeline_from_recall.py"
 )
+POST_RECALL_PIPELINE_STEPS = (
+    REPO_ROOT / "src" / "application" / "use_cases" / "chat" / "orchestration" / "post_recall_pipeline_steps.py"
+)
 POST_RECALL_STAGE_ADAPTERS = (
     REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "post_recall_stage_adapters.py"
 )
 
-_MAX_ASSEMBLE_PIPELINE_LINES = 260
+_MAX_ASSEMBLE_PIPELINE_LINES = 200
+_MAX_POST_RECALL_PIPELINE_STEPS_LINES = 320
 _MAX_POST_RECALL_ADAPTER_LINES = 280
 
 _TRANSPORT_RAG_ADAPTER_MARKERS = (
@@ -143,16 +147,25 @@ def test_post_recall_stage_adapters_size_ratchet() -> None:
 
 
 def test_assemble_pipeline_orchestration_lives_in_application() -> None:
-    """End-to-end post-recall sequencing must stay in ``assemble_pipeline_from_recall``."""
-    text = ASSEMBLE_PIPELINE.read_text(encoding="utf-8")
+    """Post-recall sequencing stays in application orchestration (coordinator + step module)."""
+    coordinator = ASSEMBLE_PIPELINE.read_text(encoding="utf-8")
+    steps = POST_RECALL_PIPELINE_STEPS.read_text(encoding="utf-8")
+    combined = coordinator + steps
     for needle in (
         "stages.section_expansion.expand_section_pool",
         "stages.reranking.rerank_assets",
         "stages.prompt_render.build_answer_prompt",
     ):
-        assert needle in text, f"expected orchestration step {needle!r} in assemble_pipeline_from_recall"
-    lines = text.splitlines()
-    assert len(lines) <= _MAX_ASSEMBLE_PIPELINE_LINES, (
-        f"assemble_pipeline_from_recall.py grew to {len(lines)} lines (max {_MAX_ASSEMBLE_PIPELINE_LINES}); "
-        "extract helpers under application/use_cases/chat/orchestration"
+        assert needle in combined, f"expected orchestration step {needle!r} in post-recall orchestration"
+    assert "step_docstore_hydration" in coordinator
+    assert "step_prompt_assembly" in coordinator
+    assemble_lines = coordinator.splitlines()
+    steps_lines = steps.splitlines()
+    assert len(assemble_lines) <= _MAX_ASSEMBLE_PIPELINE_LINES, (
+        f"assemble_pipeline_from_recall.py grew to {len(assemble_lines)} lines "
+        f"(max {_MAX_ASSEMBLE_PIPELINE_LINES}); keep the coordinator thin"
+    )
+    assert len(steps_lines) <= _MAX_POST_RECALL_PIPELINE_STEPS_LINES, (
+        f"post_recall_pipeline_steps.py grew to {len(steps_lines)} lines "
+        f"(max {_MAX_POST_RECALL_PIPELINE_STEPS_LINES}); split post-recall steps"
     )

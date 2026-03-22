@@ -2,7 +2,7 @@
 Compare FAISS-only vs hybrid retrieval for a set of questions (no LLM answer).
 
 Application-layer orchestration: resolves the project, runs pipeline inspection under both
-hybrid toggles via :class:`~src.application.use_cases.chat.inspect_rag_pipeline.InspectRagPipelineUseCase`,
+hybrid toggles via :class:`~src.application.use_cases.chat.pipeline_use_case_ports.InspectRagPipelinePort`,
 and delegates aggregation to :mod:`src.application.use_cases.retrieval.retrieval_mode_comparison`.
 """
 
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.use_cases.chat.pipeline_use_case_ports import InspectRagPipelinePort
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from src.application.use_cases.retrieval.retrieval_mode_comparison import (
     compare_retrieval_modes_for_project,
@@ -22,7 +22,7 @@ class CompareRetrievalModesUseCase:
         self,
         *,
         resolve_project: ResolveProjectUseCase,
-        inspect_pipeline: InspectRagPipelineUseCase,
+        inspect_pipeline: InspectRagPipelinePort,
     ) -> None:
         self._resolve_project = resolve_project
         self._inspect_pipeline = inspect_pipeline
