@@ -221,14 +221,6 @@ def get_delete_document_use_case(container: BackendContainerDep) -> DeleteDocume
     return container.ingestion_delete_document_use_case
 
 
-def ensure_auth_database() -> bool:
-    """Create SQLite app tables if missing (users router dependency)."""
-    from src.infrastructure.persistence.db import init_app_db
-
-    init_app_db()
-    return True
-
-
 @lru_cache(maxsize=1)
 def _default_sqlite_user_repository() -> SqliteUserRepository:
     """Process-wide user repository (single-worker SQLite; tests override ``get_user_repository``)."""
@@ -236,7 +228,11 @@ def _default_sqlite_user_repository() -> SqliteUserRepository:
     return SqliteUserRepository()
 
 
-def get_user_repository(
-    _: Annotated[bool, Depends(ensure_auth_database)],
-) -> UserRepositoryPort:
+def get_user_repository(_container: BackendContainerDep) -> UserRepositoryPort:
+    """
+    SQLite user persistence for auth routes.
+
+    Depends on the application container so :func:`~src.infrastructure.persistence.db.init_app_db`
+    runs exactly once via :func:`build_backend_composition` — not via a separate FastAPI bootstrap hook.
+    """
     return _default_sqlite_user_repository()

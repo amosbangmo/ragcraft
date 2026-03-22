@@ -13,7 +13,7 @@
 | `UpdateProjectRetrievalSettingsUseCase` | `UpdateProjectRetrievalSettingsCommand` | Saved `ProjectSettings` (preset normalized via `parse_retrieval_preset`) |
 
 Composition: `BackendApplicationContainer.settings_get_effective_retrieval_use_case` and `settings_update_project_retrieval_use_case`.  
-`BackendComposition` exposes a **single** `retrieval_settings_service` instance wired with `project_settings_service`; `RAGService` receives that same instance so chat/search and settings use cases stay aligned.
+`BackendComposition` exposes a **single** `retrieval_settings_service` instance (shared with the RAG retrieval subgraph built in the application container) so chat/search and settings use cases stay aligned.
 
 ## HTTP API
 
@@ -24,7 +24,7 @@ Identity: `X-User-Id` header (same as other project routes).
 
 ## Streamlit
 
-`src/ui/retrieval_settings_panel.py` only drives widgets and session keys; load/save goes through `RAGCraftApp.get_effective_retrieval_settings` / `update_project_retrieval_settings` (container use cases). Pass `app=app` from pages; do not call the SQLite port from the panel.
+`src/ui/retrieval_settings_panel.py` only drives widgets and session keys; load/save goes through **`BackendClient`** methods that call the same HTTP or in-process use cases (`get_effective_retrieval_settings` / `update_project_retrieval_settings`). Do not call the SQLite port from the panel.
 
 ## Preset semantics
 

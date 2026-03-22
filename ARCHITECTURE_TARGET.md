@@ -1,6 +1,6 @@
 # Runtime architecture (source of truth)
 
-This document matches the **current** repository layout after the FastAPI-first migration. For a short migration checklist and history, see `docs/migration/MIGRATION_COMPLETE_REPORT.md`.
+This document matches the **current** repository layout after the FastAPI-first migration. For orchestration closure and legacy-path verification, see **`docs/migration/ORCHESTRATION_MIGRATION_FINAL_REPORT.md`**. Older narrative: `docs/migration/MIGRATION_COMPLETE_REPORT.md`.
 
 ## HTTP backend — `apps/api/`
 

@@ -37,12 +37,10 @@ These modules are **not** imported by `apps/api`. They exist so the UI can run *
 
 | Piece | Role |
 |-------|------|
-| **`RAGCraftApp`** (`src/app/ragcraft_app.py`) | **Strategic** in-process adapter over `BackendApplicationContainer`; used by `InProcessBackendClient`. |
-| **`src/core/app_state.py`** | Streamlit session wiring for `get_backend_client()`. |
+| **`InProcessBackendClient`** | Delegates to **`BackendApplicationContainer`** use cases (no `RAGCraftApp`; see `ragcraftapp-deprecation.md`). |
+| **`src/core/app_state.py`** | Streamlit session wiring for `get_backend_client()` (HTTP or in-process container). |
 | **`src/core/chain_state.py`** | Session-scoped chain cache keys in the Streamlit process. |
 | **`src/frontend_gateway/streamlit_*.py`** | Auth/session/header glue for the UI. |
-
-**Optional follow-up:** `InProcessBackendClient` could hold `BackendApplicationContainer` directly and move remaining helpers off `RAGCraftApp` — a refactor, not a migration blocker.
 
 ---
 
@@ -63,6 +61,7 @@ python -m pytest tests/apps_api -q
 
 - `docs/migration/final-status.md` — narrative summary and limitations  
 - `docs/migration/streamlit-fastapi-dev.md` — run Streamlit against HTTP API  
-- `docs/migration/ragcraftapp-deprecation.md` — why `RAGCraftApp` still exists  
+- `docs/migration/ragcraftapp-deprecation.md` — historical removal of `RAGCraftApp`  
+- `docs/migration/ORCHESTRATION_MIGRATION_FINAL_REPORT.md` — final orchestration / composition verdict  
 - `docs/migration/streamlit-backend-client.md` — `BackendClient` protocol  
 - `ARCHITECTURE_TARGET.md` — runtime architecture (source of truth)  

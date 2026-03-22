@@ -14,7 +14,7 @@
 
 ## API-ready (HTTP parity with use cases)
 
-These routes under `/evaluation` call the same container-backed use cases as `RAGCraftApp` / Streamlit:
+These routes under `/evaluation` call the same container-backed use cases as Streamlit (via `BackendClient` / HTTP parity):
 
 - `POST /evaluation/manual` — manual evaluation (`RunManualEvaluationUseCase`).
 - `POST /evaluation/dataset/run` — full gold QA benchmark (`RunGoldQaDatasetEvaluationUseCase`).
@@ -25,13 +25,13 @@ These routes under `/evaluation` call the same container-backed use cases as `RA
 
 ## Streamlit-only (or UI-layer) today
 
-- **Session-scoped benchmark history and dashboards** — `pages/evaluation.py` and `src/ui/evaluation_*` keep run history, widgets, and download buttons; they call `RAGCraftApp` methods that delegate to the same use cases but orchestrate Streamlit `session_state` and layout.
+- **Session-scoped benchmark history and dashboards** — `pages/evaluation.py` and `src/ui/evaluation_*` keep run history, widgets, and download buttons; they call **`BackendClient`** methods that delegate to the same use cases and orchestrate Streamlit `session_state` and layout.
 - **Rich tables / plots** — presentation of `BenchmarkResult` and manual-eval results remains in UI modules, not duplicated in the API.
-- **Retrieval comparison page** — `pages/retrieval_comparison.py` uses RAG/comparison services directly for multi-question UX; not exposed as a dedicated evaluation use case yet.
+- **Retrieval comparison page** — `pages/retrieval_comparison.py` uses `BackendClient.compare_retrieval_modes` (application use case); not duplicated as a separate evaluation sub-router.
 
 ## Services vs application
 
-- `EvaluationService` — still composes `BenchmarkExecutionUseCase` and metric helpers; application use cases depend on it for gold and manual flows.
+- `EvaluationService` — infrastructure adapter composing `BenchmarkExecutionUseCase` and metric helpers; application use cases depend on **ports** (`GoldQaBenchmarkPort`, `ManualEvaluationFromRagPort`) satisfied by this service at the composition root.
 - `ManualEvaluationService.evaluate_question` — deprecated path for tests; prefer `RunManualEvaluationUseCase`.
 
 ## Benchmark payload stability

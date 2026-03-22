@@ -1,9 +1,11 @@
 # Orchestration migration — final verification report (RAGCraft)
 
-**Document type:** Closure report for the orchestration / layering migration track.  
+**Document type:** Historical closure report for the orchestration / layering migration track.  
 **Verification date:** 2026-03-22 (Prompt 6: audit, tests, legacy-import grep).  
 **Live architecture spec:** [`ARCHITECTURE_TARGET.md`](../../ARCHITECTURE_TARGET.md)  
 **Enforced import rules:** [`tests/architecture/README.md`](../../tests/architecture/README.md)
+
+> **Authoritative orchestration verdict (Prompt 5):** See **[`ORCHESTRATION_MIGRATION_FINAL_REPORT.md`](./ORCHESTRATION_MIGRATION_FINAL_REPORT.md)** for the current end-state after RAG/composition/port refactors. Sections below labeled “remaining deviations” include **obsolete** items (e.g. `RAGService` and concrete use-case coupling were addressed in later commits).
 
 ---
 
