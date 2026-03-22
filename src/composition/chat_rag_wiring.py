@@ -14,8 +14,6 @@ Orchestration lives in application use cases; this module only constructs the ob
 - Post-recall assembly: :class:`~src.application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
   (application) with stage adapters in
   :mod:`src.infrastructure.adapters.rag.post_recall_stage_adapters`.
-- Legacy ``rag_service`` module: **absent** in this repo; if reintroduced, it must be a thin compatibility
-  façade over use cases (no internal use-case construction).
 
 **Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
 ``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.

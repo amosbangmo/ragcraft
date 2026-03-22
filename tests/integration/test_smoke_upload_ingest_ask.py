@@ -147,7 +147,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         )
         ask_uc = MagicMock()
         ask_uc.execute.return_value = response
-        container.__dict__["_chat_rag_use_cases"] = SimpleNamespace(
+        container.__dict__["chat_rag_use_cases"] = SimpleNamespace(
             ask_question=ask_uc,
             build_rag_pipeline=MagicMock(),
             inspect_rag_pipeline=MagicMock(),

@@ -59,9 +59,5 @@ def http_client_project_settings_repository() -> ProjectSettingsRepositoryPort:
     return _UnsupportedProjectSettingsRepository()  # type: ignore[return-value]
 
 
-def http_client_rag_service() -> Any:
-    return _UnsupportedBackendAttribute("rag_service")
-
-
 def http_client_evaluation_service() -> Any:
     return _UnsupportedBackendAttribute("evaluation_service")

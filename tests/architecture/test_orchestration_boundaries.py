@@ -19,7 +19,6 @@ ASSEMBLE_PIPELINE = (
 POST_RECALL_STAGE_ADAPTERS = (
     REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "post_recall_stage_adapters.py"
 )
-RAG_SERVICE = REPO_ROOT / "src" / "infrastructure" / "adapters" / "rag" / "rag_service.py"
 
 _MAX_ASSEMBLE_PIPELINE_LINES = 260
 _MAX_POST_RECALL_ADAPTER_LINES = 280
@@ -157,10 +156,3 @@ def test_assemble_pipeline_orchestration_lives_in_application() -> None:
         f"assemble_pipeline_from_recall.py grew to {len(lines)} lines (max {_MAX_ASSEMBLE_PIPELINE_LINES}); "
         "extract helpers under application/use_cases/chat/orchestration"
     )
-
-
-def test_rag_service_facade_must_not_construct_use_cases_if_present() -> None:
-    """Legacy compatibility module, if added back, must not own orchestration or construct use cases."""
-    if not RAG_SERVICE.is_file():
-        return
-    _assert_no_application_use_case_imports(RAG_SERVICE)

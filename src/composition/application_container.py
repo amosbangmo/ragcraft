@@ -9,8 +9,9 @@ Use :func:`build_backend` for the **full graph** (services + use cases). Use
 
 **Orchestration inventory (this module):**
 
-- Lazy construction of use cases and injection of ports (e.g. chat/RAG subgraph from
-  :mod:`src.composition.chat_rag_wiring`).
+- Lazy construction of use cases and injection of ports (e.g. memoized
+  :attr:`~src.composition.application_container.BackendApplicationContainer.chat_rag_use_cases` from
+  :mod:`src.composition.chat_rag_wiring`). There is no ``rag_service`` façade on the container.
 - Single allowed direct ``execute`` call: :meth:`BackendApplicationContainer.invalidate_project_chain`
   delegates to :class:`~src.application.use_cases.projects.invalidate_project_chain_cache.InvalidateProjectChainCacheUseCase`
   (cache lifecycle, not RAG sequencing).
@@ -236,7 +237,12 @@ class BackendApplicationContainer:
         return GetProjectRetrievalPresetLabelUseCase(project_settings=self.project_settings_repository)
 
     @cached_property
-    def _chat_rag_use_cases(self) -> ChatRagUseCases:
+    def chat_rag_use_cases(self) -> ChatRagUseCases:
+        """
+        Memoized chat/RAG use-case bundle (same wiring as :mod:`src.composition.chat_rag_wiring`).
+
+        Exposed explicitly so callers use application use cases — not a legacy ``RAGService`` façade.
+        """
         from src.composition.chat_rag_wiring import build_chat_rag_use_cases, build_rag_retrieval_subgraph
 
         subgraph = build_rag_retrieval_subgraph(
@@ -249,23 +255,23 @@ class BackendApplicationContainer:
 
     @property
     def chat_ask_question_use_case(self) -> AskQuestionUseCase:
-        return self._chat_rag_use_cases.ask_question
+        return self.chat_rag_use_cases.ask_question
 
     @property
     def chat_inspect_pipeline_use_case(self) -> InspectRagPipelineUseCase:
-        return self._chat_rag_use_cases.inspect_rag_pipeline
+        return self.chat_rag_use_cases.inspect_rag_pipeline
 
     @property
     def chat_preview_summary_recall_use_case(self) -> PreviewSummaryRecallUseCase:
-        return self._chat_rag_use_cases.preview_summary_recall
+        return self.chat_rag_use_cases.preview_summary_recall
 
     @property
     def chat_build_rag_pipeline_use_case(self) -> BuildRagPipelineUseCase:
-        return self._chat_rag_use_cases.build_rag_pipeline
+        return self.chat_rag_use_cases.build_rag_pipeline
 
     @property
     def chat_generate_answer_from_pipeline_use_case(self) -> GenerateAnswerFromPipelineUseCase:
-        return self._chat_rag_use_cases.generate_answer_from_pipeline
+        return self.chat_rag_use_cases.generate_answer_from_pipeline
 
     @cached_property
     def chat_compare_retrieval_modes_use_case(self) -> CompareRetrievalModesUseCase:

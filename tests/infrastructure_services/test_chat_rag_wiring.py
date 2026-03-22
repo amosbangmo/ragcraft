@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 if "langchain_core.documents" not in sys.modules:
-    # Lightweight substitute for LangChain's Document in test environment.
     langchain_core_module = types.ModuleType("langchain_core")
     documents_module = types.ModuleType("langchain_core.documents")
 
@@ -27,7 +26,6 @@ if "src.core.config" not in sys.modules:
     sys.modules["src.core.config"] = types.ModuleType("src.core.config")
 
 config_module = sys.modules["src.core.config"]
-# ``retrieval_settings`` imports this symbol; tests stub the module before importing subgraph wiring.
 if not hasattr(config_module, "RetrievalConfig"):
 
     class RetrievalConfig:
@@ -35,7 +33,6 @@ if not hasattr(config_module, "RetrievalConfig"):
 
     config_module.RetrievalConfig = RetrievalConfig
 
-# Fill only the config attributes this service needs at import/runtime.
 if not hasattr(config_module, "LLM"):
     config_module.LLM = SimpleNamespace(invoke=lambda prompt: SimpleNamespace(content="ok"))
 if not hasattr(config_module, "RETRIEVAL_CONFIG"):
@@ -62,7 +59,6 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
     )
 
 if "src.infrastructure.adapters.rag.hybrid_retrieval_service" not in sys.modules:
-    # Avoid BM25 dependency for unit tests focused on RAG orchestration.
     hybrid_module = types.ModuleType("src.infrastructure.adapters.rag.hybrid_retrieval_service")
 
     class HybridRetrievalService:
@@ -86,7 +82,6 @@ if "src.infrastructure.adapters.rag.hybrid_retrieval_service" not in sys.modules
     sys.modules["src.infrastructure.adapters.rag.hybrid_retrieval_service"] = hybrid_module
 
 if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
-    # Prevent FAISS import requirements when loading related services.
     faiss_store_module = types.ModuleType("src.infrastructure.vectorstores.faiss.vector_store")
 
     def _noop(*args, **kwargs):
@@ -105,58 +100,47 @@ from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
 from src.application.chat.policies.pipeline_document_selection import deduplicate_summary_doc_ids
-from src.composition.chat_rag_wiring import build_chat_rag_use_cases, build_rag_retrieval_subgraph
+from src.composition.chat_rag_wiring import ChatRagUseCases, build_chat_rag_use_cases, build_rag_retrieval_subgraph
 from src.infrastructure.adapters.rag.confidence_service import ConfidenceService
 
 
 def _mutable_retrieval_config_view(cfg):
-    """Tests mutate ``service.config``; real ``RetrievalConfig`` is frozen."""
     if is_dataclass(cfg) and cfg.__dataclass_params__.frozen:
         return SimpleNamespace(**asdict(cfg))
     return cfg
 
 
-class _RagPipelineTestFacade:
-    """Mirrors the old ``RAGService`` surface used by these unit tests."""
+class _ChatRagWiringHarness:
+    """Holds :class:`RagRetrievalSubgraph` + :class:`ChatRagUseCases` the same way composition does (no RAG façade)."""
 
-    def __init__(self, subgraph, ucs, *, query_log_service):
-        self._sub = subgraph
-        self._ucs = ucs
+    def __init__(self, subgraph, use_cases: ChatRagUseCases, *, query_log_service):
+        self.subgraph = subgraph
+        self.use_cases = use_cases
         self.query_log_service = query_log_service
 
     @property
     def config(self):
-        return self._sub.config
+        return self.subgraph.config
 
     @config.setter
     def config(self, value):
-        self._sub.config = value
+        self.subgraph.config = value
 
     @property
     def summary_recall_service(self):
-        return self._sub.summary_recall_service
-
-    @property
-    def pipeline_assembly(self):
-        return self._sub.pipeline_assembly
+        return self.subgraph.summary_recall_service
 
     @property
     def post_recall_stage_services(self):
-        return self._sub.post_recall_stage_services
+        return self.subgraph.post_recall_stage_services
 
     @property
     def retrieval_settings_service(self):
-        return self._sub.retrieval_settings_service
-
-    def build_pipeline(self, *args, **kwargs):
-        return self._ucs.build_rag_pipeline.execute(*args, **kwargs)
-
-    def ask(self, *args, **kwargs):
-        return self._ucs.ask_question.execute(*args, **kwargs)
+        return self.subgraph.retrieval_settings_service
 
 
-class TestRAGService(unittest.TestCase):
-    def _build_service(self, query_log_service=None):
+class TestChatRagWiringComposition(unittest.TestCase):
+    def _build_harness(self, query_log_service=None):
         vectorstore_service = MagicMock()
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
@@ -167,13 +151,12 @@ class TestRAGService(unittest.TestCase):
             reranking_service=reranking_service,
         )
         ucs = build_chat_rag_use_cases(subgraph, query_log=query_log_service)
-        service = _RagPipelineTestFacade(subgraph, ucs, query_log_service=query_log_service)
-        service.config = _mutable_retrieval_config_view(service.config)
-        # Match stable RRF expectations; real ``RetrievalConfig`` may come from env.
-        service.config.hybrid_beta = 0.5
-        service.config.rrf_k = 60
+        harness = _ChatRagWiringHarness(subgraph, ucs, query_log_service=query_log_service)
+        harness.config = _mutable_retrieval_config_view(harness.config)
+        harness.config.hybrid_beta = 0.5
+        harness.config.rrf_k = 60
         return (
-            service,
+            harness,
             vectorstore_service,
             evaluation_service,
             docstore_service,
@@ -181,7 +164,7 @@ class TestRAGService(unittest.TestCase):
         )
 
     def test_deduplicate_doc_ids_preserves_order(self):
-        service, *_ = self._build_service()
+        harness, *_ = self._build_harness()
         docs = [
             SummaryRecallDocument(page_content="a", metadata={"doc_id": "d1"}),
             SummaryRecallDocument(page_content="b", metadata={"doc_id": "d2"}),
@@ -194,11 +177,10 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(result, ["d1", "d2"])
 
     def test_rrf_merge_prioritizes_common_docs(self):
-        service, *_ = self._build_service()
-        service.config.rrf_k = 60
-        settings = service.retrieval_settings_service.get_default()
+        harness, *_ = self._build_harness()
+        harness.config.rrf_k = 60
+        settings = harness.retrieval_settings_service.get_default()
 
-        # ranks: d1(1), d2(2) in primary; d2(1), d3(2) in secondary
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
             SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
@@ -208,20 +190,19 @@ class TestRAGService(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
         )
         merged_ids = [doc.metadata["doc_id"] for doc in merged]
 
-        # d2 appears in both lists at rank 1 in secondary and rank 2 in primary, so it should win.
         self.assertEqual(merged_ids[:2], ["d2", "d1"])
 
     def test_rrf_merge_respects_max_docs(self):
-        service, *_ = self._build_service()
-        service.config.rrf_k = 60
-        settings = service.retrieval_settings_service.get_default()
+        harness, *_ = self._build_harness()
+        harness.config.rrf_k = 60
+        settings = harness.retrieval_settings_service.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -232,7 +213,7 @@ class TestRAGService(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -242,10 +223,10 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(merged_ids, ["d2", "d1"])
 
     def test_rrf_merge_beta_one_prioritizes_semantic_only_docs(self):
-        service, *_ = self._build_service()
-        service.config.rrf_k = 60
-        service.config.hybrid_beta = 1.0
-        settings = service.retrieval_settings_service.get_default()
+        harness, *_ = self._build_harness()
+        harness.config.rrf_k = 60
+        harness.config.hybrid_beta = 1.0
+        settings = harness.retrieval_settings_service.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -256,7 +237,7 @@ class TestRAGService(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -266,10 +247,10 @@ class TestRAGService(unittest.TestCase):
         self.assertEqual(merged_ids, ["d1", "d2", "d3"])
 
     def test_rrf_merge_beta_zero_prioritizes_lexical_only_docs(self):
-        service, *_ = self._build_service()
-        service.config.rrf_k = 60
-        service.config.hybrid_beta = 0.0
-        settings = service.retrieval_settings_service.get_default()
+        harness, *_ = self._build_harness()
+        harness.config.rrf_k = 60
+        harness.config.hybrid_beta = 0.0
+        settings = harness.retrieval_settings_service.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -280,7 +261,7 @@ class TestRAGService(unittest.TestCase):
             SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
-        merged = service.summary_recall_service.merge_summary_docs(
+        merged = harness.summary_recall_service.merge_summary_docs(
             settings=settings,
             primary_docs=primary_docs,
             secondary_docs=secondary_docs,
@@ -289,22 +270,21 @@ class TestRAGService(unittest.TestCase):
 
         self.assertEqual(merged_ids, ["d2", "d3", "d1"])
 
-    def test_run_pipeline_returns_none_when_nothing_recalled(self):
-        service, *_ = self._build_service()
+    def test_build_rag_pipeline_returns_none_when_nothing_recalled(self):
+        harness, *_ = self._build_harness()
         project = Project(user_id="u1", project_id="p1")
 
         with patch.object(
-            service.summary_recall_service,
+            harness.summary_recall_service,
             "retrieve_summary_docs",
             return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
         ):
-            result = service.build_pipeline(project=project, question="q")
+            result = harness.use_cases.build_rag_pipeline.execute(project=project, question="q")
 
         self.assertIsNone(result)
 
-    def test_run_pipeline_success_builds_payload(self):
-        # Validate the orchestration path from retrieval to prompt payload fields.
-        service, _, _evaluation_service, docstore_service, reranking_service = self._build_service()
+    def test_build_rag_pipeline_success_builds_payload(self):
+        harness, _, _evaluation_service, docstore_service, reranking_service = self._build_harness()
         project = Project(user_id="u1", project_id="p1")
         recalled_summary_docs = [
             SummaryRecallDocument(page_content="sum1", metadata={"doc_id": "d1"}),
@@ -338,9 +318,9 @@ class TestRAGService(unittest.TestCase):
         ]
 
         with (
-            patch.object(service.summary_recall_service, "rewrite_question", return_value="rewritten"),
+            patch.object(harness.summary_recall_service, "rewrite_question", return_value="rewritten"),
             patch.object(
-                service.summary_recall_service,
+                harness.summary_recall_service,
                 "retrieve_summary_docs",
                 return_value={
                     "vector_summary_docs": recalled_summary_docs,
@@ -349,17 +329,17 @@ class TestRAGService(unittest.TestCase):
                 },
             ),
             patch.object(
-                service.post_recall_stage_services.prompt_source_service,
+                harness.post_recall_stage_services.prompt_source_service,
                 "build_prompt_sources",
                 return_value=prompt_sources_objs,
             ),
             patch.object(
-                service.post_recall_stage_services.prompt_builder_service,
+                harness.post_recall_stage_services.prompt_builder_service,
                 "build_raw_context",
                 return_value="ctx",
             ),
             patch.object(
-                service.post_recall_stage_services.prompt_builder_service,
+                harness.post_recall_stage_services.prompt_builder_service,
                 "build_prompt",
                 return_value="prompt",
             ),
@@ -368,7 +348,7 @@ class TestRAGService(unittest.TestCase):
             docstore_service.list_assets_for_source_file.return_value = raw_assets
             reranking_service.rerank.return_value = reranked_assets
 
-            payload = service.build_pipeline(
+            payload = harness.use_cases.build_rag_pipeline.execute(
                 project=project, question="question", chat_history=["h1"]
             )
 
@@ -413,8 +393,8 @@ class TestRAGService(unittest.TestCase):
         self.assertGreaterEqual(len(payload.pre_rerank_raw_assets), 1)
 
     @patch("src.infrastructure.adapters.rag.answer_generation_service.LLM")
-    def test_ask_returns_rag_response(self, mock_llm):
-        service, *_ = self._build_service()
+    def test_ask_question_returns_rag_response(self, mock_llm):
+        harness, *_ = self._build_harness()
         project = Project(user_id="u1", project_id="p1")
         pipeline = PipelineBuildResult(
             prompt="prompt text",
@@ -440,8 +420,8 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
-        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline):
-            response = service.ask(project=project, question="Q", chat_history=[])
+        with patch.object(harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline):
+            response = harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
         self.assertEqual(response.answer, "final answer")
         self.assertEqual(response.confidence, 0.8)
@@ -450,8 +430,8 @@ class TestRAGService(unittest.TestCase):
         self.assertGreater(response.latency["total_ms"], 0.0)
 
     @patch("src.infrastructure.adapters.rag.answer_generation_service.LLM")
-    def test_ask_wraps_llm_errors(self, mock_llm):
-        service, *_ = self._build_service()
+    def test_ask_question_wraps_llm_errors(self, mock_llm):
+        harness, *_ = self._build_harness()
         project = Project(user_id="u1", project_id="p1")
         mock_llm.invoke.side_effect = RuntimeError("timeout")
         pipeline = PipelineBuildResult(
@@ -462,14 +442,14 @@ class TestRAGService(unittest.TestCase):
             confidence=0.0,
         )
 
-        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline):
+        with patch.object(harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline):
             with self.assertRaises(LLMServiceError):
-                service.ask(project=project, question="Q", chat_history=[])
+                harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
     @patch("src.infrastructure.adapters.rag.answer_generation_service.LLM")
-    def test_ask_emits_query_log_when_configured(self, mock_llm):
+    def test_ask_question_emits_query_log_when_configured(self, mock_llm):
         log_service = MagicMock()
-        service, *_ = self._build_service(query_log_service=log_service)
+        harness, *_ = self._build_harness(query_log_service=log_service)
         project = Project(user_id="u1", project_id="p1")
         pipeline = PipelineBuildResult(
             prompt="prompt text",
@@ -486,11 +466,13 @@ class TestRAGService(unittest.TestCase):
         )
         mock_llm.invoke.return_value = SimpleNamespace(content="ans")
 
-        with patch.object(service._ucs.ask_question, "_build_pipeline", return_value=pipeline) as build_pipeline:
-            service.ask(project=project, question="Q", chat_history=[])
+        with patch.object(
+            harness.use_cases.ask_question, "_build_pipeline", return_value=pipeline
+        ) as build_pipeline_fn:
+            harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
 
-        build_pipeline.assert_called_once()
-        _, kwargs = build_pipeline.call_args
+        build_pipeline_fn.assert_called_once()
+        _, kwargs = build_pipeline_fn.call_args
         self.assertFalse(kwargs.get("emit_query_log"))
         log_service.log_query.assert_called_once()
         payload = log_service.log_query.call_args.kwargs["payload"]
