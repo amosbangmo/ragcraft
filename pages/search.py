@@ -5,7 +5,7 @@ Summary / recall search UI. Uses :class:`~src.frontend_gateway.protocol.BackendC
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient
-from src.domain.retrieval_filters import RetrievalFilters
+from src.frontend_gateway.view_models import RetrievalFilters
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.retrieval_settings_panel import (

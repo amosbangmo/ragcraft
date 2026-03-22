@@ -10,7 +10,7 @@ import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient
 from src.frontend_gateway.ui_errors import map_evaluation_flow_exception
-from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
+from src.frontend_gateway.view_models import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.ui.evaluation_csv_utils import parse_evaluation_csv_list
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.raw_assets import render_raw_assets

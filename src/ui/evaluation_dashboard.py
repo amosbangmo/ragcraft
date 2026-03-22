@@ -15,8 +15,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.domain.benchmark_comparison import LOWER_IS_BETTER_METRICS
-from src.domain.benchmark_failure_analysis import FailureAnalysisService
+from src.frontend_gateway.view_models import LOWER_IS_BETTER_METRICS, FailureAnalysisService
 from src.ui.evaluation_summary_metrics import (
     coerce_float_for_summary_metric as _coerce_float,
     render_summary_metric_from_mapping as _summary_metric,

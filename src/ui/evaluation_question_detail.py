@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.frontend_gateway.view_models import ManualEvaluationResult
 from src.ui.metric_help import render_metric_with_help
 from src.ui.manual_evaluation import render_manual_evaluation_result
 from src.ui.section_card import inject_section_card_styles, section_card

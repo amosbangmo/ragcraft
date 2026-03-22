@@ -11,17 +11,18 @@ import uuid
 
 import streamlit as st
 
-from src.domain.benchmark_comparison import (
+from src.frontend_gateway.protocol import BackendClient
+from src.frontend_gateway.view_models import (
+    BenchmarkResult,
+    QADatasetEntry,
     compare_benchmark_failure_counts,
     compare_benchmark_summaries,
+    coerce_benchmark_result,
 )
-from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
-from src.frontend_gateway.protocol import BackendClient
 from src.frontend_gateway.ui_errors import (
     get_user_error_message,
     map_evaluation_flow_exception,
 )
-from src.domain.qa_dataset_entry import QADatasetEntry
 from src.ui.evaluation_dashboard import render_evaluation_dashboard
 from src.ui.evaluation_history_labels import (
     build_benchmark_history_entry_label,

@@ -12,8 +12,13 @@ def clear_settings_cache():
     load_frontend_backend_settings.cache_clear()
 
 
-def test_use_http_backend_client_false_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_use_http_backend_client_true_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RAGCRAFT_BACKEND_CLIENT", raising=False)
+    assert use_http_backend_client() is True
+
+
+def test_use_http_backend_client_false_when_in_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAGCRAFT_BACKEND_CLIENT", "in_process")
     assert use_http_backend_client() is False
 
 

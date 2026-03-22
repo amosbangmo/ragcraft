@@ -1,8 +1,12 @@
 """
 Streamlit-facing auth entrypoints (login/register/session reads).
 
-Pages and ``src/ui`` must import from here — not :mod:`src.auth.auth_service` — so the app can use
-either local SQLite (in-process) or the FastAPI ``/auth/*`` routes when ``RAGCRAFT_BACKEND_CLIENT=http``.
+Default **API-first** wiring uses FastAPI ``/auth/login`` and ``/auth/register`` plus the same
+Streamlit ``session_state`` keys as legacy SQLite login. Session reads and logout use those keys
+only (no :class:`~src.auth.auth_service.AuthService` instance), so HTTP mode does not open a second
+SQLite path through the auth service.
+
+Set ``RAGCRAFT_BACKEND_CLIENT=in_process`` only for fully offline Streamlit without uvicorn.
 """
 
 from __future__ import annotations
@@ -98,20 +102,37 @@ def register(
 
 
 def logout() -> None:
-    AuthService().logout()
+    import streamlit as st
+
+    st.session_state[AuthService.SESSION_AUTH_KEY] = False
+    st.session_state.pop(AuthService.SESSION_USER_KEY, None)
+    st.session_state.pop(AuthService.SESSION_USER_ID_KEY, None)
+    st.session_state.pop(AuthService.SESSION_DISPLAY_NAME_KEY, None)
+    st.session_state.pop(AuthService.SESSION_AVATAR_KEY, None)
+    st.session_state.pop("project_id", None)
 
 
 def is_authenticated() -> bool:
-    return AuthService().is_authenticated()
+    import streamlit as st
+
+    return bool(st.session_state.get(AuthService.SESSION_AUTH_KEY, False))
 
 
 def get_display_name() -> str | None:
-    return AuthService().get_display_name()
+    import streamlit as st
+
+    v = st.session_state.get(AuthService.SESSION_DISPLAY_NAME_KEY)
+    return str(v) if v is not None else None
 
 
 def get_current_avatar_path() -> str | None:
-    return AuthService().get_current_avatar_path()
+    import streamlit as st
+
+    return st.session_state.get(AuthService.SESSION_AVATAR_KEY)
 
 
 def get_current_user_id() -> str | None:
-    return AuthService().get_current_user_id()
+    import streamlit as st
+
+    v = st.session_state.get(AuthService.SESSION_USER_ID_KEY)
+    return str(v) if v is not None else None

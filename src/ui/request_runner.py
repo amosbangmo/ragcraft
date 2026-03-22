@@ -7,7 +7,7 @@ from typing import Any, Literal, TYPE_CHECKING
 import streamlit as st
 
 if TYPE_CHECKING:
-    from src.domain.benchmark_result import BenchmarkResult
+    from src.frontend_gateway.view_models import BenchmarkResult
 
 # Session payload convention: failures from ``run_request_action`` use this key.
 # Success payloads must not use a top-level key with this name.
@@ -62,7 +62,7 @@ def analyze_dataset_evaluation_session_payload(raw: Any) -> DatasetEvaluationSes
     Use :func:`read_dataset_evaluation_session_payload` when you only need a coerced
     ``BenchmarkResult``; use this when the UI must distinguish **invalid_result** from **missing**.
     """
-    from src.domain.benchmark_result import coerce_benchmark_result
+    from src.frontend_gateway.view_models import coerce_benchmark_result
 
     if raw is None:
         return DatasetEvaluationSessionView(kind="missing")
@@ -95,7 +95,7 @@ def read_dataset_evaluation_session_payload(
     ``result`` field; otherwise None. ``meta`` includes ``enable_query_rewrite``,
     ``enable_hybrid_retrieval``, and ``generated_at`` when present on the payload.
     """
-    from src.domain.benchmark_result import BenchmarkResult
+    from src.frontend_gateway.view_models import BenchmarkResult
 
     view = analyze_dataset_evaluation_session_payload(raw)
     if view.kind != "ok" or view.result is None:

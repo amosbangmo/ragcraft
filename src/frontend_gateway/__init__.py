@@ -2,8 +2,8 @@
 Frontend boundary: protocol, HTTP and in-process clients, Streamlit settings.
 
 Exports are loaded lazily (PEP 562) so ``import src.frontend_gateway.<submodule>`` does not
-eagerly import :class:`~src.frontend_gateway.in_process.InProcessBackendClient` or the Streamlit
-container factory unless those symbols are requested.
+eagerly import HTTP or in-process backend clients unless those symbols are requested. The default
+Streamlit mode is API-first (``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 
 from __future__ import annotations

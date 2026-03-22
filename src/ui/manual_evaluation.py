@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.domain.llm_judge_constants import JUDGE_FAILURE_REASON
-from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.frontend_gateway.view_models import JUDGE_FAILURE_REASON, ManualEvaluationResult
 from src.ui.confidence_display import format_confidence_with_band
 from src.ui.metric_help import render_metric_with_help
 from src.ui.raw_assets import render_raw_assets

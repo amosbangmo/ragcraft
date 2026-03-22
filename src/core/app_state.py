@@ -3,7 +3,9 @@ Streamlit session singletons for the backend boundary.
 
 Pages and ``src/ui`` must call :func:`get_backend_client` (via
 :mod:`src.frontend_gateway.streamlit_api_client` / :mod:`src.frontend_gateway.streamlit_context`).
-In-process mode caches a :class:`~src.composition.BackendApplicationContainer` built by
+**Default:** :class:`~src.frontend_gateway.http_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
+or ``http``). **Escape hatch:** ``RAGCRAFT_BACKEND_CLIENT=in_process`` caches a
+:class:`~src.composition.BackendApplicationContainer` from
 :func:`~src.frontend_gateway.streamlit_backend_factory.build_streamlit_backend_application_container`.
 """
 

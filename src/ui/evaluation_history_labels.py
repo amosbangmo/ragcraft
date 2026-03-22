@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from src.domain.evaluation_display_text import format_bool_toggle_on_off
+from src.frontend_gateway.view_models import format_bool_toggle_on_off
 
 
 def build_benchmark_history_entry_label(

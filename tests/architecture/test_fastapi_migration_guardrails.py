@@ -53,13 +53,13 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
 
 def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     """
-    ``pages/`` and ``src/ui/`` should talk to capabilities through the gateway (protocol + context),
-    auth helpers, and domain **types** — not services, composition, infrastructure, ``src.app``, or
-    ``apps.api`` (no accidental “call FastAPI from Streamlit” coupling).
+    ``pages/`` and ``src/ui/`` should use the gateway (protocol, ``view_models``, context) and auth
+    helpers — not ``src.domain`` or infrastructure packages directly, nor ``src.app`` / ``apps.api``.
     """
     roots = [REPO_ROOT / "pages", REPO_ROOT / "src" / "ui"]
     forbidden = (
         "src.backend",
+        "src.domain",
         "src.infrastructure.services",
         "src.services",
         "src.composition",

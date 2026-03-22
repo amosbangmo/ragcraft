@@ -8,7 +8,7 @@ import streamlit as st
 from typing import Any
 
 from src.frontend_gateway.protocol import BackendClient
-from src.domain.benchmark_result import BenchmarkResult
+from src.frontend_gateway.view_models import BenchmarkResult
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.evaluation_tabs import render_evaluation_tabs

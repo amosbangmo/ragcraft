@@ -8,7 +8,7 @@ from typing import Any
 
 import streamlit as st
 
-from src.domain.evaluation_display_text import format_bool_toggle_on_off
+from src.frontend_gateway.view_models import format_bool_toggle_on_off
 
 
 def _is_benchmark_export_artifact(obj: Any) -> bool:

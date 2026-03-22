@@ -9,10 +9,10 @@ Modes (environment)
 -------------------
 
 ``RAGCRAFT_BACKEND_CLIENT``
-    * ``in_process`` (default) — same Python process as Streamlit; uses
-      :class:`~src.frontend_gateway.in_process.InProcessBackendClient`.
-    * ``http``, ``api``, or ``remote`` — calls the FastAPI app via
+    * ``http`` (default), ``api``, or ``remote`` — calls the FastAPI app via
       :class:`~src.frontend_gateway.http_client.HttpBackendClient`.
+    * ``in_process`` — same Python process as Streamlit (no uvicorn); uses
+      :class:`~src.frontend_gateway.in_process.InProcessBackendClient`.
 
 ``RAGCRAFT_API_BASE_URL``
     Root URL without trailing slash, e.g. ``http://127.0.0.1:8000``.
@@ -43,8 +43,8 @@ Streamlit pages gateway checklist (business I/O via :func:`get_backend_client` /
 * ``pages/evaluation.py`` + ``src/ui/evaluation_*.py`` — manual/dataset/gold/retrieval tabs via client.
 * ``pages/profile.py`` — client profile/password/avatar/delete + session refresh helper.
 
-In-process mode still builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient` over a
-cached :class:`~src.composition.BackendApplicationContainer` inside :mod:`src.core.app_state` only.
+The optional in-process mode builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient`
+over a cached :class:`~src.composition.BackendApplicationContainer` inside :mod:`src.core.app_state` only.
 """
 
 from __future__ import annotations

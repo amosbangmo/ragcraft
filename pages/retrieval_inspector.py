@@ -8,10 +8,13 @@ import json
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient
-from src.domain.pipeline_payloads import PipelineBuildResult
-from src.domain.retrieval_filters import RetrievalFilters
-from src.domain.retrieval_presets import PRESET_UI_LABELS, parse_retrieval_preset
-from src.domain.retrieval_settings import RetrievalSettings
+from src.frontend_gateway.view_models import (
+    PRESET_UI_LABELS,
+    PipelineBuildResult,
+    RetrievalFilters,
+    RetrievalSettings,
+    parse_retrieval_preset,
+)
 from src.auth.guards import require_authentication
 from src.frontend_gateway.ui_errors import (
     DocStoreError,

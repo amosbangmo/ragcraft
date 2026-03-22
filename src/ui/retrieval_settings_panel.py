@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from src.domain.retrieval_presets import (
+from src.frontend_gateway.view_models import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
     PRESET_UI_LABELS,
     RetrievalPreset,
+    RetrievalSettings,
     parse_retrieval_preset,
 )
-from src.domain.retrieval_settings import RetrievalSettings
 from src.frontend_gateway.retrieval_settings_merge import (
     RetrievalPresetMergePort,
     default_retrieval_preset_merge_port,

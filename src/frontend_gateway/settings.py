@@ -37,7 +37,7 @@ def _env_float_optional(name: str) -> float | None:
 @dataclass(frozen=True)
 class FrontendBackendSettings:
     """
-    ``RAGCRAFT_BACKEND_CLIENT`` — ``in_process`` (default) or ``http``.
+    ``RAGCRAFT_BACKEND_CLIENT`` — ``http`` (default, API-first) or ``in_process`` (local dev without uvicorn).
 
     ``RAGCRAFT_API_BASE_URL`` — root URL for the FastAPI app (no trailing slash), e.g.
     ``http://127.0.0.1:8000``.
@@ -63,7 +63,7 @@ class FrontendBackendSettings:
 
 @lru_cache(maxsize=1)
 def load_frontend_backend_settings() -> FrontendBackendSettings:
-    mode = _env_str("RAGCRAFT_BACKEND_CLIENT", "in_process").lower()
+    mode = _env_str("RAGCRAFT_BACKEND_CLIENT", "http").lower()
     legacy_read = _env_float("RAGCRAFT_API_TIMEOUT_SECONDS", 300.0)
     read_override = _env_float_optional("RAGCRAFT_API_READ_TIMEOUT_SECONDS")
     return FrontendBackendSettings(
