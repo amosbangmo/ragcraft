@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from starlette.responses import Response
 
 from apps.api.dependencies import (
     get_build_benchmark_export_artifacts_use_case,
@@ -58,6 +59,11 @@ from src.domain.benchmark_result import coerce_benchmark_result
 from src.domain.qa_dataset_entry import QADatasetEntry
 
 router = APIRouter(prefix="/evaluation", tags=["evaluation"])
+
+
+def _content_disposition_attachment(filename: str) -> str:
+    safe = filename.replace("\\", "\\\\").replace('"', '\\"')
+    return f'attachment; filename="{safe}"'
 
 
 def _entry_to_response(entry: QADatasetEntry) -> QaDatasetEntryResponse:
@@ -277,21 +283,40 @@ def get_benchmark_export_info() -> BenchmarkExportApiInfoResponse:
 
 @router.post(
     "/export/benchmark",
-    response_model=BenchmarkExportResponse,
+    response_model=None,
     summary="Build benchmark export files (JSON, CSV, Markdown)",
     responses={
-        422: {"description": "Body.result is not a coercible BenchmarkResult payload"},
+        200: {
+            "description": (
+                "If export_format is 'all', JSON object with metadata and base64-encoded artifacts. "
+                "If export_format is json|csv|markdown, raw file bytes with Content-Disposition attachment."
+            ),
+            "content": {
+                "application/json": {},
+                "text/csv": {},
+                "text/markdown": {},
+            },
+        },
+        422: {
+            "description": "Invalid export_format, or body.result is not a coercible BenchmarkResult payload",
+        },
     },
 )
 def post_benchmark_export(
     body: BenchmarkExportRequest,
     use_case: Annotated[Any, Depends(get_build_benchmark_export_artifacts_use_case)],
-) -> BenchmarkExportResponse:
+):
     coerced = coerce_benchmark_result(body.result)
     if coerced is None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="result must be a BenchmarkResult-compatible dict (e.g. POST /evaluation/dataset/run response).",
+            detail={
+                "error": "invalid_benchmark_payload",
+                "message": (
+                    "result must be a BenchmarkResult-compatible object (e.g. the JSON from "
+                    "POST /evaluation/dataset/run). Check summary/rows shape and row entry_id types."
+                ),
+            },
         )
     artifacts = use_case.execute(
         BuildBenchmarkExportCommand(
@@ -302,4 +327,24 @@ def post_benchmark_export(
             generated_at=body.generated_at,
         )
     )
-    return BenchmarkExportResponse.model_validate(benchmark_export_artifacts_to_api_dict(artifacts))
+    fmt = body.export_format
+    if fmt == "all":
+        return BenchmarkExportResponse.model_validate(benchmark_export_artifacts_to_api_dict(artifacts))
+    if fmt == "json":
+        return Response(
+            content=artifacts.json_bytes,
+            media_type="application/json; charset=utf-8",
+            headers={"Content-Disposition": _content_disposition_attachment(artifacts.json_filename)},
+        )
+    if fmt == "csv":
+        return Response(
+            content=artifacts.csv_bytes,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": _content_disposition_attachment(artifacts.csv_filename)},
+        )
+    # fmt == "markdown"
+    return Response(
+        content=artifacts.markdown_bytes,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": _content_disposition_attachment(artifacts.markdown_filename)},
+    )

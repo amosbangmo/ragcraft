@@ -184,22 +184,25 @@ class BenchmarkExportApiInfoResponse(BaseModel):
     implemented: bool = True
     message: str = Field(
         default=(
-            "POST JSON with project_id, retrieval flags, and result (BenchmarkResult.to_dict) "
-            "to receive base64-encoded json, csv, and markdown exports."
+            "POST JSON with project_id, retrieval flags, result, and optional export_format. "
+            "Use export_format=all for a JSON bundle with base64-encoded files; "
+            "json|csv|markdown for a direct file download."
         ),
-        description="Short summary (legacy stub clients used this field).",
+        description="Short summary for API consumers and OpenAPI browsers.",
     )
     planned_post_path: str = "/evaluation/export/benchmark"
     post_supported: bool = True
     description: str = Field(
         default=(
             "POST a JSON body with project_id, enable_query_rewrite, enable_hybrid_retrieval, "
-            "and result (the object returned by POST /evaluation/dataset/run — "
-            "BenchmarkResult.to_dict shape). Response contains base64-encoded json, csv, and markdown bytes."
+            "and result (same shape as POST /evaluation/dataset/run — BenchmarkResult.to_dict). "
+            "Set export_format to 'all' (default) for a JSON object with json_base64, csv_base64, "
+            "markdown_base64 and filenames; or 'json', 'csv', or 'markdown' for a single binary/text "
+            "response with Content-Disposition attachment and the appropriate media type."
         )
     )
     endpoint: str = "/evaluation/export/benchmark"
-    formats: list[str] = Field(default_factory=lambda: ["json", "csv", "markdown"])
+    formats: list[str] = Field(default_factory=lambda: ["json", "csv", "markdown", "all"])
 
 
 # Backward-compatible name for imports / OpenAPI consumers.
@@ -219,6 +222,13 @@ class BenchmarkExportRequest(BaseModel):
     generated_at: str | None = Field(
         default=None,
         description="Optional ISO-8601 timestamp for filenames and metadata.",
+    )
+    export_format: Literal["json", "csv", "markdown", "all"] = Field(
+        default="all",
+        description=(
+            "all: JSON body with base64-encoded json, csv, and markdown (best for programmatic clients). "
+            "json|csv|markdown: raw response bytes with attachment Content-Disposition (best for browser/Angular downloads)."
+        ),
     )
 
 
