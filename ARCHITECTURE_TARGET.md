@@ -27,8 +27,8 @@ See **`docs/README.md`** (local development) for env vars.
 | Location | Role |
 |----------|------|
 | **`src/domain/`** | Entities, ports, payloads. No framework imports (see tests). |
-| **`src/application/`** | Use cases, orchestration (`use_cases/chat/orchestration/`), policies, DTOs, `frontend_support` stubs. No `src.infrastructure`. |
-| **`src/infrastructure/`** | Adapters, persistence, vector stores, caching. |
+| **`src/application/`** | Use cases, RAG orchestration (`use_cases/chat/orchestration/`), eval RAG helper (`rag_pipeline_orchestration.py`), policies, DTOs, `frontend_support` stubs. No `src.infrastructure`. |
+| **`src/infrastructure/`** | Adapters (RAG, evaluation, workspace, …), persistence, vector stores, caching. RAG adapters do not own post-recall pipeline order or query logging. |
 | **`src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**. No `src.frontend_gateway` imports. |
 | **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
 | **`src/auth/`** | Shared auth helpers. |

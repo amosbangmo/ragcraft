@@ -7,7 +7,7 @@
 | **HTTP chat** | `apps/api/routers/chat.py` → `AskQuestionUseCase` via `apps/api/dependencies.py` |
 | **In-process UI** | `src/frontend_gateway/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
 | **Pipeline build only** | `BuildRagPipelineUseCase` (inspect/compare/eval paths) |
-| **Inspect pipeline** | `InspectRagPipelineUseCase` (delegates to build use case) |
+| **Inspect pipeline** | `InspectRagPipelineUseCase` — injected `build_pipeline` is `partial(BuildRagPipelineUseCase.execute, emit_query_log=False)` from composition |
 | **Preview summary recall** | `PreviewSummaryRecallUseCase` |
 | **Answer from built pipeline** | `GenerateAnswerFromPipelineUseCase` |
 
@@ -20,12 +20,12 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Orchestration sequence (application-owned)
 
-**File:** `src/application/use_cases/chat/orchestration/recall_then_assemble_pipeline.py`
+**Recall + assemble helper:** `recall_then_assemble_pipeline.py` calls **`run_summary_recall_from_chat_request`** then **`PipelineAssemblyPort.build`**.
 
 1. **`SummaryRecallAdapter.summary_recall_stage(...)`** — implements **`SummaryRecallStagePort`** (infrastructure: `summary_recall_adapter.py`).
-2. **`pipeline_assembly_service.build(...)`** — implements **`PipelineAssemblyPort`**. Implementation is **`ApplicationPipelineAssembly`** in application, which calls **`assemble_pipeline_from_recall`** (`assemble_pipeline_from_recall.py`).
+2. **`pipeline_assembly_service.build(...)`** — implements **`PipelineAssemblyPort`**. Implementation is **`ApplicationPipelineAssembly`**, delegating to **`assemble_pipeline_from_recall`**, which sequences **`post_recall_pipeline_steps`** (`step_docstore_hydration`, `step_section_expansion`, …).
 
-**Post-recall assembly** (`assemble_pipeline_from_recall`): application code sequences:
+**Post-recall assembly** (`assemble_pipeline_from_recall`): application coordinator; steps delegate to ports:
 
 - Docstore read → section expansion corpus policy (`section_expansion_corpus.py`) → **`SectionExpansionStagePort`** → **`AssetRerankingPort`** → compression → prompt sources → layout → multimodal hint → **`PromptRenderPort`** → **`RerankedConfidencePort`**.
 
