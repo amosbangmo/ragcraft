@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from langchain_core.documents import Document
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 @dataclass(frozen=True)
@@ -140,7 +140,7 @@ def _summary_source_file(metadata: dict | None) -> str:
     return ""
 
 
-def summary_document_matches_filters(doc: Document, filters: RetrievalFilters) -> bool:
+def summary_document_matches_filters(doc: SummaryRecallDocument, filters: RetrievalFilters) -> bool:
     if filters.is_empty():
         return True
 
@@ -188,9 +188,9 @@ def filter_raw_assets_by_filters(assets: list[dict], filters: RetrievalFilters |
 
 
 def filter_summary_documents_by_filters(
-    docs: list[Document],
+    docs: list[SummaryRecallDocument],
     filters: RetrievalFilters | None,
-) -> list[Document]:
+) -> list[SummaryRecallDocument]:
     if filters is None or filters.is_empty():
         return list(docs)
     return [d for d in docs if summary_document_matches_filters(d, filters)]

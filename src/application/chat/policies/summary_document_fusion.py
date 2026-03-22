@@ -6,18 +6,17 @@ Used after parallel semantic (FAISS) and lexical (BM25) recall paths merge into 
 
 from __future__ import annotations
 
-from langchain_core.documents import Document
-
 from src.domain.retrieval_settings import RetrievalSettings
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 def merge_summary_documents_weighted_rrf(
     *,
     settings: RetrievalSettings,
-    primary_docs: list[Document],
-    secondary_docs: list[Document],
+    primary_docs: list[SummaryRecallDocument],
+    secondary_docs: list[SummaryRecallDocument],
     max_docs: int | None = None,
-) -> list[Document]:
+) -> list[SummaryRecallDocument]:
     """
     Merge two ranked document lists using weighted RRF.
 
@@ -30,10 +29,10 @@ def merge_summary_documents_weighted_rrf(
 
     primary_ranks: dict[str, int] = {}
     secondary_ranks: dict[str, int] = {}
-    docs_by_id: dict[str, Document] = {}
+    docs_by_id: dict[str, SummaryRecallDocument] = {}
     first_seen_order: dict[str, int] = {}
 
-    def _ingest(docs: list[Document], *, target_ranks: dict[str, int]) -> None:
+    def _ingest(docs: list[SummaryRecallDocument], *, target_ranks: dict[str, int]) -> None:
         for rank, doc in enumerate(docs, start=1):
             doc_id = doc.metadata.get("doc_id")
             if not doc_id:

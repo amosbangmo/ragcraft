@@ -3,10 +3,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from langchain_core.documents import Document
-
 from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.domain.project import Project
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 def test_preview_returns_none_when_no_recall() -> None:
@@ -27,7 +26,7 @@ def test_preview_returns_none_when_no_recall() -> None:
 
 
 def test_preview_returns_dict_when_recall_present() -> None:
-    doc = Document(page_content="s", metadata={"doc_id": "d1"})
+    doc = SummaryRecallDocument(page_content="s", metadata={"doc_id": "d1"})
     svc = MagicMock()
     svc.summary_recall_stage.return_value = SimpleNamespace(
         rewritten_question="rw",

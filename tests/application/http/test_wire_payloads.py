@@ -25,6 +25,7 @@ from src.core.config import RETRIEVAL_CONFIG
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.summary_recall_document import SummaryRecallDocument
 from src.domain.project_settings import ProjectSettings
 from src.domain.query_intent import QueryIntent
 from src.domain.rag_response import RAGResponse
@@ -53,7 +54,7 @@ def test_pipeline_snapshot_wire_payload() -> None:
         question="q",
         rewritten_question="rw",
         query_intent=QueryIntent.FACTUAL,
-        selected_summary_docs=[Document(page_content="c", metadata={"doc_id": "d"})],
+        selected_summary_docs=[SummaryRecallDocument(page_content="c", metadata={"doc_id": "d"})],
         prompt_sources=[],
         confidence=0.1,
         latency={"total_ms": 2.0},

@@ -4,6 +4,11 @@ from langchain_core.documents import Document
 
 from src.domain.project import Project
 from src.domain.ports.project_chain_handle_cache_port import ProjectChainHandleCachePort
+from src.domain.summary_recall_document import SummaryRecallDocument
+from src.infrastructure.adapters.summary_recall_document_adapter import (
+    langchain_document_from_summary_recall,
+    summary_recall_document_from_langchain,
+)
 from src.infrastructure.caching.process_project_chain_cache import get_default_process_project_chain_cache
 from src.infrastructure.vectorstores.faiss.vector_store import (
     load_vector_store,
@@ -47,14 +52,18 @@ class VectorStoreService:
         self._chain_cache.set(project_id, loaded)
         return loaded
 
-    def index_documents(self, project: Project, chunks: list[Document]) -> tuple[object | None, float]:
+    def index_documents(
+        self, project: Project, chunks: list[SummaryRecallDocument]
+    ) -> tuple[object | None, float]:
         if not chunks:
             return None, 0.0
+
+        lc_chunks: list[Document] = [langchain_document_from_summary_recall(c) for c in chunks]
 
         t0 = time.perf_counter()
         try:
             vector_store = create_or_update_vector_store(
-                chunks=chunks,
+                chunks=lc_chunks,
                 index_path=project.faiss_index_path,
             )
 
@@ -89,14 +98,15 @@ class VectorStoreService:
                 user_message="Unable to update the FAISS index while deleting document vectors.",
             ) from exc
 
-    def similarity_search(self, project: Project, query: str, k: int = 3):
+    def similarity_search(self, project: Project, query: str, k: int = 3) -> list[SummaryRecallDocument]:
         try:
             vector_store = self.load(project)
 
             if vector_store is None:
                 return []
 
-            return vector_store.similarity_search(query, k=k)
+            raw = vector_store.similarity_search(query, k=k)
+            return [summary_recall_document_from_langchain(d) for d in raw]
         except VectorStoreError:
             raise
         except Exception as exc:

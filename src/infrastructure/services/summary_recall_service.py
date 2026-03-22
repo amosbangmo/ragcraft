@@ -5,8 +5,6 @@ from dataclasses import replace
 from time import perf_counter
 from typing import Any
 
-from langchain_core.documents import Document
-
 from src.application.chat.policies.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.pipeline_payloads import SummaryRecallResult
@@ -19,6 +17,8 @@ from src.domain.retrieval_filters import (
 )
 from src.domain.retrieval_settings import RetrievalSettings
 from src.domain.retrieval_strategy import RetrievalStrategy
+from src.domain.summary_recall_document import SummaryRecallDocument
+from src.infrastructure.adapters.summary_recall_document_adapter import summary_recall_document_from_langchain
 from src.infrastructure.services.adaptive_retrieval_service import AdaptiveRetrievalService
 from src.infrastructure.services.docstore_service import DocStoreService
 from src.infrastructure.services.hybrid_retrieval_service import HybridRetrievalService
@@ -150,10 +150,10 @@ class SummaryRecallService:
         self,
         *,
         settings: RetrievalSettings,
-        primary_docs: list[Document],
-        secondary_docs: list[Document],
+        primary_docs: list[SummaryRecallDocument],
+        secondary_docs: list[SummaryRecallDocument],
         max_docs: int | None = None,
-    ) -> list[Document]:
+    ) -> list[SummaryRecallDocument]:
         """Thin adapter over :func:`merge_summary_documents_weighted_rrf`."""
         return merge_summary_documents_weighted_rrf(
             settings=settings,
@@ -190,7 +190,7 @@ class SummaryRecallService:
                 filters,
             )[:k_vec]
 
-        bm25_summary_docs: list[Document] = []
+        bm25_summary_docs: list[SummaryRecallDocument] = []
 
         if enable_hybrid_retrieval:
             project_assets = self.docstore_service.list_assets_for_project(
@@ -198,7 +198,7 @@ class SummaryRecallService:
                 project_id=project.project_id,
             )
 
-            bm25_summary_docs = self.hybrid_retrieval_service.lexical_search(
+            bm25_lc = self.hybrid_retrieval_service.lexical_search(
                 query=retrieval_query,
                 assets=project_assets,
                 k=settings.bm25_search_k,
@@ -207,6 +207,7 @@ class SummaryRecallService:
                 b=settings.bm25_b,
                 epsilon=settings.bm25_epsilon,
             )
+            bm25_summary_docs = [summary_recall_document_from_langchain(d) for d in bm25_lc]
 
         merged_limit = k_vec
         if enable_hybrid_retrieval:

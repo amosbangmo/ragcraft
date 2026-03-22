@@ -1,4 +1,4 @@
-"""Pure selection helpers over summary-level LangChain documents (post-recall, pre-asset fetch)."""
+"""Pure selection helpers over :class:`~src.domain.summary_recall_document.SummaryRecallDocument` lists."""
 
 from __future__ import annotations
 

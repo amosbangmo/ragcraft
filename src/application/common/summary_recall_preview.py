@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from langchain_core.documents import Document
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 @dataclass(frozen=True)
@@ -15,9 +15,9 @@ class SummaryRecallPreviewDTO:
     """
 
     rewritten_question: str
-    recalled_summary_docs: list[Document]
-    vector_summary_docs: list[Document]
-    bm25_summary_docs: list[Document]
+    recalled_summary_docs: list[SummaryRecallDocument]
+    vector_summary_docs: list[SummaryRecallDocument]
+    bm25_summary_docs: list[SummaryRecallDocument]
     retrieval_mode: str
     query_rewrite_enabled: bool
     hybrid_retrieval_enabled: bool

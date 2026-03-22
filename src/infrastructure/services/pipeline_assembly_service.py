@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from time import perf_counter
 
-from langchain_core.documents import Document
-
 from src.application.chat.policies.pipeline_document_selection import (
     deduplicate_summary_doc_ids,
     select_summary_documents_by_doc_ids,
@@ -19,6 +17,7 @@ from src.domain.pipeline_payloads import (
 )
 from src.domain.project import Project
 from src.domain.prompt_source import PromptSource
+from src.domain.summary_recall_document import SummaryRecallDocument
 from src.infrastructure.services.confidence_service import ConfidenceService
 from src.infrastructure.services.contextual_compression_service import ContextualCompressionService
 from src.infrastructure.services.docstore_service import DocStoreService
@@ -58,7 +57,7 @@ class PipelineAssemblyService:
         self.multimodal_orchestration_service = MultimodalOrchestrationService()
 
     @staticmethod
-    def deduplicate_doc_ids(summary_docs: list[Document]) -> list[str]:
+    def deduplicate_doc_ids(summary_docs: list[SummaryRecallDocument]) -> list[str]:
         return deduplicate_summary_doc_ids(summary_docs)
 
     @staticmethod

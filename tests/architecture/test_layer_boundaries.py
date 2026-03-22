@@ -40,12 +40,23 @@ def composition_files() -> list[Path]:
 
 
 def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> None:
+    """
+    Domain stays pure: business types and ports only.
+
+    If this fails, you likely imported FastAPI/Streamlit/SQLite/LangChain or another outer layer.
+    Move adapters to infrastructure/application and keep domain free of framework and I/O imports.
+    """
     forbidden = (
         "src.infrastructure",
         "src.backend",
         "src.services",
         "src.application",
+        "src.ui",
         "streamlit",
+        "fastapi",
+        "starlette",
+        "sqlite3",
+        "langchain",
         "apps",
     )
     violations: list[str] = []
@@ -54,10 +65,19 @@ def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> Non
         bad = any_module_matches(mods, prefixes=forbidden)
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    assert not violations, "Domain layer violations:\n" + "\n".join(violations)
+    msg = (
+        "Domain layer imported a forbidden module (presentation, HTTP, persistence drivers, or LangChain). "
+        "Keep ports/DTOs here; wire frameworks only in application or infrastructure.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_application_does_not_depend_on_ui_or_infrastructure(application_files: list[Path]) -> None:
+    """
+    Application use cases must not depend on Streamlit or the API package.
+
+    Only ``src.infrastructure.services`` is allowed (orchestration moved from legacy ``src.backend``).
+    """
     violations: list[str] = []
     for path in application_files:
         mods = imported_top_level_modules(path)
@@ -68,7 +88,11 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
             elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.services"):
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-    assert not violations, "Application layer violations:\n" + "\n".join(violations)
+    msg = (
+        "Application layer must not import Streamlit, apps.api, or infrastructure adapters "
+        "(except ``src.infrastructure.services``). Use ports/DTOs and the composition root instead.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_infrastructure_does_not_depend_on_application_or_streamlit(
@@ -96,11 +120,19 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
         bad = any_module_matches(mods, prefixes=forbidden)
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    assert not violations, "Infrastructure layer violations:\n" + "\n".join(violations)
+    msg = (
+        "Non-service infrastructure must not import application use cases or Streamlit. "
+        "Service modules under ``src/infrastructure/services`` may import ``src.application`` by design.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_api_routers_do_not_import_infrastructure(router_files: list[Path]) -> None:
-    """HTTP adapters wire use cases via ``Depends``; they must not reach SQLite/FAISS modules directly."""
+    """
+    Routers resolve use cases via FastAPI ``Depends`` on the composition root.
+
+    Direct ``src.infrastructure`` imports bypass DI and couple HTTP to adapters; add a use case instead.
+    """
     forbidden = ("src.infrastructure",)
     violations: list[str] = []
     for path in router_files:
@@ -108,7 +140,8 @@ def test_api_routers_do_not_import_infrastructure(router_files: list[Path]) -> N
         bad = any_module_matches(mods, prefixes=forbidden)
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    assert not violations, "API router violations:\n" + "\n".join(violations)
+    msg = "API routers must not import infrastructure packages; wire through apps.api.dependencies.\n"
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_composition_root_avoids_streamlit(composition_files: list[Path]) -> None:

@@ -30,7 +30,11 @@ def test_apps_api_package_avoids_streamlit_and_ui_layers() -> None:
         forbidden=("streamlit", "src.ui"),
         repo_root=REPO_ROOT,
     )
-    assert not violations, "apps/api must not import Streamlit or src.ui:\n" + "\n".join(violations)
+    msg = (
+        "The FastAPI package must stay free of Streamlit and ``src.ui`` "
+        "(those belong to the Streamlit process only).\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_apps_api_package_avoids_runtime_services_layer() -> None:
@@ -45,10 +49,11 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
         forbidden=("src.services", "src.backend", "src.infrastructure.services"),
         repo_root=REPO_ROOT,
     )
-    assert not violations, (
-        "apps/api must not import src.services, src.backend, or src.infrastructure.services:\n"
-        + "\n".join(violations)
+    msg = (
+        "FastAPI should depend on use cases from ``apps.api.dependencies`` / the composition root, "
+        "not on ``src.infrastructure.services``, ``src.backend``, or ``src.services`` directly.\n"
     )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
@@ -69,7 +74,11 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
         "apps.",
     )
     violations = collect_import_violations(roots, forbidden=forbidden, repo_root=REPO_ROOT)
-    assert not violations, "Streamlit surface leaked backend internals:\n" + "\n".join(violations)
+    msg = (
+        "Streamlit pages and ``src/ui`` must use ``src.frontend_gateway`` (protocol, view_models, HTTP transport) "
+        "and must not import domain, infrastructure, composition, or ``apps.api`` directly.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
 
 
 def test_http_and_in_process_backend_clients_expose_same_gateway_operations() -> None:

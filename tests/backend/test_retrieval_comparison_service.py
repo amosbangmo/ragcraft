@@ -1,8 +1,7 @@
 import unittest
 
-from langchain_core.documents import Document
-
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.summary_recall_document import SummaryRecallDocument
 from src.domain.project import Project
 from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
 
@@ -19,7 +18,7 @@ def _fake_pipeline(
     return PipelineBuildResult(
         rewritten_question=rewritten_question,
         recalled_summary_docs=[
-            Document(page_content=str(i), metadata={}) for i in range(recalled_n)
+            SummaryRecallDocument(page_content=str(i), metadata={}) for i in range(recalled_n)
         ],
         recalled_doc_ids=list(recalled_doc_ids),
         reranked_raw_assets=reranked_raw_assets,

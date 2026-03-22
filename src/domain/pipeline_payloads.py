@@ -3,11 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from langchain_core.documents import Document
-
 from src.domain.query_intent import QueryIntent
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.retrieval_strategy import RetrievalStrategy
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 if TYPE_CHECKING:
     from src.domain.retrieval_settings import RetrievalSettings
@@ -61,9 +60,9 @@ class SummaryRecallResult:
     enable_hybrid_retrieval: bool
     enable_query_rewrite: bool
     filters_for_retrieval: RetrievalFilters | None
-    vector_summary_docs: list[Document]
-    bm25_summary_docs: list[Document]
-    recalled_summary_docs: list[Document]
+    vector_summary_docs: list[SummaryRecallDocument]
+    bm25_summary_docs: list[SummaryRecallDocument]
+    recalled_summary_docs: list[SummaryRecallDocument]
     retrieval_ms: float
 
     def to_dict(self) -> dict[str, Any]:
@@ -100,14 +99,14 @@ class PipelineBuildResult:
         default_factory=lambda: RetrievalStrategy(k=1, use_hybrid=False, apply_filters=True)
     )
     retrieval_filters: dict[str, Any] | None = None
-    vector_summary_docs: list[Document] = field(default_factory=list)
-    bm25_summary_docs: list[Document] = field(default_factory=list)
-    recalled_summary_docs: list[Document] = field(default_factory=list)
+    vector_summary_docs: list[SummaryRecallDocument] = field(default_factory=list)
+    bm25_summary_docs: list[SummaryRecallDocument] = field(default_factory=list)
+    recalled_summary_docs: list[SummaryRecallDocument] = field(default_factory=list)
     recalled_doc_ids: list[str] = field(default_factory=list)
     recalled_raw_assets: list[dict[str, Any]] = field(default_factory=list)
     pre_rerank_raw_assets: list[dict[str, Any]] = field(default_factory=list)
     section_expansion: SectionExpansionStats = field(default_factory=SectionExpansionStats)
-    selected_summary_docs: list[Document] = field(default_factory=list)
+    selected_summary_docs: list[SummaryRecallDocument] = field(default_factory=list)
     selected_doc_ids: list[str] = field(default_factory=list)
     reranked_raw_assets: list[dict[str, Any]] = field(default_factory=list)
     prompt_context_assets: list[dict[str, Any]] = field(default_factory=list)

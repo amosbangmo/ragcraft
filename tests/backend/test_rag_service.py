@@ -98,12 +98,12 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     faiss_store_module.delete_documents_from_vector_store = _noop
     sys.modules["src.infrastructure.vectorstores.faiss.vector_store"] = faiss_store_module
 
-from langchain_core.documents import Document
 from src.core.exceptions import LLMServiceError
 from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
+from src.domain.summary_recall_document import SummaryRecallDocument
 from src.infrastructure.services.confidence_service import ConfidenceService
 from src.infrastructure.services.rag_service import RAGService
 
@@ -143,10 +143,10 @@ class TestRAGService(unittest.TestCase):
     def test_deduplicate_doc_ids_preserves_order(self):
         service, *_ = self._build_service()
         docs = [
-            Document(page_content="a", metadata={"doc_id": "d1"}),
-            Document(page_content="b", metadata={"doc_id": "d2"}),
-            Document(page_content="c", metadata={"doc_id": "d1"}),
-            Document(page_content="d", metadata={}),
+            SummaryRecallDocument(page_content="a", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="b", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="c", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="d", metadata={}),
         ]
 
         result = service.pipeline_assembly_service.deduplicate_doc_ids(docs)
@@ -160,12 +160,12 @@ class TestRAGService(unittest.TestCase):
 
         # ranks: d1(1), d2(2) in primary; d2(1), d3(2) in secondary
         primary_docs = [
-            Document(page_content="p1", metadata={"doc_id": "d1"}),
-            Document(page_content="p2", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
         ]
         secondary_docs = [
-            Document(page_content="s1", metadata={"doc_id": "d2"}),
-            Document(page_content="s2", metadata={"doc_id": "d3"}),
+            SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
         merged = service.summary_recall_service.merge_summary_docs(
@@ -184,12 +184,12 @@ class TestRAGService(unittest.TestCase):
         settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
-            Document(page_content="p1", metadata={"doc_id": "d1"}),
-            Document(page_content="p2", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
         ]
         secondary_docs = [
-            Document(page_content="s1", metadata={"doc_id": "d2"}),
-            Document(page_content="s2", metadata={"doc_id": "d3"}),
+            SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
         merged = service.summary_recall_service.merge_summary_docs(
@@ -208,12 +208,12 @@ class TestRAGService(unittest.TestCase):
         settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
-            Document(page_content="p1", metadata={"doc_id": "d1"}),
-            Document(page_content="p2", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
         ]
         secondary_docs = [
-            Document(page_content="s1", metadata={"doc_id": "d2"}),
-            Document(page_content="s2", metadata={"doc_id": "d3"}),
+            SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
         merged = service.summary_recall_service.merge_summary_docs(
@@ -232,12 +232,12 @@ class TestRAGService(unittest.TestCase):
         settings = service.retrieval_settings_service.get_default()
 
         primary_docs = [
-            Document(page_content="p1", metadata={"doc_id": "d1"}),
-            Document(page_content="p2", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
         ]
         secondary_docs = [
-            Document(page_content="s1", metadata={"doc_id": "d2"}),
-            Document(page_content="s2", metadata={"doc_id": "d3"}),
+            SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
         ]
 
         merged = service.summary_recall_service.merge_summary_docs(
@@ -267,8 +267,8 @@ class TestRAGService(unittest.TestCase):
         service, _, _evaluation_service, docstore_service, reranking_service = self._build_service()
         project = Project(user_id="u1", project_id="p1")
         recalled_summary_docs = [
-            Document(page_content="sum1", metadata={"doc_id": "d1"}),
-            Document(page_content="sum2", metadata={"doc_id": "d2"}),
+            SummaryRecallDocument(page_content="sum1", metadata={"doc_id": "d1"}),
+            SummaryRecallDocument(page_content="sum2", metadata={"doc_id": "d2"}),
         ]
         raw_assets = [
             {"doc_id": "d1", "content_type": "text", "source_file": "f1", "raw_content": "raw", "metadata": {}}
@@ -378,7 +378,7 @@ class TestRAGService(unittest.TestCase):
         project = Project(user_id="u1", project_id="p1")
         pipeline = PipelineBuildResult(
             prompt="prompt text",
-            selected_summary_docs=[Document(page_content="sum", metadata={"doc_id": "d1"})],
+            selected_summary_docs=[SummaryRecallDocument(page_content="sum", metadata={"doc_id": "d1"})],
             reranked_raw_assets=[{"doc_id": "d1"}],
             prompt_sources=[{"doc_id": "d1"}],
             confidence=0.8,

@@ -10,6 +10,7 @@ from src.application.ingestion.ingestion_diagnostics_log import log_ingestion_di
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.domain.project import Project
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 from src.application.ingestion.dtos import IngestDocumentResult
 
@@ -36,7 +37,14 @@ def finalize_ingestion_pipeline(
 
     indexing_ms = 0.0
     if summary_documents:
-        _, indexing_ms = vector_index.index_documents(project, summary_documents)
+        chunks = [
+            SummaryRecallDocument(
+                page_content=str(getattr(d, "page_content", "") or ""),
+                metadata=dict(getattr(d, "metadata", None) or {}),
+            )
+            for d in summary_documents
+        ]
+        _, indexing_ms = vector_index.index_documents(project, chunks)
 
     diagnostics = replace(
         diagnostics,

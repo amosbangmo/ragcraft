@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from langchain_core.documents import Document
-
 from src.application.chat.policies.summary_document_fusion import merge_summary_documents_weighted_rrf
 from src.core.config import RETRIEVAL_CONFIG
 from src.domain.retrieval_settings import RetrievalSettings
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 def _settings(*, hybrid_beta: float = 0.5, rrf_k: int = 60) -> RetrievalSettings:
@@ -19,12 +18,12 @@ def _settings(*, hybrid_beta: float = 0.5, rrf_k: int = 60) -> RetrievalSettings
 def test_rrf_prioritizes_docs_that_rank_well_in_both_lists() -> None:
     settings = _settings()
     primary_docs = [
-        Document(page_content="p1", metadata={"doc_id": "d1"}),
-        Document(page_content="p2", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+        SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
     ]
     secondary_docs = [
-        Document(page_content="s1", metadata={"doc_id": "d2"}),
-        Document(page_content="s2", metadata={"doc_id": "d3"}),
+        SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
     ]
 
     merged = merge_summary_documents_weighted_rrf(
@@ -40,12 +39,12 @@ def test_rrf_prioritizes_docs_that_rank_well_in_both_lists() -> None:
 def test_rrf_respects_max_docs() -> None:
     settings = _settings()
     primary_docs = [
-        Document(page_content="p1", metadata={"doc_id": "d1"}),
-        Document(page_content="p2", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+        SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
     ]
     secondary_docs = [
-        Document(page_content="s1", metadata={"doc_id": "d2"}),
-        Document(page_content="s2", metadata={"doc_id": "d3"}),
+        SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
     ]
 
     merged = merge_summary_documents_weighted_rrf(
@@ -62,12 +61,12 @@ def test_rrf_respects_max_docs() -> None:
 def test_beta_one_weights_semantic_list_only() -> None:
     settings = _settings(hybrid_beta=1.0)
     primary_docs = [
-        Document(page_content="p1", metadata={"doc_id": "d1"}),
-        Document(page_content="p2", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+        SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
     ]
     secondary_docs = [
-        Document(page_content="s1", metadata={"doc_id": "d2"}),
-        Document(page_content="s2", metadata={"doc_id": "d3"}),
+        SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
     ]
 
     merged = merge_summary_documents_weighted_rrf(
@@ -83,12 +82,12 @@ def test_beta_one_weights_semantic_list_only() -> None:
 def test_beta_zero_weights_lexical_list_only() -> None:
     settings = _settings(hybrid_beta=0.0)
     primary_docs = [
-        Document(page_content="p1", metadata={"doc_id": "d1"}),
-        Document(page_content="p2", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
+        SummaryRecallDocument(page_content="p2", metadata={"doc_id": "d2"}),
     ]
     secondary_docs = [
-        Document(page_content="s1", metadata={"doc_id": "d2"}),
-        Document(page_content="s2", metadata={"doc_id": "d3"}),
+        SummaryRecallDocument(page_content="s1", metadata={"doc_id": "d2"}),
+        SummaryRecallDocument(page_content="s2", metadata={"doc_id": "d3"}),
     ]
 
     merged = merge_summary_documents_weighted_rrf(

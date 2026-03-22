@@ -37,6 +37,7 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
 from langchain_core.documents import Document
 from src.core.exceptions import VectorStoreError
 from src.domain.project import Project
+from src.domain.summary_recall_document import SummaryRecallDocument
 from src.infrastructure.caching.process_project_chain_cache import ProcessProjectChainCache
 from src.infrastructure.services.vectorstore_service import VectorStoreService
 
@@ -90,7 +91,7 @@ class TestVectorStoreService(unittest.TestCase):
     @patch("src.infrastructure.services.vectorstore_service.save_vector_store")
     @patch("src.infrastructure.services.vectorstore_service.create_or_update_vector_store")
     def test_index_documents_saves_vector_store_when_created(self, mock_create_or_update, mock_save):
-        chunks = [Document(page_content="chunk", metadata={"doc_id": "d1"})]
+        chunks = [SummaryRecallDocument(page_content="chunk", metadata={"doc_id": "d1"})]
         vector_store = MagicMock()
         mock_create_or_update.return_value = vector_store
 
@@ -99,6 +100,12 @@ class TestVectorStoreService(unittest.TestCase):
         self.assertIs(store, vector_store)
         self.assertGreaterEqual(indexing_ms, 0.0)
         mock_save.assert_called_once_with(vector_store, self.project.faiss_index_path)
+        mock_create_or_update.assert_called_once()
+        passed_chunks = mock_create_or_update.call_args.kwargs.get("chunks")
+        self.assertIsNotNone(passed_chunks)
+        self.assertEqual(len(passed_chunks), 1)
+        self.assertEqual(passed_chunks[0].page_content, "chunk")
+        self.assertEqual(passed_chunks[0].metadata.get("doc_id"), "d1")
 
     def test_similarity_search_returns_empty_when_store_missing(self):
         with patch.object(self.service, "load", return_value=None):

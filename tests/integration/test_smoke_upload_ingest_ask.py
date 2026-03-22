@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 # Populated in setUpModule; cleared in tearDownModule so stubbed packages do not
 # leak into other test modules (which may be collected / run in any order).
@@ -162,7 +163,10 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
 
         self.assertEqual(ingest_result.raw_assets, raw_assets)
         backend.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
-        backend.vectorstore_service.index_documents.assert_called_once_with(project, summary_documents)
+        expected_index_chunks = [
+            SummaryRecallDocument(page_content="summary", metadata={}),
+        ]
+        backend.vectorstore_service.index_documents.assert_called_once_with(project, expected_index_chunks)
         self.assertIsNotNone(ask_result)
         self.assertTrue(ask_result.prompt_sources)
         self.assertEqual(ask_result.prompt_sources[0]["doc_id"], "doc-1")

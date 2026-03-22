@@ -1,7 +1,5 @@
 import unittest
 
-from langchain_core.documents import Document
-
 from src.domain.retrieval_filters import (
     RetrievalFilters,
     filter_raw_assets_by_filters,
@@ -10,6 +8,7 @@ from src.domain.retrieval_filters import (
     summary_document_matches_filters,
     vector_search_fetch_k,
 )
+from src.domain.summary_recall_document import SummaryRecallDocument
 
 
 class TestRetrievalFilters(unittest.TestCase):
@@ -143,7 +142,7 @@ class TestRetrievalFilters(unittest.TestCase):
 
     def test_summary_document_uses_file_name(self):
         f = RetrievalFilters(source_files=["doc.pdf"])
-        doc = Document(page_content="x", metadata={"file_name": "doc.pdf", "content_type": "text"})
+        doc = SummaryRecallDocument(page_content="x", metadata={"file_name": "doc.pdf", "content_type": "text"})
         self.assertTrue(summary_document_matches_filters(doc, f))
 
     def test_filter_raw_assets_preserves_order(self):
@@ -157,8 +156,8 @@ class TestRetrievalFilters(unittest.TestCase):
 
     def test_filter_summary_documents(self):
         docs = [
-            Document(page_content="a", metadata={"doc_id": "1", "source_file": "x.pdf"}),
-            Document(page_content="b", metadata={"doc_id": "2", "source_file": "y.pdf"}),
+            SummaryRecallDocument(page_content="a", metadata={"doc_id": "1", "source_file": "x.pdf"}),
+            SummaryRecallDocument(page_content="b", metadata={"doc_id": "2", "source_file": "y.pdf"}),
         ]
         f = RetrievalFilters(source_files=["y.pdf"])
         out = filter_summary_documents_by_filters(docs, f)
