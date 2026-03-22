@@ -47,6 +47,15 @@ def test_legacy_backend_package_directory_is_absent() -> None:
     )
 
 
+def test_legacy_src_services_package_directory_is_absent() -> None:
+    """The legacy ``src/services`` layer was removed; use ``src.application`` and ``src.infrastructure.adapters``."""
+    services_dir = REPO_ROOT / "src" / "services"
+    assert not services_dir.exists(), (
+        "``src/services`` was removed; put orchestration in ``src.application`` and technical code in "
+        f"``src/infrastructure/adapters``. Delete leftover directory: {services_dir}"
+    )
+
+
 def test_legacy_infrastructure_services_package_directory_is_absent() -> None:
     """
     The old ``src/infrastructure/services`` package was removed; runtime code lives in
@@ -104,6 +113,21 @@ def test_codebase_python_does_not_import_removed_infrastructure_services_package
     msg = (
         "``src.infrastructure.services`` was removed. Use ``src.infrastructure.adapters`` "
         "for concrete adapters and ``src.application`` for orchestration.\n"
+    )
+    assert not violations, msg + "\n".join(violations)
+
+
+def test_codebase_python_does_not_import_removed_src_services_package() -> None:
+    """No imports of ``src.services`` (removed — use ``src.application`` / ``src.infrastructure.adapters``)."""
+    violations: list[str] = []
+    for path in _repo_python_paths_for_legacy_shim_import_guards():
+        for mod in imported_top_level_modules(path):
+            if mod == "src.services" or mod.startswith("src.services."):
+                rel = path.relative_to(REPO_ROOT)
+                violations.append(f"{rel}: imports {mod}")
+    msg = (
+        "``src.services`` was removed. Use ``src.application`` for orchestration and "
+        "``src.infrastructure.adapters`` for concrete adapters.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
