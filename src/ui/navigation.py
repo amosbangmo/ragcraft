@@ -1,8 +1,7 @@
 import streamlit as st
 
-from src.core.session import get_user_id
-from src.core.app_state import get_backend_client
 from src.auth.auth_service import AuthService
+from src.frontend_gateway.streamlit_context import get_backend_client, get_user_id
 from src.ui.avatar import render_user_avatar
 
 

@@ -1,17 +1,12 @@
 import streamlit as st
 
+from src.auth.guards import require_authentication
 from src.frontend_gateway.protocol import BackendClient
+from src.frontend_gateway.streamlit_context import refresh_streamlit_auth_session_from_user_id
 from src.ui.avatar import render_user_avatar
 from src.ui.layout import apply_layout
 from src.ui.page_header import render_page_header
 from src.ui.section_card import inject_section_card_styles, section_card
-from src.auth.auth_service import AuthService
-from src.auth.guards import require_authentication
-
-
-def _refresh_profile_session(user_id: str) -> None:
-    """Keep Streamlit session aligned with SQLite after HTTP API profile mutations."""
-    AuthService().refresh_session_from_user_id(user_id)
 
 
 require_authentication("pages/profile.py")
@@ -52,7 +47,7 @@ def confirm_profile_update_dialog(user_id: str, username: str, display_name: str
                 new_display_name=display_name,
             )
             if success:
-                _refresh_profile_session(user_id)
+                refresh_streamlit_auth_session_from_user_id(user_id)
                 st.session_state["profile_success_message"] = message
             else:
                 st.session_state["profile_error_message"] = message
@@ -82,7 +77,7 @@ def confirm_password_change_dialog(
                 confirm_new_password=confirm_new_password,
             )
             if success:
-                _refresh_profile_session(user_id)
+                refresh_streamlit_auth_session_from_user_id(user_id)
                 st.session_state["profile_success_message"] = message
             else:
                 st.session_state["profile_error_message"] = message
@@ -219,7 +214,7 @@ with row_2_col_1:
             if st.button("Save avatar", use_container_width=True):
                 success, message = client.save_avatar(user["user_id"], avatar_file)
                 if success:
-                    _refresh_profile_session(str(user["user_id"]))
+                    refresh_streamlit_auth_session_from_user_id(str(user["user_id"]))
                     st.session_state["profile_success_message"] = message
                 else:
                     st.session_state["profile_error_message"] = message

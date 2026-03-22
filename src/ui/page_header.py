@@ -1,7 +1,6 @@
 import streamlit as st
 
-from src.core.app_state import get_backend_client
-from src.core.session import get_user_id
+from src.frontend_gateway.streamlit_context import get_backend_client, get_user_id
 from src.ui.project_selector import render_project_selector
 
 
@@ -42,7 +41,7 @@ def render_page_header(
     refresh_button_disabled: bool = False,
     metrics: list[tuple[str, str | int | float]] | None = None,
 ):
-    app = get_app()
+    backend_client = get_backend_client()
     user_id = get_user_id()
 
     render_hero(
