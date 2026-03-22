@@ -9,7 +9,7 @@ This document captures the **as-is** layout, known Clean Architecture leaks, and
 ### `apps/api`
 
 - **Role:** HTTP delivery for RAGCraft: `create_app()` in `apps/api/main.py`, router modules under `apps/api/routers/`, Pydantic DTOs under `apps/api/schemas/`, shared error handling (`error_handlers.py`, `error_payload.py`), settings (`config.py`), and upload bridging (`upload_adapter.py`).
-- **Wiring:** `apps/api/dependencies.py` exposes FastAPI `Depends` providers. Many use cases are constructed here, but the graph is anchored on a process-wide `BackendComposition` and a **`RAGCraftApp` façade** (`get_ragcraft_app`) so API and Streamlit share the same service instances (notably `QueryLogService` and lazy `RAGService`).
+- **Wiring:** `apps/api/dependencies.py` exposes FastAPI `Depends` providers from **`get_backend_application_container`** (process-wide `BackendComposition` + named use cases). Streamlit in-process mode still uses **`RAGCraftApp`** via `InProcessBackendClient` in `src/core/app_state.py`; the HTTP API does not depend on `get_ragcraft_app` (removed as dead compatibility code).
 - **Deferred imports:** Dependency getters intentionally lazy-import heavy stacks (FAISS / LangChain) so lightweight routes (e.g. health) stay importable in minimal environments.
 
 ### `src/app`

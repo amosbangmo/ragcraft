@@ -1,12 +1,11 @@
 """
 FastAPI dependency providers.
 
-Wiring uses :func:`get_backend_composition` (process-wide service graph) and
-:class:`~src.composition.application_container.BackendApplicationContainer` as the **backend**
-integration boundary. Shared ``QueryLogService`` and lazy ``RAGService`` live on that composition.
+**Primary entrypoint:** :func:`get_backend_application_container` — process-wide
+:class:`~src.composition.backend_composition.BackendComposition` plus named use cases and services.
 
-:class:`~src.app.ragcraft_app.RAGCraftApp` is **legacy** (Streamlit façade); :func:`get_ragcraft_app`
-remains for compatibility but FastAPI routes should depend on the container.
+:class:`~src.app.ragcraft_app.RAGCraftApp` is used only by Streamlit in-process mode
+(``InProcessBackendClient``); FastAPI routes must depend on this module's container getters, not the façade.
 
 Use-case imports stay deferred inside getters where needed so ``import apps.api.dependencies`` does
 not load FAISS / LangChain (keeps ``/health`` importable in minimal environments).
@@ -38,20 +37,6 @@ def get_backend_application_container() -> Any:
         backend=get_backend_composition(),
         invalidate_chain_key=invalidate_chain_key,
     )
-
-
-@lru_cache(maxsize=1)
-def get_ragcraft_app() -> Any:
-    """
-    Legacy Streamlit façade over the same process-wide container as the API.
-
-    Prefer :func:`get_backend_application_container` for new FastAPI dependencies. Kept so imports
-    and tests that still reference ``get_ragcraft_app`` continue to work until removed — see
-    ``docs/migration/ragcraftapp-deprecation.md``.
-    """
-    from src.app.ragcraft_app import RAGCraftApp
-
-    return RAGCraftApp(application_container=get_backend_application_container())
 
 
 def get_project_service(

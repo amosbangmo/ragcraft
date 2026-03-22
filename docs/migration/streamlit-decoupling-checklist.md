@@ -29,6 +29,7 @@ Use this before treating Streamlit as “done” for an Angular or HTTP-only mig
 
 ## Related docs
 
+- `docs/migration/final-status.md` — migration outcome, API vs in-process gaps, next steps before a SPA.
 - `docs/migration/streamlit-backend-client.md` — client abstraction and HTTP mode.
 - `docs/migration/streamlit-fastapi-dev.md` — running API + Streamlit.
 

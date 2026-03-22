@@ -18,7 +18,7 @@
    - HTTP client calls into the FastAPI app where appropriate.
 2. **Move session-only state** — ``src/core/app_state.py`` and ``src/core/chain_state.py`` should live under an interfaces layer (per ``ARCHITECTURE_TARGET.md``) so the core package is not Streamlit-coupled.
 3. **Update remaining references** — For example docstrings and modules that mention ``RAGCraftApp`` as the canonical orchestration path (e.g. some evaluation use-case module headers, ``manual_evaluation_service`` type hints) should point at the container or use cases.
-4. **Remove ``get_ragcraft_app``** from ``apps/api/dependencies.py`` once no tests or external code rely on it.
+4. **Remove ``get_ragcraft_app`` from ``apps/api/dependencies.py``** — **done** (no routers depended on it).
 5. **Confirm parity** — Integration tests for upload / ingest / ask and API smoke tests should pass with only the container on the critical path.
 
 Until those steps are done, **do not delete** ``RAGCraftApp``: it keeps Streamlit behavior and constructor patterns stable for existing sessions.
