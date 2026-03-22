@@ -40,7 +40,7 @@ def test_apps_api_package_avoids_streamlit_and_ui_layers() -> None:
 def test_apps_api_package_avoids_runtime_services_layer() -> None:
     """
     FastAPI wires use cases from the composition root; it must not import the legacy ``src.services``
-    namespace, deprecated ``src.backend`` shims, or the concrete runtime service package
+    namespace, the removed ``src.backend`` package, or the concrete runtime service package
     (``src.infrastructure.services``) directly.
     """
     api_root = REPO_ROOT / "apps" / "api"
@@ -51,7 +51,7 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
     )
     msg = (
         "FastAPI should depend on use cases from ``apps.api.dependencies`` / the composition root, "
-        "not on ``src.infrastructure.services``, ``src.backend``, or ``src.services`` directly.\n"
+        "not on ``src.infrastructure.services``, ``src.backend`` (removed), or ``src.services`` directly.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

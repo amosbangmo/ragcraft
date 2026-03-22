@@ -8,10 +8,10 @@ Pytest modules under this package scan **import statements** (via the AST) and f
 |--------|-----------|----------------------------------|
 | **Domain** | `src/domain/` | `src.infrastructure`, `src.backend`, `src.services`, `src.application`, `src.ui`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `apps` |
 | **Application** | `src/application/` | `streamlit`, `apps`, `src.infrastructure` except the **`src.infrastructure.services`** subtree |
-| **Infrastructure** | `src/infrastructure/` | **`src.application`**, `streamlit`, `apps` — **except** `src/infrastructure/services/`, which may import `src.application` and `streamlit` (runtime graph moved from deprecated `src.backend`) |
+| **Infrastructure** | `src/infrastructure/` | **`src.application`**, `streamlit`, `apps` — **except** `src/infrastructure/services/`, which may import `src.application` and `streamlit` |
 | **API routers** | `apps/api/routers/` | `src.infrastructure` |
 | **Composition root** | `src/composition/` | `streamlit`, `apps` |
-| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.backend`**, **`src.services`**, **`src.infrastructure.services`** |
+| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.services`**, **`src.infrastructure.services`**, **`src.backend`** |
 | **Streamlit surface** | `pages/`, `src/ui/` | `src.backend`, `src.domain`, `src.infrastructure.services`, `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
 
 Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
@@ -20,10 +20,10 @@ Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **beha
 
 - **Domain** may import **`src.core`** (paths, config, shared exceptions). Summary-level retrieval uses **`SummaryRecallDocument`** in-domain — not LangChain `Document`.
 - **Application** may import **`src.infrastructure.services`** (canonical runtime services) and **`src.domain`**.
-- **Routers** wire use cases via **`Depends`** and must not import **`src.backend`**, **`src.infrastructure.services`**, or other **`src.infrastructure`** modules directly.
+- **Routers** wire use cases via **`Depends`** and must not import **`src.infrastructure.services`** or other **`src.infrastructure`** modules directly (and must not reference the removed **`src.backend`** package).
 - **Streamlit pages and widgets** may import **`streamlit`**, **`src.frontend_gateway`** (including **`view_models`** for display types), and **`src.auth`**; they must not import **`src.domain`** directly, nor **`src.backend`**, **`src.infrastructure.services`**, **`src.services`**, or the composition/app entrypoints.
 - **`src.frontend_gateway`** must not import **`src.infrastructure`** (use **`src.application.frontend_support`** for HTTP stub factories that need **`src.infrastructure.services`**).
-- **Production `src/`** (excluding **`src/backend/`** itself) must not import **`src.backend`** (deprecated shim package).
+- **Production `src/`** must not import **`src.backend`** (package removed; directory must not exist).
 - We do **not** assert a clean `sys.modules` after `import apps.api.main`: third-party transitive imports can load unrelated packages; the **AST scan** of `apps/api` is the stable guard for “API code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.
 

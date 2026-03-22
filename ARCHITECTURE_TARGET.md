@@ -43,14 +43,14 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 
 | Item | Status |
 |------|--------|
-| **`src/backend/`** | **Deprecated** re-export shims → `src.infrastructure.services.*`. Do not add new code here; import canonical modules. |
+| **`src/backend/`** | **Removed.** Import **`src.infrastructure.services`** (or application use cases); do not reintroduce. |
 | **`src/services/`** | **Removed** as a package name; do not reintroduce. |
 | **`src/app/ragcraft_app.py`** | **Removed**; in-process mode uses **`InProcessBackendClient`** + **`BackendApplicationContainer`** directly. |
 
 ## Tests
 
 - **`tests/architecture/`** — Import-boundary and migration guardrails.
-- **`tests/infrastructure_services/`** — Unit tests for **`src.infrastructure.services`** (renamed from `tests/backend` to avoid confusion with `apps/api` or `src/backend`).
+- **`tests/infrastructure_services/`** — Unit tests for **`src.infrastructure.services`** (renamed from `tests/backend` to avoid confusion with `apps/api`).
 - **`tests/apps_api/`** — FastAPI contract and E2E-style HTTP tests.
 
 ## Further reading

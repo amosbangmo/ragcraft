@@ -22,7 +22,7 @@ This document inventories **application-flow orchestration** that still lives ou
 
 ## Compatibility shims (should disappear after import migration)
 
-- **`src/backend/*.py`** — Each module is a **deprecated alias** of the matching `src.infrastructure.services.*` module (see `tests/infrastructure_services/test_deprecated_backend_shim_imports.py` and per-file docstrings, e.g. `src/backend/rag_service.py` uses `importlib` to replace the module). **Target:** delete once no remaining `from src.backend...` imports; callers should use `src.infrastructure.services` or (preferably) application use cases + composition only.
+- **`src/backend/`** — **Removed.** Canonical implementations live in `src/infrastructure/services/*`; architecture tests assert the directory is absent and nothing under `src/` imports `src.backend`.
 
 - **`src/application/evaluation/__init__.py`** still documents benchmark math under `src/services/*`; **`src/services/` is empty** in this repo. **Target:** update that docstring to name real locations (`src/infrastructure/services/*`, `src/domain/evaluation/*`) when touching the package.
 
@@ -139,11 +139,11 @@ This document inventories **application-flow orchestration** that still lives ou
 
 ## Summary: remaining orchestration problems
 
-1. **Dual entrypaths:** FastAPI uses application use cases; **in-process** `BackendClient` often uses **`RAGService`** and **`ProjectService`** directly and **reimplements** document details.
+1. **Dual entrypaths (partially addressed):** FastAPI and in-process `BackendClient` should both go through the same use cases; any remaining `RAGService` shortcuts should be narrowed over time.
 2. **Orchestration inside infrastructure:** `RAGService`, `RetrievalComparisonService`, and `EvaluationService` **construct or encode** multi-step workflows that belong in `src/application` or the composition root.
 3. **Duplicated evaluation pipeline:** Manual and gold dataset use cases both encode inspect → answer → latency merge; should be one internal application helper.
-4. **Shims:** `src/backend/*` should be **removed** after import cleanup; `src/application/evaluation/__init__.py` references a **non-existent** `src/services` tree.
-5. **Incidental:** `navigation.py` **`auth_service` NameError** in sidebar avatar path.
+4. **Docs:** `src/application/evaluation/__init__.py` may still reference a **non-existent** `src/services` tree in prose.
+5. **`src/backend/`** — **removed** (canonical: `src.infrastructure.services`).
 
 ---
 
@@ -151,8 +151,8 @@ This document inventories **application-flow orchestration** that still lives ou
 
 | Module / area | Owns orchestration? |
 |---------------|---------------------|
-| `src/application/**/use_cases/` | **Yes** — primary home. |
-| `src/application/**/orchestration/` | **Yes** — RAG-specific policies (query log emission, etc.). |
+| `src/application/use_cases/**` | **Yes** — primary home. |
+| `src/application/use_cases/chat/orchestration/` | **Yes** — RAG-specific policies (query log emission, etc.). |
 | `src/composition/application_container.py` | **Wires** use cases + ports; should own all use-case singleton construction currently hidden in `RAGService` / `EvaluationService`. |
 | `src/infrastructure/services/rag_service.py` | **No** (target: thin legacy façade or deleted). |
 | `src/infrastructure/services/retrieval_comparison_service.py` | **No** (target: application module). |
@@ -171,8 +171,7 @@ This document inventories **application-flow orchestration** that still lives ou
 4. `src/infrastructure/services/evaluation_service.py` — **extract** `BenchmarkExecutionUseCase` wiring to container.
 5. `src/application/evaluation/use_cases/run_manual_evaluation.py` + `run_gold_qa_dataset_evaluation.py` — **extract** shared “eval pipeline run” helper.
 6. `src/infrastructure/services/manual_evaluation_service.py` — **split** pure domain helpers → `src/domain/`.
-7. `src/backend/**/*.py` — **delete** when imports are migrated; expand shim tests or grep CI gate.
-8. `src/application/evaluation/__init__.py` — **fix** stale `src/services` documentation.
+7. `src/application/evaluation/__init__.py` — **fix** stale `src/services` documentation if still present.
 
 ---
 

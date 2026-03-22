@@ -1,5 +1,5 @@
 """
-Extra import-level guardrails: deprecated ``src.backend`` shims and a thin ``src.frontend_gateway``.
+Extra import-level guardrails: legacy ``src.backend`` removal and a thin ``src.frontend_gateway``.
 
 See ``tests/architecture/README.md`` for the full boundary matrix.
 """
@@ -15,26 +15,26 @@ from tests.architecture.import_scanner import collect_import_violations, importe
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_src_production_tree_does_not_import_deprecated_backend_shims() -> None:
-    """
-    ``src/backend`` remains a compatibility re-export only.
+def test_legacy_backend_package_directory_is_absent() -> None:
+    """The removed shim tree ``src/backend`` must not exist (canonical code is ``src.infrastructure.services``)."""
+    backend_dir = REPO_ROOT / "src" / "backend"
+    assert not backend_dir.exists(), (
+        "``src/backend`` was removed; use ``src.infrastructure.services`` and application use cases. "
+        f"Delete leftover directory: {backend_dir}"
+    )
 
-    Production code under ``src/`` must import canonical modules (``src.infrastructure.services``, etc.),
-    not ``src.backend.*``, so the legacy package cannot creep back as a runtime dependency.
-    """
+
+def test_src_tree_does_not_import_removed_backend_package() -> None:
+    """No module under ``src/`` may import ``src.backend`` (package no longer exists)."""
     src_root = REPO_ROOT / "src"
-    backend_dir = src_root / "backend"
     violations: list[str] = []
     for path in iter_python_files(src_root):
-        if path == backend_dir or backend_dir in path.parents:
-            continue
         for mod in imported_top_level_modules(path):
             if mod == "src.backend" or mod.startswith("src.backend."):
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
     msg = (
-        "Deprecated package ``src.backend`` must not be imported outside ``src/backend`` itself. "
-        "Use ``src.infrastructure.services`` (or the composition root) as the canonical import path.\n"
+        "``src.backend`` was removed. Use ``src.infrastructure.services`` (or the composition root).\n"
     )
     assert not violations, msg + "\n".join(violations)
 

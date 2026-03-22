@@ -126,7 +126,7 @@ LLM
 
 | Done | Transitional / deprecated |
 |------|---------------------------|
-| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** — shim re-exports only; import **`src.infrastructure.services`** in new code |
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | **`src/backend/`** removed — use **`src.infrastructure.services`** (or application use cases) |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
 | Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **`X-User-Id`** trust model — replace with real auth for production browsers |
 
@@ -135,7 +135,7 @@ LLM
 | Kind of change | Place |
 |----------------|--------|
 | Business rules, entities, ports | `src/domain/` |
-| Orchestration, commands, HTTP wire DTOs | `src/application/**/use_cases/` (and `application/http/wire.py` for JSON shapes) |
+| Orchestration, commands, HTTP wire DTOs | `src/application/use_cases/**` (and `application/http/wire.py` for JSON shapes) |
 | RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`services/`, `persistence/`, `vectorstores/`, …) |
 | SQLite port implementations | `src/adapters/sqlite/` |
 | Wiring the graph | `src/composition/` |

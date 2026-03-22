@@ -10,9 +10,9 @@
 
 The **structural** migration goals are **largely achieved**: FastAPI is the HTTP integration surface, use cases live in `src/application/`, long-running orchestration lives in `src/infrastructure/services/`, Streamlit is isolated behind `BackendClient`, and automated tests enforce several boundaries.
 
-This is **not** a claim of “production-complete SaaS backend.” Identity is still header-based for scoped routes, some API modules intentionally touch `src.infrastructure.persistence` for SQLite bootstrap, and **`src/backend/`** remains as a **deprecated shim** package. An **Angular (or other) SPA can start integration now** against OpenAPI, but **must plan** for real auth, CORS, and hardening—called out explicitly below.
+This is **not** a claim of “production-complete SaaS backend.” Identity is still header-based for scoped routes, and some API modules intentionally touch `src.infrastructure.persistence` for SQLite bootstrap. The legacy **`src/backend/`** shim package has been **removed** (canonical code is `src.infrastructure.services`). An **Angular (or other) SPA can start integration now** against OpenAPI, but **must plan** for real auth, CORS, and hardening—called out explicitly below.
 
-**Verdict:** Migration is **substantively complete for architecture and API-first development**; **product hardening** and **shim removal** remain.
+**Verdict:** Migration is **substantively complete for architecture and API-first development**; **product hardening** remains.
 
 ---
 
@@ -24,7 +24,8 @@ This is **not** a claim of “production-complete SaaS backend.” Identity is s
 | Architecture pytest package | `15 passed`, `3 skipped` (same optional dependency) |
 | `src.services` imports under `src/` | **None found** |
 | `pages/` + `src/ui/` importing `src.domain` / `src.infrastructure` / `src.composition` | **None found** (grep) |
-| `src/` (excl. `src/backend/`) importing `src.backend` | **None found** |
+| `src/backend/` directory | **Removed** (tests assert absent) |
+| `src/` importing `src.backend` | **None allowed** |
 | `apps/api/routers/` importing `src.infrastructure` | **None found** |
 | `BackendClient` vs `HttpBackendClient` surface alignment | Covered by `tests/architecture/test_fastapi_migration_guardrails.py` |
 
@@ -35,13 +36,13 @@ This is **not** a claim of “production-complete SaaS backend.” Identity is s
 ## What is fully migrated (truthful list)
 
 1. **HTTP API as primary contract** — `apps/api/` with routers, Pydantic schemas, and `Depends` → `BackendApplicationContainer` / use cases.
-2. **Use-case layer** — `src/application/**/use_cases/` holds orchestration entry points consumed by FastAPI and by `RagService` / composition.
+2. **Use-case layer** — `src/application/use_cases/**` holds orchestration entry points consumed by FastAPI and by `RAGService` / composition.
 3. **Runtime service implementations** — `src/infrastructure/services/` (RAG, evaluation, ingestion, docstore, vectorstore, etc.); **no parallel `src/services` package**.
 4. **Streamlit decoupling (import-level)** — `pages/` and `src/ui/` are forbidden by tests from importing domain, infrastructure, composition, or `apps.api`; they use `BackendClient` and `frontend_gateway` view models.
 5. **Default Streamlit → HTTP** — `RAGCRAFT_BACKEND_CLIENT` defaults to **`http`** in `src/frontend_gateway/settings.py` (API-first local and deployed setups).
 6. **In-process dev path** — `InProcessBackendClient` + `BackendApplicationContainer` (no `RAGCraftApp`).
 7. **Domain purity** — No LangChain / FastAPI / Streamlit / `sqlite3` in `src/domain/`; summary recall DTOs use `SummaryRecallDocument`.
-8. **Automated boundary tests** — `tests/architecture/` (domain, application, infrastructure, routers, gateway, deprecated `src.backend`, inline service construction in routers).
+8. **Automated boundary tests** — `tests/architecture/` (domain, application, infrastructure, routers, gateway, absence of removed `src.backend`, inline service construction in routers).
 9. **Service-layer unit tests** — `tests/infrastructure_services/` (renamed from misleading `tests/backend/`).
 
 ---
@@ -50,7 +51,6 @@ This is **not** a claim of “production-complete SaaS backend.” Identity is s
 
 | Item | Detail |
 |------|--------|
-| **`src/backend/`** | Deprecated **re-export shims** to `src.infrastructure.services.*`. Safe to remove only after consumers stop importing it. |
 | **`X-User-Id`** | Workspace identity for many routes is **trust-on-first-hop**. Fine for demos and trusted proxies; **not** browser-grade auth. |
 | **`apps/api/dependencies.py`** | Uses a **lazy** `from src.infrastructure.persistence.db import init_app_db` inside `ensure_auth_database()` so SQLite app tables exist. This is **infrastructure in the API package** by design today; stricter layering would move DB bootstrap behind a port or lifespan hook. |
 | **Streamlit product role** | Still the **reference UI**; long-term product may replace it with a SPA while keeping the same API. |
@@ -63,7 +63,7 @@ This is **not** a claim of “production-complete SaaS backend.” Identity is s
 
 1. **Security:** Header-based user id without cryptographic verification is the **largest production risk** for any public deployment.
 2. **Drift:** `HttpBackendClient` and `InProcessBackendClient` must stay aligned with `BackendClient`; tests exist but **new methods need dual implementation**.
-3. **Shim debt:** `src/backend/` can hide lingering old import paths in forks or notebooks.
+3. **Forks / notebooks:** External copies may still reference removed `src.backend` paths; grep before merging.
 4. **SQLite + single process:** Typical deployment assumptions; scaling and multi-worker SQLite need explicit design.
 
 ---
@@ -108,12 +108,11 @@ So: **integration work can start immediately**; **launching a public SPA** requi
 
 1. **P0 — Production identity** — Replace trust-on-header with verified principals for any internet-facing API.
 2. **P0 — CORS + browser auth story** — Explicit policy when the SPA is served from a different origin.
-3. **P1 — Remove `src/backend/` shims** — After confirming no remaining importers (grep across org/forks).
-4. **P1 — Optional: lifespan DB init** — Move `init_app_db` out of router-adjacent `Depends` into FastAPI `lifespan` or an explicit migration command.
-5. **P2 — Align `HttpBackendClient` / OpenAPI** — When adding `BackendClient` methods, add routes + client methods + contract tests in the same change.
-6. **P2 — Consolidate persistence layout** — Reduce split between `adapters/sqlite` and `infrastructure/persistence` where redundant.
-7. **P3 — Further split large services** — Continue extracting policies/use cases from the biggest `infrastructure.services` modules.
-8. **P3 — CI guarantee for full graph** — Ensure CI always installs `requirements.txt` so composition regression tests are not skipped.
+3. **P1 — Optional: lifespan DB init** — Move `init_app_db` out of router-adjacent `Depends` into FastAPI `lifespan` or an explicit migration command.
+4. **P2 — Align `HttpBackendClient` / OpenAPI** — When adding `BackendClient` methods, add routes + client methods + contract tests in the same change.
+5. **P2 — Consolidate persistence layout** — Reduce split between `adapters/sqlite` and `infrastructure/persistence` where redundant.
+6. **P3 — Further split large services** — Continue extracting policies/use cases from the biggest `infrastructure.services` modules.
+7. **P3 — CI guarantee for full graph** — Ensure CI always installs `requirements.txt` so composition regression tests are not skipped.
 
 ---
 

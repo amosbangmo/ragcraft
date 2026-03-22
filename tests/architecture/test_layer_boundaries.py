@@ -76,7 +76,7 @@ def test_application_does_not_depend_on_ui_or_infrastructure(application_files: 
     """
     Application use cases must not depend on Streamlit or the API package.
 
-    Only ``src.infrastructure.services`` is allowed (orchestration moved from legacy ``src.backend``).
+    Only ``src.infrastructure.services`` is allowed among infrastructure imports.
     """
     violations: list[str] = []
     for path in application_files:
@@ -101,8 +101,8 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
     """
     Core infrastructure (adapters, persistence, vector stores) must not call into ``src.application``.
 
-    ``src/infrastructure/services`` hosts runtime orchestration moved from the old ``src.backend``
-    package; those modules may import application use cases and DTOs by design.
+    ``src/infrastructure/services`` hosts runtime services; those modules may import application
+    use cases and DTOs by design.
     """
     violations: list[str] = []
     infra_root = REPO_ROOT / "src" / "infrastructure"
