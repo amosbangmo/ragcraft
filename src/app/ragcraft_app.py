@@ -1,46 +1,32 @@
+"""
+Legacy Streamlit façade over :class:`~src.composition.application_container.BackendApplicationContainer`.
+
+**Compatibility only:** new code should depend on :class:`~src.composition.application_container.BackendApplicationContainer`
+(or FastAPI ``Depends`` wired from ``apps.api.dependencies``). This class remains so existing ``pages/`` and
+``src/ui`` call sites keep working until they are migrated off the façade. Scheduled for removal once
+Streamlit uses the application container or HTTP boundaries directly — see ``docs/migration/ragcraftapp-deprecation.md``.
+"""
+
+from __future__ import annotations
+
 from datetime import datetime
 
-from src.composition import BackendComposition, build_backend_composition
-from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
-from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-from src.application.evaluation.dtos import GenerateQaDatasetCommand
-from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
-from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
-from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
-    RunGoldQaDatasetEvaluationUseCase,
+from src.composition.application_container import (
+    BackendApplicationContainer,
+    build_backend_application_container,
 )
-from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
-from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
-from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
+from src.composition import BackendComposition, build_backend_composition
+from src.application.evaluation.dtos import GenerateQaDatasetCommand
 from src.application.ingestion.dtos import DeleteDocumentCommand, ReindexDocumentCommand
+from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
 from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
+from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
 from src.application.ingestion.use_cases.replace_document_assets import (
     replace_document_assets_for_reingest,
 )
-from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
-from src.application.projects.use_cases.create_project import CreateProjectUseCase
-from src.application.projects.use_cases.get_project_document_details import (
-    GetProjectDocumentDetailsUseCase,
-)
-from src.application.projects.use_cases.get_project_retrieval_preset_label import (
-    GetProjectRetrievalPresetLabelUseCase,
-)
-from src.application.projects.use_cases.invalidate_project_chain_cache import (
-    InvalidateProjectChainCacheUseCase,
-)
-from src.application.projects.use_cases.list_document_assets_for_source import (
-    ListDocumentAssetsForSourceUseCase,
-)
-from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
-from src.application.projects.use_cases.list_projects import ListProjectsUseCase
-from src.services.rag_service import RAGService
-from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.application.evaluation.benchmark_export_dtos import (
     BenchmarkExportArtifacts,
     BuildBenchmarkExportCommand,
-)
-from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
-    BuildBenchmarkExportArtifactsUseCase,
 )
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.benchmark_result import BenchmarkResult
@@ -58,39 +44,56 @@ from src.core.chain_state import (
 
 class RAGCraftApp:
     """
-    Streamlit-oriented façade over :class:`~src.composition.backend_composition.BackendComposition`.
+    Thin Streamlit compatibility wrapper around :class:`BackendApplicationContainer`.
 
-    Pass ``backend`` to share a pre-built graph (e.g. FastAPI process singleton); otherwise a
-    fresh composition is created (typical Streamlit session).
+    Prefer constructing via ``application_container=`` when sharing a process-wide graph (FastAPI);
+    the no-arg constructor builds a fresh composition (typical Streamlit session).
     """
 
-    def __init__(self, backend: BackendComposition | None = None) -> None:
-        self._backend = backend or build_backend_composition()
+    def __init__(
+        self,
+        backend: BackendComposition | None = None,
+        *,
+        application_container: BackendApplicationContainer | None = None,
+    ) -> None:
+        if backend is not None and application_container is not None:
+            raise ValueError("Pass at most one of backend and application_container")
 
-        self.auth_service = self._backend.auth_service
-        self.project_service = self._backend.project_service
-        self.ingestion_service = self._backend.ingestion_service
-        self.vectorstore_service = self._backend.vectorstore_service
-        self.evaluation_service = self._backend.evaluation_service
-        self.chat_service = self._backend.chat_service
-        self.docstore_service = self._backend.docstore_service
-        self.reranking_service = self._backend.reranking_service
-        self.qa_dataset_service = self._backend.qa_dataset_service
-        self.qa_dataset_generation_service = self._backend.qa_dataset_generation_service
-        self.project_settings_service = self._backend.project_settings_service
-        self.query_log_service = self._backend.query_log_service
+        if application_container is not None:
+            self._container = application_container
+        else:
+            resolved_backend = backend or build_backend_composition()
+            self._container = build_backend_application_container(
+                backend=resolved_backend,
+                invalidate_chain_key=_drop_cached_chain_for_project,
+            )
+
+        self._backend = self._container.backend
+
+        # Mutable attributes (tests and callers may replace instances); keep in sync with container services.
+        self.auth_service = self._container.auth_service
+        self.project_service = self._container.project_service
+        self.ingestion_service = self._container.ingestion_service
+        self.vectorstore_service = self._container.vectorstore_service
+        self.evaluation_service = self._container.evaluation_service
+        self.chat_service = self._container.chat_service
+        self.docstore_service = self._container.docstore_service
+        self.reranking_service = self._container.reranking_service
+        self.qa_dataset_service = self._container.qa_dataset_service
+        self.qa_dataset_generation_service = self._container.qa_dataset_generation_service
+        self.project_settings_service = self._container.project_settings_service
+        self.query_log_service = self._container.query_log_service
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
-        """Port for retrieval preset persistence (UI and API use this instead of the concrete service type)."""
         return self.project_settings_service
 
     @property
-    def rag_service(self) -> RAGService:
+    def rag_service(self):
         return self._backend.rag_service
 
     @property
-    def retrieval_comparison_service(self) -> RetrievalComparisonService:
+    def retrieval_comparison_service(self):
         return self._backend.retrieval_comparison_service
 
     def get_current_user_record(self):
@@ -149,20 +152,7 @@ class RAGCraftApp:
         return self.project_service.list_projects(user_id)
 
     def list_project_documents(self, user_id: str, project_id: str) -> list[str]:
-        project = self.get_project(user_id, project_id)
-
-        if not project.path.exists():
-            return []
-
-        ignored_names = {"faiss_index", "logs.json"}
-
-        documents = [
-            item.name
-            for item in project.path.iterdir()
-            if item.is_file() and item.name not in ignored_names
-        ]
-
-        return sorted(documents)
+        return self.project_service.list_project_documents(user_id, project_id)
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
         project = self.get_project(user_id, project_id)
@@ -225,10 +215,7 @@ class RAGCraftApp:
         return cached_object
 
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
-        InvalidateProjectChainCacheUseCase(
-            project_service=self.project_service,
-            invalidate_project_chain=_drop_cached_chain_for_project,
-        ).execute(user_id=user_id, project_id=project_id)
+        self._container.invalidate_project_chain(user_id, project_id)
 
     def invalidate_all_project_chains(self):
         invalidate_all_project_chains()
@@ -311,11 +298,7 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> ManualEvaluationResult:
-        return RunManualEvaluationUseCase(
-            project_service=self.project_service,
-            rag_service=self.rag_service,
-            evaluation_service=self.evaluation_service,
-        ).execute(
+        return self._container.evaluation_run_manual_evaluation_use_case.execute(
             user_id=user_id,
             project_id=project_id,
             question=question,
@@ -395,7 +378,7 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ):
-        return CreateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
+        return self._container.evaluation_create_qa_dataset_entry_use_case.execute(
             user_id=user_id,
             project_id=project_id,
             question=question,
@@ -410,7 +393,7 @@ class RAGCraftApp:
         user_id: str,
         project_id: str,
     ):
-        return ListQaDatasetEntriesUseCase(qa_dataset_service=self.qa_dataset_service).execute(
+        return self._container.evaluation_list_qa_dataset_entries_use_case.execute(
             user_id=user_id,
             project_id=project_id,
         )
@@ -426,7 +409,7 @@ class RAGCraftApp:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ):
-        return UpdateQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
+        return self._container.evaluation_update_qa_dataset_entry_use_case.execute(
             entry_id=entry_id,
             user_id=user_id,
             project_id=project_id,
@@ -443,7 +426,7 @@ class RAGCraftApp:
         user_id: str,
         project_id: str,
     ) -> bool:
-        return DeleteQaDatasetEntryUseCase(qa_dataset_service=self.qa_dataset_service).execute(
+        return self._container.evaluation_delete_qa_dataset_entry_use_case.execute(
             entry_id=entry_id,
             user_id=user_id,
             project_id=project_id,
@@ -458,10 +441,7 @@ class RAGCraftApp:
         source_files: list[str] | None = None,
         generation_mode: str = "append",
     ) -> dict:
-        return GenerateQaDatasetUseCase(
-            qa_dataset_service=self.qa_dataset_service,
-            qa_dataset_generation_service=self.qa_dataset_generation_service,
-        ).execute(
+        return self._container.evaluation_generate_qa_dataset_use_case.execute(
             GenerateQaDatasetCommand(
                 user_id=user_id,
                 project_id=project_id,
@@ -479,14 +459,7 @@ class RAGCraftApp:
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
     ):
-        return RunGoldQaDatasetEvaluationUseCase(
-            list_qa_dataset_entries=ListQaDatasetEntriesUseCase(
-                qa_dataset_service=self.qa_dataset_service,
-            ),
-            project_service=self.project_service,
-            rag_service=self.rag_service,
-            evaluation_service=self.evaluation_service,
-        ).execute(
+        return self._container.evaluation_run_gold_qa_dataset_evaluation_use_case.execute(
             user_id=user_id,
             project_id=project_id,
             enable_query_rewrite=enable_query_rewrite,
@@ -503,7 +476,7 @@ class RAGCraftApp:
         generated_at: datetime | None = None,
     ) -> BenchmarkExportArtifacts:
         """Build JSON/CSV/Markdown downloads; ``BenchmarkExportArtifacts.run_id`` mirrors ``result.run_id`` when set."""
-        return BuildBenchmarkExportArtifactsUseCase().execute(
+        return self._container.evaluation_build_benchmark_export_artifacts_use_case.execute(
             BuildBenchmarkExportCommand(
                 project_id=project_id,
                 result=result,

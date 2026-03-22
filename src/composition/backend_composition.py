@@ -8,9 +8,9 @@ Construction order (high level):
 4. ``RAGService`` (lazy): retrieval settings, pipeline / ask use cases, query logging.
 5. ``RetrievalComparisonService`` (lazy): depends on ``RAGService``.
 
-Use cases are not all constructed here: many are built in :class:`~src.app.ragcraft_app.RAGCraftApp`
-methods or in FastAPI ``Depends`` getters. This module owns **service-level** singletons per
-composition instance.
+Application use cases are composed in :class:`~src.composition.application_container.BackendApplicationContainer`
+(see :func:`~src.composition.application_container.build_backend_application_container`). This module
+owns **service-level** singletons per composition instance.
 """
 
 from __future__ import annotations
