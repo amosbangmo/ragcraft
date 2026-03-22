@@ -3,9 +3,9 @@ Application composition root: wires technical services from
 :class:`~src.composition.backend_composition.BackendComposition` into use cases for FastAPI,
 headless callers, and the Streamlit façade.
 
-Use :func:`build_backend` for the **full graph** (services + use cases). Use
-:func:`build_backend_composition` when you only need the service layer, then pass that instance to
-:func:`build_backend_application_container` (or :func:`build_backend`) to attach use cases.
+Use :func:`build_backend_composition` to build the service graph (pass ``chat_transcript``), then
+:func:`build_backend` or :func:`build_backend_application_container` to attach use cases and the chain
+invalidation hook.
 
 **Orchestration inventory (this module):**
 
@@ -29,7 +29,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from src.auth.auth_service import AuthService
-from src.composition.backend_composition import BackendComposition, build_backend_composition
+from src.composition.backend_composition import BackendComposition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.ports.chat_transcript_port import ChatTranscriptPort
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
@@ -403,23 +403,23 @@ class BackendApplicationContainer:
 
 def build_backend_application_container(
     *,
-    backend: BackendComposition | None = None,
+    backend: BackendComposition,
     invalidate_chain_key: Callable[[str], None],
 ) -> BackendApplicationContainer:
-    """Attach use-case wiring to an existing or freshly built service graph."""
-    resolved = backend if backend is not None else build_backend_composition()
-    return BackendApplicationContainer(backend=resolved, _invalidate_chain_key=invalidate_chain_key)
+    """Attach use-case wiring to a built service graph."""
+    return BackendApplicationContainer(backend=backend, _invalidate_chain_key=invalidate_chain_key)
 
 
 def build_backend(
     *,
     invalidate_chain_key: Callable[[str], None],
-    backend: BackendComposition | None = None,
+    backend: BackendComposition,
 ) -> BackendApplicationContainer:
     """
-    Single entrypoint for the full backend graph (services + application use cases).
+    Full backend graph (services + application use cases).
 
-    Prefer this from FastAPI and integration tests when you want one obvious composition root.
+    Build :class:`~src.composition.backend_composition.BackendComposition` first (with the desired
+    ``chat_transcript``), then pass it here.
     """
     return build_backend_application_container(
         backend=backend,

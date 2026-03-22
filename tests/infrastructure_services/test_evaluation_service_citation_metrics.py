@@ -1,10 +1,11 @@
 import unittest
+from dataclasses import replace
 
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
-from src.composition.evaluation_wiring import build_evaluation_service
+from src.composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
 
 
 class _StubJudge:
@@ -58,7 +59,9 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
             has_hallucination=False,
             reason=None,
         )
-        result = build_evaluation_service(llm_judge_service=_StubJudge(judge)).evaluate_gold_qa_dataset(
+        result = build_evaluation_service(
+            replace(default_evaluation_wiring_parts(), llm_judge_service=_StubJudge(judge)),
+        ).evaluate_gold_qa_dataset(
             entries=[entry],
             pipeline_runner=runner,
         )
@@ -108,8 +111,11 @@ class TestEvaluationServiceCitationMetrics(unittest.TestCase):
             reason=None,
         )
         result = build_evaluation_service(
-            llm_judge_service=_StubJudge(judge),
-            semantic_similarity_service=_StubSemanticSimilarity(),
+            replace(
+                default_evaluation_wiring_parts(),
+                llm_judge_service=_StubJudge(judge),
+                semantic_similarity_service=_StubSemanticSimilarity(),
+            ),
         ).evaluate_gold_qa_dataset(
             entries=[entry],
             pipeline_runner=runner,

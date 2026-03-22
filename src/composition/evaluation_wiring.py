@@ -4,9 +4,14 @@ plus infrastructure row/metric services.
 
 **Layering:** this module may import both ``src.application.use_cases`` and ``src.infrastructure.adapters``;
 infrastructure adapters must not import application use cases (see architecture tests).
+
+Wiring is linear: no optional dependency branching. Tests override pieces via
+:class:`EvaluationWiringParts` + :func:`dataclasses.replace`.
 """
 
 from __future__ import annotations
+
+from dataclasses import dataclass
 
 from src.application.use_cases.evaluation.benchmark_execution import BenchmarkExecutionUseCase
 from src.application.use_cases.evaluation.gold_qa_benchmark_adapter import GoldQaBenchmarkAdapter
@@ -25,49 +30,50 @@ from src.infrastructure.adapters.evaluation.row_evaluation_service import RowEva
 from src.infrastructure.adapters.evaluation.semantic_similarity_service import SemanticSimilarityService
 
 
-def build_evaluation_service(
-    *,
-    llm_judge_service: object | None = None,
-    correlation_service: CorrelationService | None = None,
-    failure_analysis_service: FailureAnalysisService | None = None,
-    semantic_similarity_service: object | None = None,
-    explainability_service: ExplainabilityService | None = None,
-    auto_debug_service: AutoDebugService | None = None,
-) -> EvaluationService:
+@dataclass(frozen=True)
+class EvaluationWiringParts:
+    """Concrete collaborators for :func:`build_evaluation_service` (composition-only bundle)."""
+
+    llm_judge_service: object
+    correlation_service: CorrelationService
+    failure_analysis_service: FailureAnalysisService
+    semantic_similarity_service: object
+    explainability_service: ExplainabilityService
+    auto_debug_service: AutoDebugService
+
+
+def default_evaluation_wiring_parts() -> EvaluationWiringParts:
+    """Process-default evaluation adapters (no conditionals; used by :func:`build_backend_composition`)."""
+    return EvaluationWiringParts(
+        llm_judge_service=LLMJudgeService(),
+        correlation_service=CorrelationService(),
+        failure_analysis_service=FailureAnalysisService(),
+        semantic_similarity_service=SemanticSimilarityService(),
+        explainability_service=ExplainabilityService(),
+        auto_debug_service=AutoDebugService(),
+    )
+
+
+def build_evaluation_service(parts: EvaluationWiringParts) -> EvaluationService:
     """
     Construct :class:`~src.infrastructure.adapters.evaluation.evaluation_service.EvaluationService`
     with a fully wired :class:`~src.domain.ports.gold_qa_benchmark_port.GoldQaBenchmarkPort` implementation.
     """
-    lj = llm_judge_service if llm_judge_service is not None else LLMJudgeService()
-    correlation = correlation_service if correlation_service is not None else CorrelationService()
-    failure_analysis = (
-        failure_analysis_service if failure_analysis_service is not None else FailureAnalysisService()
-    )
-    semantic = (
-        semantic_similarity_service
-        if semantic_similarity_service is not None
-        else SemanticSimilarityService()
-    )
-    explainability = (
-        explainability_service if explainability_service is not None else ExplainabilityService()
-    )
-    auto_debug = auto_debug_service if auto_debug_service is not None else AutoDebugService()
-
     retrieval_metrics = RetrievalMetricsService()
     answer_quality = AnswerQualityAggregationService()
     row_evaluation = RowEvaluationService(
         retrieval_metrics_service=retrieval_metrics,
         answer_quality_service=answer_quality,
-        semantic_similarity_service=semantic,
-        llm_judge_service=lj,
+        semantic_similarity_service=parts.semantic_similarity_service,
+        llm_judge_service=parts.llm_judge_service,
     )
     benchmark_execution = BenchmarkExecutionUseCase(
         row_evaluation=row_evaluation,
         aggregation=BenchmarkAggregationService(),
-        correlation=correlation,
-        failure_analysis=failure_analysis,
-        explainability=explainability,
-        auto_debug=auto_debug,
+        correlation=parts.correlation_service,
+        failure_analysis=parts.failure_analysis_service,
+        explainability=parts.explainability_service,
+        auto_debug=parts.auto_debug_service,
     )
     gold_qa = GoldQaBenchmarkAdapter(benchmark_execution)
 
@@ -78,4 +84,8 @@ def build_evaluation_service(
     )
 
 
-__all__ = ["build_evaluation_service"]
+__all__ = [
+    "EvaluationWiringParts",
+    "build_evaluation_service",
+    "default_evaluation_wiring_parts",
+]

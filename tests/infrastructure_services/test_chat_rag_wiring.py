@@ -71,6 +71,7 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     sys.modules["src.infrastructure.vectorstores.faiss.vector_store"] = faiss_store_module
 
 from src.core.exceptions import LLMServiceError
+from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
@@ -123,10 +124,12 @@ class TestChatRagWiringComposition(unittest.TestCase):
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
         reranking_service = MagicMock()
+        retrieval_settings_service = RetrievalSettingsService()
         subgraph = build_rag_retrieval_subgraph(
             vectorstore_service=vectorstore_service,
             docstore_service=docstore_service,
             reranking_service=reranking_service,
+            retrieval_settings_service=retrieval_settings_service,
         )
         ucs = build_chat_rag_use_cases(subgraph, query_log=query_log_service)
         harness = _ChatRagWiringHarness(subgraph, ucs, query_log_service=query_log_service)

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from src.composition import BackendApplicationContainer, BackendComposition, build_backend
+from src.composition import BackendApplicationContainer, BackendComposition, build_backend, build_backend_composition
+from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 
 
 def noop_chain_invalidate(_project_id: str) -> None:
@@ -21,7 +22,8 @@ def build_backend_container_for_tests(
 
     Prefer this over ad hoc ``build_backend(...)`` calls with duplicated no-op lambdas.
     """
+    resolved_backend = backend or build_backend_composition(chat_transcript=MemoryChatTranscript())
     return build_backend(
         invalidate_chain_key=invalidate_chain_key or noop_chain_invalidate,
-        backend=backend,
+        backend=resolved_backend,
     )

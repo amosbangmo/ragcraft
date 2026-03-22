@@ -1,9 +1,10 @@
 """
 Backend composition root (no DI framework).
 
-* :func:`build_backend_composition` — technical infrastructure adapters only.
-* :func:`build_backend_application_container` — same, plus lazy use-case wiring (explicit ``invalidate_chain_key``).
-* :func:`build_backend` — **preferred** full-graph entrypoint (alias of application container build).
+* :func:`build_backend_composition` — technical infrastructure adapters only (callers pass ``chat_transcript``).
+* :func:`build_backend_application_container` — attaches lazy use-case wiring to a given ``BackendComposition``
+  and ``invalidate_chain_key`` (no branching).
+* :func:`build_backend` — full graph: pass a built ``BackendComposition`` plus ``invalidate_chain_key``.
 * :mod:`src.composition.wiring` — shared hooks (e.g. process-scoped chain eviction for FastAPI).
 
 FastAPI should obtain a process-wide :class:`BackendApplicationContainer` via ``apps.api.dependencies``.

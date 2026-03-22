@@ -109,10 +109,8 @@ def build_rag_retrieval_subgraph(
     vectorstore_service: VectorStoreService,
     docstore_service: DocStoreService,
     reranking_service: RerankingService,
-    retrieval_settings_service: RetrievalSettingsService | None = None,
-    answer_generation_service: AnswerGenerationService | None = None,
+    retrieval_settings_service: RetrievalSettingsService,
 ) -> RagRetrievalSubgraph:
-    rs = retrieval_settings_service or RetrievalSettingsService()
     table_qa = TableQAService()
     query_rewrite = QueryRewriteService(
         max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
@@ -127,7 +125,10 @@ def build_rag_retrieval_subgraph(
         vector_recall=SummaryVectorRecallAdapter(vectorstore_service),
         lexical_recall=SummaryLexicalRecallAdapter(docstore_service, hybrid),
     )
-    summary = ApplicationSummaryRecallStage(settings_tuner=rs, technical_ports=technical)
+    summary = ApplicationSummaryRecallStage(
+        settings_tuner=retrieval_settings_service,
+        technical_ports=technical,
+    )
     post_recall = build_post_recall_stage_services(
         docstore_service=docstore_service,
         reranking_service=reranking_service,
@@ -137,14 +138,14 @@ def build_rag_retrieval_subgraph(
     assembly = ApplicationPipelineAssembly(
         stages=post_recall_stage_ports_from_services(post_recall),
     )
-    answer = answer_generation_service or AnswerGenerationService()
+    answer_generation_service = AnswerGenerationService()
     return RagRetrievalSubgraph(
         table_qa_service=table_qa,
         summary_recall_stage=summary,
         pipeline_assembly=assembly,
         post_recall_stage_services=post_recall,
-        answer_generation_service=answer,
-        retrieval_settings_service=rs,
+        answer_generation_service=answer_generation_service,
+        retrieval_settings_service=retrieval_settings_service,
     )
 
 

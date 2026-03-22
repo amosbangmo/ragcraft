@@ -25,12 +25,10 @@ from src.infrastructure.adapters.sqlite.user_repository import SqliteUserReposit
 from src.auth.auth_service import AuthService
 from src.domain.ports.chat_transcript_port import ChatTranscriptPort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 from src.infrastructure.persistence.db import init_app_db
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
-from src.composition.evaluation_wiring import build_evaluation_service
+from src.composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
-from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 from src.infrastructure.adapters.workspace.project_service import ProjectService
 from src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service import QADatasetGenerationService
 from src.infrastructure.adapters.qa_dataset.qa_dataset_service import QADatasetService
@@ -64,14 +62,14 @@ class BackendComposition:
 
 def build_backend_composition(
     *,
-    chat_transcript: ChatTranscriptPort | None = None,
+    chat_transcript: ChatTranscriptPort,
 ) -> BackendComposition:
     """
     Assemble technical adapters only (no application use cases).
 
-    ``chat_transcript`` defaults to :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript`.
-    In-process UIs that need session-scoped history pass a :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort`
-    implementation via this parameter (constructed outside composition, e.g. in the gateway layer).
+    Callers supply :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` (e.g.
+    :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript` for API workers, or a
+    gateway-built session transcript for Streamlit).
     """
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
@@ -92,8 +90,8 @@ def build_backend_composition(
         project_service=project_service,
         ingestion_service=IngestionService(),
         vectorstore_service=VectorStoreService(),
-        evaluation_service=build_evaluation_service(llm_judge_service=LLMJudgeService()),
-        chat_transcript=chat_transcript if chat_transcript is not None else MemoryChatTranscript(),
+        evaluation_service=build_evaluation_service(default_evaluation_wiring_parts()),
+        chat_transcript=chat_transcript,
         docstore_service=docstore_service,
         reranking_service=RerankingService(),
         qa_dataset_service=QADatasetService(),

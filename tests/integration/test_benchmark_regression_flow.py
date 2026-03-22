@@ -1,10 +1,11 @@
 import unittest
+from dataclasses import replace
 
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
-from src.composition.evaluation_wiring import build_evaluation_service
+from src.composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
 
 from tests.quality.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
@@ -94,8 +95,11 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             reason=None,
         )
         result = build_evaluation_service(
-            llm_judge_service=StubLLMJudgeService(judge),
-            semantic_similarity_service=StubSemanticSimilarityService(),
+            replace(
+                default_evaluation_wiring_parts(),
+                llm_judge_service=StubLLMJudgeService(judge),
+                semantic_similarity_service=StubSemanticSimilarityService(),
+            ),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=runner,
@@ -154,8 +158,11 @@ class TestBenchmarkRegressionFlow(unittest.TestCase):
             reason=None,
         )
         result = build_evaluation_service(
-            llm_judge_service=StubLLMJudgeService(judge),
-            semantic_similarity_service=StubSemanticSimilarityService(),
+            replace(
+                default_evaluation_wiring_parts(),
+                llm_judge_service=StubLLMJudgeService(judge),
+                semantic_similarity_service=StubSemanticSimilarityService(),
+            ),
         ).evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=broken_runner,

@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
@@ -10,7 +11,7 @@ from src.domain.evaluation.benchmark_math import (
     r2,
     rate,
 )
-from src.composition.evaluation_wiring import build_evaluation_service
+from src.composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
 from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.llm_judge_service import LLMJudgeService
 
@@ -189,7 +190,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             reason=None,
         )
         result = build_evaluation_service(
-            llm_judge_service=_StubJudge(judge),
+            replace(default_evaluation_wiring_parts(), llm_judge_service=_StubJudge(judge)),
         ).evaluate_gold_qa_dataset(entries=[entry], pipeline_runner=runner)
 
         self.assertEqual(result.summary.data.get("successful_queries"), 0)
@@ -243,8 +244,11 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             reason=None,
         )
         result = build_evaluation_service(
-            llm_judge_service=_StubJudge(judge),
-            semantic_similarity_service=_StubSemanticSimilarity(),
+            replace(
+                default_evaluation_wiring_parts(),
+                llm_judge_service=_StubJudge(judge),
+                semantic_similarity_service=_StubSemanticSimilarity(),
+            ),
         ).evaluate_gold_qa_dataset(entries=[entry], pipeline_runner=runner)
 
         self.assertEqual(result.summary.data.get("successful_queries"), 1)
@@ -313,8 +317,11 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             )
 
         result = build_evaluation_service(
-            llm_judge_service=_SwitchJudge(),
-            semantic_similarity_service=_StubSemanticSimilarity(),
+            replace(
+                default_evaluation_wiring_parts(),
+                llm_judge_service=_SwitchJudge(),
+                semantic_similarity_service=_StubSemanticSimilarity(),
+            ),
         ).evaluate_gold_qa_dataset(
             entries=[_entry(1), _entry(2)],
             pipeline_runner=runner,

@@ -23,7 +23,7 @@ from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 
 def test_build_backend_composition_returns_typed_service_graph() -> None:
     try:
-        backend = build_backend_composition()
+        backend = build_backend_composition(chat_transcript=MemoryChatTranscript())
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Service graph unavailable in this environment: {exc}")
 
@@ -40,7 +40,7 @@ def test_build_backend_composition_returns_typed_service_graph() -> None:
 
 def test_build_backend_wires_application_container() -> None:
     try:
-        backend = build_backend_composition()
+        backend = build_backend_composition(chat_transcript=MemoryChatTranscript())
         container = build_backend_application_container(
             backend=backend,
             invalidate_chain_key=noop_chain_invalidate,
