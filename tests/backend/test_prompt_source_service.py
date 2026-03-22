@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.prompt_source_service import PromptSourceService
+from src.infrastructure.services.prompt_source_service import PromptSourceService
 
 
 class TestPromptSourceService(unittest.TestCase):

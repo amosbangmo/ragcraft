@@ -3,14 +3,14 @@ import unittest
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.backend.benchmark_math import (
+from src.domain.evaluation.benchmark_math import (
     latency_stage_row_fields,
     mean_round,
     r2,
     rate,
 )
-from src.backend.evaluation_service import EvaluationService
-from src.backend.llm_judge_service import LLMJudgeService
+from src.infrastructure.services.evaluation_service import EvaluationService
+from src.infrastructure.services.llm_judge_service import LLMJudgeService
 
 
 class _StubJudge:

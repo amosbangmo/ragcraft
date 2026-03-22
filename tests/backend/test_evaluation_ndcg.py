@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.evaluation_service import EvaluationService
+from src.infrastructure.services.evaluation_service import EvaluationService
 
 
 class TestEvaluationNDCG(unittest.TestCase):

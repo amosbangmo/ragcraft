@@ -8,7 +8,7 @@ from typing import Any
 class QueryLogIngressPayload:
     """
     Typed payload produced after a RAG pipeline run, before normalization in
-    :class:`~src.backend.query_log_service.QueryLogService`.
+    :class:`~src.infrastructure.services.query_log_service.QueryLogService`.
 
     Mirrors the dict shape historically built in ``RAGService`` for query logging.
     """

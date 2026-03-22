@@ -61,9 +61,9 @@ if not hasattr(config_module, "RETRIEVAL_CONFIG"):
         section_expansion_global_max=64,
     )
 
-if "src.backend.hybrid_retrieval_service" not in sys.modules:
+if "src.infrastructure.services.hybrid_retrieval_service" not in sys.modules:
     # Avoid BM25 dependency for unit tests focused on RAG orchestration.
-    hybrid_module = types.ModuleType("src.backend.hybrid_retrieval_service")
+    hybrid_module = types.ModuleType("src.infrastructure.services.hybrid_retrieval_service")
 
     class HybridRetrievalService:
         def __init__(self, *, k1=1.5, b=0.75, epsilon=0.25):
@@ -83,7 +83,7 @@ if "src.backend.hybrid_retrieval_service" not in sys.modules:
             return []
 
     hybrid_module.HybridRetrievalService = HybridRetrievalService
-    sys.modules["src.backend.hybrid_retrieval_service"] = hybrid_module
+    sys.modules["src.infrastructure.services.hybrid_retrieval_service"] = hybrid_module
 
 if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     # Prevent FAISS import requirements when loading related services.
@@ -104,8 +104,8 @@ from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildR
 from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
-from src.backend.confidence_service import ConfidenceService
-from src.backend.rag_service import RAGService
+from src.infrastructure.services.confidence_service import ConfidenceService
+from src.infrastructure.services.rag_service import RAGService
 
 
 def _mutable_retrieval_config_view(cfg):
@@ -372,7 +372,7 @@ class TestRAGService(unittest.TestCase):
         self.assertIsInstance(payload.context_compression, ContextCompressionStats)
         self.assertGreaterEqual(len(payload.pre_rerank_raw_assets), 1)
 
-    @patch("src.backend.answer_generation_service.LLM")
+    @patch("src.infrastructure.services.answer_generation_service.LLM")
     def test_ask_returns_rag_response(self, mock_llm):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
@@ -409,7 +409,7 @@ class TestRAGService(unittest.TestCase):
         self.assertGreaterEqual(response.latency["answer_generation_ms"], 0.0)
         self.assertGreater(response.latency["total_ms"], 0.0)
 
-    @patch("src.backend.answer_generation_service.LLM")
+    @patch("src.infrastructure.services.answer_generation_service.LLM")
     def test_ask_wraps_llm_errors(self, mock_llm):
         service, *_ = self._build_service()
         project = Project(user_id="u1", project_id="p1")
@@ -426,7 +426,7 @@ class TestRAGService(unittest.TestCase):
             with self.assertRaises(LLMServiceError):
                 service.ask(project=project, question="Q", chat_history=[])
 
-    @patch("src.backend.answer_generation_service.LLM")
+    @patch("src.infrastructure.services.answer_generation_service.LLM")
     def test_ask_emits_query_log_when_configured(self, mock_llm):
         log_service = MagicMock()
         service, *_ = self._build_service(query_log_service=log_service)

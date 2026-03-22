@@ -47,7 +47,7 @@ def _uid_header(user_id: str = "test-user-api") -> dict[str, str]:
 
 
 class _FakeProjectService:
-    """Minimal stand-in for :class:`~src.backend.project_service.ProjectService`."""
+    """Minimal stand-in for :class:`~src.infrastructure.services.project_service.ProjectService`."""
 
     def __init__(
         self,

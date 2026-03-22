@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from src.domain.evaluation.qa_question_key import normalized_qa_question_key
-from src.backend.qa_dataset_generation_service import QADatasetGenerationService
+from src.infrastructure.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.domain.ports import QADatasetEntriesPort
 
 from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
@@ -17,7 +17,7 @@ class GenerateQaDatasetUseCase:
     """
     Orchestrates LLM-backed QA proposal generation and persistence modes (append / replace / dedup).
     LLM prompts and parsing live in :class:`~src.infrastructure.llm.qa_dataset_llm_gateway.QADatasetLlmGateway`
-    via :class:`~src.backend.qa_dataset_generation_service.QADatasetGenerationService`.
+    via :class:`~src.infrastructure.services.qa_dataset_generation_service.QADatasetGenerationService`.
     """
 
     def __init__(

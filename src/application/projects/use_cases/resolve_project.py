@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from src.domain.project import Project
-from src.backend.project_service import ProjectService
+from src.infrastructure.services.project_service import ProjectService
 
 
 class ResolveProjectUseCase:
-    """Thin application entry for :meth:`~src.backend.project_service.ProjectService.get_project`."""
+    """Thin application entry for :meth:`~src.infrastructure.services.project_service.ProjectService.get_project`."""
 
     def __init__(self, *, project_service: ProjectService) -> None:
         self._projects = project_service

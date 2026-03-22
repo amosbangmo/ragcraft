@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from src.infrastructure.persistence.db import init_app_db
-from src.backend.qa_dataset_service import QADatasetService
+from src.infrastructure.services.qa_dataset_service import QADatasetService
 
 
 class TestQADatasetServicePersistence(unittest.TestCase):

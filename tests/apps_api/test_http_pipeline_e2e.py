@@ -3,7 +3,7 @@ End-to-end HTTP pipeline validation (FastAPI TestClient only).
 
 Exercises the main workspace → ingest → RAG → evaluation → export flow **through HTTP** with
 dependency overrides so the full LangChain / unstructured graph is not required. No direct calls to
-``src.backend`` or use cases from test bodies—only ``TestClient`` requests and response assertions.
+``src.infrastructure.services`` or use cases from test bodies—only ``TestClient`` requests and response assertions.
 """
 
 from __future__ import annotations

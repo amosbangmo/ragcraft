@@ -7,10 +7,10 @@ from time import perf_counter
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_latency import merge_with_answer_stage
 from src.application.evaluation.dtos import RunManualEvaluationCommand
-from src.backend.evaluation_service import EvaluationService
-from src.backend.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
-from src.backend.project_service import ProjectService
-from src.backend.rag_service import RAGService
+from src.infrastructure.services.evaluation_service import EvaluationService
+from src.infrastructure.services.manual_evaluation_service import manual_evaluation_result_from_rag_outputs
+from src.infrastructure.services.project_service import ProjectService
+from src.infrastructure.services.rag_service import RAGService
 
 
 class RunManualEvaluationUseCase:

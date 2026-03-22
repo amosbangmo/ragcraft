@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from src.application.projects.use_cases.resolve_project import ResolveProjectUseCase
-from src.backend.retrieval_comparison_service import RetrievalComparisonService
+from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
 
 
 class CompareRetrievalModesUseCase:

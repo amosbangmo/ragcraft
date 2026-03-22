@@ -58,31 +58,41 @@ def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> Non
 
 
 def test_application_does_not_depend_on_ui_or_infrastructure(application_files: list[Path]) -> None:
-    forbidden = (
-        "streamlit",
-        "apps",
-        "src.infrastructure",
-    )
     violations: list[str] = []
     for path in application_files:
         mods = imported_top_level_modules(path)
-        bad = any_module_matches(mods, prefixes=forbidden)
-        for m in bad:
-            violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
+        for mod in mods:
+            if mod.startswith("streamlit") or mod == "streamlit":
+                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
+            elif mod.startswith("apps") or mod == "apps":
+                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
+            elif mod.startswith("src.infrastructure") and not mod.startswith("src.infrastructure.services"):
+                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     assert not violations, "Application layer violations:\n" + "\n".join(violations)
 
 
 def test_infrastructure_does_not_depend_on_application_or_streamlit(
     infrastructure_files: list[Path],
 ) -> None:
-    forbidden = (
-        "src.application",
-        "streamlit",
-        "apps",
-    )
+    """
+    Core infrastructure (adapters, persistence, vector stores) must not call into ``src.application``.
+
+    ``src/infrastructure/services`` hosts runtime orchestration moved from the old ``src.backend``
+    package; those modules may import application use cases and DTOs by design.
+    """
     violations: list[str] = []
+    infra_root = REPO_ROOT / "src" / "infrastructure"
+    services_root = infra_root / "services"
     for path in infrastructure_files:
         mods = imported_top_level_modules(path)
+        try:
+            under_services = services_root in path.parents or path.parent == services_root
+        except ValueError:
+            under_services = False
+        if under_services:
+            forbidden = ("apps",)
+        else:
+            forbidden = ("src.application", "streamlit", "apps")
         bad = any_module_matches(mods, prefixes=forbidden)
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")

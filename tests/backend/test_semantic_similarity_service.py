@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
-from src.backend.semantic_similarity_service import SemanticSimilarityService
+from src.infrastructure.services.semantic_similarity_service import SemanticSimilarityService
 
 
 class TestSemanticSimilarityService(unittest.TestCase):

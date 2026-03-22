@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.explainability_service import ExplainabilityService
+from src.infrastructure.services.explainability_service import ExplainabilityService
 
 
 class TestExplainabilityService(unittest.TestCase):

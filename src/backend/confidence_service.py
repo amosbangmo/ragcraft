@@ -1,23 +1,5 @@
-"""
-Pipeline confidence from reranked retrieval evidence only.
-
-Separate from LLM-judge metrics (groundedness, hallucination, answer relevance).
-Computation lives in :mod:`src.domain.retrieval.retrieval_confidence`.
-"""
-
-from __future__ import annotations
-
-from src.domain.retrieval.retrieval_confidence import compute_confidence_from_reranked_assets
-
-
-class ConfidenceService:
-    """Combines rerank strength, consistency, and support breadth into [0, 1]."""
-
-    def compute_confidence(
-        self,
-        *,
-        reranked_raw_assets: list[dict],
-    ) -> float:
-        return compute_confidence_from_reranked_assets(
-            reranked_raw_assets=reranked_raw_assets,
-        )
+"""Deprecated compatibility alias; import from ``src.infrastructure.services.confidence_service`` instead."""
+from importlib import import_module
+import sys
+_mod = import_module("src.infrastructure.services.confidence_service")
+sys.modules[__name__] = _mod

@@ -14,8 +14,8 @@ _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "src.frontend_gateway.in_process",
     "src.frontend_gateway.streamlit_backend_factory",
-    "src.backend.qa_dataset_generation_service",
-    "src.backend.qa_dataset_service",
+    "src.infrastructure.services.qa_dataset_generation_service",
+    "src.infrastructure.services.qa_dataset_service",
     "src.infrastructure.persistence.sqlite.qa_dataset_repository",
 )
 
@@ -54,20 +54,20 @@ def setUpModule():
         get_connection=_stub_get_connection,
     )
     _install_module("src.auth.auth_service", AuthService=_DummyService)
-    _install_module("src.backend.ingestion_service", IngestionService=_DummyService)
-    _install_module("src.backend.vectorstore_service", VectorStoreService=_DummyService)
-    _install_module("src.backend.evaluation_service", EvaluationService=_DummyService)
+    _install_module("src.infrastructure.services.ingestion_service", IngestionService=_DummyService)
+    _install_module("src.infrastructure.services.vectorstore_service", VectorStoreService=_DummyService)
+    _install_module("src.infrastructure.services.evaluation_service", EvaluationService=_DummyService)
     _install_module(
-        "src.backend.llm_judge_service",
+        "src.infrastructure.services.llm_judge_service",
         LLMJudgeService=_DummyService,
         JUDGE_FAILURE_REASON="judge_failure",
     )
-    _install_module("src.backend.chat_service", ChatService=_DummyService)
-    _install_module("src.backend.rag_service", RAGService=_DummyService)
-    _install_module("src.backend.docstore_service", DocStoreService=_DummyService)
-    _install_module("src.backend.reranking_service", RerankingService=_DummyService)
+    _install_module("src.infrastructure.services.chat_service", ChatService=_DummyService)
+    _install_module("src.infrastructure.services.rag_service", RAGService=_DummyService)
+    _install_module("src.infrastructure.services.docstore_service", DocStoreService=_DummyService)
+    _install_module("src.infrastructure.services.reranking_service", RerankingService=_DummyService)
     _install_module(
-        "src.backend.retrieval_comparison_service",
+        "src.infrastructure.services.retrieval_comparison_service",
         RetrievalComparisonService=_DummyService,
     )
 

@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
 from src.domain.pipeline_payloads import PipelineBuildResult
-from src.backend.llm_judge_service import JUDGE_FAILURE_REASON
-from src.backend.manual_evaluation_service import (
+from src.infrastructure.services.llm_judge_service import JUDGE_FAILURE_REASON
+from src.infrastructure.services.manual_evaluation_service import (
     ManualEvaluationService,
     _ordered_sources_from_pipeline,
     build_expectation_comparison,

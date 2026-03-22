@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.multimodal_orchestration_service import MultimodalOrchestrationService
+from src.infrastructure.services.multimodal_orchestration_service import MultimodalOrchestrationService
 
 
 class TestMultimodalOrchestrationService(unittest.TestCase):

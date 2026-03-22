@@ -4,7 +4,7 @@ from langchain_core.documents import Document
 
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
-from src.backend.retrieval_comparison_service import RetrievalComparisonService
+from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
 
 
 def _fake_pipeline(

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from src.backend.reranking_service import RerankingService
+from src.infrastructure.services.reranking_service import RerankingService
 
 
 class TestRerankingService(unittest.TestCase):

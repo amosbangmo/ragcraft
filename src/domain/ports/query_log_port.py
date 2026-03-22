@@ -12,7 +12,7 @@ class QueryLogPort(Protocol):
     ``payload`` is a plain dict or :class:`~src.application.common.query_log_payload.QueryLogIngressPayload`
     (avoid importing that type here to keep domain free of application dependencies).
 
-    Implemented by :class:`~src.backend.query_log_service.QueryLogService`; SQLite persistence
+    Implemented by :class:`~src.infrastructure.services.query_log_service.QueryLogService`; SQLite persistence
     remains behind :class:`~src.domain.shared.query_log_port.QueryLogPersistencePort`.
     """
 

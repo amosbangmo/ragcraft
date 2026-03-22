@@ -3,7 +3,7 @@ Frontend integration seam for backend capabilities (Streamlit today; Angular/SPA
 
 Implementations: **HTTP** (:class:`~src.frontend_gateway.http_client.HttpBackendClient` → FastAPI) or
 **in-process** (:class:`~src.frontend_gateway.in_process.InProcessBackendClient` →
-:class:`~src.composition.BackendApplicationContainer`). Pages should depend only on this protocol, not on ``src.backend`` or the composition root.
+:class:`~src.composition.BackendApplicationContainer`). Pages should depend only on this protocol, not on ``src.infrastructure.services`` or the composition root.
 """
 
 from __future__ import annotations

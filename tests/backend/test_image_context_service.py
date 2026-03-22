@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.image_context_service import ImageContextService
+from src.infrastructure.services.image_context_service import ImageContextService
 
 
 class TestImageContextService(unittest.TestCase):

@@ -38,7 +38,7 @@ from langchain_core.documents import Document
 from src.core.exceptions import VectorStoreError
 from src.domain.project import Project
 from src.infrastructure.caching.process_project_chain_cache import ProcessProjectChainCache
-from src.backend.vectorstore_service import VectorStoreService
+from src.infrastructure.services.vectorstore_service import VectorStoreService
 
 
 class TestVectorStoreService(unittest.TestCase):
@@ -47,7 +47,7 @@ class TestVectorStoreService(unittest.TestCase):
         self.service = VectorStoreService(chain_cache=self._chain_cache)
         self.project = Project(user_id="u1", project_id="p1")
 
-    @patch("src.backend.vectorstore_service.load_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.load_vector_store")
     def test_load_returns_vector_store(self, mock_load):
         vector_store = MagicMock()
         mock_load.return_value = vector_store
@@ -57,7 +57,7 @@ class TestVectorStoreService(unittest.TestCase):
         self.assertIs(result, vector_store)
         mock_load.assert_called_once_with(self.project.faiss_index_path)
 
-    @patch("src.backend.vectorstore_service.load_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.load_vector_store")
     def test_load_uses_cache_until_dropped(self, mock_load):
         vector_store = MagicMock()
         mock_load.return_value = vector_store
@@ -71,14 +71,14 @@ class TestVectorStoreService(unittest.TestCase):
         self.service.load(self.project)
         self.assertEqual(mock_load.call_count, 2)
 
-    @patch("src.backend.vectorstore_service.load_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.load_vector_store")
     def test_load_wraps_errors(self, mock_load):
         mock_load.side_effect = RuntimeError("boom")
 
         with self.assertRaises(VectorStoreError):
             self.service.load(self.project)
 
-    @patch("src.backend.vectorstore_service.create_or_update_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.create_or_update_vector_store")
     def test_index_documents_returns_empty_tuple_for_empty_chunks(self, mock_create_or_update):
         # Empty input should short-circuit and avoid touching infrastructure.
         store, indexing_ms = self.service.index_documents(self.project, [])
@@ -87,8 +87,8 @@ class TestVectorStoreService(unittest.TestCase):
         self.assertEqual(indexing_ms, 0.0)
         mock_create_or_update.assert_not_called()
 
-    @patch("src.backend.vectorstore_service.save_vector_store")
-    @patch("src.backend.vectorstore_service.create_or_update_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.save_vector_store")
+    @patch("src.infrastructure.services.vectorstore_service.create_or_update_vector_store")
     def test_index_documents_saves_vector_store_when_created(self, mock_create_or_update, mock_save):
         chunks = [Document(page_content="chunk", metadata={"doc_id": "d1"})]
         vector_store = MagicMock()

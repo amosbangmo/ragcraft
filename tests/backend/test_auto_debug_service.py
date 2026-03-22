@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.auto_debug_service import AutoDebugService
+from src.infrastructure.services.auto_debug_service import AutoDebugService
 
 
 class TestAutoDebugService(unittest.TestCase):

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from src.infrastructure.logging.query_log_repository import QueryLogRepository
 from src.infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
 from src.infrastructure.persistence.db import init_app_db
-from src.backend.query_log_service import QueryLogService, parse_query_log_timestamp
+from src.infrastructure.services.query_log_service import QueryLogService, parse_query_log_timestamp
 
 
 class TestSQLiteQueryLogRepository(unittest.TestCase):

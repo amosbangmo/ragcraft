@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.table_parsing_service import TableParsingService
+from src.infrastructure.services.table_parsing_service import TableParsingService
 
 
 class TestTableParsingService(unittest.TestCase):

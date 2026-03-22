@@ -55,7 +55,7 @@ if "src.infrastructure.ingestion.summarizer" not in sys.modules:
 from src.core.exceptions import DocumentExtractionError, LLMServiceError, OCRDependencyError
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
-from src.backend.ingestion_service import IngestionService
+from src.infrastructure.services.ingestion_service import IngestionService
 
 
 class TestIngestionService(unittest.TestCase):
@@ -64,7 +64,7 @@ class TestIngestionService(unittest.TestCase):
         self.service.summarizer = MagicMock()
         self.project = Project(user_id="u1", project_id="p1")
 
-    @patch("src.backend.ingestion_service.extract_elements")
+    @patch("src.infrastructure.services.ingestion_service.extract_elements")
     def test_ingest_file_path_builds_documents_and_assets(self, mock_extract):
         mock_extract.return_value = [
             {
@@ -95,7 +95,7 @@ class TestIngestionService(unittest.TestCase):
         self.assertGreaterEqual(diagnostics.summarization_ms, 0.0)
         self.assertGreaterEqual(diagnostics.total_ms, 0.0)
 
-    @patch("src.backend.ingestion_service.extract_elements")
+    @patch("src.infrastructure.services.ingestion_service.extract_elements")
     def test_ingest_file_path_raises_on_empty_elements(self, mock_extract):
         mock_extract.return_value = []
 
@@ -106,7 +106,7 @@ class TestIngestionService(unittest.TestCase):
                 source_file="x.pdf",
             )
 
-    @patch("src.backend.ingestion_service.extract_elements")
+    @patch("src.infrastructure.services.ingestion_service.extract_elements")
     def test_ingest_file_path_translates_ocr_signature_errors(self, mock_extract):
         # Service detects known OCR error signatures and maps them to domain error.
         mock_extract.side_effect = RuntimeError("Tesseract is not installed")
@@ -118,7 +118,7 @@ class TestIngestionService(unittest.TestCase):
                 source_file="x.pdf",
             )
 
-    @patch("src.backend.ingestion_service.extract_elements")
+    @patch("src.infrastructure.services.ingestion_service.extract_elements")
     def test_ingest_file_path_wraps_summarizer_errors(self, mock_extract):
         mock_extract.return_value = [
             {

@@ -17,15 +17,15 @@ from typing import TYPE_CHECKING
 from src.auth.auth_service import AuthService
 from src.composition.backend_composition import BackendComposition, build_backend_composition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.backend.chat_service import ChatService
-from src.backend.docstore_service import DocStoreService
-from src.backend.evaluation_service import EvaluationService
-from src.backend.project_service import ProjectService
-from src.backend.qa_dataset_generation_service import QADatasetGenerationService
-from src.backend.qa_dataset_service import QADatasetService
-from src.backend.query_log_service import QueryLogService
-from src.backend.reranking_service import RerankingService
-from src.backend.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.services.chat_service import ChatService
+from src.infrastructure.services.docstore_service import DocStoreService
+from src.infrastructure.services.evaluation_service import EvaluationService
+from src.infrastructure.services.project_service import ProjectService
+from src.infrastructure.services.qa_dataset_generation_service import QADatasetGenerationService
+from src.infrastructure.services.qa_dataset_service import QADatasetService
+from src.infrastructure.services.query_log_service import QueryLogService
+from src.infrastructure.services.reranking_service import RerankingService
+from src.infrastructure.services.retrieval_settings_service import RetrievalSettingsService
 
 if TYPE_CHECKING:
     from src.application.chat.use_cases.ask_question import AskQuestionUseCase
@@ -56,10 +56,10 @@ if TYPE_CHECKING:
     from src.application.settings.use_cases.update_project_retrieval_settings import (
         UpdateProjectRetrievalSettingsUseCase,
     )
-    from src.backend.ingestion_service import IngestionService
-    from src.backend.rag_service import RAGService
-    from src.backend.retrieval_comparison_service import RetrievalComparisonService
-    from src.backend.vectorstore_service import VectorStoreService
+    from src.infrastructure.services.ingestion_service import IngestionService
+    from src.infrastructure.services.rag_service import RAGService
+    from src.infrastructure.services.retrieval_comparison_service import RetrievalComparisonService
+    from src.infrastructure.services.vectorstore_service import VectorStoreService
 
 
 @dataclass

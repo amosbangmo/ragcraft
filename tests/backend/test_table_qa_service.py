@@ -1,7 +1,7 @@
 import unittest
 
 from src.domain.query_intent import QueryIntent
-from src.backend.table_qa_service import TableQAService
+from src.infrastructure.services.table_qa_service import TableQAService
 
 
 class TestTableQAService(unittest.TestCase):

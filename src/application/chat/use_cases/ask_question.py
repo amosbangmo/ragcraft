@@ -12,13 +12,13 @@ from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.ports import QueryLogPort
-from src.backend.answer_generation_service import AnswerGenerationService
+from src.infrastructure.services.answer_generation_service import AnswerGenerationService
 
 
 class AskQuestionUseCase:
     """
     End-to-end RAG ask: build pipeline via injected callable (typically
-    :meth:`src.backend.rag_service.RAGService.build_pipeline` → :class:`BuildRagPipelineUseCase`),
+    :meth:`src.infrastructure.services.rag_service.RAGService.build_pipeline` → :class:`BuildRagPipelineUseCase`),
     generate answer, merge latency, emit deferred query log with answer payload, return
     :class:`~src.domain.rag_response.RAGResponse`.
     """

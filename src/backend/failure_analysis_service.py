@@ -1,23 +1,5 @@
-"""Compatibility re-export; implementation is :mod:`src.domain.benchmark_failure_analysis`."""
-
-from __future__ import annotations
-
-from src.domain.benchmark_failure_analysis import (
-    DEFAULT_HALLUCINATION_THRESHOLD,
-    DEFAULT_HIGH_CONFIDENCE_DANGEROUS,
-    DEFAULT_LOW_CONFIDENCE,
-    DEFAULT_QUALITY_THRESHOLD,
-    DEFAULT_TOP_EXAMPLES_PER_TYPE,
-    FAILURE_LABEL_ORDER,
-    FailureAnalysisService,
-)
-
-__all__ = [
-    "DEFAULT_HALLUCINATION_THRESHOLD",
-    "DEFAULT_HIGH_CONFIDENCE_DANGEROUS",
-    "DEFAULT_LOW_CONFIDENCE",
-    "DEFAULT_QUALITY_THRESHOLD",
-    "DEFAULT_TOP_EXAMPLES_PER_TYPE",
-    "FAILURE_LABEL_ORDER",
-    "FailureAnalysisService",
-]
+"""Deprecated compatibility alias; import from ``src.infrastructure.services.failure_analysis_service`` instead."""
+from importlib import import_module
+import sys
+_mod = import_module("src.infrastructure.services.failure_analysis_service")
+sys.modules[__name__] = _mod

@@ -2,7 +2,7 @@ import unittest
 
 from src.domain.llm_judge_result import LLMJudgeResult
 from src.domain.qa_dataset_entry import QADatasetEntry
-from src.backend.evaluation_service import EvaluationService
+from src.infrastructure.services.evaluation_service import EvaluationService
 
 
 class _StubJudge:

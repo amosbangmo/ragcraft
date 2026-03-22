@@ -1,7 +1,7 @@
 import unittest
 
 from src.domain.retrieval_filters import RetrievalFilters
-from src.backend.hybrid_retrieval_service import HybridRetrievalService
+from src.infrastructure.services.hybrid_retrieval_service import HybridRetrievalService
 
 
 class TestHybridRetrievalMetadataFilters(unittest.TestCase):

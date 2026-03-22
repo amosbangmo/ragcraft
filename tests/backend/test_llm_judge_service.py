@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from src.domain.llm_judge_result import LLMJudgeResult
-from src.backend.llm_judge_service import LLMJudgeService
+from src.infrastructure.services.llm_judge_service import LLMJudgeService
 
 
 class TestLLMJudgeService(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestLLMJudgeService(unittest.TestCase):
             ),
         )
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_parse_full_json(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
@@ -52,7 +52,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertFalse(r.has_hallucination)
         self.assertEqual(r.reason, "ok")
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_extra_legacy_keys_in_json_are_ignored(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content=(
@@ -71,7 +71,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertEqual(r.answer_relevance_score, 0.7)
         self.assertEqual(r.answer_correctness_score, 0.0)
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_strips_markdown_fence(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content="```json\n"
@@ -90,7 +90,7 @@ class TestLLMJudgeService(unittest.TestCase):
         self.assertEqual(r.citation_faithfulness_score, 1.0)
         self.assertFalse(r.has_hallucination)
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_llm_invoke_exception_returns_failure_defaults(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.side_effect = RuntimeError("unavailable")
         r = LLMJudgeService().evaluate(
@@ -101,7 +101,7 @@ class TestLLMJudgeService(unittest.TestCase):
         )
         self.assertEqual(r, LLMJudgeService._failure_result())
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_unparseable_response_returns_failure_defaults(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(content="not json at all")
         r = LLMJudgeService().evaluate(
@@ -112,7 +112,7 @@ class TestLLMJudgeService(unittest.TestCase):
         )
         self.assertEqual(r, LLMJudgeService._failure_result())
 
-    @patch("src.backend.llm_judge_service.LLM")
+    @patch("src.infrastructure.services.llm_judge_service.LLM")
     def test_regex_fallback_when_json_invalid(self, mock_llm: MagicMock) -> None:
         mock_llm.invoke.return_value = MagicMock(
             content='noise {"groundedness_score": 0.7, "garbage" trailing '

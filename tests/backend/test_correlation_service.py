@@ -1,6 +1,6 @@
 import unittest
 
-from src.backend.correlation_service import CorrelationService
+from src.infrastructure.services.correlation_service import CorrelationService
 
 
 class TestCorrelationService(unittest.TestCase):

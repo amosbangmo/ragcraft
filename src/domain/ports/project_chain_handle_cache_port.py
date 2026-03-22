@@ -1,7 +1,7 @@
 """
 Port for dropping in-process handles keyed by ``project_id`` (e.g. loaded vector indexes).
 
-Used by :class:`~src.backend.vectorstore_service.VectorStoreService` and by application-layer
+Used by :class:`~src.infrastructure.services.vectorstore_service.VectorStoreService` and by application-layer
 invalidation so the HTTP API never reaches Streamlit session state.
 """
 
