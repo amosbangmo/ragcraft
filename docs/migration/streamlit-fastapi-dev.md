@@ -52,11 +52,11 @@ streamlit run streamlit_app.py
 
 Optional tuning:
 
-- `RAGCRAFT_API_TIMEOUT_SECONDS` — default `300` (large dataset evaluations may need more).
+- `RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS` / `RAGCRAFT_API_READ_TIMEOUT_SECONDS` — split timeouts for long evaluations (legacy: `RAGCRAFT_API_TIMEOUT_SECONDS` for read when unset).
 
 ### Identity header
 
-Every mutating/listing API call from `HttpBackendClient` sends **`X-User-Id`** set to the current Streamlit session user (authenticated `user_id` or anonymous id). Routes that also take `user_id` in the JSON body (e.g. `/chat/ask`) **must** use the same value; the client sets both to match.
+Every mutating/listing API call from `HttpBackendClient` sends **`X-User-Id`** set to the current Streamlit session user (authenticated `user_id` or anonymous id). Chat and pipeline routes take the workspace user **only from this header** (no `user_id` in the JSON body).
 
 ### After profile changes over HTTP
 

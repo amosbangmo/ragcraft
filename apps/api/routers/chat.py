@@ -137,7 +137,7 @@ def post_preview_summary_recall(
     use_case: Annotated[Any, Depends(get_preview_summary_recall_use_case)],
 ) -> PreviewSummaryRecallResponse:
     """
-    Run vector (+ optional BM25) summary recall and return recalled chunks (Streamlit “preview” parity).
+    Run vector (+ optional BM25) summary recall and return recalled chunks (preview stage only).
     """
     project = project_service.get_project(user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None

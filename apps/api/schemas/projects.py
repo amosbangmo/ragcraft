@@ -1,8 +1,7 @@
 """
 Request and response models for project and document management.
 
-Identity is supplied via the ``X-User-Id`` header (see router dependencies); bodies stay minimal
-and do not assume a Streamlit session.
+Identity is supplied via the ``X-User-Id`` header (see router dependencies); request bodies stay minimal.
 """
 
 from __future__ import annotations
@@ -81,7 +80,7 @@ class DeleteDocumentResponse(BaseModel):
 
 
 class ProjectRetrievalSettingsResponse(BaseModel):
-    """Persisted preferences plus merged effective tuning (same semantics as Streamlit panel)."""
+    """Persisted preferences plus merged effective retrieval tuning."""
 
     model_config = {"extra": "forbid"}
 

@@ -82,7 +82,7 @@ def post_manual_evaluation(
     use_case: Annotated[Any, Depends(get_run_manual_evaluation_use_case)],
 ) -> ManualEvaluationResponse:
     """
-    Evaluate a single question with optional gold fields (parity with Streamlit manual eval).
+    Evaluate a single question with optional gold fields via the manual evaluation use case.
 
     Example::
 

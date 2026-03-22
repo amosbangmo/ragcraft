@@ -1,4 +1,4 @@
-"""One-off manual evaluation for a single question (parity with :meth:`RAGCraftApp.evaluate_manual_question`)."""
+"""One-off manual evaluation for a single question (``POST /evaluation/manual`` and in-process clients)."""
 
 from __future__ import annotations
 

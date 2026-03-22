@@ -278,7 +278,7 @@ def get_retrieval_preset_label(
 @router.get(
     "/{project_id}/documents/details",
     response_model=ProjectDocumentDetailsResponse,
-    summary="List documents with ingestion stats (Streamlit projects/ingestion parity)",
+    summary="List documents with ingestion stats",
 )
 def get_project_document_details(
     project_id: str,

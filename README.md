@@ -84,18 +84,18 @@ The demo allows you to:
 
 # 🏗️ Architecture Overview
 
+The **authoritative backend surface** for automation and future SPAs is the **FastAPI** app under `apps/api/` (OpenAPI at `/docs`). The Streamlit UI can call it over **HTTP** (`RAGCRAFT_BACKEND_CLIENT=http`) or run **in-process** against the same composition root via a thin façade (default local dev).
+
 ```text
 User (Browser)
       │
-      ▼
-Streamlit UI
-      │
-      ▼
-Application Facade (RAGCraftApp)
-      │
-      ▼
-Service Layer
-(auth / ingestion / retrieval / reranking / prompt building)
+      ├──────────────────────────────┐
+      ▼                              ▼
+Streamlit UI                  Angular / API clients
+      │                              │
+      │  in-process OR HTTP          │  HTTP (+ X-User-Id)
+      ▼                              ▼
+Backend composition (services + use cases)
       │
       ▼
 Document Processing
@@ -115,6 +115,8 @@ Prompt Construction
       ▼
 LLM
 ```
+
+Migration status and checklist: `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.
 
 ---
 
@@ -189,6 +191,7 @@ Assets are rehydrated from SQLite during retrieval to build the final prompt.
 ```text
 ragcraft/
 │
+├── apps/api/              # FastAPI app (primary HTTP API)
 ├── streamlit_app.py
 ├── pages/
 │   ├── chat.py
@@ -202,6 +205,7 @@ ragcraft/
 │   ├── auth/
 │   ├── core/
 │   ├── domain/
+│   ├── frontend_gateway/  # BackendClient: in-process vs HTTP
 │   ├── infrastructure/
 │   ├── services/
 │   └── ui/
@@ -230,9 +234,27 @@ pip install -r requirements.txt
 
 ## Run
 
+### Streamlit (default local UI)
+
 ```bash
 streamlit run streamlit_app.py
 ```
+
+Set `PYTHONPATH` to the repo root if imports fail (see `apps/api/main.py` for the same pattern).
+
+### FastAPI backend (HTTP API)
+
+Use a second terminal if you want OpenAPI docs or to point Streamlit at the API:
+
+```bash
+export PYTHONPATH=$(pwd)   # Linux/macOS
+python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+PowerShell: `$env:PYTHONPATH = (Get-Location).Path` then the same `uvicorn` command.
+
+- **Docs:** http://127.0.0.1:8000/docs  
+- **Streamlit + API:** set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (see `docs/migration/streamlit-fastapi-dev.md`).
 
 ### Environment variables
 
@@ -249,6 +271,7 @@ OPENAI_API_KEY=your_api_key
 ## Core
 
 - Python
+- FastAPI (HTTP API, `apps/api/`)
 - Streamlit
 - LangChain
 - FAISS

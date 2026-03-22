@@ -1,6 +1,6 @@
 """
-Bridge FastAPI ``UploadFile`` to the ingestion layer, which expects Streamlit-like objects
-(``name`` + ``getbuffer()``) via :func:`src.infrastructure.ingestion.loader.save_uploaded_file`.
+Bridge FastAPI ``UploadFile`` to the ingestion layer, which expects upload-shaped objects
+(``name`` + ``getbuffer()``) compatible with :func:`src.infrastructure.ingestion.loader.save_uploaded_file`.
 """
 
 from __future__ import annotations

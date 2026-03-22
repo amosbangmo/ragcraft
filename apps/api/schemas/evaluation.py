@@ -64,7 +64,7 @@ class DatasetBenchmarkRunRequest(BaseModel):
 
     project_id: str = Field(..., min_length=1)
     enable_query_rewrite: bool = Field(
-        description="Fixed override for every row in the benchmark (same as Streamlit run).",
+        description="Fixed override for every row in the benchmark run.",
     )
     enable_hybrid_retrieval: bool = Field(
         description="Fixed override for hybrid retrieval for every row.",

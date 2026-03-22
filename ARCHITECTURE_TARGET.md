@@ -71,3 +71,7 @@ Streamlit-specific composition and page modules. This is the home for UI wiring 
 **Domain** ← **Application** ← **Infrastructure / Interfaces / apps/api**
 
 Dependencies point inward: outer layers depend on inner abstractions, not the reverse.
+
+## Current migration status
+
+The HTTP layer under `apps/api/` is wired to the composition root without the Streamlit façade. A concise checklist (done vs remaining vs temporary UI pieces) lives in `docs/migration/BACKEND_MIGRATION_CHECKLIST.md`.

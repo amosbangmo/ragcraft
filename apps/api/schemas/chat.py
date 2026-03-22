@@ -68,7 +68,7 @@ class ChatPipelineRequestBase(BaseModel):
     question: str = Field(..., min_length=1, description="User question for this turn.")
     chat_history: list[str] = Field(
         default_factory=list,
-        description="Prior user/assistant strings in order (same convention as Streamlit).",
+        description="Prior user/assistant strings in order (alternating turns).",
     )
     filters: RetrievalFiltersPayload | None = Field(
         default=None,
@@ -107,7 +107,7 @@ class PreviewSummaryRecallRequest(ChatPipelineRequestBase):
 
 
 class ChatAskResponse(BaseModel):
-    """Answer payload matching Streamlit-facing RAG fields (JSON-serializable)."""
+    """Answer payload for full RAG responses (stable JSON-serializable fields)."""
 
     model_config = {"extra": "forbid"}
 

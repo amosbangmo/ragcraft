@@ -2,9 +2,9 @@
 Streamlit ↔ backend boundary: one entrypoint for :class:`~src.frontend_gateway.protocol.BackendClient`.
 
 Pages and ``src/ui`` should depend on :func:`get_backend_client` from this module (or
-:mod:`src.frontend_gateway.streamlit_context`, which re-exports it). **Do not** import
-:class:`~src.app.ragcraft_app.RAGCraftApp` from pages — the façade is an implementation detail
-of in-process mode only.
+:mod:`src.frontend_gateway.streamlit_context`, which re-exports it). Prefer the
+:class:`~src.frontend_gateway.protocol.BackendClient` protocol over importing the in-process
+façade module directly from feature code.
 
 Modes (environment)
 -------------------

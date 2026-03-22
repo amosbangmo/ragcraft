@@ -1,5 +1,7 @@
 # RAGCraftApp legacy façade — deprecation note
 
+See **`BACKEND_MIGRATION_CHECKLIST.md`** for migration-complete criteria and what stays temporary for Streamlit in-process mode.
+
 ## What changed
 
 - Introduced :class:`~src.composition.application_container.BackendApplicationContainer` as the **primary backend composition boundary**. It wraps :class:`~src.composition.backend_composition.BackendComposition` and exposes explicit, named dependencies for project, chat, ingestion, evaluation, and retrieval-analytics use cases (plus shared services).

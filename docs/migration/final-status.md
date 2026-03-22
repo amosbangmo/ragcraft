@@ -1,6 +1,6 @@
 # Migration final status (FastAPI-first, Streamlit decoupling)
 
-This document summarizes what the migration achieved, what debt remains, and how a future Angular (or other) frontend should integrate. Last updated as part of **Prompt 12** (hardening and documentation pass).
+This document summarizes what the migration achieved, what debt remains, and how a future Angular (or other) frontend should integrate. For a concise checklist, see **`BACKEND_MIGRATION_CHECKLIST.md`** in this folder. Last updated: **Prompt 8** (final cleanup / migration-complete pass).
 
 ---
 
@@ -53,6 +53,7 @@ This document summarizes what the migration achieved, what debt remains, and how
 
 ## Related documents
 
+- `docs/migration/BACKEND_MIGRATION_CHECKLIST.md` — done / remaining / temporary Streamlit pieces  
 - `docs/migration/streamlit-decoupling-checklist.md`
 - `docs/migration/streamlit-backend-client.md`
 - `docs/migration/ragcraftapp-deprecation.md`

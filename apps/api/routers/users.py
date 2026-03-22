@@ -1,8 +1,8 @@
 """
 Authenticated user profile API (SQLite).
 
-``X-User-Id`` must match the stored ``user_id`` row. Intended for Streamlit HTTP backend mode
-and future SPA clients; login/register remain in Streamlit for now.
+``X-User-Id`` must match the stored ``user_id`` row. Used by HTTP ``BackendClient`` and future
+SPA clients; interactive login/register may remain hosted outside this API until auth is unified.
 """
 
 from __future__ import annotations

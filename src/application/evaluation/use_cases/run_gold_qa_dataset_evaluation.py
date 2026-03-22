@@ -1,4 +1,4 @@
-"""Run the full gold QA benchmark for a project (same orchestration as :meth:`RAGCraftApp.evaluate_gold_qa_dataset`)."""
+"""Run the full gold QA benchmark for a project (``POST /evaluation/dataset/run`` and in-process clients)."""
 
 from __future__ import annotations
 

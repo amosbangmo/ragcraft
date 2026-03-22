@@ -5,11 +5,11 @@ FastAPI dependency providers.
 :class:`~src.composition.application_container.BackendApplicationContainer` from
 :func:`~src.composition.build_backend` (composition root: services + use cases).
 
-Streamlit in-process mode may still use the legacy UI façade; FastAPI wiring does not import or
-construct that module.
+FastAPI wiring does **not** import the Streamlit-oriented façade in ``src.app`` or Streamlit
+entrypoints; the HTTP API’s composition graph is independent of the desktop UI process.
 
 The composition build stays inside a cached getter so ``import apps.api.dependencies`` does not load
-FAISS, LangChain, or the Streamlit chain cache until a route resolves a dependency. Service return
+FAISS, LangChain, or UI session chain state until a route resolves a dependency. Service return
 types below are explicit where imports stay cheap;
 chat and evaluation use cases that sit behind :class:`~src.services.rag_service.RAGService` remain
 ``Any`` at the annotation layer to avoid eager heavy imports.
