@@ -14,7 +14,7 @@ There is **no** `src/backend` package and no legacy “backend” shim layer. Ca
 | HTTP API | `apps/api/...` |
 | Streamlit → backend | `src/frontend_gateway/` — `BackendClient` over **HTTP** (`HttpBackendClient`) or **in-process** (`InProcessBackendClient` + `build_streamlit_backend_application_container` from `streamlit_backend_factory.py`, which calls `src.composition.build_backend` only) |
 
-Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.py` (directory absent + **no** `src.backend` imports under `src/`, `apps/`, `pages/`, `tests/`, and `streamlit_app.py`).
+Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.py` (removed package directories absent + **no** imports of `src.backend` or `src.infrastructure.services` under `src/`, `apps/`, `pages/`, `tests/`, and `streamlit_app.py`).
 
 ## Canonical layers
 
@@ -41,7 +41,7 @@ Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.p
 
 ## Forbidden dependencies (high-signal)
 
-- **Removed packages:** `src.backend`, `src.services`, **`src.adapters`** — do not reintroduce; implementations live under `src/infrastructure/adapters/`.
+- **Removed packages:** `src.backend`, `src.services`, **`src.adapters`**, **`src.infrastructure.services`** — do not reintroduce; concrete adapters live under `src/infrastructure/adapters/`, orchestration under `src/application/`.
 - **Routers** must not import `src.infrastructure` (any submodule).
 - **Streamlit** must not import `src.infrastructure` or `src.composition` directly.
 - **Domain** must not import LangChain, SQLite drivers, or FastAPI.
@@ -64,6 +64,7 @@ Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.p
 
 | Finding | Action |
 |---------|--------|
+| `src/infrastructure/services/` | **Already absent** from the tree (logic lives in `src/infrastructure/adapters/` and `src/application/`). **Guard tests** prevent the package or imports from returning. |
 | SQLite port implementations lived under `src/adapters/sqlite/` | **Moved** to `src/infrastructure/adapters/sqlite/`; `src/adapters/` removed. |
 | `failure_analysis_service.py` only re-exported domain | **Removed**; callers import `FailureAnalysisService` from `src.domain.benchmark_failure_analysis`. |
 | `src/infrastructure/persistence/sqlite/asset_repository.py` | Kept as a thin **forwarding** module to the new adapter path (existing imports preserved). |

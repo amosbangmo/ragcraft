@@ -1,5 +1,6 @@
 """
-Extra import-level guardrails: legacy ``src.backend`` removal and a thin ``src.frontend_gateway``.
+Extra import-level guardrails: removed legacy packages (``src.backend``, ``src.adapters``,
+``src.infrastructure.services``) and a thin ``src.frontend_gateway``.
 
 See ``tests/architecture/README.md`` for the full boundary matrix.
 """
@@ -15,8 +16,8 @@ from tests.architecture.import_scanner import collect_import_violations, importe
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _python_files_guarded_against_src_backend_imports() -> list[Path]:
-    """Production, delivery, and test trees — anywhere ``src.backend`` must not reappear."""
+def _repo_python_paths_for_legacy_shim_import_guards() -> list[Path]:
+    """Trees scanned so removed shim packages cannot be reintroduced via imports."""
     paths: list[Path] = []
     for sub in ("src", "apps", "pages", "tests"):
         root = REPO_ROOT / sub
@@ -46,6 +47,19 @@ def test_legacy_backend_package_directory_is_absent() -> None:
     )
 
 
+def test_legacy_infrastructure_services_package_directory_is_absent() -> None:
+    """
+    The old ``src/infrastructure/services`` package was removed; runtime code lives in
+    ``src/infrastructure/adapters/`` (and use cases in ``src/application/``).
+    """
+    services_dir = REPO_ROOT / "src" / "infrastructure" / "services"
+    assert not services_dir.exists(), (
+        "``src/infrastructure/services`` was removed; put concrete code in "
+        "``src/infrastructure/adapters`` and orchestration in ``src/application``. "
+        f"Delete leftover directory: {services_dir}"
+    )
+
+
 def test_src_tree_does_not_import_legacy_adapters_package() -> None:
     """No module under ``src/`` may import ``src.adapters`` (package removed; use ``src.infrastructure.adapters``)."""
     src_root = REPO_ROOT / "src"
@@ -68,13 +82,28 @@ def test_codebase_python_does_not_import_removed_backend_package() -> None:
     and ``src.composition``).
     """
     violations: list[str] = []
-    for path in _python_files_guarded_against_src_backend_imports():
+    for path in _repo_python_paths_for_legacy_shim_import_guards():
         for mod in imported_top_level_modules(path):
             if mod == "src.backend" or mod.startswith("src.backend."):
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
     msg = (
         "``src.backend`` was removed. Use ``src.infrastructure.adapters`` (or the composition root).\n"
+    )
+    assert not violations, msg + "\n".join(violations)
+
+
+def test_codebase_python_does_not_import_removed_infrastructure_services_package() -> None:
+    """No imports of ``src.infrastructure.services`` (removed — use ``src.infrastructure.adapters`` / application)."""
+    violations: list[str] = []
+    for path in _repo_python_paths_for_legacy_shim_import_guards():
+        for mod in imported_top_level_modules(path):
+            if mod == "src.infrastructure.services" or mod.startswith("src.infrastructure.services."):
+                rel = path.relative_to(REPO_ROOT)
+                violations.append(f"{rel}: imports {mod}")
+    msg = (
+        "``src.infrastructure.services`` was removed. Use ``src.infrastructure.adapters`` "
+        "for concrete adapters and ``src.application`` for orchestration.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

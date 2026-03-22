@@ -45,6 +45,7 @@ Details: `docs/migration/streamlit-fastapi-dev.md`.
 |------|--------|
 | **`src/backend/`** | **Removed.** Import **`src.infrastructure.adapters`** (or application use cases); do not reintroduce. Tests fail if the directory exists or if **`src.backend`** is imported from `src/`, `apps/`, `pages/`, `tests/`, or **`streamlit_app.py`**. |
 | **`src/adapters/`** | **Removed.** SQLite and similar live under **`src/infrastructure/adapters/`**; do not reintroduce. |
+| **`src/infrastructure/services/`** | **Removed.** Use **`src/infrastructure/adapters/`** and **`src/application/`**; tests fail if the directory or **`src.infrastructure.services`** imports return. |
 | **`src/services/`** | **Removed** as a package name; do not reintroduce. |
 | **`src/app/ragcraft_app.py`** | **Removed**; in-process mode uses **`InProcessBackendClient`** + **`BackendApplicationContainer`** directly. |
 
