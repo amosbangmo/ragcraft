@@ -67,9 +67,9 @@ from src.composition.application_container import BackendApplicationContainer
 
 @lru_cache(maxsize=1)
 def get_backend_application_container() -> BackendApplicationContainer:
+    from src.application.frontend_support.memory_chat_transcript import MemoryChatTranscript
     from src.composition import build_backend, build_backend_composition
     from src.composition.wiring import process_scoped_chain_invalidate_key
-    from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
 
     return build_backend(
         invalidate_chain_key=process_scoped_chain_invalidate_key(),
