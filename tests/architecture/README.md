@@ -23,7 +23,7 @@ Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **beha
 - **Routers** wire use cases via **`Depends`** and must not import **`src.infrastructure.adapters`** or other **`src.infrastructure`** modules directly (and must not reference the removed **`src.backend`** package).
 - **Streamlit pages and widgets** may import **`streamlit`**, **`src.frontend_gateway`** (including **`view_models`** for display types), and **`src.auth`**; they must not import **`src.domain`** directly, nor **`src.backend`**, **`src.infrastructure`**, **`src.services`**, or the composition/app entrypoints.
 - **`src.frontend_gateway`** must not import **`src.infrastructure`** (use **`src.application.frontend_support`** for HTTP stub factories that need **`src.infrastructure.adapters`**).
-- **Production `src/`** must not import **`src.backend`** (package removed; directory must not exist).
+- **Codebase Python** (`src/`, `apps/`, `pages/`, `tests/`, `streamlit_app.py`) must not import **`src.backend`**; the **`src/backend/`** directory must not exist (`test_codebase_python_does_not_import_removed_backend_package` and `test_legacy_backend_package_directory_is_absent`).
 - **`src/adapters/`** must not exist; use **`src/infrastructure/adapters`** (see guardrails in `test_deprecated_backend_and_gateway_guardrails.py`).
 - We do **not** assert a clean `sys.modules` after `import apps.api.main`: third-party transitive imports can load unrelated packages; the **AST scan** of `apps/api` is the stable guard for “API code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.

@@ -2,6 +2,20 @@
 
 This document is the **normative** layering contract for RAGCraft. It complements the **runtime** overview in [`ARCHITECTURE_TARGET.md`](../../ARCHITECTURE_TARGET.md) at the repo root and the enforced rules in [`tests/architecture/README.md`](../../tests/architecture/README.md).
 
+## Canonical entrypoints (no `src/backend`)
+
+There is **no** `src/backend` package and no legacy “backend” shim layer. Call sites must use:
+
+| Concern | Where to go |
+|---------|-------------|
+| Use cases, application orchestration | `src/application/...` |
+| Concrete adapters (RAG, DB, LLM, …) | `src/infrastructure/adapters/...` |
+| Wiring the graph | `src/composition/...` (`build_backend`, `BackendApplicationContainer`, …) |
+| HTTP API | `apps/api/...` |
+| Streamlit → backend | `src/frontend_gateway/` — `BackendClient` over **HTTP** (`HttpBackendClient`) or **in-process** (`InProcessBackendClient` + `build_streamlit_backend_application_container` from `streamlit_backend_factory.py`, which calls `src.composition.build_backend` only) |
+
+Guardrails: `tests/architecture/test_deprecated_backend_and_gateway_guardrails.py` (directory absent + **no** `src.backend` imports under `src/`, `apps/`, `pages/`, `tests/`, and `streamlit_app.py`).
+
 ## Canonical layers
 
 | Layer | Path | Responsibility |

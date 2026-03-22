@@ -15,6 +15,19 @@ from tests.architecture.import_scanner import collect_import_violations, importe
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _python_files_guarded_against_src_backend_imports() -> list[Path]:
+    """Production, delivery, and test trees — anywhere ``src.backend`` must not reappear."""
+    paths: list[Path] = []
+    for sub in ("src", "apps", "pages", "tests"):
+        root = REPO_ROOT / sub
+        if root.is_dir():
+            paths.extend(iter_python_files(root))
+    streamlit_entry = REPO_ROOT / "streamlit_app.py"
+    if streamlit_entry.is_file():
+        paths.append(streamlit_entry)
+    return paths
+
+
 def test_legacy_src_adapters_package_directory_is_absent() -> None:
     """The old ``src/adapters`` tree was folded into ``src/infrastructure/adapters`` (e.g. sqlite)."""
     adapters_dir = REPO_ROOT / "src" / "adapters"
@@ -48,11 +61,14 @@ def test_src_tree_does_not_import_legacy_adapters_package() -> None:
     assert not violations, msg + "\n".join(violations)
 
 
-def test_src_tree_does_not_import_removed_backend_package() -> None:
-    """No module under ``src/`` may import ``src.backend`` (package no longer exists)."""
-    src_root = REPO_ROOT / "src"
+def test_codebase_python_does_not_import_removed_backend_package() -> None:
+    """
+    No Python under ``src/``, ``apps/``, ``pages/``, ``tests/``, or the Streamlit shell may import
+    ``src.backend`` (shim package removed — use application use cases, ``src.infrastructure.adapters``,
+    and ``src.composition``).
+    """
     violations: list[str] = []
-    for path in iter_python_files(src_root):
+    for path in _python_files_guarded_against_src_backend_imports():
         for mod in imported_top_level_modules(path):
             if mod == "src.backend" or mod.startswith("src.backend."):
                 rel = path.relative_to(REPO_ROOT)
