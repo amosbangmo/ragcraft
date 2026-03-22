@@ -103,6 +103,7 @@ def test_ingest_wire_roundtrip_preserves_document_shape() -> None:
 
 
 def test_project_resolve_use_case_is_wired() -> None:
+    _require_full_backend_stack()
     c = build_backend_container_for_tests()
     assert c.projects_resolve_project_use_case is not None
 

@@ -20,8 +20,8 @@ This document matches the **current** repository layout after the FastAPI-first 
 
 | Mode | Behavior |
 |------|----------|
-| **`http`** | `HttpBackendClient` → FastAPI (`RAGCRAFT_API_BASE_URL`). Matches how a SPA or automation would integrate. |
-| **`in_process`** (default) | `InProcessBackendClient` → shared **`BackendApplicationContainer`** built in the Streamlit process (no uvicorn). Same use cases as the API; transport only differs. |
+| **`http`** (default if `RAGCRAFT_BACKEND_CLIENT` unset) | `HttpBackendClient` → FastAPI (`RAGCRAFT_API_BASE_URL`). Matches how a SPA or automation would integrate. |
+| **`in_process`** | `InProcessBackendClient` → shared **`BackendApplicationContainer`** built in the Streamlit process (no uvicorn). Same use cases as the API; transport only differs. |
 
 Details: `docs/migration/streamlit-fastapi-dev.md`.
 
