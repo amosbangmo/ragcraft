@@ -6,7 +6,7 @@ Handlers delegate to application use cases only; serialization lives under ``app
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
@@ -29,6 +29,9 @@ from apps.api.schemas.chat import (
     RetrievalCompareRequest,
     RetrievalCompareResponse,
 )
+from src.application.chat.use_cases.ask_question import AskQuestionUseCase
+from src.application.chat.use_cases.inspect_rag_pipeline import InspectRagPipelineUseCase
+from src.application.chat.use_cases.preview_summary_recall import PreviewSummaryRecallUseCase
 from src.application.http.wire import (
     PipelineSnapshotWirePayload,
     PreviewSummaryRecallWirePayload,
@@ -36,6 +39,7 @@ from src.application.http.wire import (
     RetrievalComparisonWirePayload,
 )
 from src.services.project_service import ProjectService
+from src.services.retrieval_comparison_service import RetrievalComparisonService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -50,7 +54,7 @@ def post_chat_ask(
     body: ChatAskRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_ask_question_use_case)],
+    use_case: Annotated[AskQuestionUseCase, Depends(get_ask_question_use_case)],
 ) -> ChatAskResponse:
     """
     Run end-to-end RAG for one turn.
@@ -94,7 +98,7 @@ def post_pipeline_inspect(
     body: PipelineInspectRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_inspect_pipeline_use_case)],
+    use_case: Annotated[InspectRagPipelineUseCase, Depends(get_inspect_pipeline_use_case)],
 ) -> PipelineInspectResponse:
     """
     Build the same pipeline as ``/chat/ask`` but stop before answer generation and do not write query logs.
@@ -134,7 +138,7 @@ def post_preview_summary_recall(
     body: PreviewSummaryRecallRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_preview_summary_recall_use_case)],
+    use_case: Annotated[PreviewSummaryRecallUseCase, Depends(get_preview_summary_recall_use_case)],
 ) -> PreviewSummaryRecallResponse:
     """
     Run vector (+ optional BM25) summary recall and return recalled chunks (preview stage only).
@@ -173,8 +177,8 @@ def post_preview_summary_recall(
 def post_retrieval_compare(
     body: RetrievalCompareRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    project_service: Annotated[Any, Depends(get_project_service)],
-    comparison: Annotated[Any, Depends(get_retrieval_comparison_service)],
+    project_service: Annotated[ProjectService, Depends(get_project_service)],
+    comparison: Annotated[RetrievalComparisonService, Depends(get_retrieval_comparison_service)],
 ) -> RetrievalCompareResponse:
     project = project_service.get_project(user_id, body.project_id)
     raw = comparison.compare(

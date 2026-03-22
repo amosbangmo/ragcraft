@@ -55,7 +55,21 @@ from src.application.settings.dtos import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
+from src.application.projects.use_cases.create_project import CreateProjectUseCase
+from src.application.projects.use_cases.list_project_documents import ListProjectDocumentsUseCase
+from src.application.projects.use_cases.list_projects import ListProjectsUseCase
+from src.application.settings.use_cases.get_effective_retrieval_settings import (
+    GetEffectiveRetrievalSettingsUseCase,
+)
+from src.application.settings.use_cases.update_project_retrieval_settings import (
+    UpdateProjectRetrievalSettingsUseCase,
+)
+from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
+from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
+from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
+from src.services.docstore_service import DocStoreService
 from src.services.project_service import ProjectService
+from src.services.project_settings_service import ProjectSettingsService
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -67,7 +81,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 )
 def get_projects(
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_list_projects_use_case)],
+    use_case: Annotated[ListProjectsUseCase, Depends(get_list_projects_use_case)],
 ) -> ProjectListResponse:
     """Returns sorted project ids under ``users/{X-User-Id}/projects``."""
     return ProjectListResponse(projects=use_case.execute(user_id))
@@ -82,7 +96,7 @@ def get_projects(
 def post_project(
     body: CreateProjectRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_create_project_use_case)],
+    use_case: Annotated[CreateProjectUseCase, Depends(get_create_project_use_case)],
 ) -> CreateProjectResponse:
     """
     Creates the project directory if needed (idempotent).
@@ -102,7 +116,7 @@ def post_project(
 def get_project_documents(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_list_project_documents_use_case)],
+    use_case: Annotated[ListProjectDocumentsUseCase, Depends(get_list_project_documents_use_case)],
 ) -> ProjectDocumentsResponse:
     """Sorted filenames at the project root (not including ``faiss_index`` or ``logs.json``)."""
     return ProjectDocumentsResponse(documents=use_case.execute(user_id, project_id))
@@ -116,7 +130,9 @@ def get_project_documents(
 def get_project_retrieval_settings(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_get_effective_retrieval_settings_use_case)],
+    use_case: Annotated[
+        GetEffectiveRetrievalSettingsUseCase, Depends(get_get_effective_retrieval_settings_use_case)
+    ],
 ) -> ProjectRetrievalSettingsResponse:
     """Returns persisted preferences and merged :class:`~src.domain.retrieval_settings.RetrievalSettings` (as dict)."""
     view = use_case.execute(
@@ -135,8 +151,12 @@ def put_project_retrieval_settings(
     project_id: str,
     body: UpdateProjectRetrievalSettingsRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    update_uc: Annotated[Any, Depends(get_update_project_retrieval_settings_use_case)],
-    get_uc: Annotated[Any, Depends(get_get_effective_retrieval_settings_use_case)],
+    update_uc: Annotated[
+        UpdateProjectRetrievalSettingsUseCase, Depends(get_update_project_retrieval_settings_use_case)
+    ],
+    get_uc: Annotated[
+        GetEffectiveRetrievalSettingsUseCase, Depends(get_get_effective_retrieval_settings_use_case)
+    ],
 ) -> ProjectRetrievalSettingsResponse:
     """Saves preset / advanced toggles then returns the same shape as GET."""
     update_uc.execute(
@@ -169,7 +189,7 @@ async def post_document_ingest(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_ingest_uploaded_file_use_case)],
+    use_case: Annotated[IngestUploadedFileUseCase, Depends(get_ingest_uploaded_file_use_case)],
     file: UploadFile = File(
         ...,
         description=(
@@ -208,7 +228,7 @@ def post_document_reindex(
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_reindex_document_use_case)],
+    use_case: Annotated[ReindexDocumentUseCase, Depends(get_reindex_document_use_case)],
 ) -> IngestDocumentResponse:
     """Rebuild vectors and assets from the file already stored for this project (URL-encode ``source_file`` if needed)."""
     project = project_service.get_project(user_id, project_id)
@@ -230,7 +250,7 @@ def delete_project_document(
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    use_case: Annotated[Any, Depends(get_delete_document_use_case)],
+    use_case: Annotated[DeleteDocumentUseCase, Depends(get_delete_document_use_case)],
 ) -> DeleteDocumentResponse:
     """Removes the project file, SQLite assets, FAISS vectors, and invalidates the chain cache."""
     project = project_service.get_project(user_id, project_id)
@@ -269,7 +289,7 @@ def get_project_summary(
 def get_retrieval_preset_label(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    settings_service: Annotated[Any, Depends(get_project_settings_service)],
+    settings_service: Annotated[ProjectSettingsService, Depends(get_project_settings_service)],
 ) -> RetrievalPresetLabelResponse:
     label = settings_service.preset_label_for_project(user_id, project_id)
     return RetrievalPresetLabelResponse(label=label)
@@ -284,7 +304,7 @@ def get_project_document_details(
     project_id: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_service: Annotated[ProjectService, Depends(get_project_service)],
-    docstore: Annotated[Any, Depends(get_docstore_service)],
+    docstore: Annotated[DocStoreService, Depends(get_docstore_service)],
 ) -> ProjectDocumentDetailsResponse:
     project = project_service.get_project(user_id, project_id)
     documents = project_service.list_project_documents(user_id, project_id)
@@ -326,7 +346,7 @@ def get_document_assets(
     project_id: str,
     source_file: str,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    docstore: Annotated[Any, Depends(get_docstore_service)],
+    docstore: Annotated[DocStoreService, Depends(get_docstore_service)],
 ) -> DocumentAssetsResponse:
     assets = docstore.list_assets_for_source_file(
         user_id=user_id,

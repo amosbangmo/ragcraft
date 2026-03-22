@@ -1,4 +1,14 @@
-from src.application.ingestion.use_cases.delete_document import DeleteDocumentUseCase
+"""Ingestion use cases.
+
+Package exports are lazy (``__getattr__``) so ``from … use_cases.delete_document import …`` does not
+eagerly import every submodule (``ingest_file_path`` pulls optional extraction deps).
+"""
+
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
 from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
     DeleteDocumentResult,
@@ -7,12 +17,6 @@ from src.application.ingestion.dtos import (
     IngestUploadedFileCommand,
     ReindexDocumentCommand,
 )
-from src.application.ingestion.use_cases.ingest_file_path import IngestFilePathUseCase
-from src.application.ingestion.use_cases.ingest_uploaded_file import IngestUploadedFileUseCase
-from src.application.ingestion.use_cases.replace_document_assets import (
-    replace_document_assets_for_reingest,
-)
-from src.application.ingestion.use_cases.reindex_document import ReindexDocumentUseCase
 
 __all__ = [
     "DeleteDocumentCommand",
@@ -27,3 +31,22 @@ __all__ = [
     "ReindexDocumentUseCase",
     "replace_document_assets_for_reingest",
 ]
+
+_LAZY_ATTRS: dict[str, tuple[str, str]] = {
+    "DeleteDocumentUseCase": ("delete_document", "DeleteDocumentUseCase"),
+    "IngestFilePathUseCase": ("ingest_file_path", "IngestFilePathUseCase"),
+    "IngestUploadedFileUseCase": ("ingest_uploaded_file", "IngestUploadedFileUseCase"),
+    "ReindexDocumentUseCase": ("reindex_document", "ReindexDocumentUseCase"),
+    "replace_document_assets_for_reingest": (
+        "replace_document_assets",
+        "replace_document_assets_for_reingest",
+    ),
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_ATTRS:
+        mod_name, attr = _LAZY_ATTRS[name]
+        mod = importlib.import_module(f"{__name__}.{mod_name}")
+        return getattr(mod, attr)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

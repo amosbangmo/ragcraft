@@ -20,17 +20,13 @@ from src.domain.shared.project_settings_repository_port import ProjectSettingsRe
 from src.services.chat_service import ChatService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
-from src.services.ingestion_service import IngestionService
 from src.services.project_service import ProjectService
 from src.services.project_settings_service import ProjectSettingsService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.query_log_service import QueryLogService
-from src.services.rag_service import RAGService
 from src.services.reranking_service import RerankingService
-from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.retrieval_settings_service import RetrievalSettingsService
-from src.services.vectorstore_service import VectorStoreService
 
 if TYPE_CHECKING:
     from src.application.chat.use_cases.ask_question import AskQuestionUseCase
@@ -61,6 +57,10 @@ if TYPE_CHECKING:
     from src.application.settings.use_cases.update_project_retrieval_settings import (
         UpdateProjectRetrievalSettingsUseCase,
     )
+    from src.services.ingestion_service import IngestionService
+    from src.services.rag_service import RAGService
+    from src.services.retrieval_comparison_service import RetrievalComparisonService
+    from src.services.vectorstore_service import VectorStoreService
 
 
 @dataclass

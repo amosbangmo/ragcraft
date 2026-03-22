@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from src.domain.ports import AssetRepositoryPort, VectorStorePort
-from src.services.ingestion_service import IngestionService
 
 from src.application.ingestion.dtos import IngestDocumentResult, IngestUploadedFileCommand
+
+if TYPE_CHECKING:
+    from src.services.ingestion_service import IngestionService
 from .ingest_common import finalize_ingestion_pipeline
 from .replace_document_assets import replace_document_assets_for_reingest
 

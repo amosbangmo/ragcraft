@@ -6,7 +6,7 @@ Handlers call application use cases only; bodies use explicit Pydantic models.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from starlette.responses import Response
@@ -42,6 +42,19 @@ from apps.api.schemas.evaluation import (
 )
 from src.application.http.wire import BenchmarkRunWirePayload
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
+from src.application.evaluation.use_cases.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
+)
+from src.application.evaluation.use_cases.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+from src.application.evaluation.use_cases.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
+from src.application.evaluation.use_cases.generate_qa_dataset import GenerateQaDatasetUseCase
+from src.application.evaluation.use_cases.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+from src.application.evaluation.use_cases.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
+from src.application.evaluation.use_cases.run_gold_qa_dataset_evaluation import (
+    RunGoldQaDatasetEvaluationUseCase,
+)
+from src.application.evaluation.use_cases.run_manual_evaluation import RunManualEvaluationUseCase
+from src.application.evaluation.use_cases.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
 from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
     DeleteQaDatasetEntryCommand,
@@ -79,7 +92,7 @@ def _entry_to_response(entry: QADatasetEntry) -> QaDatasetEntryResponse:
 def post_manual_evaluation(
     body: ManualEvaluationRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_run_manual_evaluation_use_case)],
+    use_case: Annotated[RunManualEvaluationUseCase, Depends(get_run_manual_evaluation_use_case)],
 ) -> ManualEvaluationResponse:
     """
     Evaluate a single question with optional gold fields via the manual evaluation use case.
@@ -115,7 +128,9 @@ def post_manual_evaluation(
 def post_dataset_benchmark_run(
     body: DatasetBenchmarkRunRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_run_gold_qa_dataset_evaluation_use_case)],
+    use_case: Annotated[
+        RunGoldQaDatasetEvaluationUseCase, Depends(get_run_gold_qa_dataset_evaluation_use_case)
+    ],
 ) -> BenchmarkResultResponse:
     """Runs the full saved QA dataset for the project with fixed retrieval flags per row."""
     result = use_case.execute(
@@ -138,7 +153,7 @@ def post_dataset_benchmark_run(
 def get_dataset_entries(
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_id: Annotated[str, Query(min_length=1)],
-    use_case: Annotated[Any, Depends(get_list_qa_dataset_entries_use_case)],
+    use_case: Annotated[ListQaDatasetEntriesUseCase, Depends(get_list_qa_dataset_entries_use_case)],
 ) -> QaDatasetEntryListResponse:
     rows = use_case.execute(ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id))
     return QaDatasetEntryListResponse(entries=[_entry_to_response(e) for e in rows])
@@ -153,7 +168,7 @@ def get_dataset_entries(
 def post_dataset_entry(
     body: QaDatasetEntryCreateRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_create_qa_dataset_entry_use_case)],
+    use_case: Annotated[CreateQaDatasetEntryUseCase, Depends(get_create_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryResponse:
     entry = use_case.execute(
         CreateQaDatasetEntryCommand(
@@ -177,7 +192,7 @@ def put_dataset_entry(
     entry_id: int,
     body: QaDatasetEntryUpdateRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_update_qa_dataset_entry_use_case)],
+    use_case: Annotated[UpdateQaDatasetEntryUseCase, Depends(get_update_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryResponse:
     entry = use_case.execute(
         UpdateQaDatasetEntryCommand(
@@ -202,7 +217,7 @@ def delete_dataset_entry(
     entry_id: int,
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_id: Annotated[str, Query(min_length=1)],
-    use_case: Annotated[Any, Depends(get_delete_qa_dataset_entry_use_case)],
+    use_case: Annotated[DeleteQaDatasetEntryUseCase, Depends(get_delete_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryDeleteResponse:
     use_case.execute(
         DeleteQaDatasetEntryCommand(entry_id=entry_id, user_id=user_id, project_id=project_id)
@@ -222,7 +237,7 @@ def delete_dataset_entry(
 def post_dataset_generate(
     body: QaDatasetGenerateRequest,
     user_id: Annotated[str, Depends(get_request_user_id)],
-    use_case: Annotated[Any, Depends(get_generate_qa_dataset_use_case)],
+    use_case: Annotated[GenerateQaDatasetUseCase, Depends(get_generate_qa_dataset_use_case)],
 ) -> QaDatasetGenerateResponse:
     raw = use_case.execute(
         GenerateQaDatasetCommand(
@@ -252,7 +267,7 @@ def post_dataset_generate(
 def get_retrieval_logs(
     user_id: Annotated[str, Depends(get_request_user_id)],
     project_id: Annotated[str, Query(min_length=1)],
-    use_case: Annotated[Any, Depends(get_list_retrieval_query_logs_use_case)],
+    use_case: Annotated[ListRetrievalQueryLogsUseCase, Depends(get_list_retrieval_query_logs_use_case)],
     since: Annotated[str | None, Query(description="ISO-8601 lower bound (inclusive)")] = None,
     until: Annotated[str | None, Query(description="ISO-8601 upper bound (inclusive)")] = None,
     limit: Annotated[int | None, Query(ge=1, le=5000, description="Max rows")] = None,
@@ -302,7 +317,9 @@ def get_benchmark_export_info() -> BenchmarkExportApiInfoResponse:
 )
 def post_benchmark_export(
     body: BenchmarkExportRequest,
-    use_case: Annotated[Any, Depends(get_build_benchmark_export_artifacts_use_case)],
+    use_case: Annotated[
+        BuildBenchmarkExportArtifactsUseCase, Depends(get_build_benchmark_export_artifacts_use_case)
+    ],
 ):
     coerced = coerce_benchmark_result(body.result)
     if coerced is None:

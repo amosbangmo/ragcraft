@@ -16,24 +16,27 @@ Layers (in build order):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from src.auth.auth_service import AuthService
 from src.infrastructure.persistence.db import init_app_db
 from src.services.chat_service import ChatService
 from src.services.docstore_service import DocStoreService
 from src.services.evaluation_service import EvaluationService
-from src.services.ingestion_service import IngestionService
 from src.services.llm_judge_service import LLMJudgeService
 from src.services.project_service import ProjectService
 from src.services.project_settings_service import ProjectSettingsService
 from src.services.qa_dataset_generation_service import QADatasetGenerationService
 from src.services.qa_dataset_service import QADatasetService
 from src.services.query_log_service import QueryLogService
-from src.services.rag_service import RAGService
 from src.services.reranking_service import RerankingService
-from src.services.retrieval_comparison_service import RetrievalComparisonService
 from src.services.retrieval_settings_service import RetrievalSettingsService
-from src.services.vectorstore_service import VectorStoreService
+
+if TYPE_CHECKING:
+    from src.services.ingestion_service import IngestionService
+    from src.services.rag_service import RAGService
+    from src.services.retrieval_comparison_service import RetrievalComparisonService
+    from src.services.vectorstore_service import VectorStoreService
 
 
 @dataclass
@@ -66,6 +69,8 @@ class BackendComposition:
     @property
     def rag_service(self) -> RAGService:
         if self._rag_service is None:
+            from src.services.rag_service import RAGService
+
             self._rag_service = RAGService(
                 vectorstore_service=self.vectorstore_service,
                 evaluation_service=self.evaluation_service,
@@ -87,6 +92,9 @@ class BackendComposition:
 
 def build_backend_composition() -> BackendComposition:
     """Assemble the service-level composition root (no use cases)."""
+    from src.services.ingestion_service import IngestionService
+    from src.services.vectorstore_service import VectorStoreService
+
     init_app_db()
 
     query_log_service = QueryLogService()
