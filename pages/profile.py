@@ -1,3 +1,8 @@
+"""
+Account profile UI. Mutations use :class:`~src.frontend_gateway.protocol.BackendClient`; session fields refresh via
+:func:`~src.frontend_gateway.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
+"""
+
 import streamlit as st
 
 from src.auth.guards import require_authentication

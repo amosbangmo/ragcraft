@@ -1,3 +1,9 @@
+"""
+Document row actions (delete / reindex / inspect). All I/O goes through the injected
+:class:`~src.frontend_gateway.protocol.BackendClient` — never :class:`~src.app.ragcraft_app.RAGCraftApp`
+or service containers directly.
+"""
+
 import base64
 
 import streamlit as st
@@ -209,7 +215,7 @@ def confirm_delete_document_dialog(
 
 @st.dialog("Reindex document")
 def confirm_reindex_document_dialog(
-    app,
+    backend_client,
     *,
     user_id: str,
     project_id: str,
@@ -439,7 +445,7 @@ def inspect_document_dialog(
 
 
 def handle_document_action(
-    app,
+    backend_client,
     *,
     action_payload: dict | None,
     user_id: str,
@@ -483,7 +489,7 @@ def handle_document_action(
 
     if action == "reindex":
         confirm_reindex_document_dialog(
-            app,
+            backend_client,
             user_id=user_id,
             project_id=project_id,
             doc_name=doc_name,

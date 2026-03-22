@@ -1,3 +1,7 @@
+"""
+Retrieval A/B comparison via :class:`~src.frontend_gateway.protocol.BackendClient.compare_retrieval_modes``.
+"""
+
 import streamlit as st
 
 from src.auth.guards import require_authentication

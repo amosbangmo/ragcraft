@@ -1,3 +1,11 @@
+"""
+Streamlit session singletons for the backend boundary.
+
+Pages and ``src/ui`` must call :func:`get_backend_client` (via
+:mod:`src.frontend_gateway.streamlit_api_client` / :mod:`src.frontend_gateway.streamlit_context`).
+:class:`~src.app.ragcraft_app.RAGCraftApp` is only constructed here for the default in-process adapter.
+"""
+
 import streamlit as st
 from src.app.ragcraft_app import RAGCraftApp
 from src.frontend_gateway.protocol import BackendClient
@@ -10,8 +18,9 @@ HTTP_BACKEND_CLIENT_KEY = "ragcraft_http_backend_client"
 
 def get_app() -> RAGCraftApp:
     """
-    Return a singleton RAGCraftApp instance
-    stored in Streamlit session_state.
+    Singleton in-process façade used exclusively to build :class:`~src.frontend_gateway.in_process.InProcessBackendClient`.
+
+    Feature code should not call this; use :func:`get_backend_client` instead.
     """
 
     if APP_KEY not in st.session_state:
@@ -21,7 +30,7 @@ def get_app() -> RAGCraftApp:
 
 
 def get_backend_client() -> BackendClient:
-    """Streamlit entrypoint: in-process façade (default) or HTTP API (``RAGCRAFT_BACKEND_CLIENT=http``)."""
+    """Return :class:`~src.frontend_gateway.in_process.InProcessBackendClient` or :class:`~src.frontend_gateway.http_client.HttpBackendClient`."""
     if use_http_backend_client():
         from src.frontend_gateway.http_client import HttpBackendClient
 

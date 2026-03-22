@@ -1,3 +1,8 @@
+"""
+Ingestion UI. All project/document operations use :class:`~src.frontend_gateway.protocol.BackendClient`
+(``RAGCRAFT_BACKEND_CLIENT=http`` → FastAPI).
+"""
+
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient
@@ -46,7 +51,7 @@ if "ingestion_success_message" in st.session_state:
 if "ingestion_error_message" in st.session_state:
     st.error(st.session_state.pop("ingestion_error_message"))
 
-documents = app.list_project_documents(user_id, project_id)
+documents = client.list_project_documents(user_id, project_id)
 
 st.metric("Existing documents", len(documents))
 
@@ -140,7 +145,7 @@ render_result_payload(
     on_success=_render_ingestion_result,
 )
 
-updated_documents = app.get_project_document_details(user_id, project_id)
+updated_documents = client.get_project_document_details(user_id, project_id)
 
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<div class="card-title">Documents in current project</div>', unsafe_allow_html=True)

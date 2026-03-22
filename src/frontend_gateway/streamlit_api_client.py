@@ -1,10 +1,9 @@
 """
 Streamlit ↔ backend boundary: one entrypoint for :class:`~src.frontend_gateway.protocol.BackendClient`.
 
-Pages and ``src/ui`` should depend on :func:`get_backend_client` from this module (or
-:mod:`src.frontend_gateway.streamlit_context`, which re-exports it). Prefer the
-:class:`~src.frontend_gateway.protocol.BackendClient` protocol over importing the in-process
-façade module directly from feature code.
+Pages and ``src/ui`` obtain the client via :func:`get_backend_client` from this module or
+:mod:`src.frontend_gateway.streamlit_context` (same implementation). Do not import
+:class:`~src.app.ragcraft_app.RAGCraftApp` or service containers from feature code.
 
 Modes (environment)
 -------------------
@@ -31,6 +30,21 @@ no per-page branching required.
 Login/register and session reads for Streamlit go through :mod:`src.frontend_gateway.streamlit_auth`
 (HTTP mode uses ``/auth/login`` and ``/auth/register``). Profile mutations use :class:`~src.frontend_gateway.protocol.BackendClient` and
 :func:`~src.frontend_gateway.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
+
+Streamlit pages gateway checklist (business I/O via :func:`get_backend_client` / ``BackendClient``)
+---------------------------------------------------------------------------------------------------
+* ``streamlit_app.py`` — shell only (no backend calls).
+* ``pages/login.py`` — :mod:`src.frontend_gateway.streamlit_auth` (not ``BackendClient``).
+* ``pages/projects.py``, ``pages/ingestion.py`` — projects + documents + table actions.
+* ``pages/chat.py`` — ``ask_question``, ``invalidate_project_chain``, chat session stubs on client.
+* ``pages/search.py`` — ``search_project_summaries``.
+* ``pages/retrieval_inspector.py`` — ``inspect_retrieval``, ``preview_summary_recall``.
+* ``pages/retrieval_comparison.py`` — ``compare_retrieval_modes``.
+* ``pages/evaluation.py`` + ``src/ui/evaluation_*.py`` — manual/dataset/gold/retrieval tabs via client.
+* ``pages/profile.py`` — client profile/password/avatar/delete + session refresh helper.
+
+In-process mode still builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient` over
+:class:`~src.app.ragcraft_app.RAGCraftApp` inside :mod:`src.core.app_state` only — pages never import the façade.
 """
 
 from __future__ import annotations

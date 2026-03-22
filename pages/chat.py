@@ -139,7 +139,7 @@ with st.chat_message("assistant"):
             messages = client.chat_service.get_messages()
             chat_history = build_chat_history(messages)
 
-            response = app.ask_question(
+            response = client.ask_question(
                 user_id=user_id,
                 project_id=project_id,
                 question=question,

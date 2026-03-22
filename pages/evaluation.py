@@ -137,7 +137,7 @@ if bundle is not None:
 
 render_evaluation_tabs(
     manual_payload={
-        "app": app,
+        "backend_client": client,
         "user_id": user_id,
         "project_id": project_id,
         "widget_key_suffix": eval_widget_suffix,

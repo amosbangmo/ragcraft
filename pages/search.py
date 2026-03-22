@@ -1,3 +1,7 @@
+"""
+Summary / recall search UI. Uses :class:`~src.frontend_gateway.protocol.BackendClient.search_project_summaries``.
+"""
+
 import streamlit as st
 
 from src.frontend_gateway.protocol import BackendClient

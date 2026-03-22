@@ -1,8 +1,9 @@
 """
 Streamlit wiring for :class:`~src.frontend_gateway.protocol.BackendClient` and session user id.
 
-Re-exports :func:`~src.frontend_gateway.streamlit_api_client.get_backend_client`. Prefer importing
-from :mod:`src.frontend_gateway.streamlit_api_client` in new code for clearer intent.
+Re-exports :func:`~src.frontend_gateway.streamlit_api_client.get_backend_client` alongside
+:func:`get_user_id`. UI modules may import both from here; pages may use either this module or
+:mod:`src.frontend_gateway.streamlit_api_client`.
 """
 
 from __future__ import annotations

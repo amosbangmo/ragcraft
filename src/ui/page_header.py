@@ -1,7 +1,10 @@
+"""
+Shared page chrome. Resolves :class:`~src.frontend_gateway.protocol.BackendClient` via the gateway entrypoint.
+"""
+
 import streamlit as st
 
-from src.frontend_gateway.streamlit_api_client import get_backend_client
-from src.frontend_gateway.streamlit_context import get_user_id
+from src.frontend_gateway.streamlit_context import get_backend_client, get_user_id
 from src.ui.project_selector import render_project_selector
 
 
