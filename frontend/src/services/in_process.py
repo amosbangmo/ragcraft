@@ -1,4 +1,4 @@
-"""In-process :class:`~src.frontend_gateway.protocol.BackendClient` backed by :class:`~composition.BackendApplicationContainer`."""
+"""In-process :class:`~services.protocol.BackendClient` backed by :class:`~composition.BackendApplicationContainer`."""
 
 from __future__ import annotations
 

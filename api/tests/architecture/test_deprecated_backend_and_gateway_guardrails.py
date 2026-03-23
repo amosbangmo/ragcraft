@@ -1,8 +1,8 @@
 """
 Extra import-level guardrails: removed legacy packages (``src.backend``, ``src.adapters``,
-``infrastructure.services``) and a thin ``src.frontend_gateway``.
+``infrastructure.services``) and the frontend gateway package (``services`` under ``frontend/src``).
 
-See ``tests/architecture/README.md`` for the full boundary matrix.
+See ``api/tests/architecture/README.md`` for the full boundary matrix.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from architecture.import_scanner import collect_import_violations, imported_top_level_modules, iter_python_files
+from architecture.import_scanner import imported_top_level_modules, iter_python_files
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -19,11 +19,15 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def _repo_python_paths_for_legacy_shim_import_guards() -> list[Path]:
     """Trees scanned so removed shim packages cannot be reintroduced via imports."""
     paths: list[Path] = []
-    for sub in ("src", "apps", "pages", "tests"):
-        root = REPO_ROOT / sub
+    for sub in ("api/src", "frontend/src", "api/tests", "frontend/tests"):
+        root = REPO_ROOT.joinpath(*sub.split("/"))
         if root.is_dir():
             paths.extend(iter_python_files(root))
-    streamlit_entry = REPO_ROOT / "streamlit_app.py"
+    for legacy in ("src", "apps", "pages", "tests"):
+        root = REPO_ROOT / legacy
+        if root.is_dir():
+            paths.extend(iter_python_files(root))
+    streamlit_entry = REPO_ROOT / "frontend" / "app.py"
     if streamlit_entry.is_file():
         paths.append(streamlit_entry)
     return paths
@@ -70,8 +74,8 @@ def test_legacy_infrastructure_services_package_directory_is_absent() -> None:
 
 
 def test_src_tree_does_not_import_legacy_adapters_package() -> None:
-    """No module under ``src/`` may import ``src.adapters`` (package removed; use ``infrastructure.adapters``)."""
-    src_root = REPO_ROOT / "src"
+    """No module under ``api/src`` may import ``src.adapters`` (package removed; use ``infrastructure.adapters``)."""
+    src_root = REPO_ROOT / "api" / "src"
     violations: list[str] = []
     for path in iter_python_files(src_root):
         for mod in imported_top_level_modules(path):
@@ -86,9 +90,9 @@ def test_src_tree_does_not_import_legacy_adapters_package() -> None:
 
 def test_codebase_python_does_not_import_removed_backend_package() -> None:
     """
-    No Python under ``src/``, ``apps/``, ``pages/``, ``tests/``, or the Streamlit shell may import
+    No Python under ``api/src``, ``frontend/src``, test trees, or the Streamlit entry may import
     ``src.backend`` (shim package removed — use application use cases, ``infrastructure.adapters``,
-    and ``src.composition``).
+    and ``composition``).
     """
     violations: list[str] = []
     for path in _repo_python_paths_for_legacy_shim_import_guards():
@@ -132,17 +136,25 @@ def test_codebase_python_does_not_import_removed_src_services_package() -> None:
     assert not violations, msg + "\n".join(violations)
 
 
-def test_frontend_gateway_does_not_import_infrastructure_internals() -> None:
+def test_frontend_services_infrastructure_imports_are_limited() -> None:
     """
-    The gateway sits between Streamlit and HTTP/in-process backends; it must not reach adapters
-    (SQLite, FAISS, etc.) directly. Use ``src.application`` (+ allowed ``infrastructure.adapters``
-    from application helpers such as ``frontend_support``) instead.
+    Gateway code lives under ``frontend/src/services``; it may use ``infrastructure.config`` and
+    ``infrastructure.auth`` only — not adapters, persistence, RAG, or vector stores.
     """
-    root = REPO_ROOT / "api" / "src" / "frontend_gateway"
-    violations = collect_import_violations([root], forbidden=("src.infrastructure",), repo_root=REPO_ROOT)
+    root = REPO_ROOT / "frontend" / "src" / "services"
+    violations: list[str] = []
+    if root.is_dir():
+        for path in iter_python_files(root):
+            for mod in imported_top_level_modules(path):
+                if not (mod == "infrastructure" or mod.startswith("infrastructure.")):
+                    continue
+                if mod == "infrastructure.config" or mod.startswith("infrastructure.config."):
+                    continue
+                if mod == "infrastructure.auth" or mod.startswith("infrastructure.auth."):
+                    continue
+                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     msg = (
-        "``src.frontend_gateway`` must not import ``src.infrastructure`` (any submodule). "
-        "Keep transport/protocol code here; depend on application-layer factories for service stubs.\n"
+        "frontend/src/services may import only infrastructure.config.* and infrastructure.auth.*.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
@@ -150,7 +162,7 @@ def test_frontend_gateway_does_not_import_infrastructure_internals() -> None:
 def test_api_routers_do_not_instantiate_core_services_inline() -> None:
     """
     Lightweight structural check: routers should not construct ``RAGService`` / ``EvaluationService``
-    directly (bypasses ``BackendApplicationContainer`` and ``apps.api.dependencies``).
+    directly (bypasses ``BackendApplicationContainer`` and ``interfaces.http.dependencies``).
     """
     router_root = REPO_ROOT / "api" / "src" / "interfaces" / "http" / "routers"
     if not router_root.is_dir():

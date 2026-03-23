@@ -540,7 +540,9 @@ def is_lower_better(metric_key: str) -> bool:
 
 def markdown_family_guide_lines() -> list[str]:
     """Indented bullet lines documenting each :class:`BenchmarkMetricFamily` for Markdown exports."""
-    lines: list[str] = ["- **Metric families** (see ``src/domain/benchmark_metric_taxonomy.py``):"]
+    lines: list[str] = [
+        "- **Metric families** (see ``domain/evaluation/benchmark_metric_taxonomy.py`` under ``api/src``):"
+    ]
     for fam in BenchmarkMetricFamily:
         lines.append(f"  - `{fam.value}`: {FAMILY_GUIDE[fam]}")
     lines.append(

@@ -7,19 +7,19 @@ Backend composition root (no DI framework).
 * :func:`build_backend` — full graph: pass a built ``BackendComposition`` plus ``invalidate_chain_key``.
 * :mod:`composition.wiring` — shared hooks (e.g. process-scoped chain eviction for FastAPI).
 
-FastAPI should obtain a process-wide :class:`BackendApplicationContainer` via ``apps.api.dependencies``.
+FastAPI should obtain a process-wide :class:`BackendApplicationContainer` via ``interfaces.http.dependencies``.
 
 **Final orchestration target (locked for migration):**
 
-- **Application** ``src/application/use_cases`` owns RAG/chat orchestration (sequence of recall → assembly →
+- **Application** ``api/src/application/use_cases`` owns RAG/chat orchestration (sequence of recall → assembly →
   answer, retrieval comparison, evaluation runners calling inspect + generate).
-- **Application services** (``src/application/...`` outside ``use_cases``) hold only framework-agnostic helpers
+- **Application services** (``api/src/application/...`` outside ``use_cases``) hold only framework-agnostic helpers
   (policies, DTOs, pure orchestration snippets), not transport or adapter construction.
-- **Infrastructure** ``src/infrastructure/adapters`` implements ports and technical services; adapters must not
+- **Infrastructure** ``api/src/infrastructure/adapters`` implements ports and technical services; adapters must not
   construct use cases or own end-user flow sequencing where a use case already exists.
 - **Composition** (this package + :mod:`composition.chat_rag_wiring`) wires instances only — no business
   sequencing beyond delegating to a single use case ``execute`` for cache invalidation on the container.
-- **Transport** (``apps/api``, ``src/frontend_gateway``) resolves use cases from the container / dependencies;
+- **Transport** (``api/src/interfaces/http``, ``frontend/src/services``) resolves use cases from the container / dependencies;
   it must not import RAG orchestration adapters under ``infrastructure.rag`` directly.
 """
 

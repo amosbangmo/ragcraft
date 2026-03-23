@@ -1,8 +1,8 @@
 """
 UI-facing types and helpers for Streamlit (API-client boundary).
 
-Re-exports domain contracts so ``pages/`` and ``src/ui`` avoid importing ``src.domain`` directly,
-matching how a separate SPA would consume shared wire/view types.
+Re-exports domain contracts so ``frontend/src/pages`` and ``frontend/src/components`` avoid
+importing ``domain`` directly, matching how a separate SPA would consume shared wire/view types.
 """
 
 from __future__ import annotations

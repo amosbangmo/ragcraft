@@ -1,7 +1,7 @@
 """
 Evaluation and QA dataset API models.
 
-Bearer JWT supplies workspace identity (see :func:`apps.api.dependencies.get_authenticated_principal`).
+Bearer JWT supplies workspace identity (see :func:`interfaces.http.dependencies.get_authenticated_principal`).
 ``project_id`` is passed in the body or as a query parameter per route.
 """
 

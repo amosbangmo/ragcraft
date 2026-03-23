@@ -1,10 +1,10 @@
 """
 Frontend integration seam for backend capabilities (Streamlit today; Angular/SPA via HTTP).
 
-Implementations: **HTTP** (:class:`~src.frontend_gateway.http_client.HttpBackendClient` → FastAPI; default)
-or **in-process** (:class:`~src.frontend_gateway.in_process.InProcessBackendClient` →
+Implementations: **HTTP** (:class:`~services.http_client.HttpBackendClient` → FastAPI; default)
+or **in-process** (:class:`~services.in_process.InProcessBackendClient` →
 :class:`~composition.BackendApplicationContainer`). Pages should depend only on this protocol,
-:mod:`src.frontend_gateway.view_models`, and auth helpers — not on ``infrastructure.adapters`` or the composition root.
+:mod:`services.view_models`, and auth helpers — not on ``infrastructure.adapters`` or the composition root.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ class BackendClient(Protocol):
     Minimal backend operations used by Streamlit pages today.
 
     Login, registration, and session display-name/avatar reads use
-    :mod:`src.frontend_gateway.streamlit_auth` (HTTP mode calls ``/auth/login`` and ``/auth/register``).
+    :mod:`services.streamlit_auth` (HTTP mode calls ``/auth/login`` and ``/auth/register``).
 
     Chat transcript, preset merge, RAG answer generation, and gold-QA benchmarking are exposed as
     façade methods so pages do not reach adapter singletons directly.

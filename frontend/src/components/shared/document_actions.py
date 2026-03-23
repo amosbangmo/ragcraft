@@ -1,6 +1,6 @@
 """
 Document row actions (delete / reindex / inspect). All I/O goes through the injected
-:class:`~src.frontend_gateway.protocol.BackendClient` façade methods — never the composition root,
+:class:`~services.protocol.BackendClient` façade methods — never the composition root,
 adapter singletons, or use-case containers directly.
 """
 

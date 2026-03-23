@@ -1,17 +1,17 @@
 # Runtime architecture (source of truth)
 
-Short form of the layout enforced in code. **Canonical detail:** `docs/architecture.md`, `docs/rag_orchestration.md`, `docs/migration_report_final.md`.
+Short form of the layout enforced in code and tests. **Canonical detail:** `docs/architecture.md`, `docs/rag_orchestration.md`, `docs/migration_report_final.md`.
 
-## HTTP backend — `apps/api/`
+## HTTP backend — `api/src/interfaces/http/`
 
-- **FastAPI** (`apps/api/main.py`), routers, schemas, **`apps/api/dependencies.py`** → **`BackendApplicationContainer`** and use cases.
-- **`dependencies.py`** and routers use **composition + use cases** only; the **`apps/api`** tree must not import **`infrastructure.*`** (AST scan covers all modules, not only routers).
+- **FastAPI** (`api/main.py` → `interfaces.http` app), routers under `routers/`, Pydantic schemas under `schemas/`, **`dependencies.py`** → **`BackendApplicationContainer`** and use cases.
+- **Rule:** The whole **`interfaces/http`** tree must not import **`infrastructure.adapters`** or other heavy infra (AST scans cover all modules). Routers must not import **`infrastructure.*`** at all.
 
 ## Streamlit — reference UI client
 
-- **Entry:** `streamlit_app.py`, **`pages/`**, **`src/ui/`**.
-- **Rule:** Use **`BackendClient`** (`src/frontend_gateway/protocol.py`) and **`view_models`** — no direct `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api`.
-- **In-process backend:** `src/frontend_gateway/streamlit_backend_factory.py` → **`build_backend(..., backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()))`**.
+- **Entry:** `frontend/app.py`, **`frontend/src/pages/`**, **`frontend/src/components/`**.
+- **Rule:** Use **`BackendClient`** (`frontend/src/services/protocol.py`) and **`view_models`** — no direct `domain`, `application`, `composition`, or `interfaces` imports from pages/components (enforced by tests; **`services`** may use in-process wiring).
+- **In-process backend:** `frontend/src/services/streamlit_backend_factory.py` → **`build_backend(..., backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()))`**.
 
 ## Client modes (`RAGCRAFT_BACKEND_CLIENT`)
 
@@ -24,24 +24,26 @@ See **`docs/README.md`** (local development) for env vars.
 
 ## Layering (summary)
 
+On disk under **`api/src/`**, Python packages are **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`**, **`auth`**, **`core`** (no `src.` prefix in imports when **`PYTHONPATH`** includes **`api/src`**).
+
 | Location | Role |
 |----------|------|
-| **`src/domain/`** | Entities, ports, payloads. No framework imports (see tests). |
-| **`src/application/`** | Use cases, RAG orchestration (`use_cases/chat/orchestration/`), eval RAG helper (`rag_pipeline_orchestration.py`), policies, DTOs, `frontend_support` stubs. No `src.infrastructure`. |
-| **`src/infrastructure/`** | Adapters (RAG, evaluation, workspace, …), persistence, vector stores, caching. RAG adapters do not own post-recall pipeline order or query logging. |
-| **`src/composition/`** | **`build_backend_composition`**, **`evaluation_wiring`** (gold-QA stack), **`build_backend`**, **`chat_rag_wiring`**. No `src.frontend_gateway` imports. |
-| **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
-| **`src/auth/`** | Shared auth helpers. |
+| **`api/src/domain/`** | Entities, ports, payloads. No framework imports (see tests). |
+| **`api/src/application/`** | Use cases, RAG orchestration, policies, DTOs, `frontend_support` stubs. No `infrastructure` except the documented **`infrastructure.config`** narrow exception. |
+| **`api/src/infrastructure/`** | Adapters, persistence, vector stores, caching. RAG adapters do not own post-recall pipeline order or query logging. |
+| **`api/src/composition/`** | **`build_backend_composition`**, **`evaluation_wiring`**, **`build_backend`**, **`chat_rag_wiring`**. No imports of the frontend **`services`** package. |
+| **`frontend/src/services/`** | `BackendClient`, HTTP/in-process clients, Streamlit factories, **`StreamlitChatTranscript`**. Only **`infrastructure.config`** and **`infrastructure.auth`** from backend infra (not adapters). |
+| **`api/src/auth/`** | Shared auth helpers used from the backend tree. |
 
-**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`src/infrastructure/adapters`**).
+**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`infrastructure/adapters`**).
 
 ## Removed legacy paths
 
-**Do not reintroduce:** `src/backend/`, `src/adapters/`, `src/infrastructure/services/`, `src/services/` as a package, or `RAGService` / `rag_service.py` as an orchestration façade. Tests guard these.
+**Do not reintroduce at repository root:** `src/`, `apps/`, root `pages/`, `streamlit_app.py`, or monolithic layouts. **Do not reintroduce:** `api/src/backend/`, `api/src/adapters/`, `infrastructure/services/` as a package, or `RAGService` / `rag_service.py` as an orchestration façade. Tests guard these.
 
 ## Further reading
 
 - **`docs/README.md`** — doc index + local dev notes.
 - **`docs/dependency_rules.md`** — import rules.
-- **`tests/architecture/README.md`** — what pytest enforces.
-- **`scripts/validate.sh`** / **`scripts/validate.ps1`** — local **Ruff** + **`pytest tests/architecture`** (mirrors CI).
+- **`api/tests/architecture/README.md`** — what pytest enforces.
+- **`scripts/validate.sh`** / **`scripts/validate.ps1`** — local **Ruff** + **`pytest api/tests/architecture`** (mirrors CI).

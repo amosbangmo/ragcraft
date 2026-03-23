@@ -13,10 +13,10 @@ from domain.rag.summary_recall_document import SummaryRecallDocument
 # leak into other test modules (which may be collected / run in any order).
 _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
-    "src.frontend_gateway.factories.chat_service_factory",
-    "src.frontend_gateway.factories",
-    "src.frontend_gateway.in_process",
-    "src.frontend_gateway.streamlit_backend_factory",
+    "services.factories.chat_service_factory",
+    "services.factories",
+    "services.in_process",
+    "services.streamlit_backend_factory",
     "infrastructure.evaluation.qa_dataset_generation_service",
     "infrastructure.evaluation.qa_dataset_service",
     "infrastructure.persistence.sqlite.qa_dataset_repository",
@@ -65,7 +65,7 @@ def setUpModule():
         LLMJudgeService=_DummyService,
         JUDGE_FAILURE_REASON="judge_failure",
     )
-    _install_module("src.frontend_gateway.streamlit_chat_transcript", StreamlitChatTranscript=_DummyService)
+    _install_module("services.streamlit_chat_transcript", StreamlitChatTranscript=_DummyService)
     _install_module("infrastructure.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("infrastructure.rag.reranking_service", RerankingService=_DummyService)
 

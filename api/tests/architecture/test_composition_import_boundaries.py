@@ -14,7 +14,13 @@ def _forbidden_transport_import_line(line: str) -> bool:
     s = line.strip()
     if s.startswith("#") or not s:
         return False
-    return s.startswith("from src.frontend_gateway") or s.startswith("import services")
+    if s.startswith("from services"):
+        return True
+    if s.startswith("import services") and (
+        s == "import services" or s.startswith("import services.")
+    ):
+        return True
+    return False
 
 
 @pytest.mark.parametrize(

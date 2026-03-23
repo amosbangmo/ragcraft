@@ -1,5 +1,5 @@
 """
-Ingestion UI. All project/document operations use :class:`~src.frontend_gateway.protocol.BackendClient`
+Ingestion UI. All project/document operations use :class:`~services.protocol.BackendClient`
 (``RAGCRAFT_BACKEND_CLIENT=http`` → FastAPI).
 """
 

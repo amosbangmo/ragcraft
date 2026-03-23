@@ -9,6 +9,10 @@ As of the **api/frontend split** refactor, the canonical layout is:
 - **Tests:** `api/tests/` (architecture, application_tests, infrastructure_tests, apps_api, e2e, …) and `frontend/tests/`.
 - **Removed:** root `src/`, root `apps/`, root `pages/`, root `streamlit_app.py` (replaced by the tree above).
 
+### Structure cleanup closure (final)
+
+The **api/frontend** split is the **only** supported physical layout. A final cleanup pass removed stale documentation references to `apps/api/`, monolithic root `src/`, `streamlit_app.py`, and legacy Streamlit paths. **Legacy roots and duplicate trees are not present** in the repository. **Structural and import drift is blocked** by **`api/tests/architecture/`** (required tree, forbidden roots, layer rules) — that suite is the **source of truth** for what the repository is allowed to look like; **`scripts/validate_architecture.sh`** / CI run the same tests.
+
 ### Blocking architecture guardrails (PROMPT 2)
 
 The following **fail the test suite** (not advisory checks) when the repo drifts:
@@ -37,7 +41,7 @@ CI-oriented scripts: **`scripts/validate_architecture.sh`** (architecture tests 
 
 ---
 
-This report remains the **canonical end-state** summary for Clean Architecture guardrails; paths below that still mention `src/` or `apps/api/` should be read as **historical** unless cross-referenced with the layout section above.
+Sections below describe **behavior and history** using **filesystem paths** under the canonical tree (**`api/src/…`**, **`frontend/src/…`**). Python **import** names are unprefixed (`domain`, `application`, …) when **`PYTHONPATH`** includes **`api/src`** and **`frontend/src`** as in **`scripts/run_tests.sh`**.
 
 **Related:** `docs/architecture.md`, `docs/rag_orchestration.md`, `docs/dependency_rules.md`, `docs/testing_strategy.md`, `docs/api.md`.
 
@@ -47,13 +51,13 @@ This report remains the **canonical end-state** summary for Clean Architecture g
 
 | Layer | Role |
 |-------|------|
-| **`src/domain/`** | Entities, value objects, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`**, shared DTOs such as **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, retrieval fusion helpers. |
-| **`src/application/`** | **Use cases**, RAG orchestration under **`use_cases/chat/orchestration/`**, evaluation helpers (**`rag_pipeline_orchestration`**, **`GoldQaBenchmarkAdapter`**), **`frontend_support`** (HTTP-safe stubs, **`MemoryChatTranscript`**), policies, DTOs. **No** `src.infrastructure` imports. |
-| **`src/infrastructure/`** | Adapters (RAG, evaluation, SQLite, query logging, ingestion, …), persistence, vector stores. Implements domain ports; **post-recall and summary-recall sequencing stay in application**. |
-| **`src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**, **`evaluation_wiring`** (**`EvaluationWiringParts`** + **`build_evaluation_service`**), **`BackendApplicationContainer`**. **No** `src.frontend_gateway`. |
-| **`apps/api/`** | FastAPI app, routers, schemas, **`dependencies.py`** → container / use cases; may import **`src.domain`** identity ports for **`Depends`** typing. **No** `src.infrastructure` imports (entire package scanned). |
-| **`src/frontend_gateway/`** | **`BackendClient`**, HTTP and in-process clients, Streamlit factory + session transcript; **no** `src.infrastructure`. |
-| **`pages/`**, **`src/ui/`** | Streamlit UI; **only** gateway + auth + view models toward the backend — no domain / infra / composition / `apps.api` imports. |
+| **`api/src/domain/`** | Entities, value objects, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`**, shared DTOs such as **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, retrieval fusion helpers. |
+| **`api/src/application/`** | **Use cases**, RAG orchestration under **`use_cases/chat/orchestration/`**, evaluation helpers (**`rag_pipeline_orchestration`**, **`GoldQaBenchmarkAdapter`**), **`frontend_support`** (HTTP-safe stubs, **`MemoryChatTranscript`**), policies, DTOs. **No** concrete `infrastructure` adapter imports (narrow **`infrastructure.config`** exception only). |
+| **`api/src/infrastructure/`** | Adapters (RAG, evaluation, SQLite, query logging, ingestion, …), persistence, vector stores. Implements domain ports; **post-recall and summary-recall sequencing stay in application**. |
+| **`api/src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**, **`evaluation_wiring`** (**`EvaluationWiringParts`** + **`build_evaluation_service`**), **`BackendApplicationContainer`**. **No** frontend **`services`** imports. |
+| **`api/src/interfaces/http/`** | FastAPI routers, schemas, **`dependencies.py`** → container / use cases; identity types from **`domain`**. Routers **must not** import **`infrastructure.*`**. |
+| **`frontend/src/services/`** | **`BackendClient`**, HTTP and in-process clients, Streamlit factory + session transcript; **only** **`infrastructure.config`** and **`infrastructure.auth`** from backend infra (not adapters). |
+| **`frontend/app.py`**, **`frontend/src/pages/`**, **`frontend/src/components/`** | Streamlit UI; **only** gateway + auth + view models toward the backend — no direct `domain` / `application` / `composition` / `interfaces` imports from pages/components. |
 
 **Intended dependency flow:** delivery (API, gateway, UI) → **application** use cases → **domain** ports ← **infrastructure** adapters; **composition** constructs the graph.
 
@@ -75,12 +79,12 @@ This report remains the **canonical end-state** summary for Clean Architecture g
 | Infrastructure adapters do not import application | **Met** — `test_adapter_application_imports.py` (no allowlist) |
 | Gold-QA benchmark stack not constructed inside `EvaluationService` | **Met** — `evaluation_wiring.py` + `GoldQaBenchmarkAdapter` |
 | Query-log / judge row DTOs in domain | **Met** — `QueryLogIngressPayload`, `EvaluationJudgeMetricsRow` |
-| **`apps/api`** → no `infrastructure.adapters` / services legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
+| **`interfaces/http`** → routers no `infrastructure.*`; package avoids legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
 | Gateway does not import infrastructure | **Met** — layer + gateway guardrails |
 | Chat RAG uses **ports** for inspect / answer generation where required | **Met** — `test_application_chat_rag_boundary_ports.py` |
 | Chat / eval / RAG-DTO subtrees avoid infra + delivery stacks | **Met** — `test_orchestration_package_import_boundaries.py` |
 | Repo lint/format/typing config present for contributors | **Met** — `pyproject.toml` (Ruff, Black, mypy, pytest defaults) + `ruff` / `pytest` in `requirements.txt` |
-| CI enforces architecture tests + project Ruff on `src` / `apps` | **Met** — `.github/workflows/ci.yml` + `scripts/validate.sh` / `validate.ps1` (**§14**) |
+| CI enforces architecture tests + Ruff on `api/src` / `frontend/src` | **Met** — `.github/workflows/ci.yml` + `scripts/validate.sh` / `validate.ps1` (**§14**) |
 
 ---
 
@@ -88,9 +92,9 @@ This report remains the **canonical end-state** summary for Clean Architecture g
 
 Before the late hardening passes, the codebase already had:
 
-- A **clear layer layout**: `domain` ports, `application` use cases and RAG orchestration modules, `infrastructure` adapters, `composition` wiring, FastAPI in `apps/api`, and a **gateway** for Streamlit.
+- A **clear layer layout**: `domain` ports, `application` use cases and RAG orchestration modules, `infrastructure` adapters, `composition` wiring, FastAPI under `api/src/interfaces/http/`, and a **gateway** in **`frontend/src/services`** for Streamlit.
 - **RAG orchestration** owned in application (`summary_recall_workflow`, `recall_then_assemble_pipeline`, post-recall steps) instead of a monolithic infrastructure façade.
-- **Architecture tests** (`tests/architecture/`) catching the worst regressions (API importing infra, application importing LangChain, removed legacy packages).
+- **Architecture tests** (`api/tests/architecture/`) catching the worst regressions (API importing infra, application importing LangChain, removed legacy packages).
 - **Evaluation** wired through **`GoldQaBenchmarkAdapter`** and **`BenchmarkExecutionUseCase`** with an explicit **`RagInspectAnswerRun`** contract.
 
 The remaining work was **contract tightness**, **transport clarity**, and **long-term guardrails** — not a rewrite.
@@ -102,10 +106,10 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 - **Ports and adapters** — **`RetrievalPort`**, **`AnswerGenerationPort`** (and aliases as documented in domain ports); inspect and generate-from-pipeline use cases depend on protocols, not concrete infra.
 - **Evaluation wiring** — **`EvaluationWiringParts`**, **`default_evaluation_wiring_parts()`**, **`build_evaluation_service(parts)`**; **`RagInspectAnswerRun`**-only **`pipeline_runner`** contract in **`BenchmarkExecutionUseCase`**.
 - **Composition root** — explicit **`chat_transcript`** and **`backend`** parameters; RAG subgraph construction centralized (**`build_rag_retrieval_subgraph`** always builds **`AnswerGenerationService`** internally).
-- **Multimodal hints** — orchestration-adjacent logic in **`src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
-- **API layer purity** — **`apps/api/dependencies.py`** uses **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
+- **Multimodal hints** — orchestration-adjacent logic in **`api/src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
+- **API layer purity** — **`api/src/interfaces/http/dependencies.py`** uses **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the HTTP delivery package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
-- **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `src.application` imports under **`src/infrastructure/adapters`** (the old **`rag/retrieval_settings_service.py`** allowlist is gone). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`src/domain/`** so the JWT adapter does not depend on **`src.application`**.
+- **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `application` imports under **`api/src/infrastructure/adapters`** (the old **`rag/retrieval_settings_service.py`** allowlist is gone). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`api/src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`api/src/domain/`** so the JWT adapter does not depend on **`application`** use-case modules.
 
 ---
 
@@ -113,12 +117,12 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 
 | Removed | Notes |
 |---------|--------|
-| **`src/infrastructure/adapters/rag/rag_service.py`** | Legacy orchestration façade |
-| **`src/infrastructure/adapters/rag/pipeline_assembly_service.py`** | Post-recall assembly moved to application |
-| **`src/infrastructure/adapters/rag/summary_recall_adapter.py`** | Replaced by app workflow + **`summary_recall_technical_adapters.py`** |
-| **`src/infrastructure/adapters/evaluation/benchmark_report_service.py`** | Callers use **`BuildBenchmarkExportArtifactsUseCase`** |
-| **`src/backend/`**, **`src/adapters/`**, **`infrastructure.services/`** | Legacy trees; directory + import guardrails |
-| **`src/services/`** (package) | Removed / guarded |
+| **`infrastructure/adapters/rag/rag_service.py`** (historical path) | Legacy orchestration façade |
+| **`infrastructure/adapters/rag/pipeline_assembly_service.py`** | Post-recall assembly moved to application |
+| **`infrastructure/adapters/rag/summary_recall_adapter.py`** | Replaced by app workflow + **`summary_recall_technical_adapters.py`** |
+| **`infrastructure/adapters/evaluation/benchmark_report_service.py`** | Callers use **`BuildBenchmarkExportArtifactsUseCase`** |
+| **`api/src/backend/`**, **`api/src/adapters/`**, **`infrastructure.services/`** | Legacy trees; directory + import guardrails |
+| Top-level **`api/src/services/`** package (monolith-style) | Removed / guarded |
 | Legacy **`ragcraft_app`** / monolithic app wrapper | Removed; composition + API entrypoints only |
 | **`src/application/chat/ports.py`** | Unused re-export barrel |
 | **`src/application/common/query_log_payload.py`**, **`evaluation_judge_metrics.py`** | Obsolete re-exports; domain types are canonical |
@@ -127,7 +131,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 | **Trusted `X-User-Id` header** | **Removed** — replaced by **`Authorization: Bearer`** + **`JwtAuthenticationAdapter`** implementing **`AuthenticationPort`** / **`AccessTokenIssuerPort`** |
 | **`rag/retrieval_settings_service.py`** | **Removed** — empty infra subclass of **`RetrievalSettingsTuner`**; composition constructs **`RetrievalSettingsTuner`** directly (**`retrieval_settings_tuner`** on **`BackendComposition`**) |
 | **`src/infrastructure/adapters/chat_transcript/`** | **Removed** — duplicate **`MemoryChatTranscript`**; callers use **`application/frontend_support/memory_chat_transcript.py`** |
-| **`src/application/auth/{authenticated_principal,authentication_port,access_token_issuer_port}.py`** | **Moved** — canonical types under **`src/domain/authenticated_principal.py`** and **`src/domain/ports/authentication_port.py`**, **`access_token_issuer_port.py`** |
+| **`application/auth/{authenticated_principal,authentication_port,access_token_issuer_port}.py`** (historical) | **Moved** — canonical types under **`api/src/domain/authenticated_principal.py`** and **`api/src/domain/ports/authentication_port.py`**, **`access_token_issuer_port.py`** |
 
 ---
 
@@ -157,11 +161,11 @@ These do **not** invalidate the migration but are worth tracking:
 
 **Verdict: yes — the Clean Architecture migration is complete for this repository’s stated scope.** The codebase matches the target layering, dependency direction, and orchestration ownership described in **`docs/architecture.md`**, **`docs/dependency_rules.md`**, and **`docs/rag_orchestration.md`**, and **§10** / **§14** describe how that state is enforced in CI and locally.
 
-**Auth / users (final model):** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** are **domain** types (`src/domain/`). The API uses **`get_authenticated_principal` → `AuthenticationPort.authenticate_bearer_token` → `AuthenticatedPrincipal`**. Transport parses **`Authorization: Bearer`** in **`apps/api/dependencies.py`**; **`JwtAuthenticationAdapter`** implements both ports and validates HS256 JWTs (**`RAGCRAFT_JWT_SECRET`**). The trusted **`X-User-Id`** header is **removed**. Login/register issue tokens via **`AccessTokenIssuerPort`**. **`/users/*`** goes through account use cases; hashing and avatar storage use **`PasswordHasherPort`** / **`AvatarStoragePort`**.
+**Auth / users (final model):** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** are **domain** types (`api/src/domain/`). The API uses **`get_authenticated_principal` → `AuthenticationPort.authenticate_bearer_token` → `AuthenticatedPrincipal`**. Transport parses **`Authorization: Bearer`** in **`api/src/interfaces/http/dependencies.py`**; **`JwtAuthenticationAdapter`** implements both ports and validates HS256 JWTs (**`RAGCRAFT_JWT_SECRET`**). The trusted **`X-User-Id`** header is **removed**. Login/register issue tokens via **`AccessTokenIssuerPort`**. **`/users/*`** goes through account use cases; hashing and avatar storage use **`PasswordHasherPort`** / **`AvatarStoragePort`**.
 
 **RAG orchestration (final model):** Application-owned sequencing (**`ApplicationSummaryRecallStage`**, **`ApplicationPipelineAssembly`**, **`post_recall_pipeline_steps`**); infrastructure supplies single-step adapters. Typed boundaries: **`RetrievalSettingsOverrideSpec`**, **`VectorLexicalRecallBundle`**, **`RagEvaluationPipelineInput`**, **`RagInspectAnswerRun`** / **`PipelineLatency`**, **`GoldQaPipelineRowInput`**. **`InspectRagPipelineUseCase`** shares **`BuildRagPipelineUseCase`** with **`emit_query_log=False`**.
 
-**Upload / ingestion (final model):** Bounded chunked buffering via **`apps/api/upload_adapter.py`** → **`BufferedDocumentUpload`** → use cases; documented in **`src/application/ingestion/upload_boundary.py`** and **`docs/api.md`**. Avatars share the same transport pattern with a smaller byte cap.
+**Upload / ingestion (final model):** Bounded chunked buffering via **`api/src/interfaces/http/upload_adapter.py`** → **`BufferedDocumentUpload`** → use cases; documented in **`api/src/application/ingestion/upload_boundary.py`** and **`docs/api.md`**. Avatars share the same transport pattern with a smaller byte cap.
 
 **Evaluation (final model):** Single manual-eval orchestrator (**`RunManualEvaluationUseCase`**). Gold-QA via **`BenchmarkExecutionUseCase`** and **`RagInspectAnswerRun`** only. **`test_manual_evaluation_single_orchestrator.py`** guards against a second orchestration class on the manual-eval infrastructure module.
 
@@ -213,7 +217,7 @@ pytest api/tests/architecture/ -q
 | Orchestration subtrees (chat/eval/rag) | **`test_orchestration_package_import_boundaries.py`** |
 | Manual evaluation single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 
-**Multipart / upload:** `src/application` must not import **FastAPI** or **Starlette** (`test_application_orchestration_purity.py`); ingest use cases accept **`BufferedDocumentUpload`** only. Transport reads live in **`apps/api/upload_adapter.py`** (see §12).
+**Multipart / upload:** `application` must not import **FastAPI** or **Starlette** (`test_application_orchestration_purity.py`); ingest use cases accept **`BufferedDocumentUpload`** only. Transport reads live in **`api/src/interfaces/http/upload_adapter.py`** (see §12).
 
 ---
 
@@ -224,7 +228,7 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 | Removed / tightened | Replacement |
 |--------------------|-------------|
 | ``retrieval_settings: dict[str, Any] \| None`` on **`RetrievalPort.execute`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, **`run_recall_then_assemble_pipeline`**, chat use cases | **`RetrievalSettingsOverrideSpec \| None`** (domain); validated partial merge mapping keyed only to **`RetrievalSettings`** fields |
-| Ad hoc recall fusion return shape | **`VectorLexicalRecallBundle`** in **`src/application/rag/dtos/recall_stages.py`** |
+| Ad hoc recall fusion return shape | **`VectorLexicalRecallBundle`** in **`api/src/application/rag/dtos/recall_stages.py`** |
 | Untyped evaluation orchestration inputs | **`RagEvaluationPipelineInput`** |
 | **`RagInspectAnswerRun`** → row evaluation as anonymous ``dict`` | **`as_row_evaluation_input()` → `GoldQaPipelineRowInput`**; **`BenchmarkRowProcessingPort.process_row`** takes that DTO |
 | **`PipelineBuildResult.latency`** as ``dict[str, float]`` | **`PipelineLatency`** (merged after answer on ask/eval paths; **`PipelineBuildResult.to_dict()`** still emits a JSON object for wire) |
@@ -260,7 +264,7 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 **Ownership:** Application use case owns the scenario; **`EvaluationService`** is a façade over **`GoldQaBenchmarkPort`** + manual-result assembly; **`manual_evaluation_service` module** holds pure helpers and **`manual_evaluation_result_from_rag_outputs`**, not a second orchestration entry point.
 
-**Enforcement:** **`tests/architecture/test_manual_evaluation_single_orchestrator.py`** asserts **`ManualEvaluationService`** is not reintroduced on that module.
+**Enforcement:** **`api/tests/architecture/test_manual_evaluation_single_orchestrator.py`** asserts **`ManualEvaluationService`** is not reintroduced on that module.
 
 ---
 
@@ -269,9 +273,9 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 **Multipart upload boundary (documents + avatars)**
 
 - **Final strategy (explicit):** **bounded chunked buffering** — reads proceed in **1 MiB** slices while tracking cumulative size; if the cap is exceeded, the adapter raises **before** buffering the remainder. After a successful read, bytes are concatenated in memory for the application. This is **not** true streaming from the socket into extraction or indexing.
-- **Canonical module:** **`src/application/ingestion/upload_boundary.py`** documents the contract; transport implementation is **`apps/api/upload_adapter.py`** (**`read_buffered_document_upload`**, **`read_buffered_avatar_upload`** sharing **`_read_starlette_upload_bounded`**).
+- **Canonical module:** **`api/src/application/ingestion/upload_boundary.py`** documents the contract; transport implementation is **`api/src/interfaces/http/upload_adapter.py`** (**`read_buffered_document_upload`**, **`read_buffered_avatar_upload`** sharing **`_read_starlette_upload_bounded`**).
 - **Documents:** cap **`INGESTION_CONFIG.max_upload_bytes`** (**`RAG_MAX_UPLOAD_BYTES`**, default 100 MiB) → **HTTP 413** on oversize → **`IngestUploadedFileCommand`** / **`validate_buffered_document_upload`** (defense in depth).
-- **Avatars:** cap **`USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes`** (**`RAG_MAX_AVATAR_UPLOAD_BYTES`**, default 2 MiB); routers no longer use raw **`await file.read()`**. **`UploadUserAvatarCommand`** carries **`BufferedDocumentUpload`** only; **`validate_buffered_avatar_upload`** (`src/application/users/avatar_upload_policy.py`) + **`FileAvatarStorage`** (infrastructure) enforce format and size again at save time.
+- **Avatars:** cap **`USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes`** (**`RAG_MAX_AVATAR_UPLOAD_BYTES`**, default 2 MiB); routers no longer use raw **`await file.read()`**. **`UploadUserAvatarCommand`** carries **`BufferedDocumentUpload`** only; **`validate_buffered_avatar_upload`** (`api/src/application/users/avatar_upload_policy.py`) + **`FileAvatarStorage`** (infrastructure) enforce format and size again at save time.
 - **Domain:** **`BufferedDocumentUpload`** — shared typed payload for both flows after transport adaptation.
 - **On-disk pipeline:** Document extraction still runs from a **persisted file**; streaming multipart directly into unstructured is **not** implemented.
 - **Lazy unstructured imports:** **`src/infrastructure/ingestion/unstructured_extractor.py`** imports **`unstructured`** chunking/partition entry points **on first extraction**, not at module import time, so **`create_app()`** / **`BackendApplicationContainer`** construction does not pull optional partition backends (e.g. **pdfminer**) until a document is actually parsed. A full **`requirements.txt`** install remains required for real PDF/DOCX/PPTX extraction.
@@ -282,8 +286,8 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 **Row-dict leakage reduced**
 
-- **`GetProjectDocumentDetailsUseCase`** returns **`list[ProjectDocumentDetailRow]`** (`src/application/projects/dtos.py`); the projects router maps rows via **`project_document_detail_row_to_item`** (`apps/api/schemas/mappers.py`).
-- **QA dataset generation:** **`ProposedQaDatasetRow`** (domain), **`QaDatasetGenerationPort`** returns typed proposals, **`GenerateQaDatasetResult`** (`src/application/evaluation/dtos.py`), **`QaDatasetGenerateWirePayload`** for FastAPI **`QaDatasetGenerateResponse`**. **`BenchmarkExportBundleWirePayload`** wraps **`BenchmarkExportArtifacts.to_http_bundle_dict()`** for the export ``all`` format.
+- **`GetProjectDocumentDetailsUseCase`** returns **`list[ProjectDocumentDetailRow]`** (`api/src/application/projects/dtos.py`); the projects router maps rows via **`project_document_detail_row_to_item`** (`api/src/interfaces/http/schemas/mappers.py`).
+- **QA dataset generation:** **`ProposedQaDatasetRow`** (domain), **`QaDatasetGenerationPort`** returns typed proposals, **`GenerateQaDatasetResult`** (`api/src/application/evaluation/dtos.py`), **`QaDatasetGenerateWirePayload`** for FastAPI **`QaDatasetGenerateResponse`**. **`BenchmarkExportBundleWirePayload`** wraps **`BenchmarkExportArtifacts.to_http_bundle_dict()`** for the export ``all`` format.
 
 **Residual**
 
@@ -295,34 +299,45 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 ## 13. Repository tree (main folders)
 
 ```text
-apps/api/
-src/
-  auth/
-  composition/          # backend_composition, evaluation_wiring, application_container, chat_rag_wiring, wiring
-  core/
-  domain/               # entities, ports, payloads, retrieval policies, …
-  application/
-    use_cases/          # chat (orchestration/), evaluation, ingestion, projects, retrieval, settings
-    rag/                # orchestration DTOs (recall bundle, eval pipeline input, …)
-    chat/               # policies, multimodal_prompt_hints, …
-    frontend_support/
-    http/
-    common/
-  infrastructure/
-    adapters/           # rag, evaluation, workspace, query_logging, …
-    persistence/
-    vectorstores/
-  frontend_gateway/
-pages/
-src/ui/
-tests/
-  architecture/
-  apps_api/
-  application/
-  composition/
-  domain/
-  integration/
-  infrastructure_services/
+api/
+  main.py               # ASGI entry (uvicorn)
+  src/
+    auth/
+    composition/        # backend_composition, evaluation_wiring, application_container, chat_rag_wiring, wiring
+    core/
+    domain/
+    application/
+      use_cases/        # chat (orchestration/), evaluation, ingestion, projects, retrieval, settings
+      rag/
+      chat/
+      frontend_support/
+      http/
+    infrastructure/
+      adapters/
+      persistence/
+      vectorstores/
+    interfaces/
+      http/             # FastAPI app, routers, schemas, dependencies, upload_adapter
+  tests/
+    architecture/
+    apps_api/
+    application_tests/
+    composition/
+    domain/
+    e2e/
+    infrastructure_tests/
+frontend/
+  app.py                # Streamlit entry
+  src/
+    pages/
+    components/
+    services/           # BackendClient, HTTP/in-process clients, Streamlit factories
+    state/
+    utils/
+  tests/
+docs/
+scripts/
+data/
 ```
 
 ---

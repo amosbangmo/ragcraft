@@ -1,5 +1,5 @@
 """
-Evaluation hub. Dataset benchmark and related calls use :class:`~src.frontend_gateway.protocol.BackendClient`
+Evaluation hub. Dataset benchmark and related calls use :class:`~services.protocol.BackendClient`
 (``POST /evaluation/dataset/run`` and siblings when ``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 

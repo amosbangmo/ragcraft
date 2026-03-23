@@ -189,23 +189,12 @@ Assets are rehydrated from SQLite during retrieval to build the final prompt.
 ```text
 ragcraft/
 │
-├── streamlit_app.py
-├── pages/
-│   ├── chat.py
-│   ├── ingestion.py
-│   ├── retrieval_inspector.py
-│   ├── retrieval_comparison.py
-│   └── ...
-│
-├── src/
-│   ├── app/
-│   ├── auth/
-│   ├── core/
-│   ├── domain/
-│   ├── infrastructure/
-│   ├── services/
-│   └── ui/
-│
+├── api/src/          # domain, application, infrastructure, composition, interfaces/http
+├── frontend/
+│   ├── app.py        # Streamlit entry (Docker / local: run from frontend/)
+│   └── src/          # pages, components, services (BackendClient)
+├── api/tests/
+├── frontend/tests/
 ├── data/
 ├── requirements.txt
 └── README.md
@@ -231,7 +220,8 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-streamlit run streamlit_app.py
+cd frontend
+streamlit run app.py
 ```
 
 ### Environment variables

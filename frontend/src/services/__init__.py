@@ -25,7 +25,7 @@ def __getattr__(name: str):
     if name == "streamlit_auth":
         import importlib
 
-        return importlib.import_module("src.frontend_gateway.streamlit_auth")
+        return importlib.import_module("services.streamlit_auth")
     if name == "BackendClient":
         from services.protocol import BackendClient
 

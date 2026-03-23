@@ -152,7 +152,7 @@ def enrich_openapi_schema(schema: dict[str, Any]) -> dict[str, Any]:
     if "CanonicalApiError" not in schemas:
         schemas["CanonicalApiError"] = {
             "type": "object",
-            "description": "Stable error envelope from ``apps.api.error_payload.api_error_body``.",
+            "description": "Stable error envelope from ``interfaces.http.error_payload.api_error_body``.",
             "required": ["detail", "message", "error_type", "code", "category"],
             "properties": {
                 "detail": {

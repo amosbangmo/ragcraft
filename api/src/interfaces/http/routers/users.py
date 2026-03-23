@@ -120,7 +120,7 @@ async def post_avatar(
 ) -> SimpleStatusResponse:
     """
     Multipart field ``file`` is read in chunks up to ``RAG_MAX_AVATAR_UPLOAD_BYTES`` (default 2 MiB),
-    same policy as document ingest (see ``apps.api.upload_adapter``).
+    same policy as document ingest (see ``interfaces.http.upload_adapter``).
     """
     try:
         upload = await read_buffered_avatar_upload(file)

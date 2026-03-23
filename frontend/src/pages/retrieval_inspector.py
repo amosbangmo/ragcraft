@@ -1,5 +1,5 @@
 """
-Retrieval pipeline inspector. Uses :func:`~src.frontend_gateway.protocol.BackendClient.inspect_retrieval`
+Retrieval pipeline inspector. Uses :func:`~services.protocol.BackendClient.inspect_retrieval`
 (``POST /chat/pipeline/inspect`` over HTTP when ``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 

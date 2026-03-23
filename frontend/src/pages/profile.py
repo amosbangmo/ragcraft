@@ -1,6 +1,6 @@
 """
-Account profile UI. Mutations use :class:`~src.frontend_gateway.protocol.BackendClient`; session fields refresh via
-:func:`~src.frontend_gateway.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
+Account profile UI. Mutations use :class:`~services.protocol.BackendClient`; session fields refresh via
+:func:`~services.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
 """
 
 import streamlit as st

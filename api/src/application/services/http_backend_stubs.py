@@ -1,9 +1,9 @@
 """
-Placeholders attached to :class:`~src.frontend_gateway.http_client.HttpBackendClient` when the UI
+Placeholders attached to :class:`~services.http_client.HttpBackendClient` when the UI
 runs against the API: chat transcripts stay in Streamlit while RAG hits REST.
 
-Kept under ``src.application`` so ``src.frontend_gateway`` does not import
-``src.infrastructure`` directly (architecture guardrails).
+Kept under ``application`` so the frontend ``services`` package does not import
+``infrastructure`` adapters directly (architecture guardrails).
 """
 
 from __future__ import annotations

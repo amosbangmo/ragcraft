@@ -451,7 +451,8 @@ METRIC_HELP: dict[str, str] = {
 }
 
 _METRIC_HELP_FALLBACK = (
-    "No tooltip yet for this metric; see benchmark docs or add a key in src/ui/metric_help.py."
+    "No tooltip yet for this metric; see benchmark docs or add a key in "
+    "frontend/src/components/shared/metric_help.py."
 )
 
 

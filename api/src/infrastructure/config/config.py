@@ -146,7 +146,7 @@ class UserProfileUploadConfig:
     Caps for profile multipart bodies (e.g. avatars).
 
     The HTTP layer reads uploads in chunks and stops at ``max_avatar_bytes``; see
-    ``apps.api.upload_adapter``.
+    ``interfaces.http.upload_adapter``.
     """
 
     max_avatar_bytes: int = field(

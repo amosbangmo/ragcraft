@@ -170,9 +170,9 @@ def render_retrieval_settings_panel(
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
 
     When ``user_id``, ``project_id``, and ``backend_client`` are set, loads/saves use
-    :meth:`~src.frontend_gateway.protocol.BackendClient.get_effective_retrieval_settings`
+    :meth:`~services.protocol.BackendClient.get_effective_retrieval_settings`
     and
-    :meth:`~src.frontend_gateway.protocol.BackendClient.update_project_retrieval_settings`.
+    :meth:`~services.protocol.BackendClient.update_project_retrieval_settings`.
     """
     svc = service or default_retrieval_preset_merge_port()
 

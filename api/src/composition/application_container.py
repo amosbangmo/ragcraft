@@ -105,7 +105,7 @@ class BackendApplicationContainer:
     """
     Typed façade over the service graph with lazily memoized use-case instances.
 
-    FastAPI should resolve dependencies from this type (via ``apps.api.dependencies``), not by
+    FastAPI should resolve dependencies from this type (via ``interfaces.http.dependencies``), not by
     constructing services ad hoc.
     """
 

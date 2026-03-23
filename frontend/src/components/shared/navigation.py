@@ -60,7 +60,7 @@ def render_navigation(hide_sidebar: bool = False):
         else:
             st.caption("Not signed in")
 
-        st.page_link("streamlit_app.py", label="🏠 Home")
+        st.page_link("app.py", label="🏠 Home")
         st.page_link("pages/login.py", label="🔐 Login")
         st.page_link("pages/projects.py", label="📁 Projects")
         st.page_link("pages/ingestion.py", label="📄 Ingestion")

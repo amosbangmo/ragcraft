@@ -84,8 +84,8 @@ The demo allows you to:
 
 # 🏗️ Architecture Overview
 
-- **FastAPI (`apps/api/`)** is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
-- **Streamlit** (`streamlit_app.py`, `pages/`, `src/ui/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`src/frontend_gateway/protocol.py`). It must **not** import `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api` directly (enforced by architecture tests).
+- **FastAPI** under **`api/src/interfaces/http/`** (ASGI entry **`api/main.py`**) is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
+- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`frontend/src/services/protocol.py`). Pages and components must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
 - **Default Streamlit mode** is **`RAGCRAFT_BACKEND_CLIENT=http`**: the UI calls the API over HTTP like any other client. **`in_process`** builds a **`BackendApplicationContainer`** inside the Streamlit process (no uvicorn) for fast local work — same use cases, different transport.
 - **Angular or other SPAs** should use the **same HTTP API**: obtain a JWT from `POST /auth/login` or `/auth/register`, then send `Authorization: Bearer <access_token>` on scoped routes.
 
@@ -120,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** `ARCHITECTURE_TARGET.md` (short) · **`docs/README.md`** (index) · **`docs/migration_report_final.md`** (closure report) · `tests/architecture/README.md` (import guardrails).
+**Architecture reference:** `ARCHITECTURE_TARGET.md` (short) · **`docs/README.md`** (index) · **`docs/migration_report_final.md`** (closure report) · **`api/tests/architecture/README.md`** (import guardrails).
 
 ### Migration status (short)
 
@@ -214,27 +214,29 @@ Assets are rehydrated from SQLite during retrieval to build the final prompt.
 ```text
 ragcraft/
 │
-├── apps/api/                    # FastAPI — HTTP backend, OpenAPI, Depends → container
-├── streamlit_app.py             # Streamlit entry
-├── pages/                       # Streamlit multipage app
-├── src/
-│   ├── application/             # Use cases, policies, HTTP wire helpers, frontend_support stubs
-│   ├── auth/
-│   ├── composition/             # build_backend(), BackendApplicationContainer
-│   ├── core/                    # config, paths, shared errors (Streamlit session helpers here)
-│   ├── domain/                  # Entities, ports, SummaryRecallDocument, no framework imports
-│   ├── frontend_gateway/        # BackendClient, HttpBackendClient, InProcessBackendClient
-│   ├── infrastructure/          # adapters/, persistence/, vectorstores/, …
-│   │   └── adapters/sqlite/     # SQLite port implementations (users, assets, settings)
-│   └── ui/                      # Streamlit widgets (no direct domain/infra imports)
-├── docs/                        # Architecture, RAG flow, dependency rules, testing, final migration report
-├── tests/
-│   ├── architecture/            # Layer boundary + orchestration guardrails
-│   ├── apps_api/                # FastAPI contract tests
-│   └── infrastructure_services/ # Unit tests for infrastructure.adapters
+├── api/
+│   ├── main.py                  # ASGI entry (uvicorn)
+│   └── src/                     # PYTHONPATH: domain, application, infrastructure, composition, interfaces
+│       ├── application/
+│       ├── auth/
+│       ├── composition/
+│       ├── core/
+│       ├── domain/
+│       ├── infrastructure/
+│       └── interfaces/http/     # FastAPI routers, schemas, dependencies
+├── frontend/
+│   ├── app.py                   # Streamlit entry (run from frontend/)
+│   └── src/                     # PYTHONPATH: pages, components, services
+│       ├── pages/
+│       ├── components/
+│       └── services/            # BackendClient, HTTP / in-process clients
+├── api/tests/                   # pytest (architecture/, apps_api/, application_tests/, …)
+├── frontend/tests/
+├── docs/
+├── scripts/                     # validate_architecture, run_tests, lint, …
 ├── data/
 ├── requirements.txt
-├── ARCHITECTURE_TARGET.md       # Short runtime layout (read this first)
+├── ARCHITECTURE_TARGET.md
 └── README.md
 ```
 
@@ -282,18 +284,19 @@ Optional: from **`api/`**, `pytest` runs only **`tests/architecture`** (see **`a
 ### Streamlit (default local UI)
 
 ```bash
-streamlit run streamlit_app.py
+cd frontend
+streamlit run app.py
 ```
 
-Set `PYTHONPATH` to the repo root if imports fail (see `apps/api/main.py` for the same pattern).
+Use **`PYTHONPATH`** as in **`docs/README.md`** (repo root + **`api/src`** + **`frontend/src`**) so `api` and Streamlit imports resolve.
 
 ### FastAPI backend (HTTP API)
 
 Use a second terminal if you want OpenAPI docs or to point Streamlit at the API:
 
 ```bash
-export PYTHONPATH=$(pwd)   # Linux/macOS
-python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
+export PYTHONPATH=$(pwd)   # Linux/macOS — repository root
+python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 PowerShell: `$env:PYTHONPATH = (Get-Location).Path` then the same `uvicorn` command.
@@ -316,7 +319,7 @@ OPENAI_API_KEY=your_api_key
 ## Core
 
 - Python
-- FastAPI (HTTP API, `apps/api/`)
+- FastAPI (HTTP API, `api/src/interfaces/http/`, entry `api/main.py`)
 - Streamlit
 - LangChain
 - FAISS

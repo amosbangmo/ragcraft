@@ -3,7 +3,7 @@ Multipart upload boundary for HTTP-originated file bytes.
 
 **Strategy (explicit): bounded chunked buffering — not true streaming into parsers.**
 
-1. ``apps.api.upload_adapter`` reads each :class:`starlette.datastructures.UploadFile` in
+1. ``interfaces.http.upload_adapter`` reads each :class:`starlette.datastructures.UploadFile` in
    fixed-size chunks (default 1 MiB).
 2. While reading, it accumulates total size and raises if the configured cap is exceeded, so
    oversized bodies are rejected **without** buffering the full file first.

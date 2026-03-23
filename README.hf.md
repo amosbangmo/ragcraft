@@ -5,7 +5,7 @@ colorFrom: red
 colorTo: yellow
 sdk: docker
 python_version: 3.13.11
-app_file: streamlit_app.py
+app_file: frontend/app.py
 app_port: 8501
 tags:
   - rag

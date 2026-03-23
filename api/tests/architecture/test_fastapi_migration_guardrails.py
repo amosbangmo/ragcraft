@@ -3,7 +3,7 @@ Regression tests for the Streamlit → FastAPI migration boundaries.
 
 These checks complement :mod:`tests.architecture.test_layer_boundaries` by targeting the **slices**
 that regressed historically: API packages importing UI/Streamlit, and Streamlit surfaces reaching
-past the :class:`~src.frontend_gateway.protocol.BackendClient` façade into services or the
+past the :class:`~services.protocol.BackendClient` façade into services or the
 monolithic app / composition root.
 
 They are **import-level** (AST of ``import`` / ``from … import``) and avoid brittle string matching
@@ -91,8 +91,8 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
 
 def test_http_and_in_process_backend_clients_expose_same_gateway_operations() -> None:
     """
-    :class:`~src.frontend_gateway.http_client.HttpBackendClient` and
-    :class:`~src.frontend_gateway.in_process.InProcessBackendClient` must stay aligned so switching
+    :class:`~services.http_client.HttpBackendClient` and
+    :class:`~services.in_process.InProcessBackendClient` must stay aligned so switching
     ``use_http_backend_client`` does not drop operations Streamlit pages rely on.
 
     ``HttpBackendClient`` may add transport-only helpers (e.g. ``close``); in-process must implement

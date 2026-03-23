@@ -1,14 +1,11 @@
 """
-FastAPI entrypoint for RAGCraft.
+FastAPI application factory for RAGCraft (imported by :mod:`api.main`).
 
-Run locally (from repository root, with ``src`` on ``PYTHONPATH``)::
+**Preferred (repo root on ``PYTHONPATH``):** ``python -m uvicorn api.main:app``.
 
-    uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
+**Alternate** (only ``api/src`` on ``PYTHONPATH``)::
 
-Windows PowerShell::
-
-    $env:PYTHONPATH = (Get-Location).Path
-    python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000
+    uvicorn interfaces.http.main:app --reload --host 127.0.0.1 --port 8000
 """
 
 from __future__ import annotations
@@ -28,7 +25,7 @@ RAGCraft HTTP API for workspaces, RAG chat, evaluation flows, and user profile d
 ``/users/me``). ``GET /health`` and ``GET /version`` are public.
 
 **Errors:** JSON error bodies use a stable envelope — ``detail``, ``message``, ``error_type``,
-``code``, ``category`` — see ``CanonicalApiError`` in this schema and ``apps.api.error_payload``.
+``code``, ``category`` — see ``CanonicalApiError`` in this schema and ``interfaces.http.error_payload``.
 """
 
 

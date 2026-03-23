@@ -1,12 +1,12 @@
 """
-Streamlit session singletons for resolving a :class:`~src.frontend_gateway.protocol.BackendClient`.
+Streamlit session singletons for resolving a :class:`~services.protocol.BackendClient`.
 
 Pages and ``src/ui`` must call :func:`get_backend_client` (via
-:mod:`src.frontend_gateway.streamlit_api_client` / :mod:`src.frontend_gateway.streamlit_context`).
-**Default:** :class:`~src.frontend_gateway.http_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
+:mod:`services.streamlit_api_client` / :mod:`services.streamlit_context`).
+**Default:** :class:`~services.http_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
 or ``http``). **Escape hatch:** ``RAGCRAFT_BACKEND_CLIENT=in_process`` caches a
 :class:`~composition.BackendApplicationContainer` from
-:func:`~src.frontend_gateway.streamlit_backend_factory.build_streamlit_backend_application_container`.
+:func:`~services.streamlit_backend_factory.build_streamlit_backend_application_container`.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def _get_streamlit_backend_container() -> BackendApplicationContainer:
 
 
 def get_backend_client() -> BackendClient:
-    """Return :class:`~src.frontend_gateway.in_process.InProcessBackendClient` or :class:`~src.frontend_gateway.http_client.HttpBackendClient`."""
+    """Return :class:`~services.in_process.InProcessBackendClient` or :class:`~services.http_client.HttpBackendClient`."""
     if use_http_backend_client():
         from services.http_client import HttpBackendClient
 

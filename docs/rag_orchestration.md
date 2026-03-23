@@ -4,22 +4,22 @@
 
 | Entry | Mechanism |
 |-------|-----------|
-| **HTTP chat** | `apps/api/routers/chat.py` → `AskQuestionUseCase` via `apps/api/dependencies.py` (scoped routes require **`Authorization: Bearer`** → domain **`AuthenticatedPrincipal`**) |
-| **In-process UI** | `src/frontend_gateway/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
+| **HTTP chat** | `api/src/interfaces/http/routers/chat.py` → `AskQuestionUseCase` via `api/src/interfaces/http/dependencies.py` (scoped routes require **`Authorization: Bearer`** → domain **`AuthenticatedPrincipal`**) |
+| **In-process UI** | `frontend/src/services/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
 | **Pipeline build only** | `BuildRagPipelineUseCase` (inspect/compare/eval paths) |
 | **Inspect pipeline** | `InspectRagPipelineUseCase` — depends on **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance and inspect calls **`execute(..., emit_query_log=False)`** |
 | **Preview summary recall** | `PreviewSummaryRecallUseCase` |
 | **Answer from built pipeline** | `GenerateAnswerFromPipelineUseCase` |
 
-Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes it through `BackendApplicationContainer.chat_rag_use_cases` and the `chat_*_use_case` properties.
+Composition builds the graph in `api/src/composition/chat_rag_wiring.py` and exposes it through `BackendApplicationContainer.chat_rag_use_cases` and the `chat_*_use_case` properties.
 
-**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure `use_cases/chat/orchestration`, `use_cases/evaluation`, and **`src/application/rag/`** do not import infrastructure adapters or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
+**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure `use_cases/chat/orchestration`, `use_cases/evaluation`, and **`api/src/application/rag/`** do not import infrastructure adapters or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
 
 ### Typed orchestration contracts (boundaries)
 
-- **Retrieval overrides:** Per-request partial settings use **`RetrievalSettingsOverrideSpec`** (`src/domain/retrieval_settings_override_spec.py`) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases — not raw ``dict[str, Any]``. FastAPI maps the JSON ``retrieval_settings`` object to a spec in **`apps/api/routers/chat.py`**; **`InProcessBackendClient`** does the same before calling use cases.
-- **Recall fusion output:** **`fuse_vector_and_lexical_recalls`** returns **`VectorLexicalRecallBundle`** (`src/application/rag/dtos/recall_stages.py`).
-- **Evaluation input:** **`execute_rag_inspect_then_answer_for_evaluation`** takes **`RagEvaluationPipelineInput`** (`src/application/rag/dtos/evaluation_pipeline.py`).
+- **Retrieval overrides:** Per-request partial settings use **`RetrievalSettingsOverrideSpec`** (`api/src/domain/retrieval_settings_override_spec.py`) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases — not raw ``dict[str, Any]``. FastAPI maps the JSON ``retrieval_settings`` object to a spec in **`api/src/interfaces/http/routers/chat.py`**; **`InProcessBackendClient`** does the same before calling use cases.
+- **Recall fusion output:** **`fuse_vector_and_lexical_recalls`** returns **`VectorLexicalRecallBundle`** (`api/src/application/rag/dtos/recall_stages.py`).
+- **Evaluation input:** **`execute_rag_inspect_then_answer_for_evaluation`** takes **`RagEvaluationPipelineInput`** (`api/src/application/rag/dtos/evaluation_pipeline.py`).
 - **Evaluation result latency:** **`RagInspectAnswerRun.full_latency`** is **`PipelineLatency | None`**. **`RagInspectAnswerRun.as_row_evaluation_input()`** returns **`GoldQaPipelineRowInput`** for **`RowEvaluationService.process_row`** (no ad hoc ``dict`` at that boundary).
 
 ## Main use cases (happy path ask)
@@ -33,8 +33,8 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ### Summary-recall stage
 
-1. **`ApplicationSummaryRecallStage.summary_recall_stage(...)`** — **`src/application/use_cases/chat/orchestration/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**. Sequences: settings merge (**`RetrievalSettingsTuner`** via injected tuner), optional rewrite (**`QueryRewritePort`**), domain intent/table policy, domain **`resolve_summary_recall_execution_plan`**, then **`fuse_vector_and_lexical_recalls`** (vector + optional lexical ports + domain RRF merge).
-2. **Technical adapters:** **`src/infrastructure/adapters/rag/summary_recall_technical_adapters.py`** — **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`** (FAISS, BM25/docstore). Wired as **`SummaryRecallTechnicalPorts`** in **`chat_rag_wiring.py`**.
+1. **`ApplicationSummaryRecallStage.summary_recall_stage(...)`** — **`api/src/application/use_cases/chat/orchestration/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**. Sequences: settings merge (**`RetrievalSettingsTuner`** via injected tuner), optional rewrite (**`QueryRewritePort`**), domain intent/table policy, domain **`resolve_summary_recall_execution_plan`**, then **`fuse_vector_and_lexical_recalls`** (vector + optional lexical ports + domain RRF merge).
+2. **Technical adapters:** **`api/src/infrastructure/adapters/rag/summary_recall_technical_adapters.py`** — **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`** (FAISS, BM25/docstore). Wired as **`SummaryRecallTechnicalPorts`** in **`chat_rag_wiring.py`**.
 
 ### Post-recall assembly
 
@@ -57,12 +57,12 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Manual and gold-QA evaluation (inspect + answer, no production query log)
 
-**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (`src/application/use_cases/evaluation/rag_pipeline_orchestration.py`). There is **no** parallel “service” entry point that re-implements that sequence.
+**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (`api/src/application/use_cases/evaluation/rag_pipeline_orchestration.py`). There is **no** parallel “service” entry point that re-implements that sequence.
 
 - **`execute_rag_inspect_then_answer_for_evaluation`** — takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
-- **`RagInspectAnswerRun`** — `src/domain/rag_inspect_answer_run.py`; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
-- **`RunManualEvaluationUseCase`** — `POST /evaluation/manual`, **`InProcessBackendClient.evaluate_manual_question`**, and composition **`evaluation_run_manual_evaluation_use_case`** all delegate here → canonical orchestration above → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (implemented by **`EvaluationService`**). **`RunGoldQaDatasetEvaluationUseCase`** shares the same inspect/answer ports and gold-QA benchmark wiring. **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
-- **`src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
+- **`RagInspectAnswerRun`** — `api/src/domain/rag_inspect_answer_run.py`; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
+- **`RunManualEvaluationUseCase`** — `POST /evaluation/manual`, **`InProcessBackendClient.evaluate_manual_question`**, and composition **`evaluation_run_manual_evaluation_use_case`** all delegate here → canonical orchestration above → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (implemented by **`EvaluationService`**). **`RunGoldQaDatasetEvaluationUseCase`** shares the same inspect/answer ports and gold-QA benchmark wiring. **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`api/src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
+- **`api/src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
 
 ## Where answer generation happens
 
@@ -74,6 +74,6 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Document ingestion (orthogonal to RAG query path)
 
-- **HTTP:** `POST /projects/{project_id}/documents/ingest` uses **`read_buffered_document_upload`** (`apps/api/upload_adapter.py`) then **`IngestUploadedFileUseCase`** with **`IngestUploadedFileCommand.upload`** = domain **`BufferedDocumentUpload`**.
+- **HTTP:** `POST /projects/{project_id}/documents/ingest` uses **`read_buffered_document_upload`** (`api/src/interfaces/http/upload_adapter.py`) then **`IngestUploadedFileUseCase`** with **`IngestUploadedFileCommand.upload`** = domain **`BufferedDocumentUpload`**.
 - **Application:** **`validate_buffered_document_upload`** applies basename-only names, non-empty body, and size limits (aligned with **`RAG_MAX_UPLOAD_BYTES`**).
 - **Infrastructure:** **`IngestionService.ingest_uploaded_file`** persists via **`save_uploaded_file`** then runs the existing on-disk extraction pipeline (not streaming from the socket into unstructured).

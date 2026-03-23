@@ -4,40 +4,42 @@ Pytest modules under this package scan **import statements** (via the AST) and f
 
 ## Rules enforced
 
+Paths below are **on-disk** under the repository root. Python imports use package names **`domain`**, **`application`**, etc., with **`PYTHONPATH`** including **`api/src`** and **`frontend/src`**.
+
 | Layer | Location | Must not import (prefix match) |
 |--------|-----------|----------------------------------|
-| **Domain** | `src/domain/` | `src.infrastructure`, `src.backend`, `src.services`, `src.application`, `src.ui`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `apps` |
-| **Application** | `src/application/` | `streamlit`, `apps`, **`src.adapters`** (removed), **any** `src.infrastructure` (including adapters — wire in composition only). Use cases must not import `src.frontend_gateway` (see `test_application_orchestration_purity`) |
-| **Orchestration subtrees** | `src/application/use_cases/chat/orchestration/`, `…/evaluation/`, `src/application/rag/` | `src.infrastructure`, `fastapi`, `starlette`, `streamlit`, `uvicorn`, `langchain*`, `langgraph`, `faiss`, `sqlite3` — see **`test_orchestration_package_import_boundaries.py`** |
-| **Infrastructure** | `src/infrastructure/` | **`src.application`**, `streamlit`, `apps` — adapters additionally scanned by **`test_adapter_application_imports.py`** (no `src.application` imports) |
-| **API routers** | `apps/api/routers/` | `src.infrastructure` |
-| **Composition root** | `src/composition/` | `streamlit`, `apps` |
-| **FastAPI package** | `apps/api/` (all modules) | `streamlit`, `src.ui`, **`src.services`**, **`infrastructure.adapters`**, **`src.backend`**, **`src.adapters`** |
-| **Streamlit surface** | `pages/`, `src/ui/` | `src.backend`, `src.adapters`, `src.domain`, `src.services`, `src.composition`, `src.infrastructure`, `src.app`, `apps.api`, `apps` |
+| **Domain** | `api/src/domain/` | `infrastructure` (except narrow **`infrastructure.config`** per tests), `application`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `interfaces`, `composition` |
+| **Application** | `api/src/application/` | `streamlit`, **`interfaces`**, **any** `infrastructure` except **`infrastructure.config`** where allowed. Use cases must not import frontend **`services`** (see `test_application_orchestration_purity`) |
+| **Orchestration subtrees** | `api/src/application/use_cases/chat/orchestration/`, `…/evaluation/`, `api/src/application/rag/` | `infrastructure`, `fastapi`, `starlette`, `streamlit`, `uvicorn`, `langchain*`, `langgraph`, `faiss`, `sqlite3` — see **`test_orchestration_package_import_boundaries.py`** |
+| **Infrastructure** | `api/src/infrastructure/` | **`application`**, `streamlit`, `interfaces` — adapters additionally scanned by **`test_adapter_application_imports.py`** (no `application` imports) |
+| **API routers** | `api/src/interfaces/http/routers/` | `infrastructure` |
+| **Composition root** | `api/src/composition/` | `streamlit`, `interfaces` |
+| **FastAPI / HTTP package** | `api/src/interfaces/http/` (all modules) | `streamlit`, **`infrastructure.adapters`**, removed legacy **`src.backend`**, **`src.adapters`**, **`src.services`** |
+| **Frontend pages / components** | `frontend/src/pages/`, `frontend/src/components/` | `domain`, `application`, `composition`, `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** |
+| **Frontend services (gateway)** | `frontend/src/services/` | **`infrastructure.*`** except **`infrastructure.config`** and **`infrastructure.auth`** (`test_frontend_services_infrastructure_imports_are_limited`) |
 
-Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
+Module `test_fastapi_migration_guardrails.py` adds **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
 
 ## Intentional exceptions / non-goals
 
-- **Domain** may import **`src.core`** (paths, config, shared exceptions). Summary-level retrieval uses **`SummaryRecallDocument`** in-domain — not LangChain `Document`.
-- **Application** may import **`src.domain`** and **`src.core`**; it must not import **`src.infrastructure`** (implementations are composed in ``src/composition``). **Use cases** must not import **`src.frontend_gateway`**; **`application.frontend_support`** may import the gateway for HTTP-mode stubs.
-- **Routers** wire use cases via **`Depends`** and must not import **`infrastructure.adapters`** or other **`src.infrastructure`** modules directly (and must not reference the removed **`src.backend`** package).
-- **Streamlit pages and widgets** may import **`streamlit`**, **`src.frontend_gateway`** (including **`view_models`** for display types), and **`src.auth`**; they must not import **`src.domain`** directly, nor **`src.backend`**, **`src.infrastructure`**, **`src.services`**, or the composition/app entrypoints.
-- **`src.frontend_gateway`** must not import **`src.infrastructure`**. HTTP-mode placeholders live in **`application.frontend_support`** (they may import **`src.frontend_gateway`** and application helpers such as **`retrieval_settings_tuner`** — not infrastructure).
-- **Codebase Python** (`src/`, `apps/`, `pages/`, `tests/`, `streamlit_app.py`) must not import **`src.backend`**; the **`src/backend/`** directory must not exist (`test_codebase_python_does_not_import_removed_backend_package` and `test_legacy_backend_package_directory_is_absent`).
-- **`src/infrastructure/services/`** must not exist, and nothing may import **`infrastructure.services`** (`test_legacy_infrastructure_services_package_directory_is_absent`, `test_codebase_python_does_not_import_removed_infrastructure_services_package`).
-- **`src/adapters/`** must not exist; use **`src/infrastructure/adapters`** (see guardrails in `test_deprecated_backend_and_gateway_guardrails.py`).
-- We do **not** assert a clean `sys.modules` after `import interfaces.http.main`: third-party transitive imports can load unrelated packages; the **AST scan** of `apps/api` is the stable guard for “API code does not reference Streamlit”.
+- **Domain** may import **`infrastructure.config`** and **`core`** (paths, config, shared exceptions) per **`test_layer_import_rules.py`**.
+- **Application** may import **`domain`** and **`core`**; it must not import concrete **`infrastructure`** adapters (implementations are composed in **`composition`**). **Use cases** must not import **`services`** from the frontend tree; **`application.frontend_support`** supplies HTTP-mode stubs.
+- **Routers** wire use cases via **`Depends`** and must not import **`infrastructure.adapters`** or other **`infrastructure`** modules directly.
+- **Streamlit pages and components** use **`services`** and **`streamlit`**; they must not import **`domain`** or **`application`** directly.
+- **`frontend/src/services`** must not import **`infrastructure.adapters`**, persistence, RAG, or vector stores — only **`infrastructure.config`** and **`infrastructure.auth`** for shared errors and session auth.
+- **Codebase Python** under **`api/src`**, **`frontend/src`**, tests, and **`frontend/app.py`** must not import removed shims such as **`src.backend`** or **`src.adapters`**; legacy directories under **`api/src`** must stay absent (`test_deprecated_backend_and_gateway_guardrails.py`).
+- **`api/src/infrastructure/services/`** must not exist, and nothing may import **`infrastructure.services`**.
+- We do **not** assert a clean `sys.modules` after `import interfaces.http.main`: third-party transitive imports can load unrelated packages; the **AST scan** of **`interfaces/http`** is the stable guard for “HTTP delivery code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.
 
 ## Running
 
-From repo root with **`PYTHONPATH=.`**:
+From repo root (scripts set **`PYTHONPATH`**):
 
 ```bash
 ./scripts/validate.sh
 # or:
-pytest tests/architecture -q
+pytest api/tests/architecture -q
 ```
 
 **Windows:** **`.\scripts\validate.ps1`**. Same steps run in **`.github/workflows/ci.yml`**.

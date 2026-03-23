@@ -2,7 +2,7 @@
 
 Unit tests for **`infrastructure.adapters`** (RAG orchestration, docstore, vector store, evaluation, ingestion, etc.).
 
-This package was renamed from **`tests/backend`** so it is not confused with the **HTTP API** (`apps/api/`). The legacy **`src/backend/`** Python package has been removed from the tree.
+This package was renamed from **`tests/backend`** so it is not confused with the **HTTP API** (`api/src/interfaces/http/`). The legacy **`api/src/backend/`** Python package has been removed from the tree.
 
 Run with pytest (entire suite) or unittest:
 

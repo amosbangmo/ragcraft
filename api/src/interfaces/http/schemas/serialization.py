@@ -2,7 +2,7 @@
 Re-exports of wire mappers for callers that still import this module (e.g. tests).
 
 * Canonical wire types: :mod:`application.http.wire`.
-* Response assembly from domain rows: :mod:`apps.api.schemas.mappers`.
+* Response assembly from domain rows: :mod:`interfaces.http.schemas.mappers`.
 """
 
 from __future__ import annotations

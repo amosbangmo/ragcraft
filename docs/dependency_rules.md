@@ -27,32 +27,32 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`**. See **`docs/testing
 | **`frontend/src/services`** | May import `domain`, `application`, `composition`, and **`infrastructure.config`** (and related auth helpers) for the in-process/HTTP gateway; see **`test_frontend_structure.py`** for **pages/components** (thinner rules). |
 | **`frontend/src/pages`, `components`** | **Not** `domain`, `application`, `composition`, or `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** (session guards). |
 
-### Infrastructure adapters (`src/infrastructure/adapters/`)
+### Infrastructure adapters (`api/src/infrastructure/adapters/`)
 
-- Must **not** import **`src.application`** (enforced by **`tests/architecture/test_adapter_application_imports.py`**). Retrieval tuning is **`RetrievalSettingsTuner`** in **`src/application/settings/`**, wired from **`src/composition/backend_composition.py`** — not via an infra subclass.
+- Must **not** import **`application`** (enforced by **`api/tests/architecture/test_adapter_application_imports.py`**). Retrieval tuning is **`RetrievalSettingsTuner`** in **`api/src/application/settings/`**, wired from **`api/src/composition/backend_composition.py`** — not via an infra subclass.
 - RAG adapters must **not** import chat **use case classes** from `application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
 
 ### Shared boundary types (query log, evaluation rows)
 
-- **`QueryLogIngressPayload`** lives in **`src/domain/query_log_ingress_payload.py`** so query logging adapters accept the same typed shape the application builds without importing application modules.
-- **`EvaluationJudgeMetricsRow`** lives in **`src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
-- **`GoldQaPipelineRowInput`** (`src/domain/evaluation/gold_qa_row_input.py`) is the typed input to **`BenchmarkRowProcessingPort.process_row`** / **`RowEvaluationService.process_row`** (replacing an ad hoc ``dict`` runner payload).
+- **`QueryLogIngressPayload`** lives in **`api/src/domain/query_log_ingress_payload.py`** so query logging adapters accept the same typed shape the application builds without importing application modules.
+- **`EvaluationJudgeMetricsRow`** lives in **`api/src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
+- **`GoldQaPipelineRowInput`** (`api/src/domain/evaluation/gold_qa_row_input.py`) is the typed input to **`BenchmarkRowProcessingPort.process_row`** / **`RowEvaluationService.process_row`** (replacing an ad hoc ``dict`` runner payload).
 - **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** takes **`full_latency: PipelineLatency | None`**; **`ManualEvaluationPipelineSignals.stage_latency`** is the same type (JSON round-trip via **`manual_evaluation_result_from_plain_dict`** maps ``stage_latency`` dict → **`PipelineLatency`**).
-- **Manual evaluation orchestration** is **`RunManualEvaluationUseCase`** only (plus shared **`execute_rag_inspect_then_answer_for_evaluation`**). Do not add a parallel “evaluate question” orchestrator in infrastructure; **`src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** is for **row/result assembly**, not inspect+answer sequencing.
-- Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
+- **Manual evaluation orchestration** is **`RunManualEvaluationUseCase`** only (plus shared **`execute_rag_inspect_then_answer_for_evaluation`**). Do not add a parallel “evaluate question” orchestrator in infrastructure; **`api/src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** is for **row/result assembly**, not inspect+answer sequencing.
+- Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`api/src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
 
 ## Anti-patterns
 
 1. **Routers instantiating** `VectorStoreService`, `EvaluationService`, or other infra services — use **`Depends`** → container → use case.
-2. **Application importing** `src.infrastructure` — wire in **`src/composition`**.
-3. **Composition importing** `src.frontend_gateway` — use **`ChatTranscriptPort`** and pass **`StreamlitChatTranscript`** only from **`streamlit_backend_factory`**.
-4. **Gateway importing** `src.infrastructure` — use **`application.frontend_support`** stubs for HTTP mode.
-5. **Reintroducing** `src/backend`, `src/adapters`, `src/infrastructure/services` — removed; tests fail if directories or imports return.
-6. **New `rag_service.py`** orchestration façade under infrastructure that constructs chat use cases — forbidden; see **`tests/architecture/test_no_rag_service_facade.py`**.
+2. **Application importing** concrete **`infrastructure`** adapters — wire in **`composition`**.
+3. **Composition importing** frontend **`services`** — use **`ChatTranscriptPort`** and pass **`StreamlitChatTranscript`** only from **`frontend/src/services/streamlit_backend_factory`**.
+4. **Frontend `services` importing** **`infrastructure.adapters`** — use **`application.frontend_support`** and use cases; **`services` may only touch `infrastructure.config` and `infrastructure.auth`**.
+5. **Reintroducing** legacy `api/src/backend`, `api/src/adapters`, `infrastructure/services` as a package — removed; tests fail if directories or imports return.
+6. **New `rag_service.py`** orchestration façade under infrastructure that constructs chat use cases — forbidden; see **`api/tests/architecture/test_no_rag_service_facade.py`**.
 
 ## `MemoryChatTranscript` (canonical)
 
-- **`src/application/frontend_support/memory_chat_transcript.py`** — in-process **`ChatTranscriptPort`** used by **`apps/api/dependencies.py`**, tests, and any **`build_backend_composition(chat_transcript=...)`** caller. There is **no** duplicate under **`src/infrastructure/adapters`**.
+- **`api/src/application/frontend_support/memory_chat_transcript.py`** — in-process **`ChatTranscriptPort`** used by **`api/src/interfaces/http/dependencies.py`**, tests, and any **`build_backend_composition(chat_transcript=...)`** caller. There is **no** duplicate under **`api/src/infrastructure/adapters`**.
 
 ## Enforcement map (concrete tests)
 

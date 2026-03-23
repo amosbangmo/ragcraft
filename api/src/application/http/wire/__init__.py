@@ -2,7 +2,7 @@
 HTTP / JSON wire payloads: application-layer boundary between domain objects and REST clients.
 
 Maps domain and application results into **stable, JSON-serializable** structures consumed by
-``apps.api.schemas`` Pydantic models. LangChain ``Document`` instances and other non-JSON types
+``interfaces.http.schemas`` Pydantic models. LangChain ``Document`` instances and other non-JSON types
 are normalized via :func:`application.json_wire.jsonify_value` here — not in FastAPI routers.
 """
 
@@ -156,7 +156,7 @@ class EffectiveRetrievalSettingsWirePayload:
 
 @dataclass(frozen=True)
 class BenchmarkRunWirePayload:
-    """Stable benchmark aggregate for :class:`~apps.api.schemas.evaluation.BenchmarkResultResponse`."""
+    """Stable benchmark aggregate for :class:`~interfaces.http.schemas.evaluation.BenchmarkResultResponse`."""
 
     summary: dict[str, Any]
     rows: list[dict[str, Any]]
@@ -269,7 +269,7 @@ class BenchmarkExportBundleWirePayload:
         return dict(self.bundle)
 
 
-# --- Thin callables (stable names for ``apps.api.schemas.serialization`` re-exports) ---
+# --- Thin callables (stable names for ``interfaces.http.schemas.serialization`` re-exports) ---
 
 
 def rag_response_to_wire_dict(response: RAGResponse) -> dict[str, Any]:

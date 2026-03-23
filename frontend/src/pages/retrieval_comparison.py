@@ -1,5 +1,5 @@
 """
-Retrieval A/B comparison via :class:`~src.frontend_gateway.protocol.BackendClient.compare_retrieval_modes``.
+Retrieval A/B comparison via :class:`~services.protocol.BackendClient.compare_retrieval_modes``.
 """
 
 import streamlit as st

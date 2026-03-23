@@ -1,6 +1,6 @@
 # RAGCraft documentation
 
-**Layout note:** backend code lives under **`api/src/`**; Streamlit UI under **`frontend/src/`**; tests under **`api/tests/`** and **`frontend/tests/`**. Older path mentions (`src/…`, `apps/api/`) in the docs below are being aligned to this tree; see **`docs/migration_report_final.md`** for the authoritative physical layout.
+**Layout:** backend code lives under **`api/src/`**; Streamlit UI under **`frontend/src/`**; tests under **`api/tests/`** and **`frontend/tests/`**. See **`docs/migration_report_final.md`** for the authoritative physical layout and how CI blocks structural drift.
 
 Concise, **code-aligned** documentation for the repository layout after the Clean Architecture and RAG orchestration migration.
 

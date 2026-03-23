@@ -1,8 +1,8 @@
 """
-Streamlit ↔ backend boundary: one entrypoint for :class:`~src.frontend_gateway.protocol.BackendClient`.
+Streamlit ↔ backend boundary: one entrypoint for :class:`~services.protocol.BackendClient`.
 
-Pages and ``src/ui`` obtain the client via :func:`get_backend_client` from this module or
-:mod:`src.frontend_gateway.streamlit_context` (same implementation). Do not import
+Pages obtain the client via :func:`get_backend_client` from this module or
+:mod:`services.streamlit_context` (same implementation). Do not import
 the composition root or service containers from feature code.
 
 Modes (environment)
@@ -10,9 +10,9 @@ Modes (environment)
 
 ``RAGCRAFT_BACKEND_CLIENT``
     * ``http`` (default), ``api``, or ``remote`` — calls the FastAPI app via
-      :class:`~src.frontend_gateway.http_client.HttpBackendClient`.
+      :class:`~services.http_client.HttpBackendClient`.
     * ``in_process`` — same Python process as Streamlit (no uvicorn); uses
-      :class:`~src.frontend_gateway.in_process.InProcessBackendClient`.
+      :class:`~services.in_process.InProcessBackendClient`.
 
 ``RAGCRAFT_API_BASE_URL``
     Root URL without trailing slash, e.g. ``http://127.0.0.1:8000``.
@@ -27,23 +27,23 @@ Vertical slices already wired through ``BackendClient`` (projects list/create, c
 inspect, gold QA dataset run, exports, etc.) automatically use FastAPI when HTTP mode is enabled —
 no per-page branching required.
 
-Login/register and session reads for Streamlit go through :mod:`src.frontend_gateway.streamlit_auth`
-(HTTP mode uses ``/auth/login`` and ``/auth/register``). Profile mutations use :class:`~src.frontend_gateway.protocol.BackendClient` and
-:func:`~src.frontend_gateway.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
+Login/register and session reads for Streamlit go through :mod:`services.streamlit_auth`
+(HTTP mode uses ``/auth/login`` and ``/auth/register``). Profile mutations use :class:`~services.protocol.BackendClient` and
+:func:`~services.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
 
 Streamlit pages gateway checklist (business I/O via :func:`get_backend_client` / ``BackendClient``)
 ---------------------------------------------------------------------------------------------------
-* ``streamlit_app.py`` — shell only (no backend calls).
-* ``pages/login.py`` — :mod:`src.frontend_gateway.streamlit_auth` (not ``BackendClient``).
-* ``pages/projects.py``, ``pages/ingestion.py`` — projects + documents + table actions.
-* ``pages/chat.py`` — ``ask_question``, ``invalidate_project_chain``, chat session stubs on client.
-* ``pages/search.py`` — ``search_project_summaries``.
-* ``pages/retrieval_inspector.py`` — ``inspect_retrieval``, ``preview_summary_recall``.
-* ``pages/retrieval_comparison.py`` — ``compare_retrieval_modes``.
-* ``pages/evaluation.py`` + ``src/ui/evaluation_*.py`` — manual/dataset/gold/retrieval tabs via client.
-* ``pages/profile.py`` — client profile/password/avatar/delete + session refresh helper.
+* ``frontend/app.py`` — shell only (no backend calls).
+* ``frontend/src/pages/login.py`` — :mod:`services.streamlit_auth` (not ``BackendClient``).
+* ``frontend/src/pages/projects.py``, ``ingestion.py`` — projects + documents + table actions.
+* ``frontend/src/pages/chat.py`` — ``ask_question``, ``invalidate_project_chain``, chat session stubs on client.
+* ``frontend/src/pages/search.py`` — ``search_project_summaries``.
+* ``frontend/src/pages/retrieval_inspector.py`` — ``inspect_retrieval``, ``preview_summary_recall``.
+* ``frontend/src/pages/retrieval_comparison.py`` — ``compare_retrieval_modes``.
+* ``frontend/src/pages/evaluation.py`` + ``frontend/src/components/shared/evaluation_*.py`` — manual/dataset/gold/retrieval tabs via client.
+* ``frontend/src/pages/profile.py`` — client profile/password/avatar/delete + session refresh helper.
 
-The optional in-process mode builds an :class:`~src.frontend_gateway.in_process.InProcessBackendClient`
+The optional in-process mode builds an :class:`~services.in_process.InProcessBackendClient`
 over a cached :class:`~composition.BackendApplicationContainer` inside :mod:`infrastructure.config.app_state` only.
 """
 

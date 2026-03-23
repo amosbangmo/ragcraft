@@ -13,4 +13,4 @@ def require_authentication(current_page: str) -> None:
 
     st.session_state["post_login_redirect"] = current_page
     st.warning("Please log in to access this page.")
-    st.switch_page("src/pages/login.py")
+    st.switch_page("pages/login.py")

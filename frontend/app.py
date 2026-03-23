@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-require_authentication("streamlit_app.py")
+require_authentication("app.py")
 apply_layout()
 
 

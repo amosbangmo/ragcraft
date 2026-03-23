@@ -1,7 +1,7 @@
 """
 Chat and retrieval-debug HTTP API.
 
-Handlers delegate to application use cases only; serialization lives under ``apps.api.schemas``.
+Handlers delegate to application use cases only; serialization lives under ``interfaces.http.schemas``.
 """
 
 from __future__ import annotations

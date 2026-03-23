@@ -1,4 +1,4 @@
-"""Errors raised by the HTTP :class:`~src.frontend_gateway.http_client.HttpBackendClient`."""
+"""Errors raised by the HTTP :class:`~services.http_client.HttpBackendClient`."""
 
 from __future__ import annotations
 

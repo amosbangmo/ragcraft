@@ -57,10 +57,10 @@ def test_use_cases_do_not_import_frontend_gateway(use_case_files: list[Path]) ->
     violations: list[str] = []
     for path in use_case_files:
         for mod in imported_top_level_modules(path):
-            if mod == "src.frontend_gateway" or mod.startswith("src.frontend_gateway."):
+            if mod == "services" or mod.startswith("services."):
                 violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
     assert not violations, (
-        "Use case modules must not import ``src.frontend_gateway``; depend on ports and DTOs only.\n"
+        "Use case modules must not import the frontend ``services`` package; depend on ports and DTOs only.\n"
         + "\n".join(violations)
     )
 

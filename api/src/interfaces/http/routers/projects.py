@@ -1,7 +1,7 @@
 """
 Project and document management HTTP API.
 
-All handlers depend on application use cases and :func:`~apps.api.dependencies.get_authenticated_principal`.
+All handlers depend on application use cases and :func:`~interfaces.http.dependencies.get_authenticated_principal`.
 File ingest uses multipart form field ``file``; see each route's OpenAPI description.
 """
 

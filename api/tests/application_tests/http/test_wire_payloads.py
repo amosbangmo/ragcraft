@@ -1,4 +1,4 @@
-"""Application-layer HTTP wire DTOs (complements ``apps.api.schemas.serialization`` re-exports)."""
+"""Application-layer HTTP wire DTOs (complements ``interfaces.http.schemas.serialization`` re-exports)."""
 
 from __future__ import annotations
 

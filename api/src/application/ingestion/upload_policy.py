@@ -1,6 +1,6 @@
 """Application rules for uploaded document bytes (name normalization, size, emptiness).
 
-Transport policy (chunked read, caps) lives in ``apps.api.upload_adapter``; see
+Transport policy (chunked read, caps) lives in ``interfaces.http.upload_adapter``; see
 :mod:`application.ingestion.upload_boundary`.
 """
 

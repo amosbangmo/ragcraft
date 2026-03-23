@@ -1,5 +1,5 @@
 """
-Shared page chrome. Resolves :class:`~src.frontend_gateway.protocol.BackendClient` via the gateway entrypoint.
+Shared page chrome. Resolves :class:`~services.protocol.BackendClient` via the gateway entrypoint.
 """
 
 import streamlit as st
