@@ -22,6 +22,7 @@ def test_api_client_exports_ui_integration_helpers() -> None:
     for name in (
         "BenchmarkResult",
         "RetrievalSettingsPayload",
+        "SummaryRecallPreviewPayload",
         "default_retrieval_preset_merge_port",
     ):
         assert name in ac.__all__

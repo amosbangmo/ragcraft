@@ -16,9 +16,38 @@ from services.api_contract_models import (
     QADatasetEntryPayload,
     RAGAnswer,
     RetrievalSettingsPayload,
+    SummaryRecallDocumentView,
+    SummaryRecallPreviewPayload,
     default_retrieval_settings_template,
     merge_retrieval_settings_payload,
 )
+
+
+def _summary_doc_view_from_api_item(item: Any) -> SummaryRecallDocumentView:
+    if not isinstance(item, dict):
+        return SummaryRecallDocumentView(page_content="", metadata={})
+    meta = item.get("metadata")
+    return SummaryRecallDocumentView(
+        page_content=str(item.get("page_content") or ""),
+        metadata=dict(meta) if isinstance(meta, dict) else {},
+    )
+
+
+def summary_recall_preview_from_api_dict(raw: dict[str, Any]) -> SummaryRecallPreviewPayload:
+    """Parse the ``preview`` object from a successful preview-summary-recall response."""
+    recalled = raw.get("recalled_summary_docs") or []
+    vector = raw.get("vector_summary_docs") or []
+    bm25 = raw.get("bm25_summary_docs") or []
+    return SummaryRecallPreviewPayload(
+        rewritten_question=str(raw.get("rewritten_question") or ""),
+        recalled_summary_docs=tuple(_summary_doc_view_from_api_item(x) for x in recalled),
+        vector_summary_docs=tuple(_summary_doc_view_from_api_item(x) for x in vector),
+        bm25_summary_docs=tuple(_summary_doc_view_from_api_item(x) for x in bm25),
+        retrieval_mode=str(raw.get("retrieval_mode") or ""),
+        query_rewrite_enabled=bool(raw.get("query_rewrite_enabled")),
+        hybrid_retrieval_enabled=bool(raw.get("hybrid_retrieval_enabled")),
+        use_adaptive_retrieval=bool(raw.get("use_adaptive_retrieval")),
+    )
 
 
 def effective_retrieval_view_from_api_dict(data: dict[str, Any]) -> EffectiveRetrievalSettingsPayload:

@@ -16,6 +16,7 @@ from services.api_contract_models import (
     ProjectSettingsPayload,
     RAGAnswer,
     RetrievalFilters,
+    SummaryRecallPreviewPayload,
     UpdateProjectRetrievalSettingsCommand,
     WorkspaceProject,
 )
@@ -32,6 +33,7 @@ from services.http_payloads import (
     qa_dataset_entry_from_api_dict,
     qa_generate_result_from_api_dict,
     rag_answer_from_ask_api_dict,
+    summary_recall_preview_from_api_dict,
 )
 from services.http_transport import HttpTransport
 from services.memory_chat_transcript import MemoryChatTranscript
@@ -372,7 +374,7 @@ class HttpBackendClient:
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> Any:
+    ) -> SummaryRecallPreviewPayload | None:
         body = _chat_pipeline_body(
             project_id=project_id,
             question=query,
@@ -390,7 +392,10 @@ class HttpBackendClient:
         )
         if data.get("status") != "ok":
             return None
-        return data.get("preview")
+        preview = data.get("preview")
+        if not isinstance(preview, dict):
+            return None
+        return summary_recall_preview_from_api_dict(preview)
 
     def inspect_retrieval(
         self,

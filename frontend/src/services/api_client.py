@@ -2,8 +2,7 @@
 Canonical frontend ↔ backend integration surface.
 
 Streamlit **pages** and **components** import backend types and helpers **only** from this
-module — not from :mod:`services.http_client`, legacy protocol modules, or application/composition
-packages.
+module — not from :mod:`services.http_client` or application/composition packages.
 
 **HTTP contract** parsing and low-level helpers remain in:
 
@@ -57,6 +56,8 @@ from services.api_contract_models import (  # noqa: F401
     RAGAnswer,
     RetrievalFilters,
     RetrievalSettingsPayload,
+    SummaryRecallDocumentView,
+    SummaryRecallPreviewPayload,
     UpdateProjectRetrievalSettingsCommand,
     WorkspaceProject,
 )
@@ -88,6 +89,8 @@ __all__ = [
     "RetrievalPreset",
     "RetrievalPresetMergePort",
     "RetrievalSettingsPayload",
+    "SummaryRecallDocumentView",
+    "SummaryRecallPreviewPayload",
     "UpdateProjectRetrievalSettingsCommand",
     "WorkspaceProject",
     "compare_benchmark_failure_counts",

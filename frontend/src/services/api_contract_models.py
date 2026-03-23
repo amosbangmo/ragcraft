@@ -61,6 +61,28 @@ class RAGAnswer:
 
 
 @dataclass(frozen=True)
+class SummaryRecallDocumentView:
+    """One recalled summary chunk from ``POST /chat/pipeline/preview-summary-recall``."""
+
+    page_content: str
+    metadata: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SummaryRecallPreviewPayload:
+    """Wire view of the preview-summary-recall response body (``preview`` field)."""
+
+    rewritten_question: str
+    recalled_summary_docs: tuple[SummaryRecallDocumentView, ...]
+    vector_summary_docs: tuple[SummaryRecallDocumentView, ...]
+    bm25_summary_docs: tuple[SummaryRecallDocumentView, ...]
+    retrieval_mode: str
+    query_rewrite_enabled: bool
+    hybrid_retrieval_enabled: bool
+    use_adaptive_retrieval: bool
+
+
+@dataclass(frozen=True)
 class ProjectSettingsPayload:
     user_id: str
     project_id: str

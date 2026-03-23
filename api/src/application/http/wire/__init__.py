@@ -82,7 +82,7 @@ class PipelineSnapshotWirePayload:
 
 @dataclass(frozen=True)
 class PreviewSummaryRecallWirePayload:
-    """Summary-recall preview dict after JSON normalization."""
+    """Summary-recall preview dict after JSON normalization (HTTP wire only)."""
 
     preview: dict[str, Any] | None
 
@@ -92,14 +92,17 @@ class PreviewSummaryRecallWirePayload:
     ) -> PreviewSummaryRecallWirePayload:
         if preview is None:
             return cls(preview=None)
-        return cls(preview=cast(dict[str, Any], jsonify_value(preview.to_dict())))
-
-    @classmethod
-    def from_preview_dict(cls, preview: dict[str, Any] | None) -> PreviewSummaryRecallWirePayload:
-        """Legacy path for raw dicts (e.g. tests); prefer :meth:`from_preview_dto`."""
-        if preview is None:
-            return cls(preview=None)
-        return cls(preview=cast(dict[str, Any], jsonify_value(preview)))
+        wire: dict[str, Any] = {
+            "rewritten_question": preview.rewritten_question,
+            "recalled_summary_docs": cast(Any, jsonify_value(preview.recalled_summary_docs)),
+            "vector_summary_docs": cast(Any, jsonify_value(preview.vector_summary_docs)),
+            "bm25_summary_docs": cast(Any, jsonify_value(preview.bm25_summary_docs)),
+            "retrieval_mode": preview.retrieval_mode,
+            "query_rewrite_enabled": preview.query_rewrite_enabled,
+            "hybrid_retrieval_enabled": preview.hybrid_retrieval_enabled,
+            "use_adaptive_retrieval": preview.use_adaptive_retrieval,
+        }
+        return cls(preview=wire)
 
     def as_json_dict(self) -> dict[str, Any]:
         return {"preview": self.preview}

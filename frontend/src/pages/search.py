@@ -11,7 +11,7 @@ from components.shared.retrieval_settings_panel import (
     retrieval_settings_to_request_dict,
 )
 from infrastructure.auth.guards import require_authentication
-from services.api_client import BackendClient, RetrievalFilters
+from services.api_client import BackendClient, RetrievalFilters, SummaryRecallPreviewPayload
 from services.ui_errors import (
     DocStoreError,
     VectorStoreError,
@@ -87,7 +87,7 @@ if query:
     try:
         filters = _search_filters()
         with st.spinner("Searching summaries..."):
-            preview = client.search_project_summaries(
+            preview: SummaryRecallPreviewPayload | None = client.search_project_summaries(
                 user_id=user_id,
                 project_id=project_id,
                 query=query,
@@ -101,19 +101,19 @@ if query:
             st.info("No summaries found.")
             st.stop()
 
-        docs = preview["recalled_summary_docs"]
+        docs = preview.recalled_summary_docs
 
         st.caption(
-            f"Mode: **{preview['retrieval_mode']}** · "
-            f"Rewrite: **{'on' if preview['query_rewrite_enabled'] else 'off'}** · "
-            f"Hybrid: **{'on' if preview['hybrid_retrieval_enabled'] else 'off'}** · "
-            f"Adaptive: **{'on' if preview['use_adaptive_retrieval'] else 'off'}**"
+            f"Mode: **{preview.retrieval_mode}** · "
+            f"Rewrite: **{'on' if preview.query_rewrite_enabled else 'off'}** · "
+            f"Hybrid: **{'on' if preview.hybrid_retrieval_enabled else 'off'}** · "
+            f"Adaptive: **{'on' if preview.use_adaptive_retrieval else 'off'}**"
         )
         if (
-            preview.get("rewritten_question")
-            and preview["rewritten_question"].strip() != query.strip()
+            preview.rewritten_question.strip()
+            and preview.rewritten_question.strip() != query.strip()
         ):
-            st.caption(f"Retrieval query: {preview['rewritten_question']}")
+            st.caption(f"Retrieval query: {preview.rewritten_question}")
 
         st.metric("Retrieved summaries", len(docs))
         st.markdown("### Retrieved summaries")

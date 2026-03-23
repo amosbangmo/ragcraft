@@ -17,6 +17,7 @@ from services.api_contract_models import (
     QADatasetEntryPayload,
     RAGAnswer,
     RetrievalFilters,
+    SummaryRecallPreviewPayload,
     UpdateProjectRetrievalSettingsCommand,
     WorkspaceProject,
 )
@@ -122,7 +123,7 @@ class BackendClient(Protocol):
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> Any: ...
+    ) -> SummaryRecallPreviewPayload | None: ...
 
     def inspect_retrieval(
         self,
