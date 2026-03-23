@@ -40,7 +40,7 @@ from src.application.http.wire import (
     RagAnswerWirePayload,
     RetrievalComparisonWirePayload,
 )
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 

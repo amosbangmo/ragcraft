@@ -13,16 +13,15 @@ pytest tests/architecture -q
 | **Domain** | `src.core` (as established), stdlib, third-party **without** pulling app/infra (see tests for forbidden list). RAG-related typed transport for retrieval overrides lives in **`src/domain/retrieval_settings_override_spec.py`** so **`RetrievalPort`** and related protocols stay dict-free at the orchestration boundary. **`BufferedDocumentUpload`** and **`ProposedQaDatasetRow`** keep ingest and QA-generation ports off anonymous dict payloads at those boundaries. |
 | **Application** | `src.domain`, `src.core`; **`frontend_support`** may use `src.frontend_gateway` for stubs only |
 | **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
-| **Infrastructure adapters** | **Domain** always; **`src.application`** only where the codebase explicitly allows (see below) |
+| **Infrastructure adapters** | **Domain** always; **not** **`src.application`** (see **`test_adapter_application_imports.py`**) |
 | **Composition** | Domain ports, infrastructure adapters, application use cases for typing/wiring; **not** `src.frontend_gateway` |
-| **`apps/api`** | FastAPI, `src.composition`, `src.application` (types + e.g. **`frontend_support`** transcript, **`AuthenticatedPrincipal`**, **`AuthenticationPort`** resolved from the container, auth/user use-case commands), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
+| **`apps/api`** | FastAPI, `src.composition`, `src.application` (DTOs, **`frontend_support`** transcript), **`src.domain`** (**`AuthenticatedPrincipal`**, **`AuthenticationPort`** / **`AccessTokenIssuerPort`** types for dependencies), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
 | **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
 | **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
 
 ### Infrastructure adapters (`src/infrastructure/adapters/`)
 
-- Must **not** import **`src.application`** except files on the **explicit allowlist** in **`tests/architecture/test_adapter_application_imports.py`**.
-- Today the only allowlisted file is **`rag/retrieval_settings_service.py`** (thin subclass of application **`RetrievalSettingsTuner`**).
+- Must **not** import **`src.application`** (enforced by **`tests/architecture/test_adapter_application_imports.py`**). Retrieval tuning is **`RetrievalSettingsTuner`** in **`src/application/settings/`**, wired from **`src/composition/backend_composition.py`** — not via an infra subclass.
 - RAG adapters must **not** import chat **use case classes** from `src.application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
 
 ### Shared boundary types (query log, evaluation rows)
@@ -43,12 +42,9 @@ pytest tests/architecture -q
 5. **Reintroducing** `src/backend`, `src/adapters`, `src/infrastructure/services` — removed; tests fail if directories or imports return.
 6. **New `rag_service.py`** orchestration façade under infrastructure that constructs chat use cases — forbidden; see **`tests/architecture/test_no_rag_service_facade.py`**.
 
-## `MemoryChatTranscript` (two modules, one port)
+## `MemoryChatTranscript` (canonical)
 
-- **`src/application/frontend_support/memory_chat_transcript.py`** — used by **`apps/api/dependencies.py`** when calling **`build_backend_composition(chat_transcript=...)`** so the FastAPI package never imports **`src.infrastructure`**.
-- **`src/infrastructure/adapters/chat_transcript/memory_chat_transcript.py`** — same **`ChatTranscriptPort`** behavior for tests or any composition path that already lives next to other adapters; optional where callers prefer infra-local defaults.
-
-Both are thin in-memory implementations; keep API wiring on the **application** copy to satisfy layer guardrails.
+- **`src/application/frontend_support/memory_chat_transcript.py`** — in-process **`ChatTranscriptPort`** used by **`apps/api/dependencies.py`**, tests, and any **`build_backend_composition(chat_transcript=...)`** caller. There is **no** duplicate under **`src/infrastructure/adapters`**.
 
 ## Enforcement map (concrete tests)
 
@@ -58,7 +54,7 @@ Both are thin in-memory implementations; keep API wiring on the **application** 
 | No FastAPI/LC/FAISS in `src/application` | **`test_application_orchestration_purity.py`** |
 | Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
 | `apps/api` no `src.infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
-| Adapter → application allowlist | **`test_adapter_application_imports.py`** |
+| Adapters must not import application | **`test_adapter_application_imports.py`** |
 | Manual eval single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 | No RAG monolith façade | **`test_no_rag_service_facade.py`** |
 | RAG post-recall / router rag imports | **`test_orchestration_boundaries.py`** |

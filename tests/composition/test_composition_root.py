@@ -18,7 +18,7 @@ import src.composition.application_container as application_container_module
 
 from tests.support.backend_container import build_backend_container_for_tests, noop_chain_invalidate
 
-from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
+from src.application.frontend_support.memory_chat_transcript import MemoryChatTranscript
 
 
 def test_build_backend_composition_returns_typed_service_graph() -> None:
@@ -34,7 +34,7 @@ def test_build_backend_composition_returns_typed_service_graph() -> None:
     assert backend.vectorstore_service is not None
     assert backend.evaluation_service is not None
     assert backend.project_settings_repository is not None
-    assert backend.retrieval_settings_service is not None
+    assert backend.retrieval_settings_tuner is not None
     assert isinstance(backend.chat_transcript, MemoryChatTranscript)
 
 

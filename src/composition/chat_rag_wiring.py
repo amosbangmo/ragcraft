@@ -25,22 +25,33 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from src.application.chat.multimodal_prompt_hints import MultimodalPromptHints
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 from src.application.use_cases.chat.ask_question import AskQuestionUseCase
 from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from src.application.use_cases.chat.generate_answer_from_pipeline import (
+    GenerateAnswerFromPipelineUseCase,
+)
+from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from src.application.use_cases.chat.orchestration.application_pipeline_assembly import (
     ApplicationPipelineAssembly,
 )
-from src.application.use_cases.chat.generate_answer_from_pipeline import GenerateAnswerFromPipelineUseCase
-from src.application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
-from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import (
+    PipelineQueryLogEmitter,
+)
 from src.application.use_cases.chat.orchestration.ports import PostRecallStagePorts
-from src.application.use_cases.chat.orchestration.summary_recall_ports import SummaryRecallTechnicalPorts
-from src.application.use_cases.chat.orchestration.summary_recall_workflow import ApplicationSummaryRecallStage
+from src.application.use_cases.chat.orchestration.summary_recall_ports import (
+    SummaryRecallTechnicalPorts,
+)
+from src.application.use_cases.chat.orchestration.summary_recall_workflow import (
+    ApplicationSummaryRecallStage,
+)
 from src.application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
-from src.application.chat.multimodal_prompt_hints import MultimodalPromptHints
+from src.core.config import RETRIEVAL_CONFIG
 from src.domain.ports import QueryLogPort
 from src.infrastructure.adapters.rag.answer_generation_service import AnswerGenerationService
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.rag.hybrid_retrieval_service import HybridRetrievalService
 from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
     AssetRerankingAdapter,
     ContextualCompressionAdapter,
@@ -54,10 +65,7 @@ from src.infrastructure.adapters.rag.post_recall_stage_adapters import (
     TableQaAdjunctAdapter,
     build_post_recall_stage_services,
 )
-from src.core.config import RETRIEVAL_CONFIG
-from src.infrastructure.adapters.rag.hybrid_retrieval_service import HybridRetrievalService
 from src.infrastructure.adapters.rag.query_rewrite_service import QueryRewriteService
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
 from src.infrastructure.adapters.rag.summary_recall_technical_adapters import (
     QueryRewriteAdapter,
@@ -68,14 +76,18 @@ from src.infrastructure.adapters.rag.table_qa_service import TableQAService
 from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
 
 
-def post_recall_stage_ports_from_services(services: PostRecallStageServices) -> PostRecallStagePorts:
+def post_recall_stage_ports_from_services(
+    services: PostRecallStageServices,
+) -> PostRecallStagePorts:
     """Bind concrete post-recall services to application port bundle (composition root)."""
     return PostRecallStagePorts(
         docstore_read=DocstoreRecallReadAdapter(services.docstore_service),
         section_expansion=SectionExpansionStageAdapter(services.section_retrieval_service),
         reranking=AssetRerankingAdapter(services.reranking_service),
         table_qa=TableQaAdjunctAdapter(services.table_qa_service),
-        contextual_compression=ContextualCompressionAdapter(services.contextual_compression_service),
+        contextual_compression=ContextualCompressionAdapter(
+            services.contextual_compression_service
+        ),
         prompt_sources=PromptSourceBuildAdapter(services.prompt_source_service),
         layout_grouping=LayoutGroupingAdapter(services.layout_context_service),
         multimodal_hints=services.multimodal_prompt_hints,
@@ -93,15 +105,15 @@ class RagRetrievalSubgraph:
     pipeline_assembly: ApplicationPipelineAssembly
     post_recall_stage_services: PostRecallStageServices
     answer_generation_service: AnswerGenerationService
-    retrieval_settings_service: RetrievalSettingsService
+    retrieval_settings_tuner: RetrievalSettingsTuner
 
     @property
     def config(self) -> Any:
-        return self.retrieval_settings_service.config_source
+        return self.retrieval_settings_tuner.config_source
 
     @config.setter
     def config(self, value: Any) -> None:
-        self.retrieval_settings_service.set_config_source(value)
+        self.retrieval_settings_tuner.set_config_source(value)
 
 
 def build_rag_retrieval_subgraph(
@@ -109,7 +121,7 @@ def build_rag_retrieval_subgraph(
     vectorstore_service: VectorStoreService,
     docstore_service: DocStoreService,
     reranking_service: RerankingService,
-    retrieval_settings_service: RetrievalSettingsService,
+    retrieval_settings_tuner: RetrievalSettingsTuner,
 ) -> RagRetrievalSubgraph:
     table_qa = TableQAService()
     query_rewrite = QueryRewriteService(
@@ -126,7 +138,7 @@ def build_rag_retrieval_subgraph(
         lexical_recall=SummaryLexicalRecallAdapter(docstore_service, hybrid),
     )
     summary = ApplicationSummaryRecallStage(
-        settings_tuner=retrieval_settings_service,
+        settings_tuner=retrieval_settings_tuner,
         technical_ports=technical,
     )
     post_recall = build_post_recall_stage_services(
@@ -145,7 +157,7 @@ def build_rag_retrieval_subgraph(
         pipeline_assembly=assembly,
         post_recall_stage_services=post_recall,
         answer_generation_service=answer_generation_service,
-        retrieval_settings_service=retrieval_settings_service,
+        retrieval_settings_tuner=retrieval_settings_tuner,
     )
 
 

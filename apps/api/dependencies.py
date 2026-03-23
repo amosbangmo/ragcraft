@@ -61,9 +61,9 @@ from src.application.use_cases.settings.get_effective_retrieval_settings import 
 from src.application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from src.application.auth.access_token_issuer_port import AccessTokenIssuerPort
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
-from src.application.auth.authentication_port import AuthenticationPort
+from src.domain.authenticated_principal import AuthenticatedPrincipal
+from src.domain.ports.access_token_issuer_port import AccessTokenIssuerPort
+from src.domain.ports.authentication_port import AuthenticationPort
 from src.core.exceptions import (
     AuthenticationRequiredError,
     MalformedAuthenticationHeaderError,

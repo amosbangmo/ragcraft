@@ -7,8 +7,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
-from tests.architecture.import_scanner import any_module_matches, imported_top_level_modules, iter_python_files
+from tests.architecture.import_scanner import (
+    any_module_matches,
+    imported_top_level_modules,
+    iter_python_files,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -101,10 +104,11 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
     infrastructure_files: list[Path],
 ) -> None:
     """
-    Core infrastructure (adapters, persistence, vector stores) must not call into ``src.application``.
+    Core infrastructure (persistence, vector stores outside ``adapters/``) must not call into
+    ``src.application`` or Streamlit.
 
-    ``src/infrastructure/adapters`` hosts concrete runtime adapters; those modules may import
-    application use cases and DTOs by design.
+    Adapter modules under ``src/infrastructure/adapters`` are checked separately for ``apps`` only here;
+    they must not import ``src.application`` at all (see ``test_adapter_application_imports.py``).
     """
     violations: list[str] = []
     infra_root = REPO_ROOT / "src" / "infrastructure"
@@ -124,9 +128,8 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
     msg = (
         "Non-adapter infrastructure must not import application use cases or Streamlit. "
-        "Adapter modules under ``src/infrastructure/adapters`` are further restricted: only an explicit "
-        "allowlist in ``test_adapter_application_imports.py`` may import ``src.application`` "
-        "(today: ``rag/retrieval_settings_service.py``).\n"
+        "Adapter modules under ``src/infrastructure/adapters`` must not import ``src.application`` "
+        "(see ``test_adapter_application_imports.py``).\n"
     )
     assert not violations, msg + "\n".join(violations)
 
@@ -144,7 +147,9 @@ def test_api_routers_do_not_import_infrastructure(router_files: list[Path]) -> N
         bad = any_module_matches(mods, prefixes=forbidden)
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    msg = "API routers must not import infrastructure packages; wire through apps.api.dependencies.\n"
+    msg = (
+        "API routers must not import infrastructure packages; wire through apps.api.dependencies.\n"
+    )
     assert not violations, msg + "\n".join(violations)
 
 

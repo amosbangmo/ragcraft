@@ -34,7 +34,7 @@ from apps.api.upload_adapter import (
     StarletteUploadTooLargeError,
     read_buffered_avatar_upload,
 )
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 from src.application.auth.dtos import (
     ChangeUserPasswordCommand,
     DeleteUserAccountCommand,

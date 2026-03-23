@@ -14,7 +14,7 @@ from src.application.use_cases.settings.update_project_retrieval_settings import
 )
 from src.domain.project_settings import ProjectSettings, default_project_settings
 from src.domain.retrieval_presets import RetrievalPreset
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 
 
 class _MemoryProjectSettingsRepo:
@@ -35,7 +35,7 @@ class _MemoryProjectSettingsRepo:
 
 def test_get_effective_precise_preset_semantics_match_service() -> None:
     repo = _MemoryProjectSettingsRepo()
-    retrieval = RetrievalSettingsService(project_settings_repository=repo)
+    retrieval = RetrievalSettingsTuner(project_settings_repository=repo)
     repo._rows[("u", "p")] = ProjectSettings(
         user_id="u",
         project_id="p",
@@ -58,7 +58,7 @@ def test_get_effective_precise_preset_semantics_match_service() -> None:
 
 def test_get_effective_advanced_overrides_merge() -> None:
     repo = _MemoryProjectSettingsRepo()
-    retrieval = RetrievalSettingsService(project_settings_repository=repo)
+    retrieval = RetrievalSettingsTuner(project_settings_repository=repo)
     repo._rows[("u", "p")] = ProjectSettings(
         user_id="u",
         project_id="p",

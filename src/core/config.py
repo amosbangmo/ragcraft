@@ -48,9 +48,13 @@ def _get_str_env(name: str, default: str) -> str:
 class RetrievalConfig:
     """
     Env-backed defaults for retrieval. Runtime / per-request tuning flows through
-    ``RetrievalSettings`` and ``RetrievalSettingsService`` (see ``src.domain.retrieval_settings``).
+    ``RetrievalSettings`` and application-layer ``RetrievalSettingsTuner``
+    (see ``src.domain.retrieval_settings``).
     """
-    similarity_search_k: int = field(default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 25))
+
+    similarity_search_k: int = field(
+        default_factory=lambda: _get_int_env("RAG_SIMILARITY_SEARCH_K", 25)
+    )
     bm25_search_k: int = field(default_factory=lambda: _get_int_env("RAG_BM25_SEARCH_K", 25))
     hybrid_search_k: int = field(default_factory=lambda: _get_int_env("RAG_HYBRID_SEARCH_K", 25))
     bm25_k1: float = field(default_factory=lambda: _get_float_env("RAG_BM25_K1", 1.5))
@@ -59,9 +63,15 @@ class RetrievalConfig:
     rrf_k: int = field(default_factory=lambda: _get_int_env("RAG_RRF_K", 60))
     hybrid_beta: float = field(default_factory=lambda: _get_float_env("RAG_HYBRID_BETA", 0.5))
     max_prompt_assets: int = field(default_factory=lambda: _get_int_env("RAG_MAX_PROMPT_ASSETS", 5))
-    max_text_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000))
-    max_table_chars_per_asset: int = field(default_factory=lambda: _get_int_env("RAG_MAX_TABLE_CHARS_PER_ASSET", 4000))
-    enable_query_rewrite: bool = field(default_factory=lambda: _get_bool_env("RAG_ENABLE_QUERY_REWRITE", True))
+    max_text_chars_per_asset: int = field(
+        default_factory=lambda: _get_int_env("RAG_MAX_TEXT_CHARS_PER_ASSET", 4000)
+    )
+    max_table_chars_per_asset: int = field(
+        default_factory=lambda: _get_int_env("RAG_MAX_TABLE_CHARS_PER_ASSET", 4000)
+    )
+    enable_query_rewrite: bool = field(
+        default_factory=lambda: _get_bool_env("RAG_ENABLE_QUERY_REWRITE", True)
+    )
     query_rewrite_max_history_messages: int = field(
         default_factory=lambda: _get_int_env("RAG_QUERY_REWRITE_MAX_HISTORY_MESSAGES", 6)
     )

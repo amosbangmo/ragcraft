@@ -1,6 +1,6 @@
 import unittest
 
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 from src.ui.retrieval_settings_panel import (
     PRESET_BALANCED,
     PRESET_EXPLORATORY,
@@ -12,7 +12,7 @@ from src.ui.retrieval_settings_panel import (
 
 class TestRetrievalSettingsPanel(unittest.TestCase):
     def test_precise_shapes_k_and_toggles(self):
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         s = build_ui_retrieval_settings(
             preset=PRESET_PRECISE,
             enable_query_rewrite=True,
@@ -26,7 +26,7 @@ class TestRetrievalSettingsPanel(unittest.TestCase):
         self.assertEqual(s.hybrid_search_k, 8)
 
     def test_balanced_preserves_default_k(self):
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         s = build_ui_retrieval_settings(
             preset=PRESET_BALANCED,
@@ -39,7 +39,7 @@ class TestRetrievalSettingsPanel(unittest.TestCase):
         self.assertEqual(s.hybrid_search_k, base.hybrid_search_k)
 
     def test_exploratory_scales_k_and_toggles(self):
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         s = build_ui_retrieval_settings(
             preset=PRESET_EXPLORATORY,
@@ -53,7 +53,7 @@ class TestRetrievalSettingsPanel(unittest.TestCase):
         self.assertGreaterEqual(s.similarity_search_k, base.similarity_search_k)
 
     def test_request_dict_merge_roundtrip_flags(self):
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         s = build_ui_retrieval_settings(
             preset=PRESET_BALANCED,
             enable_query_rewrite=False,

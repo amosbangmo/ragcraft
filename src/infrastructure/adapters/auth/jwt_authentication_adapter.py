@@ -7,9 +7,9 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError as PyJWTInvalidTokenError
 
-from src.application.auth.access_token_issuer_port import AccessTokenIssuerPort
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
-from src.application.auth.authentication_port import AuthenticationPort
+from src.domain.authenticated_principal import AuthenticatedPrincipal
+from src.domain.ports.access_token_issuer_port import AccessTokenIssuerPort
+from src.domain.ports.authentication_port import AuthenticationPort
 from src.core.exceptions import ExpiredTokenError, InvalidTokenError
 from src.infrastructure.adapters.auth.jwt_auth_settings import JwtAuthSettings
 

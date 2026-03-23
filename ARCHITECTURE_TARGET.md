@@ -33,7 +33,7 @@ See **`docs/README.md`** (local development) for env vars.
 | **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
 | **`src/auth/`** | Shared auth helpers. |
 
-**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. An infra-local **`MemoryChatTranscript`** still exists for adapter-adjacent use but must not be imported from **`apps/api`**.
+**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`src/infrastructure/adapters`**).
 
 ## Removed legacy paths
 

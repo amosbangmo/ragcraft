@@ -1,10 +1,10 @@
-"""Application-facing port for verifying bearer access tokens (implemented in infrastructure)."""
+"""Port for verifying bearer access tokens (implemented in infrastructure)."""
 
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 
 
 @runtime_checkable

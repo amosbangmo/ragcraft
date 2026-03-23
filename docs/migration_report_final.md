@@ -10,11 +10,11 @@ This report is the **canonical end-state** summary after the migration hardening
 
 | Layer | Role |
 |-------|------|
-| **`src/domain/`** | Entities, value objects, **ports** (`Protocol` / ABC), shared DTOs such as **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, retrieval fusion helpers. |
+| **`src/domain/`** | Entities, value objects, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`**, shared DTOs such as **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, retrieval fusion helpers. |
 | **`src/application/`** | **Use cases**, RAG orchestration under **`use_cases/chat/orchestration/`**, evaluation helpers (**`rag_pipeline_orchestration`**, **`GoldQaBenchmarkAdapter`**), **`frontend_support`** (HTTP-safe stubs, **`MemoryChatTranscript`**), policies, DTOs. **No** `src.infrastructure` imports. |
 | **`src/infrastructure/`** | Adapters (RAG, evaluation, SQLite, query logging, ingestion, …), persistence, vector stores. Implements domain ports; **post-recall and summary-recall sequencing stay in application**. |
 | **`src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**, **`evaluation_wiring`** (**`EvaluationWiringParts`** + **`build_evaluation_service`**), **`BackendApplicationContainer`**. **No** `src.frontend_gateway`. |
-| **`apps/api/`** | FastAPI app, routers, schemas, **`dependencies.py`** → container / use cases. **No** `src.infrastructure` imports (entire package scanned). |
+| **`apps/api/`** | FastAPI app, routers, schemas, **`dependencies.py`** → container / use cases; may import **`src.domain`** identity ports for **`Depends`** typing. **No** `src.infrastructure` imports (entire package scanned). |
 | **`src/frontend_gateway/`** | **`BackendClient`**, HTTP and in-process clients, Streamlit factory + session transcript; **no** `src.infrastructure`. |
 | **`pages/`**, **`src/ui/`** | Streamlit UI; **only** gateway + auth + view models toward the backend — no domain / infra / composition / `apps.api` imports. |
 
@@ -35,7 +35,7 @@ This report is the **canonical end-state** summary after the migration hardening
 | Post–summary-recall order in application | **Met** — `assemble_pipeline_from_recall` + `post_recall_pipeline_steps` |
 | Summary-recall **sequencing** in application | **Met** — `ApplicationSummaryRecallStage` + `summary_recall_workflow.py`; infra = technical ports only |
 | Application does not import infrastructure | **Met** — `test_layer_boundaries.py` |
-| Infrastructure adapters → application (minimal allowlist) | **Met** — `test_adapter_application_imports.py` (allowlist: `rag/retrieval_settings_service.py`) |
+| Infrastructure adapters do not import application | **Met** — `test_adapter_application_imports.py` (no allowlist) |
 | Gold-QA benchmark stack not constructed inside `EvaluationService` | **Met** — `evaluation_wiring.py` + `GoldQaBenchmarkAdapter` |
 | Query-log / judge row DTOs in domain | **Met** — `QueryLogIngressPayload`, `EvaluationJudgeMetricsRow` |
 | **`apps/api`** → no `src.infrastructure.adapters` / services legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
@@ -67,6 +67,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 - **Multimodal hints** — orchestration-adjacent logic in **`src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
 - **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
+- **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `src.application` imports under **`src/infrastructure/adapters`** (the old **`rag/retrieval_settings_service.py`** allowlist is gone). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`src/domain/`** so the JWT adapter does not depend on **`src.application`**.
 
 ---
 
@@ -86,6 +87,9 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 | **`tests/architecture/test_rag_adapter_application_imports.py`** | Superseded by **`test_adapter_application_imports.py`** |
 | **`BenchmarkExecutionUseCase._coerce_gold_qa_runner_result`** | **Removed** — runner must return **`RagInspectAnswerRun`** |
 | **Trusted `X-User-Id` header** | **Removed** — replaced by **`Authorization: Bearer`** + **`JwtAuthenticationAdapter`** implementing **`AuthenticationPort`** / **`AccessTokenIssuerPort`** |
+| **`rag/retrieval_settings_service.py`** | **Removed** — empty infra subclass of **`RetrievalSettingsTuner`**; composition constructs **`RetrievalSettingsTuner`** directly (**`retrieval_settings_tuner`** on **`BackendComposition`**) |
+| **`src/infrastructure/adapters/chat_transcript/`** | **Removed** — duplicate **`MemoryChatTranscript`**; callers use **`application/frontend_support/memory_chat_transcript.py`** |
+| **`src/application/auth/{authenticated_principal,authentication_port,access_token_issuer_port}.py`** | **Moved** — canonical types under **`src/domain/authenticated_principal.py`** and **`src/domain/ports/authentication_port.py`**, **`access_token_issuer_port.py`** |
 
 ---
 
@@ -93,8 +97,6 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 
 | Item | Rationale |
 |------|-----------|
-| **`rag/retrieval_settings_service.py`** imports **`RetrievalSettingsTuner`** | Typed composition bridge; sole allowlisted adapter → application import |
-| **Two `MemoryChatTranscript` modules** | Application copy satisfies **`apps/api`** layer scans; infra copy remains for adapter-adjacent tests and optional wiring |
 | ~~**`ManualEvaluationService.evaluate_question`**~~ | **Removed** — manual eval uses **`RunManualEvaluationUseCase`** only (see §11b) |
 | **`import_legacy_file_logs`** on **`QueryLogService`** | One-off migration utility |
 | **JWT operational model** | Single access token (HS256), no refresh-token rotation or OAuth2 provider in-repo — product choice for a later pass |

@@ -86,7 +86,7 @@ from src.application.use_cases.projects.invalidate_project_chain_cache import (
 from src.application.use_cases.projects.list_document_assets_for_source import (
     ListDocumentAssetsForSourceUseCase,
 )
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/projects", tags=["projects"])

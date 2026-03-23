@@ -1,4 +1,4 @@
-"""In-memory transcript for HTTP-backed UI glue (mirrors infra default; keeps application free of infra imports)."""
+"""In-memory transcript implementing :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` (no I/O)."""
 
 from __future__ import annotations
 

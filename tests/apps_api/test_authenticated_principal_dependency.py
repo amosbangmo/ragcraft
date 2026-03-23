@@ -1,4 +1,4 @@
-"""Transport dependency resolves :class:`~src.application.auth.authenticated_principal.AuthenticatedPrincipal` via JWT."""
+"""Transport dependency resolves :class:`~src.domain.authenticated_principal.AuthenticatedPrincipal` via JWT."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from apps.api.dependencies import get_authenticated_principal, get_authentication_port
 from apps.api.error_handlers import register_exception_handlers
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 from src.infrastructure.adapters.auth.jwt_auth_settings import JwtAuthSettings
 from src.infrastructure.adapters.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
 from tests.apps_api.bearer_auth import bearer_headers

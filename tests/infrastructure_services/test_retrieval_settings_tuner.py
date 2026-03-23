@@ -9,18 +9,18 @@ from unittest.mock import MagicMock
 from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_presets import PRECISE_SEARCH_K, RetrievalPreset
 from src.domain.retrieval_settings import RetrievalSettings
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 
 
-class TestRetrievalSettingsService(unittest.TestCase):
+class TestRetrievalSettingsTuner(unittest.TestCase):
     def test_get_default_matches_retrieval_config(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         d = svc.get_default()
         ref = RetrievalSettings.from_retrieval_config(RETRIEVAL_CONFIG)
         self.assertEqual(d, ref)
 
     def test_merge_overrides_subset(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         merged = svc.merge(base, {"similarity_search_k": 7, "max_prompt_assets": 3})
         self.assertEqual(merged.similarity_search_k, 7)
@@ -28,13 +28,13 @@ class TestRetrievalSettingsService(unittest.TestCase):
         self.assertEqual(merged.bm25_search_k, base.bm25_search_k)
 
     def test_merge_unknown_key_raises(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         with self.assertRaises(ValueError):
             svc.merge(base, {"not_a_real_field": 1})
 
     def test_validate_rejects_bad_k(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         bad = RetrievalSettings.from_retrieval_config(
             RetrievalConfig(similarity_search_k=0),
@@ -43,7 +43,7 @@ class TestRetrievalSettingsService(unittest.TestCase):
             svc.validate(bad)
 
     def test_from_preset_balanced_sets_rewrite_and_hybrid(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         s = svc.from_preset(RetrievalPreset.BALANCED)
         self.assertTrue(s.enable_query_rewrite)
@@ -51,7 +51,7 @@ class TestRetrievalSettingsService(unittest.TestCase):
         self.assertEqual(s.similarity_search_k, base.similarity_search_k)
 
     def test_from_preset_precise_low_k_no_hybrid(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         s = svc.from_preset("precise")
         self.assertTrue(s.enable_query_rewrite)
         self.assertFalse(s.enable_hybrid_retrieval)
@@ -60,7 +60,7 @@ class TestRetrievalSettingsService(unittest.TestCase):
         self.assertEqual(s.hybrid_search_k, PRECISE_SEARCH_K)
 
     def test_from_preset_exploratory_high_k_no_rewrite(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         base = svc.get_default()
         s = svc.from_preset(RetrievalPreset.EXPLORATORY)
         self.assertFalse(s.enable_query_rewrite)
@@ -69,7 +69,7 @@ class TestRetrievalSettingsService(unittest.TestCase):
         self.assertGreaterEqual(s.similarity_search_k, base.similarity_search_k)
 
     def test_from_project_without_service_matches_get_default(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         s = svc.from_project("any", "project")
         self.assertEqual(s, svc.get_default())
 
@@ -83,14 +83,14 @@ class TestRetrievalSettingsService(unittest.TestCase):
             enable_query_rewrite=True,
             enable_hybrid_retrieval=False,
         )
-        svc = RetrievalSettingsService(project_settings_repository=repo)
+        svc = RetrievalSettingsTuner(project_settings_repository=repo)
         s = svc.from_project("u", "p")
         repo.load.assert_called_once_with("u", "p")
         self.assertFalse(s.enable_hybrid_retrieval)
         self.assertEqual(s.similarity_search_k, PRECISE_SEARCH_K)
 
     def test_retrieval_settings_for_saved_project_advanced_merges_toggles(self) -> None:
-        svc = RetrievalSettingsService()
+        svc = RetrievalSettingsTuner()
         ps = ProjectSettings(
             user_id="u",
             project_id="p",

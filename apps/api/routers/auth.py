@@ -18,7 +18,7 @@ from apps.api.dependencies import (
 )
 from apps.api.schemas.auth import AuthSuccessResponse, LoginRequest, RegisterRequest
 from apps.api.schemas.mappers import user_profile_summary_to_me
-from src.application.auth.access_token_issuer_port import AccessTokenIssuerPort
+from src.domain.ports.access_token_issuer_port import AccessTokenIssuerPort
 from src.application.auth.dtos import LoginUserCommand, RegisterUserCommand
 from src.application.use_cases.auth.login_user import LoginUserUseCase
 from src.application.use_cases.auth.register_user import RegisterUserUseCase

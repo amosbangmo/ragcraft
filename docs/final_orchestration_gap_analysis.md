@@ -14,7 +14,7 @@ Use this file as a **historical checklist** of what was addressed; the **live** 
 | **`EvaluationService`** constructed **`BenchmarkExecutionUseCase`** (infra → application use case) | **`src/composition/evaluation_wiring.py`** builds row services + **`BenchmarkExecutionUseCase`** + **`GoldQaBenchmarkAdapter`**; **`EvaluationService`** receives **`GoldQaBenchmarkPort`** only. |
 | Infrastructure imported application DTOs for query log / judge rows | **`QueryLogIngressPayload`** → **`src/domain/query_log_ingress_payload.py`**; **`EvaluationJudgeMetricsRow`** → **`src/domain/evaluation/judge_metrics_row.py`**. |
 | **`benchmark_report_service`** wrapped application export use case | Removed; callers use **`BuildBenchmarkExportArtifactsUseCase`** directly. |
-| RAG-only import test | Replaced by **`tests/architecture/test_adapter_application_imports.py`** (all adapters; allowlist **`rag/retrieval_settings_service.py`** only). |
+| RAG-only import test | **`tests/architecture/test_adapter_application_imports.py`** — no **`src.application`** imports under **`src/infrastructure/adapters`**. |
 | Unused **`application/chat/ports.py`** re-export barrel | **Removed.** |
 
 **Still optional follow-ups (non-blocking for “architecture complete”):** **`README.github.md`** diagram drift vs **`docs/architecture.md`**. Manual evaluation is unified on **`RunManualEvaluationUseCase`** + **`execute_rag_inspect_then_answer_for_evaluation`** (no parallel **`ManualEvaluationService.evaluate_question`**). Gold-QA **`pipeline_runner`** is **`RagInspectAnswerRun`**-only (**`BenchmarkExecutionUseCase`**); multimodal hint logic lives in **`src/application/chat/multimodal_prompt_hints.py`**.

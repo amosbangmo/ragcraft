@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from src.composition import BackendApplicationContainer, BackendComposition, build_backend, build_backend_composition
-from src.infrastructure.adapters.chat_transcript import MemoryChatTranscript
+from src.application.frontend_support.memory_chat_transcript import MemoryChatTranscript
 
 
 def noop_chain_invalidate(_project_id: str) -> None:

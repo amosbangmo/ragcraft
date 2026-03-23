@@ -71,7 +71,7 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
     sys.modules["src.infrastructure.vectorstores.faiss.vector_store"] = faiss_store_module
 
 from src.core.exceptions import LLMServiceError
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
@@ -116,8 +116,8 @@ class _ChatRagWiringHarness:
         return self.subgraph.post_recall_stage_services
 
     @property
-    def retrieval_settings_service(self):
-        return self.subgraph.retrieval_settings_service
+    def retrieval_settings_tuner(self):
+        return self.subgraph.retrieval_settings_tuner
 
 
 class TestChatRagWiringComposition(unittest.TestCase):
@@ -126,12 +126,12 @@ class TestChatRagWiringComposition(unittest.TestCase):
         evaluation_service = MagicMock()
         docstore_service = MagicMock()
         reranking_service = MagicMock()
-        retrieval_settings_service = RetrievalSettingsService()
+        retrieval_settings_tuner = RetrievalSettingsTuner()
         subgraph = build_rag_retrieval_subgraph(
             vectorstore_service=vectorstore_service,
             docstore_service=docstore_service,
             reranking_service=reranking_service,
-            retrieval_settings_service=retrieval_settings_service,
+            retrieval_settings_tuner=retrieval_settings_tuner,
         )
         ucs = build_chat_rag_use_cases(subgraph, query_log=query_log_service)
         harness = _ChatRagWiringHarness(subgraph, ucs, query_log_service=query_log_service)
@@ -162,7 +162,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
     def test_rrf_merge_prioritizes_common_docs(self):
         harness, *_ = self._build_harness()
         harness.config.rrf_k = 60
-        settings = harness.retrieval_settings_service.get_default()
+        settings = harness.retrieval_settings_tuner.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -185,7 +185,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
     def test_rrf_merge_respects_max_docs(self):
         harness, *_ = self._build_harness()
         harness.config.rrf_k = 60
-        settings = harness.retrieval_settings_service.get_default()
+        settings = harness.retrieval_settings_tuner.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -209,7 +209,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
         harness, *_ = self._build_harness()
         harness.config.rrf_k = 60
         harness.config.hybrid_beta = 1.0
-        settings = harness.retrieval_settings_service.get_default()
+        settings = harness.retrieval_settings_tuner.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),
@@ -233,7 +233,7 @@ class TestChatRagWiringComposition(unittest.TestCase):
         harness, *_ = self._build_harness()
         harness.config.rrf_k = 60
         harness.config.hybrid_beta = 0.0
-        settings = harness.retrieval_settings_service.get_default()
+        settings = harness.retrieval_settings_tuner.get_default()
 
         primary_docs = [
             SummaryRecallDocument(page_content="p1", metadata={"doc_id": "d1"}),

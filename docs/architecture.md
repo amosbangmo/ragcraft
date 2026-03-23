@@ -6,7 +6,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 ## `src/domain/`
 
-**Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), and shared types such as `PipelineBuildResult` (**`latency`** is **`PipelineLatency`**, not a stage ``dict``), **`RAGResponse`** (**`latency`** is **`PipelineLatency | None`**), **`PipelineLatency`**, **`GoldQaPipelineRowInput`**, `SummaryRecallDocument`, `RetrievalSettings`, **`BufferedDocumentUpload`** (multipart ingest payload: filename + bytes), **`ProposedQaDatasetRow`** (LLM QA proposals before persistence), **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).
+**Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`** (workspace identity from verified bearer auth), **`AuthenticationPort`** / **`AccessTokenIssuerPort`** (`src/domain/ports/`), and shared types such as `PipelineBuildResult` (**`latency`** is **`PipelineLatency`**, not a stage ``dict``), **`RAGResponse`** (**`latency`** is **`PipelineLatency | None`**), **`PipelineLatency`**, **`GoldQaPipelineRowInput`**, `SummaryRecallDocument`, `RetrievalSettings`, **`BufferedDocumentUpload`** (multipart ingest payload: filename + bytes), **`ProposedQaDatasetRow`** (LLM QA proposals before persistence), **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).
 
 **Does not belong:** FastAPI, Streamlit, SQLite drivers, LangChain, calls into `src.application` or `src.infrastructure`. (Domain may use `src.core` for config paths and shared exceptions where already established.)
 
@@ -29,14 +29,14 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:**
 
-- **`adapters/`** — concrete implementations: RAG stack (`docstore_service`, **`summary_recall_technical_adapters.py`** — thin **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`**), `post_recall_stage_adapters`, evaluation (**`EvaluationService`** consumes **`GoldQaBenchmarkPort`** only; no **`BenchmarkExecutionUseCase`** import), workspace, SQLite repositories, `chat_transcript/memory_chat_transcript.py`, query logging, vector store helpers, ingestion loaders, etc.
+- **`adapters/`** — concrete implementations: RAG stack (`docstore_service`, **`summary_recall_technical_adapters.py`** — thin **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`**), `post_recall_stage_adapters`, evaluation (**`EvaluationService`** consumes **`GoldQaBenchmarkPort`** only; no **`BenchmarkExecutionUseCase`** import), workspace, SQLite repositories, query logging, vector store helpers, ingestion loaders, etc. In-memory HTTP transcript lives in **`src/application/frontend_support/memory_chat_transcript.py`**, not under adapters.
 - **`persistence/`**, **`vectorstores/`**, **`caching/`**, **`logging/`** — technical subsystems.
 
 **Rules:**
 
 - **Summary-recall sequencing** is **application-owned** (**`ApplicationSummaryRecallStage`**); infrastructure provides single-purpose technical steps behind **`SummaryRecallTechnicalPorts`**.
 - Post–summary-recall **sequencing** for assembly lives in **application** (`assemble_pipeline_from_recall` + `post_recall_pipeline_steps`); adapters behind **`PostRecallStagePorts`** perform single technical steps.
-- **All** of `src/infrastructure/adapters/**/*.py` must **not** import `src.application` except the explicit allowlist in **`tests/architecture/test_adapter_application_imports.py`** (today: **`rag/retrieval_settings_service.py`** subclasses **`RetrievalSettingsTuner`**).
+- **All** of `src/infrastructure/adapters/**/*.py` must **not** import `src.application` (**`tests/architecture/test_adapter_application_imports.py`**). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed into RAG wiring.
 - **Query logging** is **not** implemented inside vectorstore/docstore/rerank modules; **`QueryLogService`** accepts dict or domain **`QueryLogIngressPayload`**.
 - Non-adapter infrastructure must not depend on application (see layer tests).
 

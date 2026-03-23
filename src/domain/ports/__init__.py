@@ -7,7 +7,9 @@ this package provides a single import path for composition roots and use cases.
 
 from src.domain.documents.asset_repository_port import AssetRepositoryPort
 from src.domain.evaluation.qa_dataset_repository_port import QADatasetRepositoryPort
+from src.domain.ports.access_token_issuer_port import AccessTokenIssuerPort
 from src.domain.ports.answer_generation_port import AnswerGenerationPort, GenerationPort
+from src.domain.ports.authentication_port import AuthenticationPort
 from src.domain.ports.benchmark_orchestration_ports import (
     AutoDebugSuggestionsPort,
     BenchmarkFailureAnalysisPort,
@@ -28,12 +30,14 @@ from src.domain.ports.query_log_port import QueryLogPort
 from src.domain.ports.retrieval_port import RetrievalPort
 from src.domain.ports.retrieval_preset_merge_port import RetrievalPresetMergePort
 from src.domain.ports.retrieval_settings_resolution_port import RetrievalSettingsResolutionPort
+from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.domain.retrieval.vector_store_port import VectorStorePort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.domain.shared.query_log_port import QueryLogPersistencePort
-from src.domain.ports.user_repository_port import UserRepositoryPort
 
 __all__ = [
+    "AccessTokenIssuerPort",
+    "AuthenticationPort",
     "AnswerGenerationPort",
     "GenerationPort",
     "ChatTranscriptPort",

@@ -20,27 +20,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from src.infrastructure.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
-from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
-from src.infrastructure.adapters.auth.bcrypt_password_hasher import BcryptPasswordHasher
-from src.infrastructure.adapters.filesystem.file_avatar_storage import FileAvatarStorage
+from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 from src.auth.auth_service import AuthService
+from src.composition.evaluation_wiring import (
+    build_evaluation_service,
+    default_evaluation_wiring_parts,
+)
 from src.domain.ports.avatar_storage_port import AvatarStoragePort
 from src.domain.ports.chat_transcript_port import ChatTranscriptPort
 from src.domain.ports.password_hasher_port import PasswordHasherPort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from src.infrastructure.persistence.db import init_app_db
-from src.infrastructure.adapters.rag.docstore_service import DocStoreService
-from src.composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
-from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
-from src.infrastructure.adapters.workspace.project_service import ProjectService
-from src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service import QADatasetGenerationService
-from src.infrastructure.adapters.qa_dataset.qa_dataset_service import QADatasetService
-from src.infrastructure.adapters.query_logging.query_log_service import QueryLogService
-from src.infrastructure.adapters.rag.reranking_service import RerankingService
-from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.adapters.auth.jwt_auth_settings import JwtAuthSettings
 from src.infrastructure.adapters.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
+from src.infrastructure.adapters.filesystem.file_avatar_storage import FileAvatarStorage
+from src.infrastructure.adapters.qa_dataset.qa_dataset_generation_service import (
+    QADatasetGenerationService,
+)
+from src.infrastructure.adapters.qa_dataset.qa_dataset_service import QADatasetService
+from src.infrastructure.adapters.query_logging.query_log_service import QueryLogService
+from src.infrastructure.adapters.rag.docstore_service import DocStoreService
+from src.infrastructure.adapters.rag.reranking_service import RerankingService
+from src.infrastructure.adapters.sqlite.project_settings_repository import (
+    SqliteProjectSettingsRepository,
+)
+from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
+from src.infrastructure.adapters.workspace.project_service import ProjectService
+from src.infrastructure.persistence.db import init_app_db
 
 if TYPE_CHECKING:
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
@@ -66,7 +73,7 @@ class BackendComposition:
     qa_dataset_service: QADatasetService
     qa_dataset_generation_service: QADatasetGenerationService
     project_settings_repository: ProjectSettingsRepositoryPort
-    retrieval_settings_service: RetrievalSettingsService
+    retrieval_settings_tuner: RetrievalSettingsTuner
 
 
 def build_backend_composition(
@@ -77,9 +84,8 @@ def build_backend_composition(
     Assemble technical adapters only (no application use cases).
 
     Callers supply :class:`~src.domain.ports.chat_transcript_port.ChatTranscriptPort` (e.g.
-    :class:`~src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript` for FastAPI,
-    :class:`~src.infrastructure.adapters.chat_transcript.MemoryChatTranscript` for tests or adapter-local defaults, or a
-    gateway-built session transcript for Streamlit).
+    :class:`~src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript` for FastAPI/tests,
+    or a gateway-built session transcript for Streamlit).
     """
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
     from src.infrastructure.adapters.rag.vectorstore_service import VectorStoreService
@@ -96,7 +102,7 @@ def build_backend_composition(
     project_service = ProjectService()
     docstore_service = DocStoreService()
     project_settings_repository = SqliteProjectSettingsRepository()
-    retrieval_settings_service = RetrievalSettingsService(
+    retrieval_settings_tuner = RetrievalSettingsTuner(
         project_settings_repository=project_settings_repository,
     )
 
@@ -119,7 +125,7 @@ def build_backend_composition(
             project_service=project_service,
         ),
         project_settings_repository=project_settings_repository,
-        retrieval_settings_service=retrieval_settings_service,
+        retrieval_settings_tuner=retrieval_settings_tuner,
     )
 
 

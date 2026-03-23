@@ -74,7 +74,7 @@ from src.application.evaluation.dtos import (
     RunManualEvaluationCommand,
     UpdateQaDatasetEntryCommand,
 )
-from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.domain.authenticated_principal import AuthenticatedPrincipal
 from src.domain.benchmark_result import coerce_benchmark_result
 from src.domain.qa_dataset_entry import QADatasetEntry
 
