@@ -56,7 +56,7 @@ jobs:
 
       - name: Coverage report (application + domain)
         run: |
-          python -m pytest api/tests/appli api/tests/domain --cov=application --cov=domain --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml -q --tb=no
+          python -m pytest api/tests/appli api/tests/domain --cov=application --cov=domain --cov-context=test --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml -q --tb=no
 
       - name: Run backend runtime tests
         run: python -m unittest discover -s api/tests/infra -p "test_*.py"

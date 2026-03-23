@@ -83,3 +83,10 @@ def pytest_collection_modifyitems(config, items) -> None:
     if smoke:
         rest = [i for i in items if i not in smoke]
         items[:] = rest + smoke
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_terminal_summary(terminalreporter, exitstatus, config) -> None:
+    from support.coverage_folder_summary import maybe_print_api_tests_folder_coverage
+
+    maybe_print_api_tests_folder_coverage(terminalreporter, config)

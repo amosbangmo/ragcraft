@@ -80,3 +80,13 @@ markers = [
     "integration: cross-boundary HTTP walk (e.g. api/tests/api/test_http_pipeline_e2e.py)",
     "reliability: runtime boot + auth/chat/e2e flow tests under api/tests/reliability",
 ]
+
+# Default source root for coverage when measuring the API (used by scripts and IDE runs).
+# Per-folder breakdown under api/tests is printed after pytest when using:
+#   pytest api/tests --cov=api/src --cov-context=test
+[tool.coverage.run]
+source = ["api/src"]
+relative_files = true
+
+[tool.coverage.report]
+skip_empty = true
