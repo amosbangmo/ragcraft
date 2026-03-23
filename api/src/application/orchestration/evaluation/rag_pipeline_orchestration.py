@@ -1,8 +1,11 @@
 """
-Application orchestration for evaluation: inspect pipeline (no query log) + LLM answer + latency merge.
+**Evaluation mode** orchestration: inspect-shaped pipeline (no product query log) + answer + latency merge.
 
-Used by manual evaluation and gold-QA dataset runs. Chat ``/chat/ask`` remains
-:class:`~application.use_cases.chat.ask_question.AskQuestionUseCase` (build + answer + deferred log).
+Single canonical path for benchmark/manual-style runs:
+:class:`~application.use_cases.evaluation.run_manual_evaluation.RunManualEvaluationUseCase` and
+gold-QA execution call this function with :class:`~application.use_cases.chat.pipeline_use_case_ports.InspectRagPipelinePort`
+(so ``emit_query_log=False`` on the shared build port). Product **ask** remains
+:class:`~application.use_cases.chat.ask_question.AskQuestionUseCase` only.
 """
 
 from __future__ import annotations

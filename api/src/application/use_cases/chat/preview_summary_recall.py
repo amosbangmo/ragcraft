@@ -27,7 +27,12 @@ def _preview_from_summary_recall(bundle: SummaryRecallResult) -> SummaryRecallPr
 
 
 class PreviewSummaryRecallUseCase:
-    """Runs the summary-recall stage only and returns a typed preview DTO for wire/transport mappers."""
+    """
+    **Preview mode:** summary-recall stage only — **no** post-recall assembly, **no** answer,
+    **no** product query logging. Returns :class:`~application.common.summary_recall_preview.SummaryRecallPreviewDTO`
+    or ``None``. Shares :func:`~application.orchestration.rag.summary_recall_from_request.run_summary_recall_from_chat_request`
+    with the build path for recall only.
+    """
 
     def __init__(self, *, summary_recall_service: SummaryRecallStagePort) -> None:
         self._summary_recall = summary_recall_service

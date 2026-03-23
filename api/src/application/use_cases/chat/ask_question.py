@@ -14,10 +14,15 @@ from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrid
 
 class AskQuestionUseCase:
     """
-    End-to-end RAG ask: build pipeline via :class:`~domain.common.ports.RetrievalPort`,
-    generate answer via :class:`~domain.common.ports.GenerationPort`, merge latency,
-    emit deferred query log via :class:`~domain.common.ports.QueryLogPort`,
-    return :class:`~domain.rag_response.RAGResponse`.
+    **Product ask mode:** full pipeline + answer + optional **product query logging**.
+
+    Builds via :class:`~domain.common.ports.RetrievalPort` (typically
+    :class:`~application.use_cases.chat.build_rag_pipeline.BuildRagPipelineUseCase`),
+    generates via :class:`~domain.common.ports.GenerationPort`, merges latency into
+    :class:`~domain.rag.pipeline_latency.PipelineLatency`, then logs via
+    :class:`~domain.common.ports.QueryLogPort` when wired (deferred full payload after
+    answer; build-stage log only when no query-log port). Failures in logging must not
+    break answer delivery (:func:`~application.common.safe_query_log.log_query_safely`).
     """
 
     def __init__(

@@ -69,6 +69,8 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 **Orchestration rule:** Summary-recall **ordering** and post-recall **pipeline ordering** live in **application**; infrastructure supplies single-purpose steps behind ports (e.g. **`SummaryRecallTechnicalPorts`**, **`PostRecallStagePorts`**).
 
+**RAG modes:** **ask** (**`AskQuestionUseCase`**) vs **inspect** (**`InspectRagPipelineUseCase`**, no query log) vs **preview** (recall-only) vs **evaluation** (**`execute_rag_inspect_then_answer_for_evaluation`**) are separate use-case surfaces; see **`docs/rag_orchestration.md`** and **`api/tests/appli/orchestration/test_rag_mode_contracts.py`**.
+
 ---
 
 ## Infrastructure (`api/src/infrastructure/`)

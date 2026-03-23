@@ -152,10 +152,27 @@ scripts/
 
 ---
 
-## 12. Verdict
+## 12. RAG orchestration — final mode and logging model
+
+**Ownership:** Sequencing stays in **`application/orchestration/rag`** (recall → assembly) and **`application/orchestration/evaluation/rag_pipeline_orchestration.py`** (inspect-shaped pipeline + answer for benchmarks/manual eval). **`composition/chat_rag_wiring.py`** wires **`BuildRagPipelineUseCase`** once; **inspect** and **ask** share it with different **`emit_query_log`** behavior.
+
+**Mode separation:**
+
+- **Ask** — **`AskQuestionUseCase`**: full pipeline + answer + optional **`QueryLogPort`** (deferred payload; logging errors swallowed for delivery — tested in **`api/tests/appli/chat/test_ask_question_use_case.py`**).
+- **Inspect** — **`InspectRagPipelineUseCase`**: full pipeline, **`emit_query_log=False`** always.
+- **Preview** — **`PreviewSummaryRecallUseCase`**: **`SummaryRecallStagePort`** only; no assembly, no **`PipelineQueryLogEmitter`**.
+- **Evaluation** — **`execute_rag_inspect_then_answer_for_evaluation`** with **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**; no product ask path, no evaluation-specific query-log branch.
+
+**Logging boundaries:** Product query logs are built only from **`application/common/pipeline_query_log.py`** / **`PipelineQueryLogEmitter`**, not from infrastructure retrieval internals. Inspect and evaluation paths must not enable build-stage logging on the shared **`BuildRagPipelineUseCase`**.
+
+**Tests:** **`api/tests/appli/orchestration/test_rag_mode_contracts.py`** enforces emitter **`enabled`** flag, **`PipelineQueryLogEmitter`** no-op when disabled or port absent, inspect/evaluation **`emit_query_log=False`**, and preview recall-only surface. Existing suites cover ask logging failure (**`test_ask_question_use_case.py`**), evaluation latency (**`appli/use_cases/evaluation/test_rag_pipeline_orchestration.py`**), and single manual-eval entry (**`test_manual_evaluation_single_orchestrator.py`**).
+
+---
+
+## 13. Verdict
 
 **The architecture migration and physical layout for this repository are complete** for the stated scope: layers, dependency direction, orchestration ownership, FastAPI vs Streamlit boundaries, and **`api/src` / `frontend/src`** as the only application code roots are **implemented and enforced**.
 
-Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export.
+Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, and **§11** above for typed vs dict boundaries.
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), and **§12** (orchestration modes and logging).

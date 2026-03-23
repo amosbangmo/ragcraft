@@ -6,6 +6,19 @@ This document describes **how RAG behavior is structured in the current codebase
 
 ---
 
+## Mode separation (ownership)
+
+| Mode | Use case / function | Pipeline | Answer | Product query log |
+|------|---------------------|----------|--------|-------------------|
+| **Ask** | **`AskQuestionUseCase`** | Full (via **`BuildRagPipelineUseCase`**) | Yes | Yes, when **`QueryLogPort`** wired (deferred full log; optional build-stage log if port absent) |
+| **Inspect** | **`InspectRagPipelineUseCase`** | Full | No | **No** — always **`emit_query_log=False`** |
+| **Preview** | **`PreviewSummaryRecallUseCase`** | Recall only | No | **No** — no build port, no emitter |
+| **Evaluation** | **`execute_rag_inspect_then_answer_for_evaluation`** + manual / gold-QA use cases | Via **inspect** port | Via **`GenerateAnswerFromPipelinePort`** | **No** — inspect contract |
+
+**Rules:** one canonical evaluation orchestration (**`rag_pipeline_orchestration.py`**); no second inspect+answer path in **`infrastructure.evaluation`** (assembly helpers only). **`api/tests/appli/orchestration/test_rag_mode_contracts.py`** locks logging flags and build-emitter behavior.
+
+---
+
 ## Entrypoints
 
 | Entry | Where | Notes |
@@ -46,7 +59,7 @@ The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendA
 
 **Single inspect+answer path for evaluation:** **`execute_rag_inspect_then_answer_for_evaluation`** in **`api/src/application/orchestration/evaluation/rag_pipeline_orchestration.py`**.
 
-- Input: **`RagEvaluationPipelineInput`** (**`api/src/application/rag/dtos/evaluation_pipeline.py`**).  
+- Input: **`RagEvaluationPipelineInput`** (**`api/src/application/dto/rag/evaluation_pipeline.py`**).  
 - Coordinates **`InspectRagPipelinePort`** and **`GenerateAnswerFromPipelinePort`**; merges latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`**.  
 - Output: **`RagInspectAnswerRun`** (**`api/src/domain/rag/rag_inspect_answer_run.py`**); **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`RowEvaluationService`**.  
 - **`BenchmarkExecutionUseCase`** requires each **`pipeline_runner`** result to be a **`RagInspectAnswerRun`** (**`TypeError`** otherwise).  
@@ -83,8 +96,9 @@ The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendA
 
 ## Logging boundaries
 
-- **After pipeline build (no answer yet):** **`PipelineQueryLogEmitter`** inside **`BuildRagPipelineUseCase.execute`** when **`emit_query_log=True`**.  
-- **After full ask:** **`AskQuestionUseCase`** uses safe helpers + **`build_query_log_ingress_payload`** → domain **`QueryLogIngressPayload`** when **`QueryLogPort`** is wired — **not** from low-level vectorstore/docstore/rerank modules.
+- **Ask only:** **`AskQuestionUseCase`** may persist product retrieval/answer logs via **`QueryLogPort`** (after answer), using **`build_query_log_ingress_payload`** → **`QueryLogIngressPayload`** and **`log_query_safely`** (logging failure does not suppress **`RAGResponse`**).  
+- **Build-stage log (ask path without deferred port):** **`PipelineQueryLogEmitter`** runs inside **`BuildRagPipelineUseCase.execute`** only when **`emit_query_log=True`**.  
+- **Inspect, preview, evaluation:** must not hit the ask-only deferred log path; inspect/evaluation rely on **`emit_query_log=False`** on **`BuildRagPipelineUseCase`**. Infrastructure adapters do **not** own product query logging.
 
 ---
 

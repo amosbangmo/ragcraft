@@ -18,10 +18,14 @@ from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrid
 
 class BuildRagPipelineUseCase:
     """
-    Build a full retrieval + prompt pipeline, optionally logging the retrieval stage.
+    **Shared build engine** for ask and inspect: recall → assembly →
+    :class:`~domain.rag.pipeline_payloads.PipelineBuildResult`.
 
-    Query logging for this path is limited to the pipeline-build payload (no final answer);
-    end-to-end ask flows may defer logging until after answer generation.
+    Product query logging is optional and controlled only by ``emit_query_log``:
+    when ``True``, emits a **pipeline-stage** log (no answer) via
+    :class:`~application.orchestration.rag.ports.PipelineBuildQueryLogEmitterPort`.
+    **Inspect** and **evaluation** callers must pass ``emit_query_log=False``; **ask**
+    coordinates logging via :class:`~application.use_cases.chat.ask_question.AskQuestionUseCase`.
     """
 
     def __init__(

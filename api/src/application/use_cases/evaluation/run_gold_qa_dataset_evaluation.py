@@ -23,6 +23,12 @@ from .list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 
 
 class RunGoldQaDatasetEvaluationUseCase:
+    """
+    Gold-QA **evaluation mode** only: per-row
+    :func:`~application.orchestration.evaluation.rag_pipeline_orchestration.execute_rag_inspect_then_answer_for_evaluation`.
+    No product ask path; no product query logging on the inspect port.
+    """
+
     def __init__(
         self,
         *,

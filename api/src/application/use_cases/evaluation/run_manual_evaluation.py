@@ -1,7 +1,7 @@
 """One-off manual evaluation for a single question (``POST /evaluation/manual`` and in-process clients).
 
 This is the **only** application orchestration entry for manual eval: it always runs
-:class:`~application.use_cases.evaluation.rag_pipeline_orchestration.execute_rag_inspect_then_answer_for_evaluation`
+:func:`~application.orchestration.evaluation.rag_pipeline_orchestration.execute_rag_inspect_then_answer_for_evaluation`
 then :meth:`~domain.common.ports.manual_evaluation_from_rag_port.ManualEvaluationFromRagPort.build_manual_evaluation_result`.
 """
 

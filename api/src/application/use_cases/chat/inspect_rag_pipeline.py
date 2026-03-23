@@ -9,10 +9,11 @@ from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrid
 
 class InspectRagPipelineUseCase:
     """
-    Same pipeline build as the build use case but never writes query logs
-    (inspector / debug flows).
+    **Inspect mode:** same full pipeline build as ask, **no product query logs**.
 
-    Delegates to :class:`~domain.common.ports.RetrievalPort` with ``emit_query_log=False``.
+    Used for HTTP inspect, retrieval comparison, and as the pipeline source for
+    evaluation orchestration. Always calls
+    :meth:`~domain.common.ports.RetrievalPort.execute` with ``emit_query_log=False``.
     """
 
     def __init__(

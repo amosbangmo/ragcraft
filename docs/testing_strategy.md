@@ -71,7 +71,7 @@ Shared helper: **`import_scanner.py`**.
 | Location | Role |
 |----------|------|
 | **`api/tests/api/`** | FastAPI routes, OpenAPI, **`dependencies`** overrides — import as package **`api`** with **`api/tests`** on **`PYTHONPATH`** |
-| **`api/tests/appli/`** | Use-case behavior, mocks; HTTP wire DTOs (**`appli/http/test_wire_payloads.py`**) assert typed payloads (e.g. **`PipelineLatency`** on **`RagAnswerWirePayload`**, **`RetrievalComparisonWirePayload`** from **`RetrievalModeComparisonResult`**) |
+| **`api/tests/appli/`** | Use-case behavior, mocks; HTTP wire DTOs (**`appli/http/test_wire_payloads.py`**) assert typed payloads; **`appli/orchestration/test_rag_mode_contracts.py`** asserts RAG **mode separation** (ask vs inspect vs preview vs evaluation) and **query-log** flags on **`BuildRagPipelineUseCase`** / **`InspectRagPipelineUseCase`** |
 | **`api/tests/domain/`** | Domain policy |
 | **`api/tests/infra/`** | Infrastructure services and adapters |
 | **`api/tests/composition/`** | Wiring smoke (may skip without optional deps) |
