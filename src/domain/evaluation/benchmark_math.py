@@ -4,22 +4,18 @@ from __future__ import annotations
 
 import numpy as np
 
+from src.domain.pipeline_latency import PipelineLatency
 
-def latency_stage_row_fields(latency: dict | None) -> dict[str, float]:
-    if not latency:
-        return {
-            "query_rewrite_ms": 0.0,
-            "retrieval_ms": 0.0,
-            "reranking_ms": 0.0,
-            "prompt_build_ms": 0.0,
-            "answer_generation_ms": 0.0,
-        }
+
+def latency_stage_row_fields(latency: PipelineLatency | None) -> dict[str, float]:
+    lat = latency or PipelineLatency()
+    d = lat.to_dict()
     return {
-        "query_rewrite_ms": round(float(latency.get("query_rewrite_ms", 0.0)), 2),
-        "retrieval_ms": round(float(latency.get("retrieval_ms", 0.0)), 2),
-        "reranking_ms": round(float(latency.get("reranking_ms", 0.0)), 2),
-        "prompt_build_ms": round(float(latency.get("prompt_build_ms", 0.0)), 2),
-        "answer_generation_ms": round(float(latency.get("answer_generation_ms", 0.0)), 2),
+        "query_rewrite_ms": round(float(d["query_rewrite_ms"]), 2),
+        "retrieval_ms": round(float(d["retrieval_ms"]), 2),
+        "reranking_ms": round(float(d["reranking_ms"]), 2),
+        "prompt_build_ms": round(float(d["prompt_build_ms"]), 2),
+        "answer_generation_ms": round(float(d["answer_generation_ms"]), 2),
     }
 
 

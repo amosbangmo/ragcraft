@@ -15,7 +15,7 @@ from src.domain.project import Project
 def test_evaluation_orchestration_merges_latency_when_pipeline_present() -> None:
     project = Project(user_id="u", project_id="p")
     pipeline = MagicMock()
-    pipeline.latency = {"query_rewrite_ms": 1.0, "retrieval_ms": 2.0}
+    pipeline.latency = PipelineLatency(query_rewrite_ms=1.0, retrieval_ms=2.0)
 
     inspect_pipeline = MagicMock()
     inspect_pipeline.execute.return_value = pipeline
@@ -37,6 +37,7 @@ def test_evaluation_orchestration_merges_latency_when_pipeline_present() -> None
     assert run.pipeline is pipeline
     assert isinstance(run.full_latency, PipelineLatency)
     assert run.full_latency.answer_generation_ms >= 0.0
+    assert isinstance(pipeline.latency, PipelineLatency)
     inspect_pipeline.execute.assert_called_once()
     generate.execute.assert_called_once_with(project=project, pipeline=pipeline)
 

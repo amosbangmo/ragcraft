@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
+from src.domain.evaluation.gold_qa_row_input import GoldQaPipelineRowInput
 from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 
@@ -18,11 +18,11 @@ class RagInspectAnswerRun:
     latency_ms: float
     full_latency: PipelineLatency | None
 
-    def to_row_evaluation_dict(self) -> dict[str, Any]:
-        """Shape expected by :meth:`RowEvaluationService.process_row`."""
-        return {
-            "pipeline": self.pipeline,
-            "answer": self.answer,
-            "latency_ms": self.latency_ms,
-            "latency": self.full_latency.to_dict() if self.full_latency is not None else None,
-        }
+    def as_row_evaluation_input(self) -> GoldQaPipelineRowInput:
+        """Typed input for :meth:`~src.infrastructure.adapters.evaluation.row_evaluation_service.RowEvaluationService.process_row`."""
+        return GoldQaPipelineRowInput(
+            pipeline=self.pipeline,
+            answer=self.answer,
+            latency_ms=self.latency_ms,
+            full_latency=self.full_latency,
+        )

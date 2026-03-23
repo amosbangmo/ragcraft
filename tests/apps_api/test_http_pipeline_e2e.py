@@ -36,6 +36,7 @@ from src.application.use_cases.evaluation.build_benchmark_export_artifacts impor
 from src.application.ingestion.dtos import IngestDocumentResult
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -91,7 +92,7 @@ def pipeline_client() -> Iterator[tuple[TestClient, FastAPI]]:
             question=question,
             answer="HTTP-only answer.",
             confidence=0.88,
-            latency={"total_ms": 42.0},
+            latency=PipelineLatency(total_ms=42.0),
         )
     )
     app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(

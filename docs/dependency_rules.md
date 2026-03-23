@@ -29,6 +29,8 @@ pytest tests/architecture -q
 
 - **`QueryLogIngressPayload`** lives in **`src/domain/query_log_ingress_payload.py`** so query logging adapters accept the same typed shape the application builds without importing application modules.
 - **`EvaluationJudgeMetricsRow`** lives in **`src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
+- **`GoldQaPipelineRowInput`** (`src/domain/evaluation/gold_qa_row_input.py`) is the typed input to **`BenchmarkRowProcessingPort.process_row`** / **`RowEvaluationService.process_row`** (replacing an ad hoc ``dict`` runner payload).
+- **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** takes **`full_latency: PipelineLatency | None`**; **`ManualEvaluationPipelineSignals.stage_latency`** is the same type (JSON round-trip via **`manual_evaluation_result_from_plain_dict`** maps ``stage_latency`` dict → **`PipelineLatency`**).
 - Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
 
 ## Anti-patterns

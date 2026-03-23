@@ -2,6 +2,7 @@ import unittest
 from dataclasses import replace
 
 from src.domain.llm_judge_result import LLMJudgeResult
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
@@ -44,13 +45,13 @@ class TestEvaluationServiceModuleHelpers(unittest.TestCase):
 
     def test_latency_stage_row_fields_rounds(self) -> None:
         out = latency_stage_row_fields(
-            {
-                "query_rewrite_ms": 1.234,
-                "retrieval_ms": 2.0,
-                "reranking_ms": 0.0,
-                "prompt_build_ms": 3.456,
-                "answer_generation_ms": 4.5,
-            }
+            PipelineLatency(
+                query_rewrite_ms=1.234,
+                retrieval_ms=2.0,
+                reranking_ms=0.0,
+                prompt_build_ms=3.456,
+                answer_generation_ms=4.5,
+            )
         )
         self.assertEqual(out["query_rewrite_ms"], 1.23)
         self.assertEqual(out["prompt_build_ms"], 3.46)
@@ -223,7 +224,7 @@ class TestEvaluateGoldQADataset(unittest.TestCase):
             retrieval_mode="hybrid",
             query_rewrite_enabled=True,
             hybrid_retrieval_enabled=True,
-            latency={"retrieval_ms": 5.555},
+            latency=PipelineLatency(retrieval_ms=5.555),
         )
 
         def runner(_e: QADatasetEntry) -> RagInspectAnswerRun:

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 from src.infrastructure.adapters.evaluation.manual_evaluation_service import (
@@ -241,7 +242,7 @@ def test_evaluate_question_with_pipeline_and_judge_branches():
         prompt_sources=[{"source_file": "a.pdf"}, "x", {"source_file": "a.pdf"}],
         selected_doc_ids=["d1", ""],
         reranked_raw_assets=[{"k": 1}, "bad"],
-        latency={"query_rewrite_ms": 1.0, "retrieval_ms": 2.0},
+        latency=PipelineLatency(query_rewrite_ms=1.0, retrieval_ms=2.0),
     )
     app = MagicMock()
     app.get_project.return_value = MagicMock()

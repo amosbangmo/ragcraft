@@ -20,7 +20,7 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 - **Retrieval overrides:** Per-request partial settings use **`RetrievalSettingsOverrideSpec`** (`src/domain/retrieval_settings_override_spec.py`) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases — not raw ``dict[str, Any]``. FastAPI maps the JSON ``retrieval_settings`` object to a spec in **`apps/api/routers/chat.py`**; **`InProcessBackendClient`** does the same before calling use cases.
 - **Recall fusion output:** **`fuse_vector_and_lexical_recalls`** returns **`VectorLexicalRecallBundle`** (`src/application/rag/dtos/recall_stages.py`).
 - **Evaluation input:** **`execute_rag_inspect_then_answer_for_evaluation`** takes **`RagEvaluationPipelineInput`** (`src/application/rag/dtos/evaluation_pipeline.py`).
-- **Evaluation result latency:** **`RagInspectAnswerRun.full_latency`** is **`PipelineLatency | None`**; **`to_row_evaluation_dict()`** still exposes a plain ``dict`` for row evaluation.
+- **Evaluation result latency:** **`RagInspectAnswerRun.full_latency`** is **`PipelineLatency | None`**. **`RagInspectAnswerRun.as_row_evaluation_input()`** returns **`GoldQaPipelineRowInput`** for **`RowEvaluationService.process_row`** (no ad hoc ``dict`` at that boundary).
 
 ## Main use cases (happy path ask)
 
@@ -57,8 +57,8 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Manual and gold-QA evaluation (inspect + answer, no production query log)
 
-- **`execute_rag_inspect_then_answer_for_evaluation`** — `src/application/use_cases/evaluation/rag_pipeline_orchestration.py`; takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges latency into **`PipelineLatency`** on the run object (pipeline snapshot still stores JSON-friendly latency ``dict`` on **`PipelineBuildResult`**).
-- **`RagInspectAnswerRun`** — `src/domain/rag_inspect_answer_run.py`; explicit DTO crossing into benchmark row processing (`to_row_evaluation_dict()` for **`RowEvaluationService`**).
+- **`execute_rag_inspect_then_answer_for_evaluation`** — `src/application/use_cases/evaluation/rag_pipeline_orchestration.py`; takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
+- **`RagInspectAnswerRun`** — `src/domain/rag_inspect_answer_run.py`; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
 - **`RunManualEvaluationUseCase`** / **`RunGoldQaDatasetEvaluationUseCase`** own the scenario; **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
 
 ## Where answer generation happens

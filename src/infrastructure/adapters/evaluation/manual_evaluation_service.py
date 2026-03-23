@@ -189,7 +189,7 @@ def manual_evaluation_result_from_eval_row(
     pipeline: PipelineBuildResult | None,
     answer: str,
     latency_ms: float,
-    full_latency_dict: dict[str, float] | None,
+    full_latency: PipelineLatency | None,
 ) -> ManualEvaluationResult:
     has_pipeline = pipeline is not None
     judge_failed = bool(row.get("judge_failed"))
@@ -306,7 +306,7 @@ def manual_evaluation_result_from_eval_row(
         query_rewrite_enabled=bool(row.get("query_rewrite_enabled", False)),
         hybrid_retrieval_enabled=bool(row.get("hybrid_retrieval_enabled", False)),
         latency_ms=float(row.get("latency_ms", round(latency_ms, 1))),
-        stage_latency=full_latency_dict,
+        stage_latency=full_latency,
     )
 
     jfr_raw = row.get("judge_failure_reason")
@@ -382,7 +382,7 @@ def manual_evaluation_result_from_rag_outputs(
     pipeline: PipelineBuildResult | None,
     answer: str,
     latency_ms: float,
-    full_latency_dict: dict[str, float] | None,
+    full_latency: PipelineLatency | None,
     gold_qa_benchmark: GoldQaBenchmarkPort,
 ) -> ManualEvaluationResult:
     entry = QADatasetEntry(
@@ -395,12 +395,11 @@ def manual_evaluation_result_from_rag_outputs(
         expected_sources=exp_src,
     )
 
-    full_lat_obj = PipelineLatency.from_dict(full_latency_dict) if full_latency_dict else None
     run = RagInspectAnswerRun(
         pipeline=pipeline,
         answer=answer,
         latency_ms=latency_ms,
-        full_latency=full_lat_obj,
+        full_latency=full_latency,
     )
 
     def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
@@ -419,7 +418,7 @@ def manual_evaluation_result_from_rag_outputs(
         pipeline=pipeline,
         answer=answer,
         latency_ms=latency_ms,
-        full_latency_dict=full_latency_dict,
+        full_latency=full_latency,
     )
 
 
@@ -461,7 +460,6 @@ class ManualEvaluationService:
             answer_generation_ms = (perf_counter() - gen_started) * 1000.0
         latency_ms = (perf_counter() - started) * 1000.0
 
-        full_latency_dict: dict[str, float] | None = None
         full_lat_obj: PipelineLatency | None = None
         if pipeline is not None:
             full_lat_obj = merge_with_answer_stage(
@@ -469,8 +467,7 @@ class ManualEvaluationService:
                 answer_generation_ms=answer_generation_ms,
                 total_ms=latency_ms,
             )
-            full_latency_dict = full_lat_obj.to_dict()
-            pipeline.latency = full_latency_dict
+            pipeline.latency = full_lat_obj
             pipeline.latency_ms = latency_ms
 
         entry = QADatasetEntry(
@@ -506,5 +503,5 @@ class ManualEvaluationService:
             pipeline=pipeline,
             answer=answer,
             latency_ms=latency_ms,
-            full_latency_dict=full_latency_dict,
+            full_latency=full_lat_obj,
         )

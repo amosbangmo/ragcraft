@@ -37,6 +37,7 @@ from src.core.exceptions import DomainError, LLMServiceError, VectorStoreError
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
@@ -297,7 +298,7 @@ def test_chat_ask_answered_happy_path(override_app: tuple[TestClient, FastAPI]) 
             question=question,
             answer="Because.",
             confidence=0.5,
-            latency={"total_ms": 1.0},
+            latency=PipelineLatency(total_ms=1.0),
         )
 
     app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(

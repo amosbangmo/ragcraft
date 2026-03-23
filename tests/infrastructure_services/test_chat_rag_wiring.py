@@ -72,6 +72,7 @@ if "src.infrastructure.vectorstores.faiss.vector_store" not in sys.modules:
 
 from src.core.exceptions import LLMServiceError
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
 from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
@@ -350,9 +351,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
             reranked_raw_assets=reranked_assets,
         )
         self.assertEqual(payload.confidence, expected_confidence)
-        self.assertIsInstance(payload.latency, dict)
+        self.assertIsInstance(payload.latency, PipelineLatency)
         self.assertGreaterEqual(payload.latency_ms, 0.0)
-        lat = payload.latency
+        lat = payload.latency.to_dict()
         for key in (
             "query_rewrite_ms",
             "retrieval_ms",
@@ -399,14 +400,14 @@ class TestChatRagWiringComposition(unittest.TestCase):
                 chars_after=50,
                 ratio=0.5,
             ),
-            latency={
-                "query_rewrite_ms": 0.1,
-                "retrieval_ms": 0.2,
-                "reranking_ms": 0.3,
-                "prompt_build_ms": 0.4,
-                "answer_generation_ms": 0.0,
-                "total_ms": 1.0,
-            },
+            latency=PipelineLatency(
+                query_rewrite_ms=0.1,
+                retrieval_ms=0.2,
+                reranking_ms=0.3,
+                prompt_build_ms=0.4,
+                answer_generation_ms=0.0,
+                total_ms=1.0,
+            ),
         )
         mock_llm.invoke.return_value = SimpleNamespace(content=" final answer ")
 
@@ -417,8 +418,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
         self.assertEqual(response.answer, "final answer")
         self.assertEqual(response.confidence, 0.8)
         self.assertIsNotNone(response.latency)
-        self.assertGreaterEqual(response.latency["answer_generation_ms"], 0.0)
-        self.assertGreater(response.latency["total_ms"], 0.0)
+        rl = response.latency.to_dict()
+        self.assertGreaterEqual(rl["answer_generation_ms"], 0.0)
+        self.assertGreater(rl["total_ms"], 0.0)
 
     @patch("src.infrastructure.adapters.rag.answer_generation_service.LLM")
     def test_ask_question_wraps_llm_errors(self, mock_llm):

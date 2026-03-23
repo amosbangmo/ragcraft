@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 
 
@@ -22,5 +23,5 @@ class ManualEvaluationFromRagPort(Protocol):
         pipeline: PipelineBuildResult | None,
         answer: str,
         latency_ms: float,
-        full_latency_dict: dict[str, float] | None,
+        full_latency: PipelineLatency | None,
     ) -> ManualEvaluationResult: ...

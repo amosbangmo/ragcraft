@@ -4,13 +4,14 @@ from unittest.mock import MagicMock, patch
 
 from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from src.application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.project import Project
 
 
 def test_build_invokes_emitter_when_payload_present() -> None:
     project = Project(user_id="u1", project_id="p1")
     payload = MagicMock()
-    payload.latency = {"total_ms": 0.0}
+    payload.latency = PipelineLatency(total_ms=0.0)
 
     summary = MagicMock()
     assembly = MagicMock()

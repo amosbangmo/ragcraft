@@ -65,8 +65,7 @@ class AskQuestionUseCase:
             answer_generation_ms=answer_generation_ms,
             total_ms=total_ms,
         )
-        full_latency_dict = full_latency.to_dict()
-        pipeline.latency = full_latency_dict
+        pipeline.latency = full_latency
         pipeline.latency_ms = total_ms
 
         if defer_log:
@@ -88,5 +87,5 @@ class AskQuestionUseCase:
             raw_assets=pipeline.reranked_raw_assets,
             prompt_sources=pipeline.prompt_sources,
             confidence=pipeline.confidence,
-            latency=full_latency_dict,
+            latency=full_latency,
         )

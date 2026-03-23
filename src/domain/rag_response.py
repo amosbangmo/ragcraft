@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.domain.pipeline_latency import PipelineLatency
+
 
 @dataclass
 class RAGResponse:
@@ -10,4 +12,4 @@ class RAGResponse:
     raw_assets: list[Any] = field(default_factory=list)
     prompt_sources: list[Any] = field(default_factory=list)
     confidence: float = 0.0
-    latency: dict[str, float] | None = None
+    latency: PipelineLatency | None = None

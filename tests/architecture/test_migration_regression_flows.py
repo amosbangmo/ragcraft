@@ -18,6 +18,7 @@ from src.application.http.wire import (
     preview_summary_recall_to_wire_dict,
     rag_response_to_wire_dict,
 )
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.query_intent import QueryIntent
 from src.domain.rag_response import RAGResponse
@@ -53,7 +54,7 @@ def test_wire_helpers_normalize_chat_answer_pipeline_and_preview() -> None:
         raw_assets=[{"doc_id": "1"}],
         prompt_sources=[{"doc_id": "1"}],
         confidence=0.5,
-        latency={"total_ms": 1.0},
+        latency=PipelineLatency(total_ms=1.0),
     )
     out = rag_response_to_wire_dict(rag)
     assert out["answer"] == "a"
@@ -80,7 +81,7 @@ def test_wire_helpers_normalize_chat_answer_pipeline_and_preview() -> None:
         selected_summary_docs=[SummaryRecallDocument(page_content="c", metadata={"doc_id": "d"})],
         prompt_sources=[],
         confidence=0.1,
-        latency={"total_ms": 2.0},
+        latency=PipelineLatency(total_ms=2.0),
         latency_ms=2.0,
         retrieval_strategy=RetrievalStrategy(k=3, use_hybrid=False, apply_filters=True),
     )

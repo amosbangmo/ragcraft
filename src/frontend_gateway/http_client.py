@@ -12,6 +12,7 @@ import httpx
 from src.application.settings.dtos import UpdateProjectRetrievalSettingsCommand
 from src.domain.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from src.domain.manual_evaluation_result import manual_evaluation_result_from_plain_dict
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.project_settings import ProjectSettings
@@ -340,6 +341,8 @@ class HttpBackendClient:
         data = self._t.request_json("POST", "/chat/ask", bearer_token=self._bearer(), json_body=body)
         if data.get("status") == "no_pipeline":
             return None
+        lat_raw = data.get("latency")
+        latency = PipelineLatency.from_dict(lat_raw) if isinstance(lat_raw, dict) else None
         return RAGResponse(
             question=str(data.get("question") or ""),
             answer=str(data.get("answer") or ""),
@@ -347,7 +350,7 @@ class HttpBackendClient:
             raw_assets=list(data.get("raw_assets") or []),
             prompt_sources=list(data.get("prompt_sources") or []),
             confidence=float(data.get("confidence") or 0.0),
-            latency=data.get("latency"),
+            latency=latency,
         )
 
     def get_effective_retrieval_settings(

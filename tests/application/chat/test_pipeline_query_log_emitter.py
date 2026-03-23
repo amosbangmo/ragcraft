@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.application.use_cases.chat.orchestration.pipeline_query_log_emitter import PipelineQueryLogEmitter
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.project import Project
 
 
@@ -37,14 +38,7 @@ def test_emitter_logs_when_enabled(project: Project) -> None:
     log = MagicMock()
     emitter = PipelineQueryLogEmitter(log)
     payload = MagicMock()
-    payload.latency = {
-        "query_rewrite_ms": 0.0,
-        "retrieval_ms": 0.0,
-        "reranking_ms": 0.0,
-        "prompt_build_ms": 0.0,
-        "answer_generation_ms": 0.0,
-        "total_ms": 1.0,
-    }
+    payload.latency = PipelineLatency(total_ms=1.0)
     emitter.emit_after_pipeline_build(
         enabled=True, project=project, question="q", payload=payload
     )

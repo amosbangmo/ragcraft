@@ -59,5 +59,5 @@ class RunManualEvaluationUseCase:
             pipeline=run.pipeline,
             answer=run.answer,
             latency_ms=run.latency_ms,
-            full_latency_dict=run.full_latency.to_dict() if run.full_latency is not None else None,
+            full_latency=run.full_latency,
         )

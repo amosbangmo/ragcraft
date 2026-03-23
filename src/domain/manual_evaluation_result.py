@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 
+from src.domain.pipeline_latency import PipelineLatency
+
 
 @dataclass(frozen=True)
 class ManualEvaluationAnswerQuality:
@@ -64,7 +66,7 @@ class ManualEvaluationPipelineSignals:
     query_rewrite_enabled: bool
     hybrid_retrieval_enabled: bool
     latency_ms: float
-    stage_latency: dict[str, float] | None = None
+    stage_latency: PipelineLatency | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -143,6 +145,26 @@ def _optional_subdataclass(cls: type, raw: Any) -> Any:
         return None
 
 
+def _pipeline_signals_from_plain_dict(raw: Any) -> ManualEvaluationPipelineSignals | None:
+    if raw is None or not isinstance(raw, dict):
+        return None
+    sl = raw.get("stage_latency")
+    stage_latency: PipelineLatency | None = None
+    if isinstance(sl, dict):
+        stage_latency = PipelineLatency.from_dict(sl)
+    try:
+        return ManualEvaluationPipelineSignals(
+            confidence=float(raw.get("confidence") or 0.0),
+            retrieval_mode=str(raw.get("retrieval_mode") or ""),
+            query_rewrite_enabled=bool(raw.get("query_rewrite_enabled")),
+            hybrid_retrieval_enabled=bool(raw.get("hybrid_retrieval_enabled")),
+            latency_ms=float(raw.get("latency_ms") or 0.0),
+            stage_latency=stage_latency,
+        )
+    except TypeError:
+        return None
+
+
 def manual_evaluation_result_from_plain_dict(d: dict[str, Any]) -> ManualEvaluationResult:
     """Rebuild :class:`ManualEvaluationResult` from JSON (e.g. FastAPI ``ManualEvaluationResponse``)."""
     return ManualEvaluationResult(
@@ -163,7 +185,7 @@ def manual_evaluation_result_from_plain_dict(d: dict[str, Any]) -> ManualEvaluat
             ManualEvaluationPromptSourceQuality, d.get("prompt_source_quality")
         ),
         retrieval_quality=_optional_subdataclass(ManualEvaluationRetrievalQuality, d.get("retrieval_quality")),
-        pipeline_signals=_optional_subdataclass(ManualEvaluationPipelineSignals, d.get("pipeline_signals")),
+        pipeline_signals=_pipeline_signals_from_plain_dict(d.get("pipeline_signals")),
         expectation_comparison=_optional_subdataclass(
             ManualEvaluationExpectationComparison, d.get("expectation_comparison")
         ),

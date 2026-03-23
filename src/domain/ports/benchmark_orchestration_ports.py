@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import Any, Protocol, runtime_checkable
 
 from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
+from src.domain.evaluation.gold_qa_row_input import GoldQaPipelineRowInput
 
 
 @runtime_checkable
 class BenchmarkRowProcessingPort(Protocol):
-    def process_row(self, entry: Any, result: dict, acc: BenchmarkAccumulator) -> None: ...
+    def process_row(self, entry: Any, result: GoldQaPipelineRowInput, acc: BenchmarkAccumulator) -> None: ...
 
 
 @runtime_checkable

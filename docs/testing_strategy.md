@@ -32,9 +32,9 @@ Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/archi
 
 - **`tests/application/`** — use case behavior with mocks (e.g. **`test_ask_question_use_case.py`**, **`test_inspect_rag_pipeline_use_case.py`**, **`test_benchmark_execution_use_case.py`**, **`test_upload_policy.py`**, **`test_ingest_uploaded_file_use_case.py`**, **`test_get_project_document_details_use_case.py`**, **`test_generate_qa_dataset_use_case.py`**).
 - **`tests/apps_api/test_upload_adapter.py`** — Starlette/FastAPI upload chunked read and oversize rejection.
-- **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py`, `test_rag_inspect_answer_run.py`, `test_retrieval_settings_override_spec.py`).
+- **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py`, `test_rag_inspect_answer_run.py` covers **`GoldQaPipelineRowInput`** via **`as_row_evaluation_input()`**, `test_retrieval_settings_override_spec.py`).
 - **`tests/application/use_cases/evaluation/test_rag_pipeline_orchestration.py`** — evaluation inspect+answer orchestration and **`RagInspectAnswerRun`** latency typing.
-- **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` for composition-wired RAG subgraph).
+- **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` asserts **`PipelineBuildResult.latency`** and **`RAGResponse.latency`** are **`PipelineLatency`**; evaluation / manual-eval tests use the same types).
 
 ## What architecture tests do *not* prove
 

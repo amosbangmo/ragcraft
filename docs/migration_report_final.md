@@ -169,7 +169,18 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 | ``retrieval_settings: dict[str, Any] \| None`` on **`RetrievalPort.execute`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, **`run_recall_then_assemble_pipeline`**, chat use cases | **`RetrievalSettingsOverrideSpec \| None`** (domain); validated partial merge mapping keyed only to **`RetrievalSettings`** fields |
 | Ad hoc recall fusion return shape | **`VectorLexicalRecallBundle`** in **`src/application/rag/dtos/recall_stages.py`** |
 | Untyped evaluation orchestration inputs | **`RagEvaluationPipelineInput`** |
-| **`RagInspectAnswerRun.full_latency`** as loose dict | **`PipelineLatency \| None`**; row export still uses **`to_row_evaluation_dict()`** |
+| **`RagInspectAnswerRun`** → row evaluation as anonymous ``dict`` | **`as_row_evaluation_input()` → `GoldQaPipelineRowInput`**; **`BenchmarkRowProcessingPort.process_row`** takes that DTO |
+| **`PipelineBuildResult.latency`** as ``dict[str, float]`` | **`PipelineLatency`** (merged after answer on ask/eval paths; **`PipelineBuildResult.to_dict()`** still emits a JSON object for wire) |
+| **`RAGResponse.latency`** as loose dict | **`PipelineLatency \| None`**; **`RagAnswerWirePayload`** / API serialization call **`to_dict()`** at the transport edge |
+| **`latency_stage_row_fields`** input shape | **`PipelineLatency \| None`** (benchmark row **`data`** remains a wide metric map for aggregation/export) |
+| **`full_latency_dict`** on manual-eval assembly | **`full_latency: PipelineLatency \| None`** on **`ManualEvaluationFromRagPort`** and **`manual_evaluation_result_from_rag_outputs`** |
+| **`ManualEvaluationPipelineSignals.stage_latency`** as ``dict[str, float]`` | **`PipelineLatency \| None`**; **`manual_evaluation_result_from_plain_dict`** maps JSON ``stage_latency`` back to **`PipelineLatency`** |
+| **`to_row_evaluation_dict()`** on **`RagInspectAnswerRun`** | **Removed** in favor of **`as_row_evaluation_input()`** |
+
+**Where plain dicts remain (by design):**
+
+- **`BenchmarkRow.data`** — wide per-row metric map for summaries, CSV export, and correlation helpers (not the runner→row-processor boundary).
+- **HTTP JSON** — FastAPI/Pydantic and **`rag_response_to_wire_dict`** use dict-shaped latency only after mapping from **`PipelineLatency`**.
 
 **Execution modes (unchanged intent, clearer contracts):**
 

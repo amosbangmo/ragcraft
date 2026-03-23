@@ -48,7 +48,7 @@ def execute_rag_inspect_then_answer_for_evaluation(
             total_ms=latency_ms,
         )
         full_latency = merged
-        pipeline.latency = merged.to_dict()
+        pipeline.latency = merged
         pipeline.latency_ms = latency_ms
 
     return RagInspectAnswerRun(

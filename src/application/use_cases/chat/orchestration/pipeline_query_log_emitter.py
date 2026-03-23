@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from src.application.common.pipeline_query_log import build_query_log_ingress_payload
 from src.application.common.safe_query_log import log_query_safely
-from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.ports import QueryLogPort
 from src.domain.project import Project
@@ -32,7 +31,7 @@ class PipelineQueryLogEmitter:
     ) -> None:
         if not enabled or self._query_log is None:
             return
-        latency = PipelineLatency.from_dict(payload.latency)
+        latency = payload.latency
         log_query_safely(
             self._query_log,
             build_query_log_ingress_payload(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.query_intent import QueryIntent
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.retrieval_strategy import RetrievalStrategy
@@ -128,7 +129,7 @@ class PipelineBuildResult:
     raw_context: str = ""
     prompt: str = ""
     confidence: float = 0.0
-    latency: dict[str, float] = field(default_factory=dict)
+    latency: PipelineLatency = field(default_factory=PipelineLatency)
     latency_ms: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
@@ -163,6 +164,6 @@ class PipelineBuildResult:
             "raw_context": self.raw_context,
             "prompt": self.prompt,
             "confidence": self.confidence,
-            "latency": dict(self.latency),
+            "latency": self.latency.to_dict(),
             "latency_ms": self.latency_ms,
         }

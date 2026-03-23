@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
-from src.domain.evaluation.judge_metrics_row import EvaluationJudgeMetricsRow
 from src.domain.benchmark_result import BenchmarkRow
+from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
+from src.domain.evaluation.benchmark_math import latency_stage_row_fields, r2
+from src.domain.evaluation.gold_qa_row_input import GoldQaPipelineRowInput
+from src.domain.evaluation.judge_metrics_row import EvaluationJudgeMetricsRow
 from src.domain.multimodal_metrics import (
     empty_modality_row_fields,
     modality_row_fields_from_pipeline,
 )
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
-from src.infrastructure.adapters.evaluation.answer_citation_metrics_service import answer_cited_doc_ids
-from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
-from src.domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
-from src.domain.evaluation.benchmark_math import latency_stage_row_fields, r2
+from src.infrastructure.adapters.evaluation.answer_citation_metrics_service import (
+    answer_cited_doc_ids,
+)
+from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import (
+    AnswerQualityAggregationService,
+)
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 from src.infrastructure.adapters.evaluation.retrieval_metrics_service import RetrievalMetricsService
 
@@ -45,19 +51,13 @@ class RowEvaluationService:
         self._semantic_similarity_service = semantic_similarity_service
         self._llm_judge_service = llm_judge_service
 
-    def process_row(self, entry, result: dict, acc: BenchmarkAccumulator) -> None:
-        pipeline = result.get("pipeline")
-        answer = (result.get("answer") or "").strip()
-        latency_ms = float(result.get("latency_ms", 0.0))
-        merged_latency = result.get("latency")
-        if not isinstance(merged_latency, dict) and pipeline is not None:
-            merged_latency = (
-                pipeline.latency
-                if isinstance(pipeline, PipelineBuildResult)
-                else pipeline.get("latency")
-            )
-        if not isinstance(merged_latency, dict):
-            merged_latency = None
+    def process_row(self, entry, result: GoldQaPipelineRowInput, acc: BenchmarkAccumulator) -> None:
+        pipeline = result.pipeline
+        answer = (result.answer or "").strip()
+        latency_ms = float(result.latency_ms)
+        merged_latency: PipelineLatency | None = result.full_latency
+        if merged_latency is None and pipeline is not None:
+            merged_latency = pipeline.latency
 
         expected_doc_ids = set(entry.expected_doc_ids or [])
         expected_sources = set(entry.expected_sources or [])
@@ -284,7 +284,7 @@ class RowEvaluationService:
 
         judge_result = self._llm_judge_service.evaluate(
             question=entry.question,
-            answer=result.get("answer", ""),
+            answer=result.answer,
             raw_context=pl.get("raw_context", ""),
             prompt_sources=refs_for_judge,
             expected_answer=expected_answer if has_expected_answer else None,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.infrastructure.adapters.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
@@ -51,7 +52,7 @@ class EvaluationService:
         pipeline: PipelineBuildResult | None,
         answer: str,
         latency_ms: float,
-        full_latency_dict: dict[str, float] | None,
+        full_latency: PipelineLatency | None,
     ) -> ManualEvaluationResult:
         from src.infrastructure.adapters.evaluation.manual_evaluation_service import (
             manual_evaluation_result_from_rag_outputs,
@@ -67,7 +68,7 @@ class EvaluationService:
             pipeline=pipeline,
             answer=answer,
             latency_ms=latency_ms,
-            full_latency_dict=full_latency_dict,
+            full_latency=full_latency,
             gold_qa_benchmark=self._gold_qa_benchmark,
         )
 

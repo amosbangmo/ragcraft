@@ -38,12 +38,12 @@ class PipelineLatency:
 
 
 def merge_with_answer_stage(
-    pipeline_partial: dict[str, Any] | None,
+    pipeline_partial: PipelineLatency | None,
     *,
     answer_generation_ms: float,
     total_ms: float,
 ) -> PipelineLatency:
-    base = PipelineLatency.from_dict(pipeline_partial)
+    base = pipeline_partial if pipeline_partial is not None else PipelineLatency()
     return replace(
         base,
         answer_generation_ms=answer_generation_ms,

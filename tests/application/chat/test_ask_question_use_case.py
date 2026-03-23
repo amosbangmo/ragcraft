@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from src.application.use_cases.chat.ask_question import AskQuestionUseCase
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
@@ -20,7 +21,7 @@ def test_ask_returns_none_when_no_pipeline() -> None:
 
 
 def test_ask_success_without_query_log() -> None:
-    pipeline = PipelineBuildResult(question="q?", latency={"retrieval_ms": 1.0})
+    pipeline = PipelineBuildResult(question="q?", latency=PipelineLatency(retrieval_ms=1.0))
     retrieval = MagicMock()
     retrieval.execute.return_value = pipeline
     gen = MagicMock()
@@ -40,7 +41,7 @@ def test_ask_success_without_query_log() -> None:
 
 
 def test_retrieval_overrides_passed_to_retrieval_port() -> None:
-    pipeline = PipelineBuildResult(latency={})
+    pipeline = PipelineBuildResult(latency=PipelineLatency())
     retrieval = MagicMock()
     retrieval.execute.return_value = pipeline
     gen = MagicMock()
@@ -56,7 +57,7 @@ def test_retrieval_overrides_passed_to_retrieval_port() -> None:
 
 
 def test_ask_logging_failure_still_returns_answer() -> None:
-    pipeline = PipelineBuildResult(question="q?", latency={})
+    pipeline = PipelineBuildResult(question="q?", latency=PipelineLatency())
     retrieval = MagicMock()
     retrieval.execute.return_value = pipeline
     gen = MagicMock()

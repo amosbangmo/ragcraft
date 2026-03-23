@@ -302,7 +302,7 @@ def render_manual_evaluation_result(
         )
         if ps.stage_latency:
             with st.expander("Per-stage latency (ms)", expanded=False):
-                sl = ps.stage_latency
+                sl = ps.stage_latency.to_dict()
                 r1, r2, r3 = st.columns(3)
                 with r1:
                     st.caption("Query rewrite")

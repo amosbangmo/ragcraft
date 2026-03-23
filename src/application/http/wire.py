@@ -15,12 +15,12 @@ from src.application.common.summary_recall_preview import SummaryRecallPreviewDT
 from src.application.evaluation.benchmark_export_dtos import BenchmarkExportArtifacts
 from src.application.evaluation.dtos import GenerateQaDatasetResult
 from src.application.ingestion.dtos import IngestDocumentResult
+from src.application.json_wire import jsonify_value
 from src.application.settings.dtos import EffectiveRetrievalSettingsView
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.rag_response import RAGResponse
-from src.application.json_wire import jsonify_value
 
 
 @dataclass(frozen=True)
@@ -44,9 +44,10 @@ class RagAnswerWirePayload:
             raw_assets=cast(list[dict[str, Any]], jsonify_value(response.raw_assets)),
             prompt_sources=cast(list[dict[str, Any]], jsonify_value(response.prompt_sources)),
             confidence=float(response.confidence),
-            latency=cast(dict[str, Any] | None, jsonify_value(response.latency))
-            if response.latency is not None
-            else None,
+            latency=cast(
+                dict[str, Any] | None,
+                jsonify_value(response.latency.to_dict()) if response.latency is not None else None,
+            ),
         )
 
     def as_json_dict(self) -> dict[str, Any]:

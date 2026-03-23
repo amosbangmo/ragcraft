@@ -96,8 +96,6 @@ def assemble_pipeline_from_recall(
         answer_generation_ms=0.0,
         total_ms=total_pipeline_ms,
     )
-    latency_dict = latency.to_dict()
-
     return PipelineBuildResult(
         question=question,
         rewritten_question=rewritten_question,
@@ -133,6 +131,6 @@ def assemble_pipeline_from_recall(
         raw_context=prompt_out.raw_context,
         prompt=prompt_out.prompt,
         confidence=confidence,
-        latency=latency_dict,
+        latency=latency,
         latency_ms=total_pipeline_ms,
     )

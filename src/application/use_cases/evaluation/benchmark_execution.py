@@ -54,7 +54,7 @@ class BenchmarkExecutionUseCase:
                     f"got {type(raw).__name__}. Use execute_rag_inspect_then_answer_for_evaluation "
                     "or RagInspectAnswerRun(...) at the composition boundary."
                 )
-            self._row_eval.process_row(entry, raw.to_row_evaluation_dict(), acc)
+            self._row_eval.process_row(entry, raw.as_row_evaluation_input(), acc)
 
         summary_payload = self._aggregation.build_summary_payload(acc)
         rows = acc.rows

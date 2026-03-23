@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.domain.pipeline_payloads import PipelineBuildResult
+
 
 def _norm_content_type(raw: object) -> str:
     s = str(raw or "").strip().lower()
@@ -82,12 +84,15 @@ def empty_modality_row_fields() -> dict[str, Any]:
     }
 
 
-def modality_row_fields_from_pipeline(pipeline: dict[str, Any]) -> dict[str, Any]:
-    assets = pipeline.get("prompt_context_assets")
+def modality_row_fields_from_pipeline(
+    pipeline: PipelineBuildResult | dict[str, Any],
+) -> dict[str, Any]:
+    pl = pipeline.to_dict() if isinstance(pipeline, PipelineBuildResult) else pipeline
+    assets = pl.get("prompt_context_assets")
     if not isinstance(assets, list) or not assets:
-        raw = pipeline.get("reranked_raw_assets")
+        raw = pl.get("reranked_raw_assets")
         assets = raw if isinstance(raw, list) else []
-    refs = pipeline.get("prompt_sources")
+    refs = pl.get("prompt_sources")
     if not isinstance(refs, list):
         refs = []
 
