@@ -10,15 +10,12 @@ Short form of the layout enforced in code and tests. **Canonical detail:** `docs
 ## Streamlit — reference UI client
 
 - **Entry:** `frontend/app.py`, **`frontend/src/pages/`**, **`frontend/src/components/`**.
-- **Rule:** Import **`BackendClient`**, **`get_backend_client`**, and UI-facing helpers **only** from **`frontend/src/services/api_client.py`**. No direct `domain`, `application`, `composition`, or `interfaces` imports from pages/components (enforced by tests). The **`api_client`** module is the sole frontend bridge into **`application/frontend_support/`**.
-- **In-process backend:** `api/src/application/frontend_support/streamlit_backend_factory.py` → **`build_backend(..., backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()))`**.
+- **Rule:** Import **`BackendClient`**, **`get_backend_client`**, and UI-facing helpers **only** from **`frontend/src/services/api_client.py`**. No direct `domain`, `application`, `composition`, or `interfaces` imports from pages/components (enforced by tests). **`frontend/src/services`** implements **`HttpBackendClient`** and must not import **`domain`** / **`application`** (architecture tests).
+- **Composition factory (tests/tooling):** `api/src/application/frontend_support/streamlit_backend_factory.py` → **`build_backend(..., backend=build_backend_composition(chat_transcript=StreamlitChatTranscript()))`**.
 
-## Client modes (`RAGCRAFT_BACKEND_CLIENT`)
+## Backend client
 
-| Mode | Behavior |
-|------|----------|
-| **`http`** (default if unset) | `HttpBackendClient` → FastAPI (`RAGCRAFT_API_BASE_URL`). |
-| **`in_process`** | `InProcessBackendClient` → **`BackendApplicationContainer`** in the Streamlit process. |
+**Only** **`HttpBackendClient`** (`frontend/src/services/http_backend_client.py`) → FastAPI at **`RAGCRAFT_API_BASE_URL`**. Cached in **`infrastructure.config.app_state`**.
 
 See **`docs/README.md`** (local development) for env vars.
 
@@ -29,11 +26,11 @@ On disk under **`api/src/`**, the **only** top-level Python packages are **`doma
 | Location | Role |
 |----------|------|
 | **`api/src/domain/`** | Entities, ports, payloads. No framework imports (see tests). |
-| **`api/src/application/`** | Use cases, RAG orchestration, policies, DTOs, **`frontend_support/`** (Streamlit–backend protocol, HTTP + in-process clients, wire mappers). No `infrastructure` except the documented **`infrastructure.config`** narrow exception. |
+| **`api/src/application/`** | Use cases, RAG orchestration, policies, DTOs, **`frontend_support/`** (protocol re-export, **`streamlit_backend_factory`** for composition). No `infrastructure` except the documented **`infrastructure.config`** narrow exception. |
 | **`api/src/infrastructure/`** | Adapters, persistence, vector stores, caching. RAG adapters do not own post-recall pipeline order or query logging. |
 | **`api/src/composition/`** | **`build_backend_composition`**, **`evaluation_wiring`**, **`build_backend`**, **`chat_rag_wiring`**. No imports of the frontend **`services`** package. |
 | **`api/src/interfaces/http/`** | FastAPI app factory, routers, Pydantic schemas, upload adapters; thin handlers → use cases. |
-| **`frontend/src/services/`** | **`api_client.py`** (canonical façade), wire DTOs, Streamlit auth/session, HTTP transport helpers. **`StreamlitChatTranscript`** and factories live next to composition under **`application/frontend_support/`**. Only **`infrastructure.config`** and **`infrastructure.auth`** from backend infra (not adapters). |
+| **`frontend/src/services/`** | **`api_client.py`** (canonical façade), **`http_backend_client.py`**, wire DTOs, Streamlit auth/session, HTTP transport helpers. **`StreamlitChatTranscript`** and factories live under **`application/frontend_support/`**. Only **`infrastructure.config`** and **`infrastructure.auth`** from backend infra (not adapters). |
 
 **Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`application.services.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`application.frontend_support.streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`infrastructure/adapters`**).
 
