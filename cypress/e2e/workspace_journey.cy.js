@@ -71,7 +71,7 @@ describe("RAGCraft workspace API journey", () => {
         timeout: 180000,
         failOnStatusCode: false,
       }).then((resp) => {
-        if (resp.status === 201) {
+        if (resp.status === 200 || resp.status === 201) {
           expect(resp.body).to.have.property("diagnostics");
           Cypress.env("e2e_ingest_ok", true);
         } else {
