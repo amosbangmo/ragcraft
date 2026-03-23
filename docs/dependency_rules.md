@@ -94,6 +94,14 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 
 ---
 
+## Tests should respect the same boundaries
+
+**`api/tests/architecture/`** encodes this document mechanically. **`api/tests/appli/`** and **`api/tests/api/`** should import **`domain`** / **`application`** / **`interfaces`** from their **real** package locations (not stale convenience paths removed during refactors). **`frontend/tests`** that assert on **API-shaped** types should use **`services.evaluation_wire_models`** / **`services.view_models`** wire exports where production code does, so **collection** and **runtime** agree.
+
+Optional **pytest markers** (path-assigned in **`api/tests/conftest.py`**) help run slices (**`api_http`**, **`appli`**, **`e2e`**, …); see **`docs/testing_strategy.md`**.
+
+---
+
 ## Lint and format
 
 **Ruff**, **Black**, and **mypy** are configured in the root **`pyproject.toml`**. Ruff catches issues architecture tests do not (e.g. undefined names).

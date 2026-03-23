@@ -66,5 +66,14 @@ ignore_errors = true
 testpaths = ["api/tests", "frontend/tests"]
 pythonpath = ["api/src", "frontend/src", "api/tests"]
 markers = [
-    "architecture: optional pytest filter for layering guards (primary CI gate is the path api/tests/architecture via scripts/validate_architecture.sh)",
+    "architecture: layout and import guardrails under api/tests/architecture (also run via scripts/validate_architecture.sh)",
+    "api_http: FastAPI TestClient route tests under api/tests/api",
+    "appli: application use-case and orchestration tests under api/tests/appli",
+    "e2e: regression or quality-gate tests under api/tests/e2e",
+    "infra: infrastructure tests under api/tests/infra",
+    "bootstrap: ASGI entry and create_app smoke under api/tests/bootstrap",
+    "domain: domain policy tests under api/tests/domain",
+    "composition: composition wiring smoke under api/tests/composition",
+    "frontend: Streamlit/UI and HTTP client tests under frontend/tests",
+    "integration: cross-boundary HTTP walk (e.g. api/tests/api/test_http_pipeline_e2e.py)",
 ]

@@ -1,6 +1,45 @@
 # Testing strategy
 
-Tests are layered: **fast architecture and layout guards** at the base, then **unit** tests (domain, use cases, infrastructure), **HTTP/API** tests, **composition** smoke tests, and optional **integration** flows.
+Tests are layered: **fast architecture and layout guards** at the base, then **unit** tests (domain, use cases, infrastructure), **HTTP/API** tests, **composition** smoke tests, **frontend** client/UI tests, and optional **e2e** flows. The goal is **structural confidence** (layers, contracts, orchestration modes) — not maximizing a coverage percentage alone.
+
+---
+
+## Test matrix (what proves what)
+
+| Layer | Location | Proves |
+|-------|----------|--------|
+| **Architecture** | **`api/tests/architecture/`** | Repo layout, forbidden imports, router/schema placement, orchestration purity, frontend thinness |
+| **Bootstrap** | **`api/tests/bootstrap/`** | **`api/main.py`** wiring, **`create_app()`**, **`/health`**, OpenAPI |
+| **API / HTTP** | **`api/tests/api/`** | Route contracts, auth, validation (**422**), **`RAGCraftError`** envelope (**400/401/409/…**), multipart limits |
+| **Application** | **`api/tests/appli/`** | Use cases with fake ports; **`appli/orchestration/test_rag_mode_contracts.py`** — ask vs inspect vs preview vs evaluation and query-log rules |
+| **Domain** | **`api/tests/domain/`** | Domain policy |
+| **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
+| **Composition** | **`api/tests/composition/`** | Wiring smoke |
+| **E2E / regression** | **`api/tests/e2e/`** | Thresholds and heavier checks (may be environment-sensitive) |
+| **Frontend** | **`frontend/tests/streamlit/`**, **`frontend/tests/ui/`** | HTTP client paths, wire JSON parsing, Streamlit helpers |
+
+Together, these give **9/10+** confidence for **regressions in layering, HTTP contracts, RAG mode separation, and the Streamlit↔API boundary**, assuming normal CI runs (**`scripts/run_tests.sh`** / **`.ps1`**). They do **not** replace production security review, load testing, or real LLM/vector SLO validation.
+
+---
+
+## Pytest markers (optional filters)
+
+Markers are **registered** in **`api/tests/conftest.py`** (`pytest_configure`) and duplicated in root **`pyproject.toml`** for documentation. **`pytest_collection_modifyitems`** also **assigns** markers from each test file’s path (e.g. everything under **`api/tests/api/`** gets **`api_http`**).
+
+Examples (repository root, **`PYTHONPATH=api/src:frontend/src:api/tests`**):
+
+```bash
+# Only FastAPI route tests
+python -m pytest -m api_http -q
+
+# Skip slower e2e folder
+python -m pytest -m "not e2e" -q
+
+# Application use cases only
+python -m pytest -m appli -q
+```
+
+CI continues to use **path-based** runs (**`validate_architecture`** then **`api/tests`** minus **`architecture/`** and **`bootstrap/`** + **`frontend/tests`**); markers are for **local narrowing**, not a separate required gate.
 
 ---
 
@@ -86,7 +125,20 @@ Shared helper: **`import_scanner.py`**.
 | Location | Role |
 |----------|------|
 | **`frontend/tests/streamlit/`** | **`frontend/src/services`**, HTTP vs in-process client, Streamlit wiring; **`test_http_client_route_contract.py`** (path literals); **`test_streamlit_http_client.py`** (mock transport + ask/inspect/benchmark); **`test_frontend_api_contract.py`** (wire parsing **`rag_answer_from_ask_api_dict`**, retrieval settings payload, **`http_error_map`**, ingest copy helpers, error envelope → **`VectorStoreError`**, **`api_client`** re-exports) |
-| **`frontend/tests/ui/`** | Streamlit/UI components where present |
+| **`frontend/tests/ui/`** | Streamlit/UI components; imports should follow the same **wire vs domain** rules as production (e.g. **`LOWER_IS_BETTER_METRICS`** from **`domain.evaluation.benchmark_comparison`**, **`BenchmarkResult`** from **`services.evaluation_wire_models`** where the UI contract is wire-shaped) |
+
+### Recently strengthened API tests
+
+- **`api/tests/api/test_system_routes.py`** — **`GET /health`**, **`GET /version`**, no auth required (even with bogus **`Authorization`**).
+- **`api/tests/api/test_auth_router.py`** — login **422** envelope (**`RequestValidationError`**); register password mismatch **400** with **`AuthValidationError`** / **`auth_validation_failed`**.
+
+### Recently strengthened application tests
+
+- **`api/tests/appli/settings/test_retrieval_settings_use_cases.py`** — update use case accepts **legacy UI preset labels** (via **`PRESET_UI_LABELS`**) and persists canonical preset values.
+
+### Import hygiene in tests
+
+Several tests previously imported symbols from the wrong module after refactors (e.g. **`parse_query_log_timestamp`** lives under **`domain.rag.query_log_timestamp`**, not **`query_log_service`**; **`LOWER_IS_BETTER_METRICS`** under **`domain.evaluation.benchmark_comparison`**). Keeping test imports aligned with **real modules** avoids **collection failures** and false confidence.
 
 ---
 

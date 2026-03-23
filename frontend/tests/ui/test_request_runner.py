@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from components.shared import request_runner as rr
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from services.evaluation_wire_models import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 
 
 class _RerunStub(Exception):
@@ -67,7 +67,10 @@ class TestRunnerPayloadHelpers(unittest.TestCase):
         self.assertIsNotNone(parsed)
         assert parsed is not None
         got_bench, meta = parsed
-        self.assertIsInstance(got_bench, BenchmarkResult)
+        # Avoid ``isinstance`` against a second imported ``BenchmarkResult`` class when the
+        # full suite loads both wire and domain modules in different orders.
+        self.assertEqual(type(got_bench).__name__, "BenchmarkResult")
+        self.assertEqual(got_bench.rows[0].entry_id, 1)
         self.assertTrue(meta.get("enable_query_rewrite"))
         self.assertFalse(meta.get("enable_hybrid_retrieval"))
         self.assertEqual(meta.get("generated_at"), "2025-01-01T00:00:00Z")

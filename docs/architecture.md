@@ -117,6 +117,12 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 ---
 
+## Testing (enforcement and confidence)
+
+**`docs/testing_strategy.md`** is the full matrix: architecture + bootstrap gate, **`api/tests/api`** contracts, **`appli`** use cases and **`appli/orchestration/test_rag_mode_contracts`**, infra/composition/e2e, and **`frontend/tests`**. Pytest **markers** (registered in **`api/tests/conftest.py`**) label tests by folder for optional filtered runs. Together these justify **high confidence** in layout, dependency direction, HTTP error envelopes, and RAG **mode separation** — not every production scenario.
+
+---
+
 ## Layer diagram (runtime)
 
 ```mermaid

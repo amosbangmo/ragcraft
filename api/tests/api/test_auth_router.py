@@ -117,6 +117,36 @@ def test_register_success(auth_app: tuple[TestClient, FastAPI]) -> None:
     assert body["user"]["username"] == "bob"
 
 
+def test_login_validation_error_missing_fields(auth_app: tuple[TestClient, FastAPI]) -> None:
+    tc, _app = auth_app
+    r = tc.post("/auth/login", json={})
+    assert r.status_code == 422
+    body = r.json()
+    assert body.get("error_type") == "RequestValidationError"
+    assert body.get("code") == "request_validation_failed"
+
+
+def test_register_password_mismatch_returns_canonical_400_envelope(
+    auth_app: tuple[TestClient, FastAPI],
+) -> None:
+    tc, app = auth_app
+    app.dependency_overrides[get_user_repository] = lambda: FakeRepo({})
+    r = tc.post(
+        "/auth/register",
+        json={
+            "username": "bob",
+            "password": "password1",
+            "confirm_password": "password2",
+            "display_name": "Bob",
+        },
+    )
+    assert r.status_code == 400
+    body = r.json()
+    assert body.get("error_type") == "AuthValidationError"
+    assert body.get("code") == "auth_validation_failed"
+    assert "message" in body
+
+
 def test_register_conflict(auth_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = auth_app
     app.dependency_overrides[get_user_repository] = lambda: FakeRepo({"alice": _row()})

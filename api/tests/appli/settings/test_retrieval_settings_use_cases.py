@@ -14,7 +14,7 @@ from application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
 from domain.projects.project_settings import ProjectSettings, default_project_settings
-from domain.rag.retrieval_presets import RetrievalPreset
+from domain.rag.retrieval_presets import PRESET_UI_LABELS, RetrievalPreset
 
 
 class _MemoryProjectSettingsRepo:
@@ -75,6 +75,24 @@ def test_get_effective_advanced_overrides_merge() -> None:
         view.effective_retrieval.similarity_search_k
         == retrieval.from_preset(RetrievalPreset.PRECISE.value).similarity_search_k
     )
+
+
+def test_update_accepts_legacy_ui_preset_label() -> None:
+    """Router/UI may still send title-case labels; preset parser normalizes to canonical values."""
+    repo = _MemoryProjectSettingsRepo()
+    update_uc = UpdateProjectRetrievalSettingsUseCase(project_settings=repo)
+    exploratory_label = PRESET_UI_LABELS[RetrievalPreset.EXPLORATORY]
+    out = update_uc.execute(
+        UpdateProjectRetrievalSettingsCommand(
+            user_id="alice",
+            project_id="demo",
+            retrieval_preset=exploratory_label,
+            retrieval_advanced=False,
+            enable_query_rewrite=True,
+            enable_hybrid_retrieval=True,
+        )
+    )
+    assert out.retrieval_preset == RetrievalPreset.EXPLORATORY.value
 
 
 def test_update_then_load_round_trip() -> None:

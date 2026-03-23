@@ -211,4 +211,42 @@ scripts/
 
 Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**. Runtime and contract coverage are summarized in **§13**. Frontend–backend wire integration is summarized in **§14**.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), **§13** (runtime confidence), and **§14** (canonical HTTP client / wire types).
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), **§13** (runtime confidence), **§14** (canonical HTTP client / wire types), and **§16** (testing matrix and confidence).
+
+---
+
+## 16. Testing matrix — gaps closed and 9/10+ confidence
+
+**What was weak or broken**
+
+- Some **UI and appli tests** imported **removed or wrong symbols** (e.g. **`LOWER_IS_BETTER_METRICS`**, **`parse_query_log_timestamp`**) and **failed at collection** or asserted the wrong **`BenchmarkResult`** class after the **wire** client refactor — undermining trust in “green” CI.
+- **System routes** (**`/health`**, **`/version`**) were only indirectly covered; **auth** routes lacked explicit **validation** and **password-mismatch** envelope checks at the HTTP layer.
+- **Retrieval settings** use-case tests did not cover **legacy UI preset labels** end-to-end through **`UpdateProjectRetrievalSettingsUseCase`**.
+- There was no **documented** way to run **slices** of the suite by concern (API vs appli vs e2e) without hand-picking paths.
+
+**What was added or fixed**
+
+- **`api/tests/api/test_system_routes.py`** — public **liveness** and **version** JSON; confirms bogus **Bearer** does not break them.
+- **`api/tests/api/test_auth_router.py`** — **login** empty body → **422** with **`RequestValidationError`** / **`request_validation_failed`**; **register** password mismatch → **400** with **`AuthValidationError`** / **`auth_validation_failed`**.
+- **`api/tests/appli/settings/test_retrieval_settings_use_cases.py`** — **`test_update_accepts_legacy_ui_preset_label`**.
+- **`api/tests/conftest.py`** — registers **pytest markers** and **auto-tags** tests by top-level folder (**`api_http`**, **`appli`**, **`architecture`**, **`e2e`**, **`frontend`**, …); **`test_http_pipeline_e2e`** also gets **`integration`**.
+- Root **`pyproject.toml`** documents the same **markers** for **`pytest --markers`**.
+- **Import fixes:** **`api/tests/infra/test_query_log_service.py`**, **`api/tests/appli/test_benchmark_metric_taxonomy.py`**, **`frontend/tests/ui/test_evaluation_dashboard.py`**, **`frontend/tests/ui/test_request_runner.py`** (wire **`BenchmarkResult`** + stable assertion).
+- **Docs:** **`docs/testing_strategy.md`** (matrix, markers, new tests), **`docs/dependency_rules.md`**, **`docs/architecture.md`**, this section.
+
+**Final matrix (conceptual)**
+
+1. **Architecture + bootstrap** — structure and ASGI smoke (**§8**, **§13**).  
+2. **`api/tests/api`** — contracts, auth, validation, **`RAGCraftError`** mapping.  
+3. **`api/tests/appli`** — use cases + **`test_rag_mode_contracts`**.  
+4. **`api/tests/infra`**, **`domain`**, **`composition`**, **`e2e`** — depth and regression where needed.  
+5. **`frontend/tests`** — HTTP client literals, wire parsing, UI helpers.
+
+**Why this is sufficient for 9/10+ (for this repo’s stated scope)**
+
+- **Layer and import violations** are **blocked** by architecture tests.  
+- **RAG product modes** (ask / inspect / preview / evaluation) and **query-log rules** are **explicitly tested** in application orchestration tests.  
+- **HTTP behavior** matches **documented envelopes** on representative **auth**, **system**, **project**, **chat**, and **evaluation** paths (plus **`test_http_pipeline_e2e`**).  
+- **Frontend integration** is guarded by **client contract tests** and **UI tests** that align with **wire** types.
+
+Remaining **1/10** is intentional: **production security hardening**, **real LLM/vector SLOs**, **browser E2E**, and **chaos/load** are **out of scope** for this matrix (**§10**).

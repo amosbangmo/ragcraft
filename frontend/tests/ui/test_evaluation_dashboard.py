@@ -3,10 +3,8 @@ import unittest
 import pandas as pd
 
 from components.shared import evaluation_dashboard as ed
-from infrastructure.evaluation.benchmark_comparison_service import (
-    LOWER_IS_BETTER_METRICS,
-    BenchmarkComparisonService,
-)
+from domain.evaluation.benchmark_comparison import LOWER_IS_BETTER_METRICS
+from infrastructure.evaluation.benchmark_comparison_service import BenchmarkComparisonService
 
 
 class TestEvaluationDashboardCoercions(unittest.TestCase):

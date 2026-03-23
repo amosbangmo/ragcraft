@@ -5,11 +5,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
 
+from domain.rag.query_log_timestamp import parse_query_log_timestamp
 from infrastructure.observability.logging.query_log_repository import QueryLogRepository
-from infrastructure.observability.query_log_service import (
-    QueryLogService,
-    parse_query_log_timestamp,
-)
+from infrastructure.observability.query_log_service import QueryLogService
 from infrastructure.persistence.db import init_app_db
 from infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
 
