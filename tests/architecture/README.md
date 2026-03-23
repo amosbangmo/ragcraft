@@ -8,6 +8,7 @@ Pytest modules under this package scan **import statements** (via the AST) and f
 |--------|-----------|----------------------------------|
 | **Domain** | `src/domain/` | `src.infrastructure`, `src.backend`, `src.services`, `src.application`, `src.ui`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `apps` |
 | **Application** | `src/application/` | `streamlit`, `apps`, **`src.adapters`** (removed), **any** `src.infrastructure` (including adapters — wire in composition only). Use cases must not import `src.frontend_gateway` (see `test_application_orchestration_purity`) |
+| **Orchestration subtrees** | `src/application/use_cases/chat/orchestration/`, `…/evaluation/`, `src/application/rag/` | `src.infrastructure`, `fastapi`, `starlette`, `streamlit`, `uvicorn`, `langchain*`, `langgraph`, `faiss`, `sqlite3` — see **`test_orchestration_package_import_boundaries.py`** |
 | **Infrastructure** | `src/infrastructure/` | **`src.application`**, `streamlit`, `apps` — **except** `src/infrastructure/adapters/` under **`test_adapter_application_imports.py`** (minimal allowlist; today only `rag/retrieval_settings_service.py`) |
 | **API routers** | `apps/api/routers/` | `src.infrastructure` |
 | **Composition root** | `src/composition/` | `streamlit`, `apps` |

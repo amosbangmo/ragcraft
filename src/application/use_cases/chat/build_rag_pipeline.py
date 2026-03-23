@@ -12,6 +12,7 @@ from src.application.use_cases.chat.orchestration.ports import (
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class BuildRagPipelineUseCase:

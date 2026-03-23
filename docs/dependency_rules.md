@@ -46,3 +46,19 @@ pytest tests/architecture -q
 - **`src/infrastructure/adapters/chat_transcript/memory_chat_transcript.py`** — same **`ChatTranscriptPort`** behavior for tests or any composition path that already lives next to other adapters; optional where callers prefer infra-local defaults.
 
 Both are thin in-memory implementations; keep API wiring on the **application** copy to satisfy layer guardrails.
+
+## Enforcement map (concrete tests)
+
+| Rule | Primary test module |
+|------|---------------------|
+| Domain / application / infra layer directions | **`test_layer_boundaries.py`** |
+| No FastAPI/LC/FAISS in `src/application` | **`test_application_orchestration_purity.py`** |
+| Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
+| `apps/api` no `src.infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
+| Adapter → application allowlist | **`test_adapter_application_imports.py`** |
+| No RAG monolith façade | **`test_no_rag_service_facade.py`** |
+| RAG post-recall / router rag imports | **`test_orchestration_boundaries.py`** |
+
+## Lint and format
+
+**Ruff** / **Black** / **mypy** settings: **`pyproject.toml`**. Ruff complements AST tests by catching issues such as **undefined names** in modules that still type-check at runtime under lazy evaluation.

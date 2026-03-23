@@ -14,7 +14,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:**
 
-- **Use cases** under `src/application/use_cases/` — one primary workflow per class (e.g. `AskQuestionUseCase`, `BuildRagPipelineUseCase`, `RunManualEvaluationUseCase`).
+- **Use cases** under `src/application/use_cases/` — one primary workflow per class (e.g. `AskQuestionUseCase`, `BuildRagPipelineUseCase`, `RunManualEvaluationUseCase`). Shared RAG orchestration **DTOs** live under **`src/application/rag/`** (imported by chat/eval paths; guarded by **`test_orchestration_package_import_boundaries`**).
 - **RAG orchestration helpers** under `src/application/use_cases/chat/orchestration/` — e.g. **`summary_recall_workflow.py`** (**`ApplicationSummaryRecallStage`** implements **`SummaryRecallStagePort`**), **`summary_recall_ports.py`** (technical ports for rewrite / vector / lexical recall), **`recall_then_assemble_pipeline`**, **`summary_recall_from_request`**, **`assemble_pipeline_from_recall`**, **`post_recall_pipeline_steps`**, **`ApplicationPipelineAssembly`**, **`PipelineQueryLogEmitter`**, port definitions (**`ports.py`**, **`PostRecallStagePorts`**, **`PipelineBuildQueryLogEmitterPort`**).
 - **Evaluation RAG helper** — `execute_rag_inspect_then_answer_for_evaluation` in **`use_cases/evaluation/rag_pipeline_orchestration.py`** (inspect + answer + latency for eval; no production query log).
 - **`GoldQaBenchmarkAdapter`** — **`use_cases/evaluation/gold_qa_benchmark_adapter.py`**; implements **`GoldQaBenchmarkPort`** by delegating to **`BenchmarkExecutionUseCase`** (wired from composition, not from **`EvaluationService`** internals).
@@ -117,3 +117,15 @@ flowchart TB
 ```
 
 **Edges omitted for brevity:** **`src/auth`** and **`src/core`** are shared helpers; **`COMP`** also imports application types and domain ports when constructing the graph.
+
+## Tooling (lint, format, typing)
+
+Configuration lives in **`pyproject.toml`** at the repo root (dependencies for runtime remain in **`requirements.txt`**).
+
+| Tool | Role |
+|------|------|
+| **Ruff** | Lint + import sort (`I`) + safe pyupgrade (`UP`); catches undefined names (`F821`) and unused imports (`F401`). Example: `ruff check src apps` / `ruff format src apps`. |
+| **Black** | Formatter; line length **100** (match Ruff). Example: `black src apps pages tests`. |
+| **mypy** | Incremental static typing; **`ignore_missing_imports`** by default for third-party gaps. Prefer tightening **ports, DTOs, and use-case signatures** over repo-wide strict mode in one step. Example: `mypy --config-file=pyproject.toml -p src.application.use_cases.chat.ask_question`. |
+
+**CI suggestion:** run **`pytest tests/architecture/`** and **`ruff check src apps --select F,E9`** (or the full Ruff rule set from `pyproject.toml`) on PRs touching `src/`, `apps/`, `pages/`, or `src/ui/`.

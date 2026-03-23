@@ -41,10 +41,25 @@ This report is the **canonical end-state** summary after the migration hardening
 | **`apps/api`** → no `src.infrastructure.adapters` / services legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
 | Gateway does not import infrastructure | **Met** — layer + gateway guardrails |
 | Chat RAG uses **ports** for inspect / answer generation where required | **Met** — `test_application_chat_rag_boundary_ports.py` |
+| Chat / eval / RAG-DTO subtrees avoid infra + delivery stacks | **Met** — `test_orchestration_package_import_boundaries.py` |
+| Repo lint/format/typing config present for contributors | **Met** — `pyproject.toml` (Ruff, Black, mypy) + `ruff` in `requirements.txt` |
 
 ---
 
-## 3. Recent documentation / architecture passes (chronological, high level)
+## 3. What was already strong (baseline)
+
+Before the late hardening passes, the codebase already had:
+
+- A **clear layer layout**: `domain` ports, `application` use cases and RAG orchestration modules, `infrastructure` adapters, `composition` wiring, FastAPI in `apps/api`, and a **gateway** for Streamlit.
+- **RAG orchestration** owned in application (`summary_recall_workflow`, `recall_then_assemble_pipeline`, post-recall steps) instead of a monolithic infrastructure façade.
+- **Architecture tests** (`tests/architecture/`) catching the worst regressions (API importing infra, application importing LangChain, removed legacy packages).
+- **Evaluation** wired through **`GoldQaBenchmarkAdapter`** and **`BenchmarkExecutionUseCase`** with an explicit **`RagInspectAnswerRun`** contract.
+
+The remaining work was **contract tightness**, **transport clarity**, and **long-term guardrails** — not a rewrite.
+
+---
+
+## 4. Recent documentation / architecture passes (chronological, high level)
 
 - **Ports and adapters** — **`RetrievalPort`**, **`AnswerGenerationPort`** (and aliases as documented in domain ports); inspect and generate-from-pipeline use cases depend on protocols, not concrete infra.
 - **Evaluation wiring** — **`EvaluationWiringParts`**, **`default_evaluation_wiring_parts()`**, **`build_evaluation_service(parts)`**; **`RagInspectAnswerRun`**-only **`pipeline_runner`** contract in **`BenchmarkExecutionUseCase`**.
@@ -55,7 +70,7 @@ This report is the **canonical end-state** summary after the migration hardening
 
 ---
 
-## 4. Removed components (cumulative)
+## 5. Removed components (cumulative)
 
 | Removed | Notes |
 |---------|--------|
@@ -73,7 +88,7 @@ This report is the **canonical end-state** summary after the migration hardening
 
 ---
 
-## 5. Acceptable residual detail (intentional)
+## 6. Acceptable residual detail (intentional)
 
 | Item | Rationale |
 |------|-----------|
@@ -86,7 +101,7 @@ This report is the **canonical end-state** summary after the migration hardening
 
 ---
 
-## 6. Remaining risks (non-architectural)
+## 7. Remaining risks (non-architectural)
 
 These do **not** invalidate the migration but are worth tracking:
 
@@ -97,17 +112,23 @@ These do **not** invalidate the migration but are worth tracking:
 
 ---
 
-## 7. Is the migration “complete”?
+## 8. Is the migration “complete”?
 
 **For Clean Architecture boundaries and RAG orchestration ownership: yes.** Layers, guardrail tests, and docs describe the same dependency rules and flows.
 
-**Auth / users transport (closure):** The raw **`X-User-Id` → `str`** dependency has been replaced by **`get_authenticated_principal` → `AuthenticatedPrincipal`**. Login and registration are **`LoginUserUseCase`** and **`RegisterUserUseCase`** with explicit DTOs; **`/users/*`** routes delegate to user/account use cases only. Password hashing and avatar storage use **`PasswordHasherPort`** and **`AvatarStoragePort`** with bcrypt and **`FileAvatarStorage`** under **`src/infrastructure/adapters/filesystem/`**. Streamlit **`try_login` / `try_register`** delegate to the same use cases via **`auth_credentials`** so rules are not duplicated in routers.
+**Auth / users (corrected):** The API boundary uses **`get_authenticated_principal` → `AuthenticatedPrincipal`** instead of passing raw header strings through handlers. Login and registration are **`LoginUserUseCase`** / **`RegisterUserUseCase`**; **`/users/*`** uses account use cases. Password and avatar I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**. Streamlit reuses the same use cases via **`auth_credentials`**.
 
-**Not claimed:** production security hardening, performance tuning, or elimination of every duplicate convenience API in evaluation — see **§6**.
+**RAG orchestration (corrected):** Typed overrides (**`RetrievalSettingsOverrideSpec`**), recall/assembly DTOs, explicit eval input (**`RagEvaluationPipelineInput`**), and **`RagInspectAnswerRun`** with **`PipelineLatency`**. Ask vs inspect vs preview vs evaluation modes are documented in **`docs/rag_orchestration.md`**.
+
+**Ingestion / settings / evaluation edges (corrected):** **`BufferedDocumentUpload`**, chunked multipart reads + **`RAG_MAX_UPLOAD_BYTES`**, **`ProjectDocumentDetailRow`**, **`GenerateQaDatasetResult`** + wire payloads, benchmark export bundle typing.
+
+**Structural guardrails (final pass):** **`test_orchestration_package_import_boundaries.py`**; **`pyproject.toml`** for **Ruff**, **Black**, and incremental **mypy**; **Ruff** surfaced missing **`RetrievalSettingsOverrideSpec`** imports in **`build_rag_pipeline.py`** / **`summary_recall_workflow.py`** (fixed).
+
+**Not claimed:** production security hardening, performance tuning, full **mypy --strict** across the repo, or deduplicating every evaluation convenience path — see **§7** and **§6**.
 
 ---
 
-## 8. Post-migration improvements (optional backlog)
+## 9. Post-migration improvements (optional backlog)
 
 - **Security:** Implement **`TrustedTransportIdentityPort`** with JWT/OAuth and stop treating **`X-User-Id`** as trusted on public networks.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
@@ -134,10 +155,11 @@ pytest tests/architecture/ -q
 | Chat RAG port names / boundaries | **`test_application_chat_rag_boundary_ports.py`** |
 | UI surface | **`test_streamlit_import_guardrails.py`** |
 | Smoke `build_backend` | **`test_migration_regression_flows.py`** |
+| Orchestration subtrees (chat/eval/rag) | **`test_orchestration_package_import_boundaries.py`** |
 
 ---
 
-## 10. RAG orchestration typed contracts (orchestration hardening)
+## 11. RAG orchestration typed contracts (orchestration hardening)
 
 This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchestration boundaries and formalized DTOs for recall fusion and evaluation input.
 
@@ -186,7 +208,7 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 ---
 
-## 12. Repository tree (main folders)
+## 13. Repository tree (main folders)
 
 ```text
 apps/api/
@@ -197,6 +219,7 @@ src/
   domain/               # entities, ports, payloads, retrieval policies, …
   application/
     use_cases/          # chat (orchestration/), evaluation, ingestion, projects, retrieval, settings
+    rag/                # orchestration DTOs (recall bundle, eval pipeline input, …)
     chat/               # policies, multimodal_prompt_hints, …
     frontend_support/
     http/
@@ -220,6 +243,15 @@ tests/
 
 ---
 
-## Final verdict
+## Final verdict (architecture maturity)
 
-The Clean Architecture migration is **complete** for enforced boundaries and documented runtime layout. Treat **§6** as the living risk register for product and operations follow-up.
+The repository is an **excellent long-term base** for feature work **within** the chosen Clean Architecture style:
+
+- **Layers and dependency direction** are **enforced by tests**, not only described in docs.
+- **RAG orchestration** is **application-owned**, typed at the main boundaries, and **split by execution mode** (ask / inspect / preview / evaluation) with **logging only through ports** on product paths.
+- **Delivery** (FastAPI, gateway, UI) stays **thin** relative to use cases; **composition** is the only place that should know about concrete adapters.
+- **Tooling** (**`pyproject.toml`**) gives contributors a **shared Ruff/Black/mypy baseline**; **mypy strict** for the entire tree remains **deferred** (incremental adoption is intentional).
+
+**Intentionally deferred:** verified identity on public networks (**JWT/OAuth**), **mypy strict** everywhere, optional consolidation of duplicate evaluation helpers, and typed rows for every SQLite-backed list endpoint.
+
+Treat **§7** (risks) and **§6** (acceptable residual) as the living registers for product and operations follow-up.

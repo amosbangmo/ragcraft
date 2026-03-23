@@ -13,6 +13,8 @@
 
 Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes it through `BackendApplicationContainer.chat_rag_use_cases` and the `chat_*_use_case` properties.
 
+**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure `use_cases/chat/orchestration`, `use_cases/evaluation`, and **`src/application/rag/`** do not import infrastructure adapters or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
+
 ### Typed orchestration contracts (boundaries)
 
 - **Retrieval overrides:** Per-request partial settings use **`RetrievalSettingsOverrideSpec`** (`src/domain/retrieval_settings_override_spec.py`) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases — not raw ``dict[str, Any]``. FastAPI maps the JSON ``retrieval_settings`` object to a spec in **`apps/api/routers/chat.py`**; **`InProcessBackendClient`** does the same before calling use cases.

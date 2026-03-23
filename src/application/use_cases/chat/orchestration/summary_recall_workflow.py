@@ -27,6 +27,7 @@ from src.domain.retrieval_filters import (
     vector_search_fetch_k,
 )
 from src.domain.retrieval_settings import RetrievalSettings
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from src.domain.summary_recall_document import SummaryRecallDocument
 
 logger = logging.getLogger(__name__)

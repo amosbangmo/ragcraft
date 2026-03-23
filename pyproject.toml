@@ -1,0 +1,50 @@
+# RAGCraft — project metadata and tool configuration (dependencies remain in requirements.txt).
+# Run from repo root with PYTHONPATH=. (or install in editable mode if you add a build backend later).
+
+[project]
+name = "ragcraft"
+version = "0.1.0"
+description = "RAG workspace with Clean Architecture layout"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "apps", "pages", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E4",   # import-related syntax
+  "E7",
+  "E9",   # runtime syntax errors
+  "F",    # pyflakes (undefined names, unused imports, …)
+  "I",    # isort
+  "UP",   # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "apps"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+# Incremental typing: full strict mode is not enforced repo-wide yet (legacy dict shapes in places).
+# Use:  python -m mypy --config-file=pyproject.toml -p src.domain
+# Prefer tightening ports/DTOs/use-case signatures over blanket ignores.
+[tool.mypy]
+python_version = "3.11"
+explicit_package_bases = true
+ignore_missing_imports = true
+warn_unused_configs = true
+show_error_codes = true
+namespace_packages = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
