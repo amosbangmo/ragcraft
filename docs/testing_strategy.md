@@ -1,85 +1,102 @@
 # Testing strategy
 
-The suite is organized as a **pyramid**: fast **architecture** import and layout guards at the base, **unit** use-case and domain tests, **HTTP/API** tests with dependency overrides, then heavier **integration** / optional-dependency flows.
+Tests are layered: **fast architecture and layout guards** at the base, then **unit** tests (domain, use cases, infrastructure), **HTTP/API** tests, **composition** smoke tests, and optional **integration** flows.
 
-## Commands (repo root)
+---
 
-Use these for **local** work and as the **reference for CI** (see **`.github/workflows/ci.yml`**).
+## Commands (repository root)
+
+These match **CI** (see **`.github/workflows/ci.yml`**) and the **`scripts/`** entrypoints.
 
 | What | Bash | PowerShell |
 |------|------|------------|
-| **Architecture validation only** (blocking layout + imports + required tree) | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
-| **Lint (Ruff) + architecture tests** | `./scripts/validate.sh` | `.\scripts\validate.ps1` |
-| **Full pytest workflow** (architecture first, then rest of `api/tests` + `frontend/tests`) | `./scripts/run_tests.sh` | `.\scripts\run_tests.ps1` |
-| **Lint only** | `./scripts/lint.sh` | `.\scripts\lint.ps1` |
+| Architecture tests only | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
+| Lint + architecture | `./scripts/validate.sh` | `.\scripts\validate.ps1` |
+| Full workflow (architecture, then rest) | `./scripts/run_tests.sh` | `.\scripts\run_tests.ps1` |
+| Lint only | `./scripts/lint.sh` | `.\scripts\lint.ps1` |
 
-**Environment:** scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (Linux `:` / Windows `;` inside the respective script). **`api/src` is listed first** so application packages are never shadowed by anything under **`api/tests`**.
+**`PYTHONPATH`:** **`api/src:frontend/src:api/tests`** (order matters: **`api/src`** first so test packages do not shadow application code).
 
-**Strict subset:** architecture tests are exactly everything under **`api/tests/architecture/`** — no need for a pytest marker for day-to-day use. Optional marker **`architecture`** exists in root **`pyproject.toml`** for future filtering; the **canonical gate** is the path + **`validate_architecture`**.
+**Architecture package:** everything under **`api/tests/architecture/`** — the primary structural gate. Optional pytest marker **`architecture`** exists in root **`pyproject.toml`**; day-to-day, use the path or **`validate_architecture`**.
 
-**From `api/` only:** **`api/pyproject.toml`** limits pytest to **`tests/architecture`** so `cd api && pytest` matches **`validate_architecture.sh`** without scanning the whole repo.
+**From `api/`:** **`api/pyproject.toml`** limits pytest to **`tests/architecture`** so **`cd api && pytest`** matches the architecture script without scanning the whole repo.
 
-**Full pytest in one shot (no script):**
+**One-shot pytest (may duplicate architecture if run alone):**
 
 ```bash
 export PYTHONPATH=api/src:frontend/src:api/tests
 python -m pytest api/tests frontend/tests -q
 ```
 
-(Runs architecture tests twice if you already ran **`validate_architecture.sh`**; prefer **`run_tests.sh`** for a single ordered workflow.)
+Prefer **`run_tests.sh`** for the ordered workflow (architecture once, then **`api/tests`** minus architecture + **`frontend/tests`**).
 
-**Typing (optional):** incremental **mypy** is not wired into **`lint.sh`**. Example:
+**Typing (optional):** not in **`lint.sh`**. Example:
 
 ```bash
+set PYTHONPATH=api/src
 mypy --config-file=pyproject.toml -p domain
 ```
 
-(Adjust **`-p`** to the package under **`api/src`**; see **`pyproject.toml`** **`[tool.mypy]`**.)
-
-**CI lock-in:** **`.github/workflows/ci.yml`** runs **`bash scripts/lint.sh`**, **`bash scripts/validate_architecture.sh`**, then **`python -m pytest api/tests --ignore=api/tests/architecture frontend/tests`** (same split as **`run_tests.sh`** step 2), plus existing **unittest** jobs and boot check.
-
-Root **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`testpaths`** and **`pythonpath`** when you invoke pytest from the repo root without the scripts.
+---
 
 ## Architecture tests (`api/tests/architecture/`)
 
-| Area | Examples |
-|------|-----------|
-| **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, **Python only under `api/src` + `api/main.py` (+ `api/tests`)** and **`frontend/src` + `frontend/app.py` (+ `frontend/tests`)**, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/` |
-| **Required skeleton** | `test_required_tree.py` — explicit **must-exist** directories and anchor files (backend composition + HTTP stack, frontend entry/pages/services/state, docs/scripts, test subtrees `appli` / `infra` / `api` / `e2e`) without enumerating every future file |
-| **Layer imports** | `test_layer_import_rules.py` — domain, application, HTTP routers (AST top-level imports) |
-| **Infra + composition** | `test_layer_boundaries.py` — infrastructure vs application/Streamlit; composition vs Streamlit |
-| **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit under `interfaces/http`; no frontend top-level packages or monolith `src` / `apps` import roots |
-| **Frontend thin UI** | `test_frontend_structure.py` — pages/components vs `services` gateway import policy |
-| **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `application/orchestration/{rag,evaluation}`, `use_cases/evaluation`, and `application/rag` must not import `infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
-| **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Starlette/Streamlit/FAISS/LangChain in `application` |
-| **Legacy packages / stray trees** | `test_deprecated_backend_and_gateway_guardrails.py` — no monolith `src.*` shims, `infrastructure.services`, stray dirs under `api/src` |
-| **FastAPI migration** | `test_fastapi_migration_guardrails.py` — HTTP vs infra-graph imports; Streamlit client alignment |
-| **Composition** | `test_composition_import_boundaries.py` — no `services` imports in `composition/*.py` |
-| **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `infrastructure.rag`; post-recall adapter rules |
-| **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class |
-| **Adapters → no application imports** | `test_adapter_application_imports.py` — infrastructure adapter modules must not import `application` |
-| **Chat RAG port wiring** | `test_application_chat_rag_boundary_ports.py` |
-| **Regression flows** | `test_migration_regression_flows.py` — smoke imports for `build_backend` |
-| **Manual eval orchestration** | `test_manual_evaluation_single_orchestrator.py` |
+| Area | Role |
+|------|------|
+| **`test_repository_structure.py`** | Required roots, forbidden duplicate roots, **Python only** under **`api/src`** / **`frontend/src`** (plus documented entrypoints and test trees), router/schema placement |
+| **`test_required_tree.py`** | Positive checks: anchor directories and files must exist |
+| **`test_layer_import_rules.py`** | Domain, application, HTTP router import directions |
+| **`test_layer_boundaries.py`** | Infrastructure vs application/Streamlit; composition vs Streamlit |
+| **`test_fastapi_delivery_boundaries.py`** | **`interfaces/http`** — no Streamlit; no frontend package names or forbidden monolith import roots |
+| **`test_fastapi_migration_guardrails.py`** | HTTP vs infra graph imports; **`BackendClient`** alignment checks |
+| **`test_frontend_structure.py`** | Pages/components stay thin |
+| **`test_orchestration_package_import_boundaries.py`** | Orchestration + **`application/rag`** avoid **`infrastructure`** and frameworks |
+| **`test_orchestration_boundaries.py`** | Transport layers must not import **`infrastructure.rag`**; composition **`execute`** usage; adapter size ratchets |
+| **`test_application_orchestration_purity.py`** | Application avoids FastAPI, Streamlit, FAISS, LangChain, etc.; use cases avoid **`services`** |
+| **`test_deprecated_backend_and_gateway_guardrails.py`** | Forbidden directories under **`api/src`**, forbidden monolith **`import`** patterns, **`frontend/src/services`** infra limits |
+| **`test_composition_import_boundaries.py`** | Composition must not import frontend **`services`** |
+| **`test_adapter_application_imports.py`** | **`api/src/infrastructure`** must not import **`application`** (narrow exception documented) |
+| **`test_no_rag_service_facade.py`** | No **`RAGService`** / **`rag_service.py`** façade |
+| **`test_manual_evaluation_single_orchestrator.py`** | Single manual-eval orchestration path |
+| **`test_application_chat_rag_boundary_ports.py`** | Chat RAG port wiring |
+| **`test_migration_regression_flows.py`** | Smoke **`build_backend`** |
+| Others | See **`api/tests/architecture/README.md`** |
 
-Shared helper: **`api/tests/architecture/import_scanner.py`**. Index: **`api/tests/architecture/README.md`** (if present).
+Shared helper: **`import_scanner.py`**.
 
-## Integration and API tests
+---
 
-- **`api/tests/api/`** — FastAPI contracts, dependency overrides, OpenAPI (import as ``api`` only with ``api/tests`` on ``PYTHONPATH``, e.g. ``scripts/run_tests.sh``).
-- **`api/tests/appli/_unclassified_tests/integration/`** — heavier flows (optional deps).
-- **`api/tests/composition/`** — `build_backend_composition` / container wiring (may skip without unstructured/langchain).
+## Other backend tests
 
-## Service / use case unit tests
+| Location | Role |
+|----------|------|
+| **`api/tests/api/`** | FastAPI routes, OpenAPI, **`dependencies`** overrides — import as package **`api`** with **`api/tests`** on **`PYTHONPATH`** |
+| **`api/tests/appli/`** | Use-case behavior, mocks |
+| **`api/tests/domain/`** | Domain policy |
+| **`api/tests/infra/`** | Infrastructure services and adapters |
+| **`api/tests/composition/`** | Wiring smoke (may skip without optional deps) |
+| **`api/tests/e2e/`** | Heavier or environment-sensitive checks |
 
-- **`api/tests/appli/`** — use case behavior with mocks.
-- **`api/tests/domain/`** — pure domain policy.
-- **`api/tests/infra/`** — adapter behavior.
-- **`frontend/tests/`** — Streamlit/UI and **`frontend/src/services`** client tests (e.g. **`frontend/tests/streamlit/`**).
+---
 
-## What architecture tests do *not* prove
+## Frontend tests
 
-- Full absence of logical coupling.
-- Runtime security of **JWT bearer** verification and secret configuration in real deployments.
+| Location | Role |
+|----------|------|
+| **`frontend/tests/streamlit/`** | **`frontend/src/services`**, HTTP vs in-process client, Streamlit wiring |
+| **`frontend/tests/ui/`** | Streamlit/UI components where present |
 
-**Lint (paths match `lint.sh`):** `ruff check api/src frontend/src api/tests/architecture` (see **`pyproject.toml`**).
+---
+
+## What architecture tests do not prove
+
+- Absence of all logical coupling  
+- Production security of JWT verification or secret handling  
+
+---
+
+## Lint paths
+
+Match **`scripts/lint.sh`:**
+
+`ruff check api/src frontend/src api/tests/architecture`

@@ -120,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** `ARCHITECTURE_TARGET.md` (short) · **`docs/README.md`** (index) · **`docs/migration_report_final.md`** (closure report) · **`api/tests/architecture/README.md`** (import guardrails).
+**Architecture reference:** **`docs/README.md`** (index) · **`docs/architecture.md`** (layers) · **`docs/dependency_rules.md`** (imports + tests) · **`docs/migration_report_final.md`** (closure) · **`ARCHITECTURE_TARGET.md`** (short target summary) · **`api/tests/architecture/README.md`** (test matrix).
 
 ### Migration status (short)
 
@@ -215,25 +215,26 @@ Assets are rehydrated from SQLite during retrieval to build the final prompt.
 ragcraft/
 │
 ├── api/
-│   ├── main.py                  # ASGI entry (uvicorn)
+│   ├── main.py                  # ASGI entry (uvicorn: api.main:app)
 │   └── src/                     # PYTHONPATH: domain, application, infrastructure, composition, interfaces
-│       ├── application/
-│       ├── auth/
+│       ├── application/         # use_cases, orchestration/, rag/, dto/, frontend_support/, …
 │       ├── composition/
-│       ├── core/
 │       ├── domain/
-│       ├── infrastructure/
-│       └── interfaces/http/     # FastAPI routers, schemas, dependencies
+│       ├── infrastructure/      # rag/, evaluation/, persistence/, auth/, …
+│       └── interfaces/http/    # FastAPI app, routers/, schemas/, dependencies
 ├── frontend/
 │   ├── app.py                   # Streamlit entry (run from frontend/)
-│   └── src/                     # PYTHONPATH: pages, components, services
+│   └── src/
 │       ├── pages/
 │       ├── components/
-│       └── services/            # BackendClient, HTTP / in-process clients
-├── api/tests/                   # pytest (architecture/, api/, appli/, infra/, …)
-├── frontend/tests/
-├── docs/
-├── scripts/                     # validate_architecture, run_tests, lint, …
+│       ├── services/            # BackendClient, HTTP / in-process clients, Streamlit factory
+│       ├── state/
+│       ├── viewmodels/
+│       └── utils/
+├── api/tests/                   # pytest: architecture/, api/, appli/, infra/, e2e/, …
+├── frontend/tests/              # streamlit/, ui/, …
+├── docs/                        # architecture.md, api.md, dependency_rules.md, …
+├── scripts/                     # validate_architecture, run_tests, lint, validate
 ├── data/
 ├── requirements.txt
 ├── ARCHITECTURE_TARGET.md

@@ -1,44 +1,52 @@
 # RAGCraft documentation
 
-**Layout:** backend code lives under **`api/src/`** (plus **`api/main.py`**); Streamlit UI under **`frontend/src/`** (plus **`frontend/app.py`**); tests under **`api/tests/`** and **`frontend/tests/`** (e.g. **`frontend/tests/streamlit/`** for services wiring). **`api/tests/architecture/test_repository_structure.py`** fails if application Python appears outside those trees. See **`docs/migration_report_final.md`** for the full layout and guardrails.
+Index of **code-aligned** docs for the current repository layout.
 
-Concise, **code-aligned** documentation for the repository layout after the Clean Architecture and RAG orchestration migration.
+## Layout (today)
 
-| Document | Purpose |
-|----------|---------|
-| [architecture.md](architecture.md) | Layer responsibilities: domain, application, infrastructure, composition, API, gateway; RAG adapter import rules; **mermaid** dependency diagram |
-| [api.md](api.md) | HTTP authentication (**Bearer JWT**), env vars, error envelope, OpenAPI pointers |
-| [rag_orchestration.md](rag_orchestration.md) | RAG flow: entrypoints, use cases, orchestration modules, ports, adapters, logging, evaluation path |
-| [dependency_rules.md](dependency_rules.md) | Allowed import directions, RAG-specific rules, anti-patterns |
-| [testing_strategy.md](testing_strategy.md) | How to run architecture validation, full tests, lint; architecture test index |
-| [migration_report_final.md](migration_report_final.md) | **End-state** migration report: what was strong, what each hardening pass fixed, **structural guardrails**, **remaining risks**, final maturity verdict |
-**Tooling:** root **`pyproject.toml`** configures **Ruff**, **Black**, **mypy**, and **pytest** defaults. Runtime packages are listed in **`requirements.txt`**.
+- **Backend:** **`api/src/`** (packages `domain`, `application`, `infrastructure`, `composition`, `interfaces`). ASGI entry **`api/main.py`**.
+- **Frontend:** **`frontend/src/`** (Streamlit UI packages + **`services`** for the backend client). Entry **`frontend/app.py`**.
+- **Tests:** **`api/tests/`**, **`frontend/tests/`**.
+- **Tooling:** root **`pyproject.toml`**, **`requirements.txt`**, **`scripts/`** (validate, lint, run_tests).
 
-## Architecture validation (first-class commands)
+Structural rules are **enforced in CI** by **`api/tests/architecture/`** (see **`docs/testing_strategy.md`**).
 
-Structural and import drift is caught by **`api/tests/architecture/`**. Use the repo scripts from the **repository root** (same commands **CI** uses for lint + architecture + non-architecture pytest):
+---
 
-| Command | What it runs |
-|---------|----------------|
-| **`./scripts/validate_architecture.sh`** | **Pytest** — `api/tests/architecture` only (blocking). |
-| **`./scripts/validate.sh`** | **`./scripts/lint.sh`** then **`./scripts/validate_architecture.sh`** (quick CI-style check). |
-| **`./scripts/run_tests.sh`** | Architecture tests, then **`pytest api/tests`** with **`--ignore=api/tests/architecture`** plus **`frontend/tests`** (no duplicate architecture run). |
-| **`./scripts/lint.sh`** | **Ruff** on **`api/src`**, **`frontend/src`**, **`api/tests/architecture`**. |
+## Documents
 
-**Windows (PowerShell):** `.\scripts\validate_architecture.ps1`, `.\scripts\validate.ps1`, `.\scripts\run_tests.ps1`, `.\scripts\lint.ps1`.
+| Document | Contents |
+|----------|----------|
+| **[architecture.md](architecture.md)** | Layers, dependency direction, orchestration ownership, FastAPI and Streamlit integration, diagram |
+| **[dependency_rules.md](dependency_rules.md)** | Import rules, forbidden paths, mapping to architecture tests |
+| **[rag_orchestration.md](rag_orchestration.md)** | Ask, inspect, preview recall, evaluation flows; logging; typed DTOs |
+| **[api.md](api.md)** | How to run Uvicorn, JWT auth, uploads, OpenAPI, route ownership |
+| **[testing_strategy.md](testing_strategy.md)** | Scripts, pytest layout, architecture test index |
+| **[migration_report_final.md](migration_report_final.md)** | Closure report: what is fixed, what is enforced, what is out of scope |
 
-**Manual equivalent** (any shell, repo root):
+---
+
+## First commands (repo root)
+
+**Architecture gate:**
 
 ```bash
 export PYTHONPATH=api/src:frontend/src:api/tests
 python -m pytest api/tests/architecture -q
 ```
 
-**Optional:** from **`api/`**, `pytest` runs only **`tests/architecture`** per **`api/pyproject.toml`**.
+Or: **`./scripts/validate_architecture.sh`** / **`.\scripts\validate_architecture.ps1`**.
 
-## Local development (Streamlit + FastAPI)
+**Lint + architecture:** **`./scripts/validate.sh`**
 
-- Run API: `python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000` with **`PYTHONPATH`** including the **repository root** (so `api` is importable) and **`RAGCRAFT_JWT_SECRET`** set (see **`docs/api.md`**).
-- Point Streamlit at the API: set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (e.g. `http://127.0.0.1:8000`).
-- In-process Streamlit (no uvicorn): `RAGCRAFT_BACKEND_CLIENT=in_process` uses `build_streamlit_backend_application_container()` (same use cases, `StreamlitChatTranscript` for session state).
-- Optional: **`RAG_MAX_UPLOAD_BYTES`** / **`RAG_MAX_AVATAR_UPLOAD_BYTES`** — multipart caps (see `docs/migration_report_final.md` §12 and `docs/api.md`).
+**Full tests:** **`./scripts/run_tests.sh`**
+
+---
+
+## Local development
+
+- **API:** set **`RAGCRAFT_JWT_SECRET`**, repo root on **`PYTHONPATH`**, then **`python -m uvicorn api.main:app --reload`** (see **`docs/api.md`**).
+- **Streamlit:** from **`frontend/`**, **`streamlit run app.py`** with **`PYTHONPATH`** including repo root, **`api/src`**, and **`frontend/src`** (see root **`README.md`**).
+- **Streamlit → API:** **`RAGCRAFT_BACKEND_CLIENT=http`** and **`RAGCRAFT_API_BASE_URL`**. **In-process:** **`RAGCRAFT_BACKEND_CLIENT=in_process`** (no Uvicorn; same use cases).
+
+Optional upload caps: **`RAG_MAX_UPLOAD_BYTES`**, **`RAG_MAX_AVATAR_UPLOAD_BYTES`** (**`docs/api.md`**, **`migration_report_final.md`**).

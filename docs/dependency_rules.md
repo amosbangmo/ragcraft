@@ -1,76 +1,98 @@
 # Dependency rules
 
-Import directions enforced in code and by **`api/tests/architecture/`** (AST scans).
+This document is the **authoritative description** of allowed dependencies and physical structure, aligned with **`api/tests/architecture/`**. If code and this file disagree, **fix the code** or **update this file** together with the tests.
 
-**Validate from repo root (exact commands):**
+---
+
+## Validate locally (repo root)
 
 | Intent | Command |
 |--------|---------|
 | Architecture tests only | **`./scripts/validate_architecture.sh`** or **`.\scripts\validate_architecture.ps1`** |
-| Ruff + architecture (CI-style) | **`./scripts/validate.sh`** or **`.\scripts\validate.ps1`** |
+| Lint + architecture | **`./scripts/validate.sh`** or **`.\scripts\validate.ps1`** |
 | Full pytest (architecture first, then rest) | **`./scripts/run_tests.sh`** or **`.\scripts\run_tests.ps1`** |
+| Lint only | **`./scripts/lint.sh`** or **`.\scripts\lint.ps1`** |
 
-Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`**. See **`docs/testing_strategy.md`** and **`docs/README.md`**.
+Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Windows in the `.ps1` scripts).
 
-**Required skeleton:** **`test_required_tree.py`** asserts that canonical directories (e.g. `api/src/domain/`, `frontend/src/pages/`, `api/tests/appli/`) and **anchor files** (composition wiring modules, core routers/schemas, `frontend/app.py`, key docs/scripts) still exist. It does not list every future module—only the architectural spine—so legitimate feature growth stays unblocked.
+---
 
-## Allowed directions
+## Physical structure (enforced)
 
-| From | May import |
-|------|------------|
-| **Domain** | `domain`, stdlib, third-party **without** transport or concrete infrastructure. **Narrow exception:** imports under **`infrastructure.config`** only (paths/constants), enforced explicitly in **`test_layer_import_rules.py`**. |
-| **Application** | `domain`, **`application` DTOs/ports**; **not** FastAPI/Starlette/Streamlit/`interfaces`. **Narrow exception:** **`infrastructure.config`** only for shared config/exceptions (same test module). |
-| **Infrastructure (non-adapter)** | Technical deps; **not** `application` (except Streamlit shims whitelisted in **`test_layer_boundaries`**) |
-| **Infrastructure adapters** | **Domain** always; **not** **`application`** (see **`test_adapter_application_imports.py`**) |
-| **Composition** | Domain ports, infrastructure, application use cases for typing/wiring; **not** Streamlit |
-| **`interfaces/http`** | FastAPI, `composition`, `application`, `domain` types as needed; **not** `streamlit`. Routers must not import **`infrastructure.*`** at all (even config); other HTTP modules may use **`infrastructure.config`** for errors/settings. |
-| **`frontend/src/services`** | May import `domain`, `application`, `composition`, and **`infrastructure.config`** (and related auth helpers) for the in-process/HTTP gateway; see **`test_frontend_structure.py`** for **pages/components** (thinner rules). |
-| **`frontend/src/pages`, `components`** | **Not** `domain`, `application`, `composition`, or `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** (session guards). |
+| Rule | Primary test |
+|------|----------------|
+| Required top-level areas: **`api/`**, **`frontend/`**, **`docs/`**, **`scripts/`**, **`api/src/`**, **`frontend/src/`** | **`test_repository_structure.py`** |
+| **Forbidden** at repo root: **`src/`**, **`apps/`**, **`pages/`**, **`streamlit_app.py`** | **`test_repository_structure.py`** |
+| Backend **application** `.py` only under **`api/src/`** (plus **`api/main.py`**, **`api/__init__.py`**, **`api/tests/**`) | **`test_repository_structure.py`** |
+| Frontend **application** `.py` only under **`frontend/src/`** (plus **`frontend/app.py`**, **`frontend/tests/**`) | **`test_repository_structure.py`** |
+| **Forbidden** under **`api/src/`**: top-level **`pages/`**, **`ui/`**; stray **`adapters/`**, **`backend/`**, **`services/`** packages; **`infrastructure/services/`** | **`test_repository_structure.py`**, **`test_deprecated_backend_and_gateway_guardrails.py`** |
+| **Forbidden** under **`frontend/src/`**: vendored **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`** trees | **`test_repository_structure.py`** |
+| FastAPI **`APIRouter`** only under **`api/src/interfaces/http/routers/`** | **`test_repository_structure.py`** |
+| Pydantic **`BaseModel`** HTTP types under **`interfaces/http/schemas/`** (not loose router files) | **`test_repository_structure.py`** |
+| Required skeleton files and directories | **`test_required_tree.py`** |
 
-### Infrastructure (`api/src/infrastructure/`)
+---
 
-- Must **not** import **`application`** (enforced by **`api/tests/architecture/test_adapter_application_imports.py`**, with the documented **`auth_credentials`** exception). Retrieval tuning is **`RetrievalSettingsTuner`** in **`api/src/application/services/retrieval_settings_tuner.py`**, wired from **`api/src/composition/backend_composition.py`**.
-- RAG adapters must **not** import chat **use case classes** from `application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
+## Layer imports (enforced)
 
-### Shared boundary types (query log, evaluation rows)
+| From | May import | Must not import (unless noted) |
+|------|------------|--------------------------------|
+| **`api/src/domain/`** | `domain`, stdlib, vetted third-party | `application`, `infrastructure` (except **`infrastructure.config`** per **`test_layer_import_rules.py`**), `composition`, `interfaces`, FastAPI, Starlette, Streamlit |
+| **`api/src/application/`** | `domain`, `application` | FastAPI, Starlette, Streamlit, `interfaces`, concrete **`infrastructure`** (except **`infrastructure.config`** where allowed). **Use cases** must not import **`services`** (frontend package). |
+| **`api/src/infrastructure/`** | `domain`, stdlib, third-party | **`application`** — **zero** imports (**`test_adapter_application_imports.py`**, with **`auth_credentials`** exception). Streamlit only on allowlisted shim files (**`test_layer_boundaries`**). |
+| **`api/src/composition/`** | `domain`, `application`, `infrastructure` for wiring | Streamlit, **`services`** (frontend) |
+| **`api/src/interfaces/http/routers/`** | FastAPI, `application`, `domain`, `composition` via deps | **`infrastructure.*`** (any) |
+| **`api/src/interfaces/http/`** (non-router) | As needed for app, errors, upload | Streamlit; also no frontend top-level packages or monolith **`src`/`apps`** import roots (**`test_fastapi_delivery_boundaries`**) |
+| **`frontend/src/services/`** | `domain`, `application`, `composition`, `infrastructure.config`, `infrastructure.auth` | Other **`infrastructure.*`** (**`test_frontend_services_infrastructure_imports_are_limited`** in **`test_deprecated_backend_and_gateway_guardrails.py`**) |
+| **`frontend/src/pages`**, **`components/`** | `services`, Streamlit, `infrastructure.auth` for guards | `domain`, `application`, `composition`, `interfaces` (**`test_frontend_structure.py`**) |
 
-- **`QueryLogIngressPayload`** lives in **`api/src/domain/query_log_ingress_payload.py`** so query logging adapters accept the same typed shape the application builds without importing application modules.
-- **`EvaluationJudgeMetricsRow`** lives in **`api/src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
-- **`GoldQaPipelineRowInput`** (`api/src/domain/evaluation/gold_qa_row_input.py`) is the typed input to **`BenchmarkRowProcessingPort.process_row`** / **`RowEvaluationService.process_row`** (replacing an ad hoc ``dict`` runner payload).
-- **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** takes **`full_latency: PipelineLatency | None`**; **`ManualEvaluationPipelineSignals.stage_latency`** is the same type (JSON round-trip via **`manual_evaluation_result_from_plain_dict`** maps ``stage_latency`` dict → **`PipelineLatency`**).
-- **Manual evaluation orchestration** is **`RunManualEvaluationUseCase`** only (plus shared **`execute_rag_inspect_then_answer_for_evaluation`**). Do not add a parallel “evaluate question” orchestrator in infrastructure; **`api/src/infrastructure/evaluation/manual_evaluation_service.py`** is for **row/result assembly**, not inspect+answer sequencing.
-- Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`api/src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
+---
+
+## RAG-specific rules
+
+- Infrastructure **must not** host a second RAG orchestration façade (**`test_no_rag_service_facade.py`**).  
+- Chat orchestration folders **must not** import **`infrastructure`** or delivery stacks (**`test_orchestration_package_import_boundaries.py`**).  
+- **`interfaces/http`** and **`frontend/src/services`** **must not** import **`infrastructure.rag`** directly (**`test_orchestration_boundaries.py`**).  
+- **Composition** **must not** import **`services`** (frontend); transcript wiring only from **`streamlit_backend_factory`** (**`test_composition_import_boundaries.py`**).
+
+---
+
+## Shared boundary types (examples)
+
+- **`QueryLogIngressPayload`** — **`api/src/domain/rag/query_log_ingress_payload.py`**.  
+- **`EvaluationJudgeMetricsRow`** — **`api/src/domain/evaluation/judge_metrics_row.py`**.  
+- **`GoldQaPipelineRowInput`** — **`api/src/domain/evaluation/gold_qa_row_input.py`**.  
+- **`MemoryChatTranscript`** — only **`api/src/application/frontend_support/memory_chat_transcript.py`** (HTTP worker + tests); no duplicate under **`infrastructure`**.
+
+---
 
 ## Anti-patterns
 
-1. **Routers instantiating** `VectorStoreService`, `EvaluationService`, or other infra services — use **`Depends`** → container → use case.
-2. **Application importing** concrete **`infrastructure`** adapters — wire in **`composition`**.
-3. **Composition importing** frontend **`services`** — use **`ChatTranscriptPort`** and pass **`StreamlitChatTranscript`** only from **`frontend/src/services/streamlit_backend_factory`**.
-4. **Frontend `services` importing** concrete **`infrastructure`** (beyond **`infrastructure.config`** / **`infrastructure.auth`**) — use **`application.frontend_support`** and use cases instead.
-5. **Reintroducing** legacy `api/src/backend`, `api/src/adapters`, `infrastructure/services` as a package — removed; tests fail if directories or imports return.
-6. **New `rag_service.py`** orchestration façade under infrastructure that constructs chat use cases — forbidden; see **`api/tests/architecture/test_no_rag_service_facade.py`**.
+1. Routers constructing **`VectorStoreService`**, **`EvaluationService`**, or other infra services inline — use **`Depends`** → container → use case.  
+2. Application importing concrete persistence/RAG modules — wire in **composition**.  
+3. Reintroducing forbidden directories under **`api/src`** or forbidden roots at repo root — tests fail.  
+4. Python **`import`** of legacy monolith package names (**`src.backend`**, **`src.services`**, **`infrastructure.services`**, etc.) — forbidden across scanned trees (**`test_deprecated_backend_and_gateway_guardrails.py`**).
 
-## `MemoryChatTranscript` (canonical)
+---
 
-- **`api/src/application/frontend_support/memory_chat_transcript.py`** — in-process **`ChatTranscriptPort`** used by **`api/src/interfaces/http/dependencies.py`**, tests, and any **`build_backend_composition(chat_transcript=...)`** caller. There is **no** duplicate under **`api/src/infrastructure/`**.
+## Enforcement index
 
-## Enforcement map (concrete tests)
+| Concern | Test module(s) |
+|---------|----------------|
+| Layout + code roots | **`test_repository_structure.py`**, **`test_required_tree.py`** |
+| Domain / application / router imports | **`test_layer_import_rules.py`** |
+| Infrastructure / composition | **`test_layer_boundaries.py`**, **`test_adapter_application_imports.py`** |
+| FastAPI package purity | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
+| Frontend imports | **`test_frontend_structure.py`**, **`test_deprecated_backend_and_gateway_guardrails.py`** (`test_frontend_services_infrastructure_imports_are_limited`) |
+| Application tech purity | **`test_application_orchestration_purity.py`** |
+| Orchestration subtrees | **`test_orchestration_package_import_boundaries.py`**, **`test_orchestration_boundaries.py`** |
+| Composition vs `services` | **`test_composition_import_boundaries.py`** |
+| RAG façade | **`test_no_rag_service_facade.py`** |
+| Manual eval single path | **`test_manual_evaluation_single_orchestrator.py`** |
+| Chat RAG ports | **`test_application_chat_rag_boundary_ports.py`** |
 
-| Rule | Primary test module |
-|------|---------------------|
-| Physical layout (roots, FastAPI file locations, forbidden trees) | **`test_repository_structure.py`** |
-| Required directories + anchor files (positive skeleton) | **`test_required_tree.py`** |
-| Domain / application / HTTP router import directions | **`test_layer_import_rules.py`** |
-| Infrastructure + composition Streamlit rules | **`test_layer_boundaries.py`** |
-| `interfaces/http` no Streamlit / legacy namespaces | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
-| Frontend pages/components import thinness | **`test_frontend_structure.py`** |
-| No FastAPI/LC/FAISS in `application` | **`test_application_orchestration_purity.py`** |
-| Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
-| Adapters must not import application | **`test_adapter_application_imports.py`** |
-| Manual eval single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
-| No RAG monolith façade | **`test_no_rag_service_facade.py`** |
-| RAG post-recall / router rag imports | **`test_orchestration_boundaries.py`** |
+---
 
 ## Lint and format
 
-**Ruff** / **Black** / **mypy** settings: **`pyproject.toml`**. Ruff complements AST tests by catching issues such as **undefined names** in modules that still type-check at runtime under lazy evaluation.
+**Ruff**, **Black**, and **mypy** are configured in the root **`pyproject.toml`**. Ruff catches issues architecture tests do not (e.g. undefined names).

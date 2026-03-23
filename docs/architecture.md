@@ -1,140 +1,166 @@
-# Architecture (Clean Architecture)
+# Architecture
 
-RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **application** orchestrates, **infrastructure** implements technical details, **composition** wires objects, **delivery** (FastAPI, Streamlit client) stays thin.
+RAGCraft uses **Clean Architecture** (ports and adapters): **domain** at the center, **application** owns workflows and orchestration, **infrastructure** implements technical details, **composition** builds the object graph, and **delivery** (FastAPI and the Streamlit client) stays thin.
 
-**Canonical flow details for RAG:** **`docs/rag_orchestration.md`**. **Import rules:** **`docs/dependency_rules.md`**. **End-state migration summary:** **`docs/migration_report_final.md`**.
+**Related:** **`docs/rag_orchestration.md`** (RAG flows and ownership), **`docs/dependency_rules.md`** (import rules and enforcement), **`docs/api.md`** (HTTP contract), **`docs/migration_report_final.md`** (closure and guardrails).
 
-## Canonical repository layout (enforced by tests)
+---
 
-- **Backend:** `api/src/` — packages `domain`, `application`, `infrastructure`, `composition`, `interfaces` (FastAPI lives under `interfaces/http/`). **`PYTHONPATH`** includes `api/src` so imports are `from domain...`, not `from src.domain...`.
-- **Frontend:** `frontend/src/` — Streamlit pages, components, and `services` (HTTP / in-process gateway). **`PYTHONPATH`** includes `frontend/src` so pages use `from services...`.
-- **Guardrails:** `api/tests/architecture/` fails CI on structural drift (forbidden roots, misplaced routers/schemas) and on import-boundary violations. Run `./scripts/validate_architecture.sh` from the repo root (or `pytest api/tests/architecture -q` with the same `PYTHONPATH` as in that script). See **`docs/testing_strategy.md`** for the module map.
+## Repository layout
+
+| Area | Path | Role |
+|------|------|------|
+| Backend packages | **`api/src/`** | `domain`, `application`, `infrastructure`, `composition`, `interfaces` |
+| ASGI entry | **`api/main.py`** | Loads `api/src` onto `sys.path` and exposes **`interfaces.http.main:create_app`** as **`app`** for Uvicorn |
+| Frontend packages | **`frontend/src/`** | `pages`, `components`, `services`, `state`, `viewmodels`, `utils` |
+| Streamlit entry | **`frontend/app.py`** | Multi-page app shell |
+| Backend tests | **`api/tests/`** | Architecture guards under **`api/tests/architecture/`**, plus `api`, `appli`, `infra`, `e2e`, … |
+| Frontend tests | **`frontend/tests/`** | UI and **`frontend/src/services`** tests (e.g. **`frontend/tests/streamlit/`**) |
+
+**Imports:** With **`PYTHONPATH`** including **`api/src`** and **`frontend/src`** (as in **`scripts/run_tests.sh`** / **`scripts/validate_architecture.sh`**), Python import names are **top-level** (`from domain...`, `from application...`, `from services...`), not nested under a shared `src` package.
+
+**Enforcement:** **`api/tests/architecture/`** fails on forbidden repo roots, misplaced FastAPI routers/schemas, code living outside **`api/src`** / **`frontend/src`**, and disallowed cross-layer imports. Run **`./scripts/validate_architecture.sh`** from the repo root.
+
+---
+
+## Dependency direction (allowed)
+
+```text
+Delivery (interfaces/http, frontend/services, Streamlit UI)
+        → application (use cases + orchestration)
+        → domain (entities, value objects, ports)
+        ↑
+        └── infrastructure (implements domain ports; no application imports)
+```
+
+**Composition** may import **domain**, **application** (for wiring), and **infrastructure** to construct the graph. It must not import **Streamlit** or **`frontend/src/services`**.
+
+**Summary:**
+
+- **Domain** does not depend on application, infrastructure, FastAPI, or Streamlit (narrow **`infrastructure.config`** exception where tests allow).
+- **Application** depends on **domain** and sibling **`application`** modules; it does not import concrete infrastructure or delivery frameworks (narrow **`infrastructure.config`** exception).
+- **Infrastructure** implements ports; it does not import **`application`** (see **`test_adapter_application_imports.py`** for the **`auth_credentials`** exception).
+- **`interfaces/http`** uses FastAPI, **`Depends`**, **`BackendApplicationContainer`**, and **domain** types; **routers** must not import **`infrastructure.*`**.
+- **`frontend/src/services`** may call use cases and composition for **in-process** mode and may use **`infrastructure.config`** / **`infrastructure.auth`** only (not full RAG/persistence stacks).
+- **`frontend/src/pages`** and **`components`** use **`services`** and **`infrastructure.auth`** for guards only—not **`domain`**, **`application`**, **`composition`**, or **`interfaces`**.
+
+---
 
 ## Domain (`api/src/domain/`)
 
-**Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`** (workspace identity from verified bearer auth), **`AuthenticationPort`** / **`AccessTokenIssuerPort`** (`api/src/domain/ports/`), and shared types such as `PipelineBuildResult` (**`latency`** is **`PipelineLatency`**, not a stage ``dict``), **`RAGResponse`** (**`latency`** is **`PipelineLatency | None`**), **`PipelineLatency`**, **`GoldQaPipelineRowInput`**, `SummaryRecallDocument`, `RetrievalSettings`, **`BufferedDocumentUpload`** (multipart ingest payload: filename + bytes), **`ProposedQaDatasetRow`** (LLM QA proposals before persistence), **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`api/src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).
+**Owns:** entities and value objects, **ports** (`Protocol` / ABC) such as **`RetrievalPort`**, **`AnswerGenerationPort`**, **`QueryLogPort`**, identity types (**`AuthenticatedPrincipal`** under **`domain/auth/`**), auth ports (**`AuthenticationPort`**, **`AccessTokenIssuerPort`** under **`domain/common/ports/`** and related modules), and shared DTOs (**`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`PipelineLatency`**, **`BufferedDocumentUpload`**, **`RetrievalSettingsOverrideSpec`** under **`domain/rag/`**, etc.).
 
-**Does not belong:** FastAPI, Streamlit, SQLite drivers, LangChain, calls into `application` or `infrastructure` (except the narrow **`infrastructure.config`** allowance in tests). Domain may use **`core`** for config paths and shared exceptions where already established.
+**Does not own:** framework or adapter code (FastAPI, Streamlit, SQLite drivers, LangChain in domain modules).
+
+---
 
 ## Application (`api/src/application/`)
 
-**Belongs here:**
+**Owns:**
 
-- **Use cases** under `api/src/application/use_cases/` — one primary workflow per class (e.g. `AskQuestionUseCase`, `BuildRagPipelineUseCase`, `RunManualEvaluationUseCase`). Shared RAG orchestration **DTOs** live under **`api/src/application/rag/`** (imported by chat/eval paths; guarded by **`test_orchestration_package_import_boundaries`**).
-- **RAG orchestration helpers** under **`api/src/application/orchestration/rag/`** — e.g. **`summary_recall_workflow.py`** (**`ApplicationSummaryRecallStage`** implements **`SummaryRecallStagePort`**), **`summary_recall_ports.py`** (technical ports for rewrite / vector / lexical recall), **`recall_then_assemble_pipeline`**, **`summary_recall_from_request`**, **`assemble_pipeline_from_recall`**, **`post_recall_pipeline_steps`**, **`ApplicationPipelineAssembly`**, **`PipelineQueryLogEmitter`**, port definitions (**`ports.py`**, **`PostRecallStagePorts`**, **`PipelineBuildQueryLogEmitterPort`**).
-- **Evaluation RAG helper** — `execute_rag_inspect_then_answer_for_evaluation` in **`use_cases/evaluation/rag_pipeline_orchestration.py`** (inspect + answer + latency for eval; no production query log). **`RunManualEvaluationUseCase`** is the **only** application entry point for one-off manual evaluation; infrastructure **`manual_evaluation_service`** supplies assembly from benchmark rows, not a second orchestrator.
-- **`GoldQaBenchmarkAdapter`** — **`use_cases/evaluation/gold_qa_benchmark_adapter.py`**; implements **`GoldQaBenchmarkPort`** by delegating to **`BenchmarkExecutionUseCase`** (wired from composition, not from **`EvaluationService`** internals).
-- **Pipeline use-case ports** — `use_cases/chat/pipeline_use_case_ports.py` (`InspectRagPipelinePort`, `GenerateAnswerFromPipelinePort`) so evaluation does not depend on concrete chat use case classes.
-- **Policies** under `api/src/application/chat/policies/` — pure helpers (dedupe, wire shapes) used by orchestration; RRF merge lives in **domain** (`summary_document_fusion`).
-- **DTOs / wire helpers** — `application/http/wire.py`, evaluation DTOs, settings DTOs; **`build_query_log_ingress_payload`** builds domain **`QueryLogIngressPayload`**. RAG orchestration DTOs under **`api/src/application/rag/dtos/`** (e.g. **`VectorLexicalRecallBundle`**, **`RagEvaluationPipelineInput`**) plus domain **`RetrievalSettingsOverrideSpec`** for typed retrieval overrides on chat/RAG ports.
-- **`frontend_support/`** — HTTP-mode stubs for the gateway (`http_backend_stubs.py`, `memory_chat_transcript.py`) so **`frontend/src/services`** does not pull infrastructure adapters for HTTP mode.
+- **Use cases** — **`application/use_cases/**`** (e.g. chat, evaluation, ingestion, projects, auth).
+- **RAG orchestration** — **`application/orchestration/rag/`** (summary recall workflow, post-recall assembly, pipeline steps) and **`application/orchestration/evaluation/`** (e.g. **`rag_pipeline_orchestration.py`**, **`gold_qa_benchmark_adapter.py`**, benchmark execution helpers).
+- **RAG DTOs** — **`application/rag/dtos/`** (recall bundles, evaluation pipeline input, etc.).
+- **Policies and chat helpers** — **`application/chat/`** (e.g. **`multimodal_prompt_hints`**).
+- **DTOs and HTTP wire helpers** — **`application/dto/**`**, **`application/http/wire/`**.
+- **Frontend-facing stubs for HTTP mode** — **`application/frontend_support/`** (**`MemoryChatTranscript`**, etc.) so the FastAPI worker does not depend on infrastructure adapters for transcript behavior.
 
-**Does not belong:** importing concrete **`infrastructure`** adapters (wiring uses composition). Use cases must not import the frontend **`services`** package.
+**Does not own:** wiring the live graph (that is **composition**) or low-level I/O (that is **infrastructure**).
+
+**Orchestration rule:** Summary-recall **ordering** and post-recall **pipeline ordering** live in **application**; infrastructure supplies single-purpose steps behind ports (e.g. **`SummaryRecallTechnicalPorts`**, **`PostRecallStagePorts`**).
+
+---
 
 ## Infrastructure (`api/src/infrastructure/`)
 
-**Belongs here:**
+**Owns:** concrete implementations—**`rag/`** (retrieval, docstore, LLM gateway, **`summary_recall_technical_adapters`**, **`post_recall_stage_adapters`**, **`answer_generation_service`**), **`evaluation/`**, **`persistence/`**, **`auth/`**, **`storage/`**, **`observability/`**, **`config/`**.
 
-- **`rag/`**, **`evaluation/`**, **`persistence/`**, **`auth/`**, **`storage/`**, **`observability/`**, **`config/`** — concrete services and repositories (e.g. **`docstore_service`**, **`summary_recall_technical_adapters.py`** with **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`**, **`post_recall_stage_adapters`**, **`EvaluationService`** consuming **`GoldQaBenchmarkPort`** only). In-memory HTTP transcript lives in **`api/src/application/frontend_support/memory_chat_transcript.py`**, not here.
+**Does not own:** use-case orchestration sequences or importing **`application`** (except the documented narrow exception in **`auth_credentials`**).
 
-**Rules:**
+**Query logging:** Built via domain **`QueryLogIngressPayload`** from application; not embedded inside vectorstore/rerank internals.
 
-- **Summary-recall sequencing** is **application-owned** (**`ApplicationSummaryRecallStage`**); infrastructure provides single-purpose technical steps behind **`SummaryRecallTechnicalPorts`**.
-- Post–summary-recall **sequencing** for assembly lives in **application** (`assemble_pipeline_from_recall` + `post_recall_pipeline_steps`); modules behind **`PostRecallStagePorts`** perform single technical steps.
-- **All** Python under **`api/src/infrastructure/`** must **not** import **`application`** (**`api/tests/architecture/test_adapter_application_imports.py`**, with the documented **`auth_credentials`** exception). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed into RAG wiring.
-- **Query logging** is **not** implemented inside vectorstore/docstore/rerank modules; **`QueryLogService`** accepts dict or domain **`QueryLogIngressPayload`**.
-- Infrastructure must not depend on application (see layer tests), except narrow Streamlit shims whitelisted in **`test_layer_boundaries`**.
+---
 
 ## Composition (`api/src/composition/`)
 
-**Belongs here:** building the object graph only.
+**Owns:** **`build_backend_composition`**, **`BackendApplicationContainer`**, **`chat_rag_wiring`**, **`evaluation_wiring`**, **`backend_composition`**, FastAPI lifecycle hooks in **`wiring.py`**.
 
-| Module | Role |
-|--------|------|
-| `backend_composition.py` | `BackendComposition` — technical services only. Uses **`build_evaluation_service()`** from **`evaluation_wiring.py`** for the evaluation stack. |
-| `evaluation_wiring.py` | Builds **`RowEvaluationService`**, **`BenchmarkExecutionUseCase`**, **`GoldQaBenchmarkAdapter`**, **`EvaluationService`**. |
-| `application_container.py` | `BackendApplicationContainer` — memoized use cases, delegates to `chat_rag_wiring` for the RAG bundle. |
-| `chat_rag_wiring.py` | Builds `RagRetrievalSubgraph` and `ChatRagUseCases`; wires **`InspectRagPipelineUseCase`** with the same **`BuildRagPipelineUseCase`** instance as **`RetrievalPort`**, which calls **`execute(..., emit_query_log=False)`** (no `partial` indirection). |
-| `wiring.py` | Process-scoped chain cache invalidation hook for FastAPI. |
+**Does not own:** end-user UI or business scenario scripts (beyond wiring).
 
-**Does not belong:** business flow sequencing (beyond one administrative `execute` for chain invalidation), Streamlit imports.
+**Streamlit:** Session transcript is supplied from **`frontend/src/services/streamlit_backend_factory`** via **`StreamlitChatTranscript`** and **`build_backend_composition(chat_transcript=...)`**.
 
-**Streamlit transcript:** `frontend/src/services/streamlit_backend_factory.build_streamlit_backend_application_container()` passes `backend=build_backend_composition(chat_transcript=StreamlitChatTranscript())` so session transcript wiring stays in **`frontend/src/services`**.
+---
 
 ## HTTP delivery (`api/src/interfaces/http/`)
 
-**Belongs here:** FastAPI app (mounted from **`api/main.py`**), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`. Multipart uploads (**documents** and **avatars**) use **`interfaces.http.upload_adapter`** — chunked reads with per-route byte caps → domain **`BufferedDocumentUpload`** → use cases (**`IngestUploadedFileCommand`**, **`UploadUserAvatarCommand`**). Strategy is documented in **`api/src/application/ingestion/upload_boundary.py`** (bounded buffering, not socket-to-parser streaming).
+**Owns:** FastAPI **`create_app`**, **routers** under **`routers/`**, Pydantic **schemas** under **`schemas/`**, **`dependencies.py`** (cached **`BackendApplicationContainer`**, **`get_authenticated_principal`**), **`upload_adapter`** (bounded multipart reads), error handlers.
 
-**Identity:** Routes that require a logged-in workspace user depend on **`get_authenticated_principal`**, which parses **`Authorization: Bearer`** in **`dependencies.py`**, delegates verification to **`AuthenticationPort`** (implemented by **`JwtAuthenticationAdapter`** in infrastructure), and returns a framework-agnostic **`AuthenticatedPrincipal`**. Handlers pass **`principal.user_id`** into use cases only; they never interpret raw tokens.
+**Security model:** Scoped routes use **`Authorization: Bearer <JWT>`**. **`dependencies`** delegates verification to **`AuthenticationPort`**; handlers receive **`AuthenticatedPrincipal`** and pass **`user_id`** into use cases only.
 
-**Auth and profile:** **`/auth/login`** and **`/auth/register`** call **`LoginUserUseCase`** / **`RegisterUserUseCase`** and issue a signed JWT via **`AccessTokenIssuerPort`** (same adapter). **`/users/*`** routes call dedicated user/account use cases. Password hashing and avatar filesystem I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**, implemented by **`BcryptPasswordHasher`** and **`FileAvatarStorage`** (under **`api/src/infrastructure/auth/`** and **`api/src/infrastructure/storage/`**) and wired in **`build_backend_composition`**. JWT signing uses **`RAGCRAFT_JWT_SECRET`** (and optional **`RAGCRAFT_JWT_ISSUER`** / **`RAGCRAFT_JWT_AUDIENCE`**) — never hardcoded in source.
+**Rule:** Routers resolve work through **`Depends`** → container → use cases; they do not import **`infrastructure.*`**.
 
-**Rule:** Routers must not import **`infrastructure.*`**; other HTTP modules follow **`test_fastapi_delivery_boundaries`**. Use cases resolve via **`Depends`** → **`BackendApplicationContainer`**. **`MemoryChatTranscript`** for the HTTP worker comes from **`application.frontend_support.memory_chat_transcript`**.
+---
 
-## Frontend services (`frontend/src/services/`)
+## Frontend integration (`frontend/src/`)
 
-**Belongs here:** `BackendClient` protocol, `HttpBackendClient`, `InProcessBackendClient`, HTTP transport/payloads, Streamlit auth glue, `StreamlitChatTranscript` (session-backed transcript), `streamlit_backend_factory`, factories under **`factories/`** (e.g. chat service wiring for Streamlit).
+**`services/`** — **`BackendClient`** protocol, HTTP and in-process clients, payloads, Streamlit auth/session helpers, **`streamlit_backend_factory`**. This is the only place that may combine **composition + use cases** for the Streamlit app.
 
-**Rule:** No imports of **`infrastructure`** except **`infrastructure.config`** and **`infrastructure.auth`** (see **`test_frontend_services_infrastructure_imports_are_limited`**). HTTP placeholders come from `application.frontend_support`. Gold-QA **`pipeline_runner`** must return **`RagInspectAnswerRun`** (**`BenchmarkExecutionUseCase`** raises **`TypeError`** otherwise).
+**`pages/`**, **`components/`** — Streamlit UI; consume **`services`** only (plus **`infrastructure.auth`** for guards where allowed).
 
-## Other backend roots (`api/src/`)
+**`state/`**, **`viewmodels/`**, **`utils/`** — UI state and helpers; same import rules as pages/components unless tests say otherwise.
 
-- **`auth/`** — password utilities and helpers used with infrastructure auth; credential rules for HTTP live in application use cases.
-- **`core/`** — config, paths, shared errors.
+---
 
-## Streamlit UI (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`)
-
-Streamlit entry and pages; must use **`BackendClient`** via **`services`**, not `domain` / `application` / `composition` / `interfaces` directly from pages and components (enforced by tests).
-
-**Dependency direction (target):** delivery → application use cases → domain ports ← infrastructure adapters. Composition instantiates and injects.
-
-## Layer dependency diagram (runtime)
+## Layer diagram (runtime)
 
 ```mermaid
 flowchart TB
   subgraph delivery["Delivery"]
-    API["interfaces/http"]
-    GW["frontend/services"]
-    UI["frontend pages + components"]
+    HTTP["interfaces/http"]
+    SVC["frontend/src/services"]
+    UI["frontend/src/pages + components"]
   end
   subgraph comp["Composition"]
     COMP["composition"]
   end
   subgraph app["Application"]
-    UC["use_cases + orchestration"]
+    UC["use_cases"]
+    ORCH["orchestration/rag + orchestration/evaluation"]
     FS["frontend_support"]
   end
   subgraph dom["Domain"]
     PORTS["ports + entities + DTOs"]
   end
   subgraph infra["Infrastructure"]
-    ADP["adapters"]
-    TECH["persistence / vectorstores / …"]
+    RAG["rag"]
+    EVAL["evaluation"]
+    PERS["persistence"]
+    OTHER["auth, storage, observability, config"]
   end
-  API --> UC
-  API --> COMP
-  API --> PORTS
-  GW --> UC
-  GW --> COMP
-  UI --> GW
+  HTTP --> UC
+  HTTP --> COMP
+  HTTP --> PORTS
+  SVC --> UC
+  SVC --> COMP
+  UI --> SVC
   COMP --> UC
-  COMP --> ADP
+  COMP --> infra
+  UC --> ORCH
+  ORCH --> PORTS
   UC --> PORTS
-  ADP --> PORTS
-  TECH --> PORTS
+  infra --> PORTS
   FS --> PORTS
 ```
 
-**Edges omitted for brevity:** **`api/src/auth`** and **`api/src/core`** are shared helpers; **`COMP`** also imports application types and domain ports when constructing the graph.
+---
 
-## Tooling (lint, format, typing)
+## Tooling
 
-Configuration lives in **`pyproject.toml`** at the repo root (dependencies for runtime remain in **`requirements.txt`**).
+| Tool | Config | Typical use |
+|------|--------|-------------|
+| **Ruff** | Root **`pyproject.toml`** | `ruff check api/src frontend/src` (CI also checks **`api/tests/architecture`**) |
+| **Black** | Root **`pyproject.toml`** | Formatting, line length 100 |
+| **pytest** | Root + **`api/pyproject.toml`** | Architecture gate: **`api/tests/architecture`** |
+| **mypy** | Root **`pyproject.toml`** | Optional incremental; e.g. **`PYTHONPATH=api/src`** then **`-p domain`** |
 
-| Tool | Role |
-|------|------|
-| **Ruff** | Lint + import sort (`I`) + safe pyupgrade (`UP`); catches undefined names (`F821`) and unused imports (`F401`). Example: `ruff check api/src frontend/src` / `ruff format api/src frontend/src`. |
-| **Black** | Formatter; line length **100** (match Ruff). |
-| **mypy** | Incremental static typing; **`ignore_missing_imports`** by default for third-party gaps. Prefer tightening **ports, DTOs, and use-case signatures** over repo-wide strict mode in one step. Example: `mypy --config-file=pyproject.toml -p application.use_cases.chat.ask_question`. |
-
-**CI (enforced):** **`.github/workflows/ci.yml`** runs **`scripts/lint.sh`**, **`scripts/validate_architecture.sh`**, and pytest (see **`scripts/validate.sh`** / **`validate.ps1`** for the same locally).
+CI runs **`scripts/lint.sh`**, **`scripts/validate_architecture.sh`**, and the non-architecture pytest slice—see **`.github/workflows/ci.yml`**.

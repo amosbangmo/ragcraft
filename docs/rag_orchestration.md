@@ -1,79 +1,107 @@
-# RAG orchestration (final model)
+# RAG orchestration
+
+This document describes **how RAG behavior is structured in the current codebase**: which use cases own which flows, where orchestration modules live, and how logging and typed boundaries work.
+
+**Code roots:** orchestration modules under **`api/src/application/orchestration/`**, use cases under **`api/src/application/use_cases/`**, wiring in **`api/src/composition/chat_rag_wiring.py`** and **`evaluation_wiring.py`**, technical steps under **`api/src/infrastructure/rag/`**.
+
+---
 
 ## Entrypoints
 
-| Entry | Mechanism |
-|-------|-----------|
-| **HTTP chat** | `api/src/interfaces/http/routers/chat.py` → `AskQuestionUseCase` via `api/src/interfaces/http/dependencies.py` (scoped routes require **`Authorization: Bearer`** → domain **`AuthenticatedPrincipal`**) |
-| **In-process UI** | `frontend/src/services/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
-| **Pipeline build only** | `BuildRagPipelineUseCase` (inspect/compare/eval paths) |
-| **Inspect pipeline** | `InspectRagPipelineUseCase` — depends on **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance and inspect calls **`execute(..., emit_query_log=False)`** |
-| **Preview summary recall** | `PreviewSummaryRecallUseCase` |
-| **Answer from built pipeline** | `GenerateAnswerFromPipelineUseCase` |
+| Entry | Where | Notes |
+|-------|--------|------|
+| **HTTP chat (ask)** | **`api/src/interfaces/http/routers/chat.py`** → **`AskQuestionUseCase`** via **`dependencies.py`** | Scoped routes require **`Authorization: Bearer`** → **`AuthenticatedPrincipal`**. |
+| **In-process Streamlit ask** | **`frontend/src/services/in_process.py`** → container **`chat_ask_question_use_case`** | Same use cases as HTTP; different transport. |
+| **Pipeline build** | **`BuildRagPipelineUseCase`** | Used by inspect, comparison, and evaluation paths. |
+| **Inspect pipeline** | **`InspectRagPipelineUseCase`** | Uses **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance; inspect calls **`execute(..., emit_query_log=False)`**. |
+| **Preview summary recall** | **`PreviewSummaryRecallUseCase`** | Stops after recall; returns preview DTOs, not a full pipeline. |
+| **Answer from built pipeline** | **`GenerateAnswerFromPipelineUseCase`** | LLM answer given an already-built pipeline. |
 
-Composition builds the graph in `api/src/composition/chat_rag_wiring.py` and exposes it through `BackendApplicationContainer.chat_rag_use_cases` and the `chat_*_use_case` properties.
+The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendApplicationContainer`** (e.g. **`chat_rag_use_cases`**, **`chat_*_use_case`** properties).
 
-**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure **`api/src/application/orchestration/{rag,evaluation}`**, **`application/use_cases/evaluation`**, and **`api/src/application/rag/`** do not import **`infrastructure`** or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
+**Import guardrails:** **`test_orchestration_package_import_boundaries.py`** scans **`application/orchestration/{rag,evaluation}`**, **`application/use_cases/evaluation`**, and **`application/rag`** and forbids **`infrastructure`**, FastAPI, Streamlit, LangChain, FAISS, etc., so orchestration stays port-driven.
 
-### Typed orchestration contracts (boundaries)
+---
 
-- **Retrieval overrides:** Per-request partial settings use **`RetrievalSettingsOverrideSpec`** (`api/src/domain/retrieval_settings_override_spec.py`) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases — not raw ``dict[str, Any]``. FastAPI maps the JSON ``retrieval_settings`` object to a spec in **`api/src/interfaces/http/routers/chat.py`**; **`InProcessBackendClient`** does the same before calling use cases.
-- **Recall fusion output:** **`fuse_vector_and_lexical_recalls`** returns **`VectorLexicalRecallBundle`** (`api/src/application/rag/dtos/recall_stages.py`).
-- **Evaluation input:** **`execute_rag_inspect_then_answer_for_evaluation`** takes **`RagEvaluationPipelineInput`** (`api/src/application/rag/dtos/evaluation_pipeline.py`).
-- **Evaluation result latency:** **`RagInspectAnswerRun.full_latency`** is **`PipelineLatency | None`**. **`RagInspectAnswerRun.as_row_evaluation_input()`** returns **`GoldQaPipelineRowInput`** for **`RowEvaluationService.process_row`** (no ad hoc ``dict`` at that boundary).
+## Flow 1: Product ask (chat)
 
-## Main use cases (happy path ask)
+1. **`AskQuestionUseCase`** — builds the pipeline (via injected **`BuildRagPipelineUseCase`**), generates an answer through **`AnswerGenerationPort`**, then logs via **`QueryLogPort`** when configured (deferred full payload after answer).
+2. **`BuildRagPipelineUseCase`** — runs **`run_recall_then_assemble_pipeline`** (see below) and, when **`emit_query_log=True`**, uses **`PipelineQueryLogEmitter`**. RAG infrastructure services do **not** log queries themselves.
 
-1. **`AskQuestionUseCase`** — calls injected `build_pipeline` (bound to `BuildRagPipelineUseCase.execute`), then **`AnswerGenerationPort`** for the LLM, then **`QueryLogPort`** when configured (deferred full payload after answer).
-2. **`BuildRagPipelineUseCase`** — runs **`run_recall_then_assemble_pipeline`** then **`PipelineBuildQueryLogEmitterPort`** (`PipelineQueryLogEmitter`) when `emit_query_log=True`. RAG adapters do not log queries themselves.
+---
 
-## Orchestration sequence (application-owned)
+## Flow 2: Inspect pipeline
 
-**Recall + assemble helper:** `recall_then_assemble_pipeline.py` calls **`run_summary_recall_from_chat_request`** then **`PipelineAssemblyPort.build`**.
+- **`InspectRagPipelineUseCase`** — same **`BuildRagPipelineUseCase`** as ask, with **`emit_query_log=False`**. No answer generation on this path.
+
+---
+
+## Flow 3: Preview summary recall
+
+- **`PreviewSummaryRecallUseCase`** — runs summary-recall–related work and returns preview data (**`SummaryRecallPreviewDTO`** and related shapes). Does not run full post-recall assembly or answer generation.
+
+---
+
+## Flow 4: Evaluation (gold QA, manual)
+
+**Single inspect+answer path for evaluation:** **`execute_rag_inspect_then_answer_for_evaluation`** in **`api/src/application/orchestration/evaluation/rag_pipeline_orchestration.py`**.
+
+- Input: **`RagEvaluationPipelineInput`** (**`api/src/application/rag/dtos/evaluation_pipeline.py`**).  
+- Coordinates **`InspectRagPipelinePort`** and **`GenerateAnswerFromPipelinePort`**; merges latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`**.  
+- Output: **`RagInspectAnswerRun`** (**`api/src/domain/rag/rag_inspect_answer_run.py`**); **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`RowEvaluationService`**.  
+- **`BenchmarkExecutionUseCase`** requires each **`pipeline_runner`** result to be a **`RagInspectAnswerRun`** (**`TypeError`** otherwise).  
+- **`GoldQaBenchmarkAdapter`** (**`api/src/application/orchestration/evaluation/gold_qa_benchmark_adapter.py`**) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**, wired from **`evaluation_wiring.py`**.  
+- **`api/src/infrastructure/evaluation/manual_evaluation_service.py`** — row/result assembly helpers only; **does not** replace the application orchestration above.  
+- **Manual evaluation:** **`RunManualEvaluationUseCase`** is the single application entry for that scenario (see **`test_manual_evaluation_single_orchestrator.py`**).
+
+---
+
+## Orchestration sequence (recall → assembly)
+
+**Coordinator:** **`recall_then_assemble_pipeline.py`** calls **`run_summary_recall_from_chat_request`** then **`PipelineAssemblyPort.build`**.
 
 ### Summary-recall stage
 
-1. **`ApplicationSummaryRecallStage.summary_recall_stage(...)`** — **`api/src/application/orchestration/rag/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**. Sequences: settings merge (**`RetrievalSettingsTuner`** via injected tuner), optional rewrite (**`QueryRewritePort`**), domain intent/table policy, domain **`resolve_summary_recall_execution_plan`**, then **`fuse_vector_and_lexical_recalls`** (vector + optional lexical ports + domain RRF merge).
-2. **Technical adapters:** **`api/src/infrastructure/rag/summary_recall_technical_adapters.py`** — **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`** (FAISS, BM25/docstore). Wired as **`SummaryRecallTechnicalPorts`** in **`chat_rag_wiring.py`**.
+1. **`ApplicationSummaryRecallStage`** — **`api/src/application/orchestration/rag/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**: settings merge (**`RetrievalSettingsTuner`**), optional rewrite (**`QueryRewritePort`**), domain policies, **`resolve_summary_recall_execution_plan`**, **`fuse_vector_and_lexical_recalls`**.  
+2. **Infrastructure technical adapters** — **`api/src/infrastructure/rag/summary_recall_technical_adapters.py`** (**`QueryRewriteAdapter`**, vector/lexical adapters). Exposed as **`SummaryRecallTechnicalPorts`** from **`chat_rag_wiring.py`**.
 
 ### Post-recall assembly
 
-**`ApplicationPipelineAssembly`** (bound into **`BuildRagPipelineUseCase`** as its assembly collaborator) implements **`PipelineAssemblyPort`**: **`build(...)`** delegates to **`assemble_pipeline_from_recall`**, which sequences **`post_recall_pipeline_steps`** (`step_docstore_hydration`, `step_section_expansion`, …).
+- **`ApplicationPipelineAssembly`** (**`api/src/application/orchestration/rag/application_pipeline_assembly.py`**) implements **`PipelineAssemblyPort`**; **`assemble_pipeline_from_recall`** sequences **`post_recall_pipeline_steps`**.  
+- **Infrastructure** — **`api/src/infrastructure/rag/post_recall_stage_adapters.py`** — one thin adapter per **`PostRecallStagePorts`** slot.
 
-**Technical implementations:** **`api/src/infrastructure/rag/post_recall_stage_adapters.py`** — one thin adapter class per port, delegating to existing services.
+---
 
-## Ports involved (representative)
+## Typed boundaries (orchestration ↔ domain)
 
-- **`SummaryRecallStagePort`**, **`PipelineAssemblyPort`** — recall + assembly boundary.
-- **`SummaryRecallTechnicalPorts`** — query rewrite, vector recall, lexical recall (application-defined protocols; infrastructure adapters).
-- **`PostRecallStagePorts`** (dataclass) — docstore read, section expansion, reranking, table QA hints, compression, prompt sources, layout, multimodal, prompt render, confidence.
-- **`QueryLogPort`** — query logging (implemented by infrastructure query log service).
-- **`AnswerGenerationPort`** — LLM answer from a built pipeline; implemented by **`AnswerGenerationService`**.
+- **Retrieval overrides:** **`RetrievalSettingsOverrideSpec`** (**`api/src/domain/rag/retrieval_settings_override_spec.py`**) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases. FastAPI maps JSON in **`routers/chat.py`**; **`InProcessBackendClient`** maps before calling use cases.  
+- **Recall fusion output:** **`VectorLexicalRecallBundle`** (**`api/src/application/rag/dtos/recall_stages.py`**).  
+- **Evaluation orchestration input:** **`RagEvaluationPipelineInput`**.  
+- **Latency:** **`PipelineLatency`** on **`RagInspectAnswerRun`** and related DTOs; HTTP serialization maps to dict at the wire edge where needed.
 
-## Where logging happens
+---
 
-- **After pipeline build (no answer yet):** `PipelineQueryLogEmitter` in `BuildRagPipelineUseCase.execute` when `emit_query_log=True`.
-- **After full ask:** `AskQuestionUseCase` uses `log_query_safely` + `build_query_log_ingress_payload` (builds domain **`QueryLogIngressPayload`**) when a `QueryLogPort` is wired — never from vectorstore/docstore/rerank adapters.
+## Logging boundaries
 
-## Manual and gold-QA evaluation (inspect + answer, no production query log)
+- **After pipeline build (no answer yet):** **`PipelineQueryLogEmitter`** inside **`BuildRagPipelineUseCase.execute`** when **`emit_query_log=True`**.  
+- **After full ask:** **`AskQuestionUseCase`** uses safe helpers + **`build_query_log_ingress_payload`** → domain **`QueryLogIngressPayload`** when **`QueryLogPort`** is wired — **not** from low-level vectorstore/docstore/rerank modules.
 
-**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (**`api/src/application/orchestration/evaluation/rag_pipeline_orchestration.py`**). There is **no** parallel “service” entry point that re-implements that sequence.
+---
 
-- **`execute_rag_inspect_then_answer_for_evaluation`** — takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
-- **`RagInspectAnswerRun`** — **`api/src/domain/rag/rag_inspect_answer_run.py`**; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
-- **`RunManualEvaluationUseCase`** — `POST /evaluation/manual`, **`InProcessBackendClient.evaluate_manual_question`**, and composition **`evaluation_run_manual_evaluation_use_case`** all delegate here → canonical orchestration above → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (implemented by **`EvaluationService`**). **`RunGoldQaDatasetEvaluationUseCase`** shares the same inspect/answer ports and gold-QA benchmark wiring. **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`api/src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
-- **`api/src/infrastructure/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
+## Answer generation
 
-## Where answer generation happens
+- **`api/src/infrastructure/rag/answer_generation_service.py`** — LLM invocation behind **`AnswerGenerationPort`**, used by **`AskQuestionUseCase`** and **`GenerateAnswerFromPipelineUseCase`**.
 
-- **`api/src/infrastructure/rag/answer_generation_service.py`** — LLM invoke, used by **`AskQuestionUseCase`** and **`GenerateAnswerFromPipelineUseCase`**.
+---
 
 ## Retrieval comparison
 
-- **`CompareRetrievalModesUseCase`** — uses **`InspectRagPipelinePort`** (application); no direct RAG adapter imports from routers or gateway.
+- **`CompareRetrievalModesUseCase`** — uses **`InspectRagPipelinePort`**; no direct **`infrastructure.rag`** imports from routers or **`frontend/src/services`** (enforced by **`test_orchestration_boundaries.py`** among others).
 
-## Document ingestion (orthogonal to RAG query path)
+---
 
-- **HTTP:** `POST /projects/{project_id}/documents/ingest` uses **`read_buffered_document_upload`** (`api/src/interfaces/http/upload_adapter.py`) then **`IngestUploadedFileUseCase`** with **`IngestUploadedFileCommand.upload`** = domain **`BufferedDocumentUpload`**.
-- **Application:** **`validate_buffered_document_upload`** applies basename-only names, non-empty body, and size limits (aligned with **`RAG_MAX_UPLOAD_BYTES`**).
-- **Infrastructure:** **`IngestionService.ingest_uploaded_file`** persists via **`save_uploaded_file`** then runs the existing on-disk extraction pipeline (not streaming from the socket into unstructured).
+## Document ingestion (orthogonal to query path)
+
+- **HTTP:** **`POST /projects/{project_id}/documents/ingest`** → **`upload_adapter.read_buffered_document_upload`** → **`IngestUploadedFileUseCase`** with domain **`BufferedDocumentUpload`**.  
+- **Application:** validation and commands under **`application/use_cases/ingestion`** and **`application/ingestion`**.  
+- **Infrastructure:** **`IngestionService`** and related modules persist and run on-disk extraction (see **`docs/api.md`** for upload caps).
