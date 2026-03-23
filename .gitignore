@@ -1,304 +1,93 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# ======================================================
 # Python
-# ======================================================
-=======
-# =========================
-# Python
-# =========================
->>>>>>> 4834a3e (Storing chunks into Faiss)
-=======
-# ======================================================
-# Python
-# ======================================================
->>>>>>> bcab36e (Avoiding duplications in create_vector_store)
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyo
 *.pyd
-<<<<<<< HEAD
-<<<<<<< HEAD
 *.so
-
-# Bytecode
 *.pyc
 
-# ======================================================
 # Virtual environments
-# ======================================================
 .venv/
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
-
-# Python version manager
 .python-version
 
-# ======================================================
-# Environment variables / Secrets
-# ======================================================
+# Environment variables / secrets
 .env
 .env.*
 *.env
 *.key
 *.secret
-
-# Streamlit secrets
 .streamlit/secrets.toml
 
-# ======================================================
 # Logs
-# ======================================================
 *.log
 logs/
 log/
 *.out
 *.err
 
-# ======================================================
 # Local data / RAG storage
-# ======================================================
 data/
 datasets/
 uploads/
 storage/
 cache/
 
-# ======================================================
 # Vector databases
-# ======================================================
 faiss_index/
-<<<<<<< HEAD
 vector_store/
-vectordb/
-db/
-
-# FAISS files
-*.faiss
-*.index
-*.pkl
-
-# Chroma
-chroma/
-chroma_db/
-
-# LanceDB
-.lancedb/
-
-# Weaviate local
-weaviate-data/
-
-# ======================================================
-# Model / embedding caches
-# ======================================================
-.huggingface/
-.hf_cache/
-transformers_cache/
-models/
-model_cache/
-
-# ======================================================
-# Jupyter
-# ======================================================
-.ipynb_checkpoints/
-
-# ======================================================
-# Testing / coverage
-# ======================================================
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-.nox/
-
-# ======================================================
-# Build / packaging
-# ======================================================
-=======
-
-# Distribution / packaging
->>>>>>> 4834a3e (Storing chunks into Faiss)
-build/
-dist/
-*.egg-info/
-.eggs/
-<<<<<<< HEAD
-pip-wheel-metadata/
-
-# ======================================================
-# IDE
-# ======================================================
-.vscode/
-.idea/
-*.iml
-
-# ======================================================
-# OS files
-# ======================================================
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# ======================================================
-# Temporary files
-# ======================================================
-tmp/
-temp/
-*.tmp
-*.bak
-*.swp
-*.swo
-
-# ======================================================
-# Node (if frontend later)
-# ======================================================
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# ======================================================
-# Docker
-# ======================================================
-.docker/
-docker-compose.override.yml
-
-# ======================================================
-# Misc
-# ======================================================
-*.sqlite
-*.db
-*.sqlite3
-=======
-=======
-*.so
-
-# Bytecode
-*.pyc
->>>>>>> bcab36e (Avoiding duplications in create_vector_store)
-
-# ======================================================
-# Virtual environments
-# ======================================================
-.venv/
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# Python version manager
-.python-version
-
-# ======================================================
-# Environment variables / Secrets
-# ======================================================
-.env
-.env.*
-*.env
-*.key
-*.secret
-
-# Streamlit secrets
-.streamlit/secrets.toml
-
-# ======================================================
-# Logs
-# ======================================================
-*.log
-logs/
-log/
-*.out
-*.err
-
-# ======================================================
-# Local data / RAG storage
-# ======================================================
-data/
-datasets/
-uploads/
-storage/
-cache/
-
-# ======================================================
-# Vector databases
-# ======================================================
-faiss_index/
 vectorstore/
-=======
->>>>>>> ded2d17 (POO refactor)
-vector_store/
 vectordb/
 db/
-
-# FAISS files
 *.faiss
 *.index
 *.pkl
-
-# Chroma
 chroma/
 chroma_db/
-
-# LanceDB
 .lancedb/
-
-# Weaviate local
 weaviate-data/
 
-# ======================================================
 # Model / embedding caches
-# ======================================================
 .huggingface/
 .hf_cache/
 transformers_cache/
 models/
 model_cache/
 
-# ======================================================
 # Jupyter
-# ======================================================
 .ipynb_checkpoints/
 
-# ======================================================
-# Testing / coverage
-# ======================================================
+# Testing / coverage / generated reports
 .coverage
 htmlcov/
 .pytest_cache/
 .tox/
 .nox/
+artifacts/
 
-# ======================================================
 # Build / packaging
-# ======================================================
 build/
 dist/
 *.egg-info/
 .eggs/
 pip-wheel-metadata/
 
-# ======================================================
 # IDE
-# ======================================================
 .vscode/
 .idea/
 *.iml
 
-# ======================================================
 # OS files
-# ======================================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ======================================================
 # Temporary files
-# ======================================================
 tmp/
 temp/
 *.tmp
@@ -306,31 +95,17 @@ temp/
 *.swp
 *.swo
 
-<<<<<<< HEAD
-# =========================
-# Uploaded documents
-# =========================
-uploads/
->>>>>>> 4834a3e (Storing chunks into Faiss)
-=======
-# ======================================================
 # Node (if frontend later)
-# ======================================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# ======================================================
 # Docker
-# ======================================================
 .docker/
 docker-compose.override.yml
 
-# ======================================================
 # Misc
-# ======================================================
 *.sqlite
 *.db
 *.sqlite3
->>>>>>> bcab36e (Avoiding duplications in create_vector_store)

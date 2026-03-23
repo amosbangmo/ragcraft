@@ -100,13 +100,21 @@ class SqliteUserRepository:
         conn.close()
 
     def delete_user(self, user_id: str) -> None:
+        """
+        Remove the account row and all SQLite rows scoped to ``user_id`` (RAG assets, QA rows,
+        query logs, per-project retrieval settings). Disk cleanup is done by
+        :meth:`~infrastructure.storage.file_avatar_storage.FileAvatarStorage.delete_user_data_tree`
+        in :class:`~application.use_cases.users.delete_user_account.DeleteUserAccountUseCase`.
+        """
         conn = get_connection()
-        conn.execute(
-            """
-            DELETE FROM users
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-        conn.commit()
-        conn.close()
+        try:
+            conn.execute("DELETE FROM rag_assets WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM qa_dataset WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM query_logs WHERE user_id = ?", (user_id,))
+            conn.execute(
+                "DELETE FROM project_retrieval_settings WHERE user_id = ?", (user_id,)
+            )
+            conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+            conn.commit()
+        finally:
+            conn.close()

@@ -32,7 +32,7 @@ This document describes **what the repository implements today**, how it is **en
 | Full HTTP walk (mocked use cases) | **`api/tests/api/test_http_pipeline_e2e.py`** |
 | Composition smoke upload → ask (mocked services) | **`api/tests/e2e/test_smoke_upload_ingest_ask.py`** |
 | Mocked ask **wall time** bound | **`api/tests/appli/test_performance_smoke.py`** |
-| Browser loads **live uvicorn** `/docs` and `/health` | **`api/tests/e2e_browser/`** (Playwright, **`@pytest.mark.e2e_browser`**) |
+| Browser / API E2E on **live uvicorn** (`/docs`, `/health`, parcours workspace HTTP) | **`cypress/e2e/`** (Cypress, **`npm run cy:ci`**) |
 
 ---
 
@@ -40,14 +40,14 @@ This document describes **what the repository implements today**, how it is **en
 
 - Lint (Ruff), architecture scripts, main pytest slice, infra/appli unittest slices.
 - **Boot check:** **`create_app()`** from **`interfaces.http.main`** (not Streamlit composition).
-- **Playwright:** `python -m playwright install --with-deps chromium` then **`pytest api/tests/e2e_browser -m e2e_browser`**.
+- **Cypress:** **`npm ci`** then **`npm run cy:ci`** (**`scripts/run_cypress_e2e.py`**: API + **`cypress run`**).
 - **Coverage:** pytest-cov over **`api/tests/appli`** + **`api/tests/domain`** for packages **`application`** and **`domain`**, XML report **`coverage.xml`** (no fixed fail-under in CI; tune locally before raising a gate).
 
 ---
 
 ## 5. Limitations (factual)
 
-- **Playwright E2E** today proves the **ASGI surface** in a real browser (OpenAPI UI + health). It does **not** drive the full Streamlit login/project/upload/query UI; that remains covered by **HTTP TestClient** walks and unit/integration tests.
+- **Cypress E2E** covers the **OpenAPI UI + health** in a browser and, via **`cy.request`**, le même parcours **HTTP** que Streamlit en mode backend HTTP (inscription, login, projet, ingest, ask + champs sources, réglages retrieval, évaluation manuelle, erreurs API structurées). L’UI Streamlit widgets n’est pas pilotée au pixel près; le contrat réseau l’est.
 - **Mypy** is **not** strict repo-wide; **`pyproject.toml`** enables **`warn_return_any`** and **`no_implicit_optional`** as incremental tightening — full strict passes are optional developer commands.
 - **Heavy parsers** (e.g. unstructured) and **external LLM/embedding** calls are not required for the default CI pytest slice; many tests use **mocks** or **dependency overrides**.
 

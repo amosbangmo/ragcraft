@@ -29,7 +29,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install ruff
-          python -m playwright install --with-deps chromium
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install npm dependencies (Cypress)
+        run: npm ci
 
       - name: Lint (critical rules)
         run: ruff check . --select E9,F63,F7,F82
@@ -43,8 +51,8 @@ jobs:
       - name: Pytest (remainder — same as step 2 of scripts/run_tests.sh)
         run: python -m pytest api/tests --ignore=api/tests/architecture --ignore=api/tests/bootstrap frontend/tests -q --tb=short
 
-      - name: Playwright E2E (live API)
-        run: python -m pytest api/tests/e2e_browser -m e2e_browser -q --tb=short
+      - name: Cypress E2E (live API)
+        run: npm run cy:ci
 
       - name: Coverage report (application + domain)
         run: |

@@ -47,7 +47,6 @@ pillow
 # Testing
 pytest
 pytest-cov
-playwright>=1.41.0
 
 # Lint / format (optional CI: ruff check src apps)
 ruff>=0.8.0

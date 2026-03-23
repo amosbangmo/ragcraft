@@ -19,7 +19,7 @@ Tests are **layered** for **structural confidence**: layout and imports, bootstr
 | **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
 | **Composition** | **`api/tests/composition/`** | Wiring smoke |
 | **E2E / regression** | **`api/tests/e2e/`** | Heavier / env-sensitive gates |
-| **Browser E2E** | **`api/tests/e2e_browser/`** | Playwright against **live uvicorn** (`@pytest.mark.e2e_browser`) |
+| **Browser E2E** | **`cypress/e2e/`** | Cypress against **live uvicorn**: surface publique (`public_surface.cy.js`) + parcours API aligné Streamlit HTTP (`workspace_journey.cy.js` — auth, projet, ingest, ask/sources, réglages retrieval, évaluation manuelle, erreurs JSON) via **`npm run cy:ci`** / **`scripts/run_cypress_e2e.py`**. |
 | **Frontend** | **`frontend/tests/`** | **`test_api_client.py`**, Streamlit, wire parsing, route literal contract |
 
 **Product matrix:** **`docs/product_features.md`**.

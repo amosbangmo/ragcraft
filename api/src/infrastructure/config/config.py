@@ -167,20 +167,40 @@ if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is missing")
 
 
+def _openai_request_timeout() -> float | None:
+    """Optional OpenAI HTTP timeout (seconds). Unset or non-positive → langchain default."""
+    raw = os.getenv("OPENAI_REQUEST_TIMEOUT_S")
+    if raw is None or not raw.strip():
+        return None
+    try:
+        value = float(raw.strip())
+    except ValueError:
+        return None
+    return value if value > 0 else None
+
+
+_OPENAI_REQUEST_TIMEOUT = _openai_request_timeout()
+
 APP_CONFIG = RAGConfig()
 RETRIEVAL_CONFIG = APP_CONFIG.retrieval
 INGESTION_CONFIG = APP_CONFIG.ingestion
 USER_PROFILE_UPLOAD_CONFIG = APP_CONFIG.user_profile_upload
 
 
-EMBEDDINGS = OpenAIEmbeddings(
-    api_key=OPENAI_API_KEY,
-    model=_get_str_env("OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"),
-)
+_embeddings_kwargs: dict = {
+    "api_key": OPENAI_API_KEY,
+    "model": _get_str_env("OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"),
+}
+_llm_kwargs: dict = {
+    "api_key": OPENAI_API_KEY,
+    "model": _get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+    "temperature": float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
+}
+if _OPENAI_REQUEST_TIMEOUT is not None:
+    _embeddings_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
+    _llm_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
 
-LLM = ChatOpenAI(
-    api_key=OPENAI_API_KEY,
-    model=_get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
-    temperature=float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
-)
+EMBEDDINGS = OpenAIEmbeddings(**_embeddings_kwargs)
+
+LLM = ChatOpenAI(**_llm_kwargs)
 # NOTE: module-level ``LLM`` / ``EMBEDDINGS`` singletons; moving construction behind the composition root is a separate refactor (see ARCHITECTURE_TARGET.md).

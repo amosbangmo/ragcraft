@@ -1,0 +1,15 @@
+{
+  "name": "ragcraft",
+  "private": true,
+  "scripts": {
+    "e2e:serve": "python scripts/e2e_api_server.py",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:ci": "python scripts/run_cypress_e2e.py"
+  },
+  "devDependencies": {
+    "cypress": "^14.2.0",
+    "cypress-multi-reporters": "^2.0.4",
+    "mocha-junit-reporter": "^2.2.1"
+  }
+}

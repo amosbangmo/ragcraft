@@ -149,12 +149,21 @@ def delete_avatar(principal: PrincipalDep, use_case: RemoveAvatarUCDep) -> Simpl
     return SimpleStatusResponse(success=True, message=result.message)
 
 
-@router.delete("/me", response_model=SimpleStatusResponse, summary="Delete account")
+@router.delete(
+    "/me",
+    response_model=SimpleStatusResponse,
+    summary="Delete account and all user-owned data",
+)
 def delete_me(
     body: DeleteAccountRequest,
     principal: PrincipalDep,
     use_case: DeleteAccountUCDep,
 ) -> SimpleStatusResponse:
+    """
+    Verifies the current password, then deletes every DB row for this ``user_id`` (users,
+    rag_assets, qa_dataset, query_logs, project_retrieval_settings) and removes
+    ``<data_root>/users/<user_id>`` on disk (projects, indexes, avatars).
+    """
     result = use_case.execute(
         DeleteUserAccountCommand(user_id=principal.user_id, current_password=body.current_password)
     )
