@@ -1,5 +1,5 @@
 """
-Summary / recall search UI. Uses :class:`~services.protocol.BackendClient.search_project_summaries``.
+Summary / recall search UI. Uses :class:`~services.api_client.BackendClient.search_project_summaries``.
 """
 
 import streamlit as st
@@ -11,14 +11,12 @@ from components.shared.retrieval_settings_panel import (
     retrieval_settings_to_request_dict,
 )
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient, RetrievalFilters
 from services.ui_errors import (
     DocStoreError,
     VectorStoreError,
     get_user_error_message,
 )
-from services.view_models import RetrievalFilters
-
 st.set_page_config(
     page_title="Search | RAGCraft",
     page_icon="🔎",

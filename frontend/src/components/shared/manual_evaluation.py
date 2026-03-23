@@ -6,7 +6,7 @@ from components.shared.confidence_display import format_confidence_with_band
 from components.shared.metric_help import render_metric_with_help
 from components.shared.prompt_sources import render_prompt_sources
 from components.shared.raw_assets import render_raw_assets
-from services.view_models import JUDGE_FAILURE_REASON, ManualEvaluationResult
+from services.api_client import JUDGE_FAILURE_REASON, ManualEvaluationResult
 
 
 def _fmt_float(value: float | None) -> str:

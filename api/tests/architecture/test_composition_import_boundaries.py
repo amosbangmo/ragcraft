@@ -33,6 +33,7 @@ def test_composition_modules_do_not_import_services_package(path: Path) -> None:
     hits = [ln for ln in text.splitlines() if _forbidden_transport_import_line(ln)]
     assert not hits, (
         f"{path.relative_to(REPO_ROOT)} must not import services "
-        f"(use ports + infrastructure adapters; Streamlit transcript is wired in streamlit_backend_factory):\n"
+        f"(use ports + infrastructure adapters; Streamlit transcript is wired in "
+        f"application.frontend_support.streamlit_backend_factory):\n"
         + "\n".join(hits)
     )

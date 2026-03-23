@@ -93,12 +93,12 @@ The Streamlit app must not treat **`application.dto`** or **`domain`** types as 
 
 | Piece | Path | Role |
 |-------|------|------|
-| Public façade | **`frontend/src/services/api_client.py`** | Re-exports **`HttpBackendClient`**, **`get_backend_client`**, wire types, and transport helpers |
-| HTTP implementation | **`frontend/src/services/http_client.py`** | Builds requests and parses JSON using **only** wire modules (no **`domain`** / **`application.dto`** imports on the hot path) |
+| Public façade | **`frontend/src/services/api_client.py`** | **Only** module pages/components use for **`BackendClient`**, **`HttpBackendClient`**, **`get_backend_client`**, wire/view-model helpers, and preset-merge ports (implementation under **`application/frontend_support/`**) |
+| HTTP implementation | **`api/src/application/frontend_support/http_backend_client.py`** | Builds requests and parses JSON using **only** wire modules (no **`domain`** / **`application.dto`** imports on the hot path) |
 | Wire DTOs | **`frontend/src/services/api_contract_models.py`** | Projects, chat (**`RAGAnswer`**), retrieval filters/settings, ingestion/QA payloads |
 | Evaluation wire | **`frontend/src/services/evaluation_wire_models.py`**, **`evaluation_wire_parse.py`** | Manual eval + benchmark results from API JSON |
 | JSON helpers | **`frontend/src/services/http_payloads.py`** | **`rag_answer_from_ask_api_dict`**, retrieval settings, QA generate, export artifacts, … |
-| In-process mapping | **`frontend/src/services/client_wire_mappers.py`** | Maps domain/application results → wire types at the **`InProcessBackendClient`** boundary |
+| In-process mapping | **`api/src/application/frontend_support/client_wire_mappers.py`** | Maps domain/application results → wire types at the **`InProcessBackendClient`** boundary |
 
 **Environment (local dev):** set **`RAGCRAFT_BACKEND_CLIENT`** to **`http`** (default), **`api`**, or **`remote`** to use **`HttpBackendClient`**; set **`RAGCRAFT_API_BASE_URL`** to the API root (no trailing slash), e.g. **`http://127.0.0.1:8000`**. Optional: **`RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS`**, **`RAGCRAFT_API_READ_TIMEOUT_SECONDS`** (or legacy **`RAGCRAFT_API_TIMEOUT_SECONDS`**). The JWT from Streamlit session state is sent as **`Authorization: Bearer`** on scoped calls (**`services/http_transport.py`**).
 

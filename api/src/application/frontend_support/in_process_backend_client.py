@@ -1,4 +1,4 @@
-"""In-process :class:`~services.protocol.BackendClient` backed by :class:`~composition.BackendApplicationContainer`."""
+"""In-process :class:`~application.frontend_support.backend_client_protocol.BackendClient` backed by :class:`~composition.BackendApplicationContainer`."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from services.api_contract_models import UpdateProjectRetrievalSettingsCommand
-from services.client_wire_mappers import (
+from application.frontend_support.client_wire_mappers import (
     benchmark_result_to_wire,
     delete_document_result_to_wire,
     effective_retrieval_view_to_wire,

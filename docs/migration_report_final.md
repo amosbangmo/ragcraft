@@ -47,7 +47,7 @@ The remaining work was **consistency** (paths, docs, tests naming), **guardrail 
 - **JWT bearer** is the standard for scoped HTTP routes: **`Authorization: Bearer`**, verified via **`AuthenticationPort`** (**`JwtAuthenticationAdapter`** in **`infrastructure/auth`**).
 - **Domain-owned identity:** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`** under **`domain`**.
 - **FastAPI** resolves the container and **`AuthenticatedPrincipal`** in **`interfaces/http/dependencies.py`**; **routers do not import **`infrastructure.*`**.
-- **HTTP transcript** for the API worker uses **`application/frontend_support/memory_chat_transcript.py`**.
+- **HTTP transcript** for the API worker uses **`application/services/memory_chat_transcript.py`**.
 
 ---
 
@@ -148,7 +148,7 @@ scripts/
 **Where dicts remain (intentionally terminal):**
 
 - **`retrieval_comparison_to_wire_dict`** and **`RetrievalComparisonWirePayload.as_json_dict()`** — transport JSON for FastAPI / Streamlit.
-- **`frontend/src/services/in_process.py`** calls **`retrieval_comparison_to_wire_dict`** after the use case so Streamlit pages keep a plain **`dict`** contract without leaking dataclasses into **`BackendClient`** typing.
+- **`api/src/application/frontend_support/in_process_backend_client.py`** calls **`retrieval_comparison_to_wire_dict`** after the use case so Streamlit pages keep a plain **`dict`** contract without leaking dataclasses into **`BackendClient`** typing.
 - **Benchmark run wire** (**`BenchmarkRunWirePayload.from_benchmark_result`**) still normalizes from **`BenchmarkResult.to_dict()`** — a separate backlog item if benchmark rows become first-class typed DTOs end-to-end.
 
 ---
@@ -187,19 +187,21 @@ scripts/
 
 ## 14. Canonical frontend–backend integration (wire client)
 
-**Single façade:** Streamlit (and future SPAs) should treat **`frontend/src/services/api_client.py`** as the primary entry for “talk to the API”: it documents and re-exports **`HttpBackendClient`**, **`get_backend_client`**, **`HttpTransport`**, and the wire dataclasses used across modes.
+**Single façade:** **`frontend/src/pages/`** and **`frontend/src/components/`** import **`BackendClient`**, **`get_backend_client`**, wire types, retrieval/evaluation helpers, and preset-merge ports **only** from **`frontend/src/services/api_client.py`**. That module re-exports symbols implemented under **`api/src/application/frontend_support/`** (protocol, **`HttpBackendClient`**, **`InProcessBackendClient`**, **`client_wire_mappers`**, **`view_models`**, **`streamlit_backend_factory`**, **`streamlit_backend_access`**) so **no other** **`frontend/src`** file imports **`domain`**, **`application`**, **`composition`**, or **`interfaces`** (except **`api_client.py`** as the bridge).
 
 **Contract guarantees:**
 
-- **`http_client.py`** parses HTTP JSON via **`http_payloads.py`** into **`api_contract_models`** / **`evaluation_wire_models`** — **no** **`domain`** or **`application.dto`** imports on the HTTP implementation path (except **`TYPE_CHECKING`** for in-process-only method signatures).
-- **`InProcessBackendClient`** returns the **same wire shapes** for shared methods (e.g. **`RAGAnswer`**, **`EffectiveRetrievalSettingsPayload`**, **`BenchmarkResult`**, **`QADatasetEntryPayload`**, ingestion payloads) via **`client_wire_mappers.py`**, so **`BackendClient`** stays mode-agnostic for UI code.
-- **`services/view_models.py`** re-exports **`RetrievalFilters`**, **`BenchmarkResult`**, **`coerce_benchmark_result`**, **`QADatasetEntry`** (alias of **`QADatasetEntryPayload`**) so **`pages/`** / **`components/`** avoid **`domain`** for API-shaped data.
+- **`http_backend_client.py`** (under **`frontend_support`**) parses HTTP JSON via **`http_payloads.py`** into **`api_contract_models`** / **`evaluation_wire_models`** — **no** **`domain`** imports on the HTTP hot path (in-process-only methods use **`Any`** where shapes are not sent over HTTP).
+- **`InProcessBackendClient`** returns the **same wire shapes** for shared methods (e.g. **`RAGAnswer`**, **`EffectiveRetrievalSettingsPayload`**, **`BenchmarkResult`**, **`QADatasetEntryPayload`**, ingestion payloads) via **`client_wire_mappers.py`**, including **`DocumentReplacementSummary.to_wire_dict()`** and **`StoredMultimodalAsset.upsert_kwargs()`** for ingestion payloads.
+- **`application/frontend_support/view_models.py`** re-exports **`RetrievalFilters`**, **`BenchmarkResult`**, **`coerce_benchmark_result`**, **`QADatasetEntry`** (alias of **`QADatasetEntryPayload`**) for **`api_client`**; pages/components receive them only through **`api_client`**.
 - **`settings_dtos.py`** exposes **`UpdateProjectRetrievalSettingsCommand`** and **`EffectiveRetrievalSettingsPayload`** from **`api_contract_models`**, not from **`application.dto`**.
 
 **Tests added / tightened:**
 
-- **`frontend/tests/streamlit/test_frontend_api_contract.py`** — ask-response parsing, retrieval settings deserialization, **`raise_for_api_response`** mapping, ingest success-message helpers, HTTP client error envelope (**`VectorStoreError`**), façade import smoke.
-- **`frontend/tests/streamlit/test_streamlit_context_refresh.py`** — HTTP refresh test patches **`infrastructure.config.app_state.get_backend_client`** so it stays stable when other tests import **`services.api_client`**.
+- **`api/tests/architecture/test_frontend_streamlit_services_entrypoint.py`** — AST allowlist: pages/components may import only **`services.api_client`**, **`services.ui_errors`**, **`services.streamlit_context`**, **`services.settings_dtos`**, and **`services.streamlit_auth`** from the **`services`** package.
+- **`frontend/tests/test_api_client.py`** — **`api_client`** exports façade symbols; **`InProcessBackendClient`** remains a lazy attribute so lightweight imports do not load the in-process stack.
+- **`frontend/tests/streamlit/test_frontend_api_contract.py`** — uses **`HttpBackendClient`** from **`services.api_client`**.
+- **`frontend/tests/streamlit/test_streamlit_context_refresh.py`** — patches **`infrastructure.config.app_state.get_backend_client`**; **`streamlit_backend_access.get_backend_client`** resolves **`app_state` lazily** so the patch applies.
 
 **Local dev:** documented under **`docs/api.md`** (Streamlit client section): **`RAGCRAFT_BACKEND_CLIENT`**, **`RAGCRAFT_API_BASE_URL`**, timeouts, bearer token behavior.
 

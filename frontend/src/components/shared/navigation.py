@@ -2,7 +2,8 @@ import streamlit as st
 
 from components.shared.avatar import render_user_avatar
 from services import streamlit_auth
-from services.streamlit_context import get_backend_client, get_user_id
+from services.api_client import get_backend_client
+from services.streamlit_context import get_user_id
 
 
 def render_navigation(hide_sidebar: bool = False):

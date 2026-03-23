@@ -1,14 +1,13 @@
 """
-Streamlit wiring for :class:`~services.protocol.BackendClient` and session user id.
+Streamlit wiring for :class:`~services.api_client.BackendClient` and session user id.
 
-Re-exports :func:`~services.streamlit_api_client.get_backend_client` alongside
-:func:`get_user_id`. UI modules may import both from here; pages may use either this module or
-:mod:`services.streamlit_api_client`.
+Re-exports :func:`~services.api_client.get_backend_client` alongside :func:`get_user_id`.
+Prefer :mod:`services.api_client` for new code.
 """
 
 from __future__ import annotations
 
-from services.streamlit_api_client import get_backend_client
+from services.api_client import get_backend_client
 
 
 def get_user_id() -> str:

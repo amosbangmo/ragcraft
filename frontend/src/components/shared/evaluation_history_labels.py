@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from services.view_models import format_bool_toggle_on_off
+from services.api_client import format_bool_toggle_on_off
 
 
 def build_benchmark_history_entry_label(

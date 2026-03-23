@@ -10,7 +10,7 @@ from typing import Any, cast
 import streamlit as st
 
 from components.shared.retrieval_dashboard import render_retrieval_dashboard
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 
 
 def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:

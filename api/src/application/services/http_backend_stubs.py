@@ -1,5 +1,5 @@
 """
-Placeholders attached to :class:`~services.http_client.HttpBackendClient` when the UI
+Placeholders attached to :class:`~application.frontend_support.http_backend_client.HttpBackendClient` when the UI
 runs against the API: chat transcripts stay in Streamlit while RAG hits REST.
 
 Kept under ``application`` so the frontend ``services`` package does not import

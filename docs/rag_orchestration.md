@@ -24,7 +24,7 @@ This document describes **how RAG behavior is structured in the current codebase
 | Entry | Where | Notes |
 |-------|--------|------|
 | **HTTP chat (ask)** | **`api/src/interfaces/http/routers/chat.py`** → **`AskQuestionUseCase`** via **`dependencies.py`** | Scoped routes require **`Authorization: Bearer`** → **`AuthenticatedPrincipal`**. |
-| **In-process Streamlit ask** | **`frontend/src/services/in_process.py`** → container **`chat_ask_question_use_case`** | Same use cases as HTTP; different transport. |
+| **In-process Streamlit ask** | **`api/src/application/frontend_support/in_process_backend_client.py`** → container **`chat_ask_question_use_case`** | Same use cases as HTTP; different transport. |
 | **Pipeline build** | **`BuildRagPipelineUseCase`** | Used by inspect, comparison, and evaluation paths. |
 | **Inspect pipeline** | **`InspectRagPipelineUseCase`** | Uses **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance; inspect calls **`execute(..., emit_query_log=False)`**. |
 | **Preview summary recall** | **`PreviewSummaryRecallUseCase`** | Stops after recall; returns preview DTOs, not a full pipeline. |

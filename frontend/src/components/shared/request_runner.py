@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import streamlit as st
 
 if TYPE_CHECKING:
-    from services.view_models import BenchmarkResult
+    from services.api_client import BenchmarkResult
 
 # Session payload convention: failures from ``run_request_action`` use this key.
 # Success payloads must not use a top-level key with this name.
@@ -62,7 +62,7 @@ def analyze_dataset_evaluation_session_payload(raw: Any) -> DatasetEvaluationSes
     Use :func:`read_dataset_evaluation_session_payload` when you only need a coerced
     ``BenchmarkResult``; use this when the UI must distinguish **invalid_result** from **missing**.
     """
-    from services.view_models import coerce_benchmark_result
+    from services.api_client import coerce_benchmark_result
 
     if raw is None:
         return DatasetEvaluationSessionView(kind="missing")

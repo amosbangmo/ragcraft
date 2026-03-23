@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from typing import TYPE_CHECKING
 
 import streamlit as st
 
-from services.retrieval_settings_merge import (
-    RetrievalPresetMergePort,
-    default_retrieval_preset_merge_port,
-)
-from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
-from services.view_models import (
+from services.api_client import (
+    BackendClient,
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
     PRESET_UI_LABELS,
     RetrievalPreset,
+    RetrievalPresetMergePort,
     RetrievalSettings,
+    default_retrieval_preset_merge_port,
     parse_retrieval_preset,
 )
-
-if TYPE_CHECKING:
-    from services.protocol import BackendClient
+from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
 
 _RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
 
@@ -170,9 +165,9 @@ def render_retrieval_settings_panel(
     - ``retrieval_settings`` — merged ``RetrievalSettings`` for backend calls
 
     When ``user_id``, ``project_id``, and ``backend_client`` are set, loads/saves use
-    :meth:`~services.protocol.BackendClient.get_effective_retrieval_settings`
+    :meth:`~services.api_client.BackendClient.get_effective_retrieval_settings`
     and
-    :meth:`~services.protocol.BackendClient.update_project_retrieval_settings`.
+    :meth:`~services.api_client.BackendClient.update_project_retrieval_settings`.
     """
     svc = service or default_retrieval_preset_merge_port()
 

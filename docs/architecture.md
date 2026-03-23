@@ -91,7 +91,7 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 **Does not own:** end-user UI or business scenario scripts (beyond wiring).
 
-**Streamlit:** Session transcript is supplied from **`frontend/src/services/streamlit_backend_factory`** via **`StreamlitChatTranscript`** and **`build_backend_composition(chat_transcript=...)`**.
+**Streamlit:** Session transcript is supplied from **`api/src/application/frontend_support/streamlit_backend_factory.py`** via **`StreamlitChatTranscript`** and **`build_backend_composition(chat_transcript=...)`**.
 
 ---
 
@@ -107,11 +107,9 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 ## Frontend integration (`frontend/src/`)
 
-**`services/`** — **`BackendClient`** protocol (**`services/protocol.py`**), HTTP (**`http_client.py`**) and in-process (**`in_process.py`**) clients, **`api_client.py`** as the **documented canonical import surface** for the backend façade, **`http_payloads.py`** / **`api_contract_models.py`** / **`evaluation_wire_*`** as the **frontend-owned wire contract** matching FastAPI JSON, **`client_wire_mappers.py`** to align in-process return types with that wire contract, Streamlit auth/session helpers, **`streamlit_backend_factory`**. This is the only place that may combine **composition + use cases** for the Streamlit app.
+**`services/`** — **`api_client.py`** is the **only** import surface pages and components use for **`BackendClient`**, **`get_backend_client`**, HTTP/in-process types, retrieval/evaluation UI helpers, and preset-merge ports. Low-level wire parsing stays in **`http_payloads.py`**, **`api_contract_models.py`**, and **`evaluation_wire_*`**. The protocol, **`HttpBackendClient`**, **`InProcessBackendClient`**, wire mappers, Streamlit backend factory, and **`view_models`** implementation live under **`api/src/application/frontend_support/`** (imported by **`api_client.py`** only from the frontend tree).
 
-**HTTP client rule:** **`http_client.py`** must not import **`domain`** or **`application.dto`** for response parsing; **`TYPE_CHECKING`** may reference domain types only for signatures of **NotImplemented** in-process-only methods.
-
-**`pages/`**, **`components/`** — Streamlit UI; consume **`services`** only (plus **`infrastructure.auth`** for guards where allowed).
+**`pages/`**, **`components/`** — Streamlit UI; import allowed **`services.*`** modules only (**`api_client`**, **`ui_errors`**, **`streamlit_context`**, **`settings_dtos`**, **`streamlit_auth`**) plus **`infrastructure.auth`** for guards where allowed (enforced by **`api/tests/architecture/test_frontend_streamlit_services_entrypoint.py`**).
 
 **`state/`**, **`viewmodels/`**, **`utils/`** — UI state and helpers; same import rules as pages/components unless tests say otherwise.
 

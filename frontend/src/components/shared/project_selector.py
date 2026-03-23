@@ -1,6 +1,7 @@
 import streamlit as st
 
-from services.streamlit_context import get_backend_client, get_user_id
+from services.api_client import get_backend_client
+from services.streamlit_context import get_user_id
 
 
 def render_project_selector(

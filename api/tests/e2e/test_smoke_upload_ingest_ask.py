@@ -15,8 +15,8 @@ _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "services.factories.chat_service_factory",
     "services.factories",
-    "services.in_process",
-    "services.streamlit_backend_factory",
+    "application.frontend_support.in_process_backend_client",
+    "application.frontend_support.streamlit_backend_factory",
     "infrastructure.evaluation.qa_dataset_generation_service",
     "infrastructure.evaluation.qa_dataset_service",
     "infrastructure.persistence.sqlite.qa_dataset_repository",
@@ -69,8 +69,8 @@ def setUpModule():
     _install_module("infrastructure.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("infrastructure.rag.reranking_service", RerankingService=_DummyService)
 
-    from services.in_process import InProcessBackendClient as _IPC
-    from services.streamlit_backend_factory import (
+    from application.frontend_support.in_process_backend_client import InProcessBackendClient as _IPC
+    from application.frontend_support.streamlit_backend_factory import (
         build_streamlit_backend_application_container as _build,
     )
 

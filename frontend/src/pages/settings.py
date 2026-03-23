@@ -2,7 +2,7 @@
 Project-level retrieval defaults (preset + advanced overrides).
 
 Uses :func:`components.shared.retrieval_settings_panel.render_retrieval_settings_panel` so changes
-persist via :meth:`services.protocol.BackendClient.update_project_retrieval_settings`.
+persist via :meth:`services.api_client.BackendClient.update_project_retrieval_settings`.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.retrieval_settings_panel import render_retrieval_settings_panel
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 
 st.set_page_config(
     page_title="Settings | RAGCraft",

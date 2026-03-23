@@ -1,20 +1,19 @@
 """
-Streamlit session singletons for resolving a :class:`~services.protocol.BackendClient`.
+Streamlit session singletons for resolving a :class:`~application.frontend_support.backend_client_protocol.BackendClient`.
 
-Pages under ``frontend/src/pages`` must call :func:`get_backend_client` (via
-:mod:`services.streamlit_api_client` / :mod:`services.streamlit_context`).
-**Default:** :class:`~services.http_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
+Pages under ``frontend/src/pages`` should obtain the client via :mod:`services.api_client`.
+**Default:** :class:`~application.frontend_support.http_backend_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
 or ``http``). **Escape hatch:** ``RAGCRAFT_BACKEND_CLIENT=in_process`` caches a
 :class:`~composition.BackendApplicationContainer` from
-:func:`~services.streamlit_backend_factory.build_streamlit_backend_application_container`.
+:func:`~application.frontend_support.streamlit_backend_factory.build_streamlit_backend_application_container`.
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
+from application.frontend_support.backend_client_protocol import BackendClient
 from composition import BackendApplicationContainer
-from services.protocol import BackendClient
 from services.settings import load_frontend_backend_settings, use_http_backend_client
 
 BACKEND_CONTAINER_KEY = "streamlit_backend_application_container"
@@ -23,7 +22,7 @@ HTTP_BACKEND_CLIENT_KEY = "ragcraft_http_backend_client"
 
 def _get_streamlit_backend_container() -> BackendApplicationContainer:
     if BACKEND_CONTAINER_KEY not in st.session_state:
-        from services.streamlit_backend_factory import (
+        from application.frontend_support.streamlit_backend_factory import (
             build_streamlit_backend_application_container,
         )
 
@@ -33,9 +32,9 @@ def _get_streamlit_backend_container() -> BackendApplicationContainer:
 
 
 def get_backend_client() -> BackendClient:
-    """Return :class:`~services.in_process.InProcessBackendClient` or :class:`~services.http_client.HttpBackendClient`."""
+    """Return in-process or HTTP backend client according to ``RAGCRAFT_BACKEND_CLIENT``."""
     if use_http_backend_client():
-        from services.http_client import HttpBackendClient
+        from application.frontend_support.http_backend_client import HttpBackendClient
 
         cfg = load_frontend_backend_settings()
         cached = st.session_state.get(HTTP_BACKEND_CLIENT_KEY)
@@ -53,7 +52,7 @@ def get_backend_client() -> BackendClient:
         st.session_state[HTTP_BACKEND_CLIENT_KEY] = client
         return client
 
-    from services.in_process import InProcessBackendClient
+    from application.frontend_support.in_process_backend_client import InProcessBackendClient
 
     return InProcessBackendClient(_get_streamlit_backend_container())
 

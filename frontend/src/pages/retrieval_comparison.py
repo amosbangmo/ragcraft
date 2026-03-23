@@ -1,5 +1,5 @@
 """
-Retrieval A/B comparison via :class:`~services.protocol.BackendClient.compare_retrieval_modes``.
+Retrieval A/B comparison via :class:`~services.api_client.BackendClient.compare_retrieval_modes``.
 """
 
 import streamlit as st
@@ -12,7 +12,7 @@ from components.shared.request_runner import (
     run_request_action,
 )
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 from services.ui_errors import (
     DocStoreError,
     LLMServiceError,

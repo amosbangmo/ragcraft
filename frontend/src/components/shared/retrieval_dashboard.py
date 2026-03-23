@@ -10,7 +10,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import streamlit as st
 
-from services.view_models import parse_query_log_timestamp
+from services.api_client import parse_query_log_timestamp
 
 
 def _as_float(value: object) -> float | None:

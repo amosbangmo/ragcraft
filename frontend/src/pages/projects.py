@@ -1,6 +1,6 @@
 """
-Projects workspace UI. All backend access goes through :class:`~services.protocol.BackendClient`
-(:func:`~services.streamlit_api_client.get_backend_client`); set ``RAGCRAFT_BACKEND_CLIENT=http``
+Projects workspace UI. All backend access goes through :class:`~services.api_client.BackendClient`
+(:func:`~services.api_client.get_backend_client`); set ``RAGCRAFT_BACKEND_CLIENT=http``
 to use FastAPI as system of record.
 """
 
@@ -12,7 +12,7 @@ from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.project_selector import render_project_selector
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 
 st.set_page_config(
     page_title="Projects | RAGCraft",

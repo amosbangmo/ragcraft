@@ -27,17 +27,17 @@ from components.shared.request_runner import (
     render_result_payload,
     run_request_action,
 )
-from services.protocol import BackendClient
-from services.ui_errors import (
-    get_user_error_message,
-    map_evaluation_flow_exception,
-)
-from services.view_models import (
+from services.api_client import (
+    BackendClient,
     BenchmarkResult,
     QADatasetEntry,
     coerce_benchmark_result,
     compare_benchmark_failure_counts,
     compare_benchmark_summaries,
+)
+from services.ui_errors import (
+    get_user_error_message,
+    map_evaluation_flow_exception,
 )
 
 BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY = "benchmark_run_history_by_project"

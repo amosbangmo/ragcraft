@@ -1,5 +1,5 @@
 """
-RAG chat UI. Uses :class:`~services.protocol.BackendClient` for ``ask_question``; HTTP mode
+RAG chat UI. Uses :class:`~services.api_client.BackendClient` for ``ask_question``; HTTP mode
 targets ``POST /chat/ask`` on the FastAPI app (``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 
@@ -20,7 +20,7 @@ from components.shared.retrieval_settings_panel import (
     retrieval_settings_to_request_dict,
 )
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 from services.ui_errors import (
     DocStoreError,
     LLMServiceError,

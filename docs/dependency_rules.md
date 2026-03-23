@@ -54,7 +54,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 - Infrastructure **must not** host a second RAG orchestration façade (**`test_no_rag_service_facade.py`**).  
 - Chat orchestration folders **must not** import **`infrastructure`** or delivery stacks (**`test_orchestration_package_import_boundaries.py`**).  
 - **`interfaces/http`** and **`frontend/src/services`** **must not** import **`infrastructure.rag`** directly (**`test_orchestration_boundaries.py`**).  
-- **Composition** **must not** import **`services`** (frontend); transcript wiring only from **`streamlit_backend_factory`** (**`test_composition_import_boundaries.py`**).
+- **Composition** **must not** import **`services`** (frontend); Streamlit transcript wiring lives in **`application.frontend_support.streamlit_backend_factory`** (**`test_composition_import_boundaries.py`**).
 
 ---
 

@@ -3,7 +3,7 @@ Regression tests for HTTP vs Streamlit transport boundaries.
 
 These complement :mod:`architecture.test_layer_boundaries` and
 :mod:`architecture.test_fastapi_delivery_boundaries`. Streamlit surfaces must stay behind
-:class:`~services.protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
+:class:`~application.frontend_support.backend_client_protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
 directly.
 
 Checks are **import-level** (AST of ``import`` / ``from … import``).
@@ -59,15 +59,15 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
 
 def test_http_and_in_process_backend_clients_expose_same_gateway_operations() -> None:
     """
-    :class:`~services.http_client.HttpBackendClient` and
-    :class:`~services.in_process.InProcessBackendClient` must stay aligned so switching
+    :class:`~application.frontend_support.http_backend_client.HttpBackendClient` and
+    :class:`~application.frontend_support.in_process_backend_client.InProcessBackendClient` must stay aligned so switching
     ``use_http_backend_client`` does not drop operations Streamlit pages rely on.
 
     ``HttpBackendClient`` may add transport-only helpers (e.g. ``close``); in-process must implement
     every other public callable or property the HTTP client exposes.
     """
-    from services.http_client import HttpBackendClient
-    from services.in_process import InProcessBackendClient
+    from application.frontend_support.http_backend_client import HttpBackendClient
+    from application.frontend_support.in_process_backend_client import InProcessBackendClient
 
     def _surface(cls: type) -> set[str]:
         names: set[str] = set()
@@ -101,8 +101,8 @@ def test_runtime_checkable_backend_client_accepts_http_client_instance() -> None
     """Structural check: HTTP implementation satisfies the protocol used by pages."""
     import httpx
 
-    from services.http_client import HttpBackendClient
-    from services.protocol import BackendClient
+    from application.frontend_support.backend_client_protocol import BackendClient
+    from application.frontend_support.http_backend_client import HttpBackendClient
 
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={}))
     client = HttpBackendClient(base_url="http://test.invalid", transport=transport)

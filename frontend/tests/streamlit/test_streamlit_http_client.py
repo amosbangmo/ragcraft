@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from services.evaluation_wire_models import BenchmarkResult
-from services.http_client import HttpBackendClient
+from services.api_client import HttpBackendClient
 
 
 def _bench_json() -> dict:

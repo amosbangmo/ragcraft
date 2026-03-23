@@ -23,7 +23,7 @@ from components.shared.evaluation_summary_metrics import (
 )
 from components.shared.metric_help import render_metric_with_help
 from components.shared.section_card import inject_section_card_styles, section_card
-from services.view_models import LOWER_IS_BETTER_METRICS, FailureAnalysisService
+from services.api_client import FailureAnalysisService, LOWER_IS_BETTER_METRICS
 
 
 def _coerce_hallucination_flag(value: object) -> bool:

@@ -1,5 +1,5 @@
 """
-Retrieval pipeline inspector. Uses :func:`~services.protocol.BackendClient.inspect_retrieval`
+Retrieval pipeline inspector. Uses :func:`~services.api_client.BackendClient.inspect_retrieval`
 (``POST /chat/pipeline/inspect`` over HTTP when ``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 
@@ -16,19 +16,19 @@ from components.shared.request_runner import (
     run_request_action,
 )
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
-from services.ui_errors import (
-    DocStoreError,
-    LLMServiceError,
-    VectorStoreError,
-    get_user_error_message,
-)
-from services.view_models import (
+from services.api_client import (
+    BackendClient,
     PRESET_UI_LABELS,
     PipelineBuildResult,
     RetrievalFilters,
     RetrievalSettings,
     parse_retrieval_preset,
+)
+from services.ui_errors import (
+    DocStoreError,
+    LLMServiceError,
+    VectorStoreError,
+    get_user_error_message,
 )
 
 st.set_page_config(

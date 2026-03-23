@@ -1,5 +1,5 @@
 """
-Ingestion UI. All project/document operations use :class:`~services.protocol.BackendClient`
+Ingestion UI. All project/document operations use :class:`~services.api_client.BackendClient`
 (``RAGCRAFT_BACKEND_CLIENT=http`` → FastAPI).
 """
 
@@ -15,7 +15,7 @@ from components.shared.request_runner import (
     run_request_action,
 )
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 
 st.set_page_config(
     page_title="Ingestion | RAGCraft",

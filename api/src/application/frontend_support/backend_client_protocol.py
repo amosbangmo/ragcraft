@@ -1,10 +1,10 @@
 """
 Frontend integration seam for backend capabilities (Streamlit today; Angular/SPA via HTTP).
 
-Implementations: **HTTP** (:class:`~services.http_client.HttpBackendClient` → FastAPI; default)
-or **in-process** (:class:`~services.in_process.InProcessBackendClient` →
-:class:`~composition.BackendApplicationContainer`). Pages should depend only on this protocol,
-:mod:`services.view_models`, and auth helpers — not on ``infrastructure.adapters`` or the composition root.
+Implementations: **HTTP** (:class:`~application.frontend_support.http_backend_client.HttpBackendClient` → FastAPI; default)
+or **in-process** (:class:`~application.frontend_support.in_process_backend_client.InProcessBackendClient` →
+:class:`~composition.BackendApplicationContainer`). Streamlit pages should depend on
+:mod:`services.api_client` (re-exports) and auth helpers — not on ``infrastructure.adapters`` or the composition root.
 
 Wire types (:mod:`services.api_contract_models`, :mod:`services.evaluation_wire_models`) are the
 cross-mode contract for HTTP and mapped at the in-process boundary. A few methods remain

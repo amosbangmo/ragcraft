@@ -1,5 +1,5 @@
 """
-Evaluation hub. Dataset benchmark and related calls use :class:`~services.protocol.BackendClient`
+Evaluation hub. Dataset benchmark and related calls use :class:`~services.api_client.BackendClient`
 (``POST /evaluation/dataset/run`` and siblings when ``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 
@@ -12,8 +12,7 @@ from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.request_runner import analyze_dataset_evaluation_session_payload
 from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
-from services.view_models import BenchmarkResult
+from services.api_client import BackendClient, BenchmarkResult
 
 st.set_page_config(
     page_title="Evaluation | RAGCraft",

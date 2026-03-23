@@ -15,7 +15,7 @@ from components.shared.request_runner import (
     render_result_payload,
     run_request_action,
 )
-from services.protocol import BackendClient
+from services.api_client import BackendClient
 from services.ui_errors import (
     DocStoreError,
     LLMServiceError,

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-from domain.rag.chat_message import ChatMessage
-
 
 class StreamlitChatTranscript:
     """Implements :class:`~domain.common.ports.chat_transcript_port.ChatTranscriptPort` via Streamlit session state."""
@@ -28,11 +26,7 @@ class StreamlitChatTranscript:
         return st.session_state.get(self.MESSAGE_KEY, [])
 
     def add_user_message(self, content: str) -> None:
-        st.session_state[self.MESSAGE_KEY].append(
-            ChatMessage(role="user", content=content).__dict__
-        )
+        st.session_state[self.MESSAGE_KEY].append({"role": "user", "content": content})
 
     def add_assistant_message(self, content: str) -> None:
-        st.session_state[self.MESSAGE_KEY].append(
-            ChatMessage(role="assistant", content=content).__dict__
-        )
+        st.session_state[self.MESSAGE_KEY].append({"role": "assistant", "content": content})

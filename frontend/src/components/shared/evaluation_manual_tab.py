@@ -19,9 +19,8 @@ from components.shared.request_runner import (
     render_result_payload,
     run_request_action,
 )
-from services.protocol import BackendClient
+from services.api_client import BackendClient, ManualEvaluationResult, is_manual_evaluation_result_like
 from services.ui_errors import map_evaluation_flow_exception
-from services.view_models import ManualEvaluationResult, is_manual_evaluation_result_like
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:

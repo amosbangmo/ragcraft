@@ -9,7 +9,7 @@ import streamlit as st
 from components.shared.manual_evaluation import render_manual_evaluation_result
 from components.shared.metric_help import render_metric_with_help
 from components.shared.section_card import inject_section_card_styles, section_card
-from services.view_models import ManualEvaluationResult
+from services.api_client import ManualEvaluationResult
 
 
 def render_evaluation_question_detail(result: ManualEvaluationResult) -> None:

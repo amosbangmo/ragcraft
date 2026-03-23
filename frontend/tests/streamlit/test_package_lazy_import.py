@@ -6,7 +6,8 @@ import sys
 def test_importing_streamlit_context_does_not_load_in_process_client() -> None:
     """
     ``services`` uses lazy exports so lightweight UI imports (e.g. ``streamlit_context``)
-    avoid pulling :mod:`services.in_process` until something requests an in-process symbol.
+    avoid pulling :mod:`application.frontend_support.in_process_backend_client` until something
+    requests an in-process symbol.
     """
     prefix = "services."
     for key in list(sys.modules):
@@ -14,7 +15,10 @@ def test_importing_streamlit_context_does_not_load_in_process_client() -> None:
             del sys.modules[key]
     if "services" in sys.modules:
         del sys.modules["services"]
+    for key in list(sys.modules):
+        if key.startswith("application.frontend_support"):
+            del sys.modules[key]
 
     import services.streamlit_context  # noqa: F401
 
-    assert "services.in_process" not in sys.modules
+    assert "application.frontend_support.in_process_backend_client" not in sys.modules

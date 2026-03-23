@@ -7,7 +7,7 @@ import pytest
 
 from infrastructure.config.exceptions import VectorStoreError
 from services.api_contract_models import IngestDocumentPayload, IngestionDiagnosticsPayload
-from services.http_client import HttpBackendClient
+from services.api_client import HttpBackendClient
 from services.http_error_map import raise_for_api_response
 from services.http_payloads import (
     effective_retrieval_view_from_api_dict,

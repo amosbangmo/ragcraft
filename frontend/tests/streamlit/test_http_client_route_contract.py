@@ -8,8 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_SERVICES = Path(__file__).resolve().parents[2] / "src" / "services"
-_HTTP_CLIENT = _SERVICES / "http_client.py"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_HTTP_CLIENT = (
+    _REPO_ROOT / "api" / "src" / "application" / "frontend_support" / "http_backend_client.py"
+)
+_SERVICES = _REPO_ROOT / "frontend" / "src" / "services"
 _STREAMLIT_AUTH = _SERVICES / "streamlit_auth.py"
 
 

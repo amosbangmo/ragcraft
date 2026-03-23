@@ -1,7 +1,7 @@
 """
 Frontend-local wire types for the FastAPI JSON contract.
 
-HTTP integration code (:mod:`services.http_client`, :mod:`services.http_payloads`) uses **only**
+HTTP integration code (:mod:`application.frontend_support.http_backend_client`, :mod:`services.http_payloads`) uses **only**
 these models plus stdlib / :mod:`infrastructure.config` — not ``domain`` or ``application``.
 In-process mode maps domain objects to these shapes at the client boundary where needed.
 """

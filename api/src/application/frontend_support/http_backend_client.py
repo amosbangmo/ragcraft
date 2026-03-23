@@ -4,17 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import quote
 
 import httpx
 
-if TYPE_CHECKING:
-    from domain.evaluation.qa_dataset_entry import QADatasetEntry
-    from domain.projects.project import Project
-    from domain.rag.pipeline_payloads import PipelineBuildResult
-    from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-
+from application.services.http_backend_stubs import (
+    http_client_chat_service,
+    http_client_project_settings_repository,
+)
 from services.api_contract_models import (
     DeleteDocumentPayload,
     EffectiveRetrievalSettingsPayload,
@@ -40,7 +38,6 @@ from services.http_payloads import (
     rag_answer_from_ask_api_dict,
 )
 from services.http_transport import HttpTransport
-from services.stubs import http_client_chat_service, http_client_project_settings_repository
 
 
 def _streamlit_access_token_supplier() -> str:
@@ -140,7 +137,7 @@ class HttpBackendClient:
         http_client_chat_service().add_assistant_message(content)
 
     def generate_answer_from_pipeline(
-        self, *, project: Project, pipeline: PipelineBuildResult
+        self, *, project: Any, pipeline: Any
     ) -> str:
         raise NotImplementedError(
             "generate_answer_from_pipeline is not exposed over HTTP; use POST /evaluation/manual "
@@ -150,8 +147,8 @@ class HttpBackendClient:
     def evaluate_gold_qa_dataset_with_runner(
         self,
         *,
-        entries: list[QADatasetEntry],
-        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun],
+        entries: list[Any],
+        pipeline_runner: Callable[[Any], Any],
     ) -> BenchmarkResult:
         raise NotImplementedError(
             "evaluate_gold_qa_dataset_with_runner is not exposed over HTTP; use POST /evaluation/dataset/run "

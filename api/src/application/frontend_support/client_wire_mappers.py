@@ -85,6 +85,18 @@ def project_settings_to_payload(ps: ProjectSettings) -> ProjectSettingsPayload:
     )
 
 
+def _raw_assets_to_wire_list(assets: Any) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for a in assets or []:
+        if hasattr(a, "upsert_kwargs") and callable(a.upsert_kwargs):
+            out.append(a.upsert_kwargs())
+        elif isinstance(a, dict):
+            out.append(dict(a))
+        else:
+            out.append(dict(a))
+    return out
+
+
 def ingest_document_result_to_wire(result: Any) -> IngestDocumentPayload:
     diag = result.diagnostics
     diagnostics = IngestionDiagnosticsPayload(
@@ -96,9 +108,16 @@ def ingest_document_result_to_wire(result: Any) -> IngestDocumentPayload:
         generated_assets=int(diag.generated_assets),
         errors=list(diag.errors or []),
     )
+    ri = result.replacement_info
+    if ri is None:
+        replacement_wire: dict[str, Any] = {}
+    elif hasattr(ri, "to_wire_dict"):
+        replacement_wire = dict(ri.to_wire_dict())
+    else:
+        replacement_wire = dict(ri or {})
     return IngestDocumentPayload(
-        raw_assets=list(result.raw_assets),
-        replacement_info=dict(result.replacement_info or {}),
+        raw_assets=_raw_assets_to_wire_list(result.raw_assets),
+        replacement_info=replacement_wire,
         diagnostics=diagnostics,
     )
 
