@@ -1,4 +1,9 @@
-"""One-off manual evaluation for a single question (``POST /evaluation/manual`` and in-process clients)."""
+"""One-off manual evaluation for a single question (``POST /evaluation/manual`` and in-process clients).
+
+This is the **only** application orchestration entry for manual eval: it always runs
+:class:`~src.application.use_cases.evaluation.rag_pipeline_orchestration.execute_rag_inspect_then_answer_for_evaluation`
+then :meth:`~src.domain.ports.manual_evaluation_from_rag_port.ManualEvaluationFromRagPort.build_manual_evaluation_result`.
+"""
 
 from __future__ import annotations
 

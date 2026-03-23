@@ -31,6 +31,7 @@ pytest tests/architecture -q
 - **`EvaluationJudgeMetricsRow`** lives in **`src/domain/evaluation/judge_metrics_row.py`** for benchmark row judge slices.
 - **`GoldQaPipelineRowInput`** (`src/domain/evaluation/gold_qa_row_input.py`) is the typed input to **`BenchmarkRowProcessingPort.process_row`** / **`RowEvaluationService.process_row`** (replacing an ad hoc ``dict`` runner payload).
 - **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** takes **`full_latency: PipelineLatency | None`**; **`ManualEvaluationPipelineSignals.stage_latency`** is the same type (JSON round-trip via **`manual_evaluation_result_from_plain_dict`** maps ``stage_latency`` dict → **`PipelineLatency`**).
+- **Manual evaluation orchestration** is **`RunManualEvaluationUseCase`** only (plus shared **`execute_rag_inspect_then_answer_for_evaluation`**). Do not add a parallel “evaluate question” orchestrator in infrastructure; **`src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** is for **row/result assembly**, not inspect+answer sequencing.
 - Gold-QA benchmark **orchestration** (**`BenchmarkExecutionUseCase`**) is wired in **`src/composition/evaluation_wiring.py`**; **`GoldQaBenchmarkAdapter`** (application) implements **`GoldQaBenchmarkPort`** for **`EvaluationService`**.
 
 ## Anti-patterns
@@ -58,6 +59,7 @@ Both are thin in-memory implementations; keep API wiring on the **application** 
 | Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
 | `apps/api` no `src.infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
 | Adapter → application allowlist | **`test_adapter_application_imports.py`** |
+| Manual eval single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 | No RAG monolith façade | **`test_no_rag_service_facade.py`** |
 | RAG post-recall / router rag imports | **`test_orchestration_boundaries.py`** |
 

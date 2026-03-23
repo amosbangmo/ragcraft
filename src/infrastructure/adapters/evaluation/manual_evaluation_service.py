@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from time import perf_counter
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
-from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.manual_evaluation_result import (
     ManualEvaluationAnswerCitationQuality,
     ManualEvaluationAnswerQuality,
@@ -14,13 +11,12 @@ from src.domain.manual_evaluation_result import (
     ManualEvaluationResult,
     ManualEvaluationRetrievalQuality,
 )
+from src.domain.pipeline_latency import PipelineLatency
+from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
-from src.domain.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
-
-if TYPE_CHECKING:
-    from src.frontend_gateway.protocol import BackendClient
 
 _MANUAL_EVAL_ENTRY_ID = 0
 
@@ -420,88 +416,3 @@ def manual_evaluation_result_from_rag_outputs(
         latency_ms=latency_ms,
         full_latency=full_latency,
     )
-
-
-class ManualEvaluationService:
-    @staticmethod
-    def evaluate_question(
-        *,
-        backend_client: BackendClient,
-        user_id: str,
-        project_id: str,
-        question: str,
-        expected_answer: str | None = None,
-        expected_doc_ids: list[str] | None = None,
-        expected_sources: list[str] | None = None,
-    ) -> ManualEvaluationResult:
-        """Prefer :class:`~src.application.use_cases.evaluation.run_manual_evaluation.RunManualEvaluationUseCase` for new wiring; kept for tests and ``BackendClient``-based call sites."""
-        q = (question or "").strip()
-        exp_ans = (expected_answer or "").strip() or None
-        exp_docs = list(expected_doc_ids or [])
-        exp_src = list(expected_sources or [])
-
-        project = backend_client.get_project(user_id, project_id)
-
-        started = perf_counter()
-        pipeline = backend_client.inspect_retrieval(
-            user_id=user_id,
-            project_id=project_id,
-            question=q,
-            chat_history=[],
-        )
-        answer = ""
-        answer_generation_ms = 0.0
-        if pipeline is not None:
-            gen_started = perf_counter()
-            answer = backend_client.generate_answer_from_pipeline(
-                project=project,
-                pipeline=pipeline,
-            )
-            answer_generation_ms = (perf_counter() - gen_started) * 1000.0
-        latency_ms = (perf_counter() - started) * 1000.0
-
-        full_lat_obj: PipelineLatency | None = None
-        if pipeline is not None:
-            full_lat_obj = merge_with_answer_stage(
-                pipeline.latency,
-                answer_generation_ms=answer_generation_ms,
-                total_ms=latency_ms,
-            )
-            pipeline.latency = full_lat_obj
-            pipeline.latency_ms = latency_ms
-
-        entry = QADatasetEntry(
-            id=_MANUAL_EVAL_ENTRY_ID,
-            user_id=user_id,
-            project_id=project_id,
-            question=q,
-            expected_answer=exp_ans,
-            expected_doc_ids=exp_docs,
-            expected_sources=exp_src,
-        )
-
-        run = RagInspectAnswerRun(
-            pipeline=pipeline,
-            answer=answer,
-            latency_ms=latency_ms,
-            full_latency=full_lat_obj,
-        )
-
-        def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
-            return run
-
-        benchmark = backend_client.evaluate_gold_qa_dataset_with_runner(
-            entries=[entry],
-            pipeline_runner=pipeline_runner,
-        )
-        return manual_evaluation_result_from_eval_row(
-            row=benchmark.rows[0].data,
-            q=q,
-            exp_ans=exp_ans,
-            exp_docs=exp_docs,
-            exp_src=exp_src,
-            pipeline=pipeline,
-            answer=answer,
-            latency_ms=latency_ms,
-            full_latency=full_lat_obj,
-        )

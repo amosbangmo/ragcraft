@@ -17,7 +17,7 @@ Use this file as a **historical checklist** of what was addressed; the **live** 
 | RAG-only import test | Replaced by **`tests/architecture/test_adapter_application_imports.py`** (all adapters; allowlist **`rag/retrieval_settings_service.py`** only). |
 | Unused **`application/chat/ports.py`** re-export barrel | **Removed.** |
 
-**Still optional follow-ups (non-blocking for “architecture complete”):** duplicate **`ManualEvaluationService.evaluate_question`** path vs **`RunManualEvaluationUseCase`**; **`README.github.md`** diagram drift vs **`docs/architecture.md`**. Gold-QA **`pipeline_runner`** is **`RagInspectAnswerRun`**-only (**`BenchmarkExecutionUseCase`**); multimodal hint logic lives in **`src/application/chat/multimodal_prompt_hints.py`**.
+**Still optional follow-ups (non-blocking for “architecture complete”):** **`README.github.md`** diagram drift vs **`docs/architecture.md`**. Manual evaluation is unified on **`RunManualEvaluationUseCase`** + **`execute_rag_inspect_then_answer_for_evaluation`** (no parallel **`ManualEvaluationService.evaluate_question`**). Gold-QA **`pipeline_runner`** is **`RagInspectAnswerRun`**-only (**`BenchmarkExecutionUseCase`**); multimodal hint logic lives in **`src/application/chat/multimodal_prompt_hints.py`**.
 
 ---
 

@@ -57,9 +57,12 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 
 ## Manual and gold-QA evaluation (inspect + answer, no production query log)
 
-- **`execute_rag_inspect_then_answer_for_evaluation`** — `src/application/use_cases/evaluation/rag_pipeline_orchestration.py`; takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
+**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (`src/application/use_cases/evaluation/rag_pipeline_orchestration.py`). There is **no** parallel “service” entry point that re-implements that sequence.
+
+- **`execute_rag_inspect_then_answer_for_evaluation`** — takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
 - **`RagInspectAnswerRun`** — `src/domain/rag_inspect_answer_run.py`; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
-- **`RunManualEvaluationUseCase`** / **`RunGoldQaDatasetEvaluationUseCase`** own the scenario; **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
+- **`RunManualEvaluationUseCase`** — `POST /evaluation/manual`, **`InProcessBackendClient.evaluate_manual_question`**, and composition **`evaluation_run_manual_evaluation_use_case`** all delegate here → canonical orchestration above → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (implemented by **`EvaluationService`**). **`RunGoldQaDatasetEvaluationUseCase`** shares the same inspect/answer ports and gold-QA benchmark wiring. **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
+- **`src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
 
 ## Where answer generation happens
 

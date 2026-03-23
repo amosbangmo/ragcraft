@@ -95,7 +95,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 |------|-----------|
 | **`rag/retrieval_settings_service.py`** imports **`RetrievalSettingsTuner`** | Typed composition bridge; sole allowlisted adapter → application import |
 | **Two `MemoryChatTranscript` modules** | Application copy satisfies **`apps/api`** layer scans; infra copy remains for adapter-adjacent tests and optional wiring |
-| **`ManualEvaluationService.evaluate_question`** | Overlaps eval orchestration with **`rag_pipeline_orchestration`**; **product/DX** consolidation optional |
+| ~~**`ManualEvaluationService.evaluate_question`**~~ | **Removed** — manual eval uses **`RunManualEvaluationUseCase`** only (see §11b) |
 | **`import_legacy_file_logs`** on **`QueryLogService`** | One-off migration utility |
 | **JWT operational model** | Single access token (HS256), no refresh-token rotation or OAuth2 provider in-repo — product choice for a later pass |
 | Architecture **line-count ratchets** in `test_orchestration_boundaries.py` | Prevents silent growth of coordinator modules |
@@ -108,7 +108,7 @@ These do **not** invalidate the migration but are worth tracking:
 
 - **AuthN/AuthZ:** Symmetric JWTs require **`RAGCRAFT_JWT_SECRET`** rotation discipline, HTTPS in production, and optional issuer/audience tightening. **`TrustedTransportIdentityPort`** remains for non-JWT bridges if needed.
 - **Operational drift:** Contributors may reintroduce **`src.infrastructure`** imports under **`apps/api`**; **`pytest tests/architecture/`** in CI on touched trees reduces regression risk.
-- **Duplicate eval paths:** Manual eval service vs use-case orchestration may diverge behavior over time unless consolidated.
+- **Duplicate eval paths:** **Closed for manual evaluation** — only **`RunManualEvaluationUseCase`** orchestrates; **`manual_evaluation_service`** is assembly-only.
 - **Third-party weight:** Heavy optional stacks (e.g. ingestion) can still complicate test envs; architecture tests are **import-level**, not full integration proof.
 
 ---
@@ -133,7 +133,7 @@ These do **not** invalidate the migration but are worth tracking:
 
 - **Security:** Add refresh tokens, asymmetric signing (JWKS), or an external IdP; rate-limit **`/auth/login`**.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
-- **DX:** Deduplicate **`ManualEvaluationService.evaluate_question`** vs **`RunManualEvaluationUseCase`**; keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
+- **DX:** Keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
 - **CI:** Run **`pytest tests/architecture/`** when `src/`, `apps/api`, `pages/`, or `src/ui/` change.
 
 ---
@@ -157,6 +157,7 @@ pytest tests/architecture/ -q
 | UI surface | **`test_streamlit_import_guardrails.py`** |
 | Smoke `build_backend` | **`test_migration_regression_flows.py`** |
 | Orchestration subtrees (chat/eval/rag) | **`test_orchestration_package_import_boundaries.py`** |
+| Manual evaluation single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 
 ---
 
@@ -192,6 +193,18 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 | Evaluation | **`execute_rag_inspect_then_answer_for_evaluation`** | **No** | Yes, via **`GenerateAnswerFromPipelinePort`**; returns **`RagInspectAnswerRun`** for **`BenchmarkExecutionUseCase`** |
 
 **Future hardening (optional):** Gateway HTTP client method signatures may still accept ``dict`` for ``retrieval_settings`` as transport-only JSON; tightening those to a shared wire type would be cosmetic unless validation is duplicated outside the API boundary.
+
+### 11b. Manual evaluation — single orchestrator (final)
+
+| Before | After |
+|--------|--------|
+| **`ManualEvaluationService.evaluate_question`** duplicated inspect → answer → latency → gold-QA benchmark → **`manual_evaluation_result_from_eval_row`** alongside **`RunManualEvaluationUseCase`** | **Removed** class; one path only |
+
+**Canonical flow:** **`RunManualEvaluationUseCase.execute`** → **`execute_rag_inspect_then_answer_for_evaluation`** → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (**`EvaluationService`**, which calls **`manual_evaluation_result_from_rag_outputs`** / row assembly in **`manual_evaluation_service.py`**).
+
+**Ownership:** Application use case owns the scenario; **`EvaluationService`** is a façade over **`GoldQaBenchmarkPort`** + manual-result assembly; **`manual_evaluation_service` module** holds pure helpers and **`manual_evaluation_result_from_rag_outputs`**, not a second orchestration entry point.
+
+**Enforcement:** **`tests/architecture/test_manual_evaluation_single_orchestrator.py`** asserts **`ManualEvaluationService`** is not reintroduced on that module.
 
 ---
 

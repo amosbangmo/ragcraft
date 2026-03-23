@@ -1,18 +1,50 @@
 from unittest.mock import MagicMock
 
+from src.application.evaluation.dtos import RunManualEvaluationCommand
+from src.application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
 from src.domain.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from src.domain.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
+from src.domain.manual_evaluation_result import (
+    ManualEvaluationResult,
+    is_manual_evaluation_result_like,
+)
 from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.domain.project import Project
+from src.infrastructure.adapters.evaluation.evaluation_service import EvaluationService
 from src.infrastructure.adapters.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 from src.infrastructure.adapters.evaluation.manual_evaluation_service import (
-    ManualEvaluationService,
     _ordered_sources_from_pipeline,
-    build_expectation_comparison,
-    detect_manual_evaluation_issues,
     _row_optional_float,
     _row_optional_int,
+    build_expectation_comparison,
+    detect_manual_evaluation_issues,
 )
+
+
+def _run_manual_evaluation_uc(
+    *,
+    user_id: str,
+    project_id: str,
+    inspect_return,
+    generate_answer: str | None,
+    benchmark: BenchmarkResult,
+) -> RunManualEvaluationUseCase:
+    project = Project(user_id=user_id, project_id=project_id)
+    project_service = MagicMock()
+    project_service.get_project.return_value = project
+    inspect = MagicMock()
+    inspect.execute.return_value = inspect_return
+    generate = MagicMock()
+    if generate_answer is not None:
+        generate.execute.return_value = generate_answer
+    gold = MagicMock()
+    gold.evaluate_gold_qa_dataset.return_value = benchmark
+    return RunManualEvaluationUseCase(
+        project_service=project_service,
+        inspect_pipeline=inspect,
+        generate_answer_from_pipeline=generate,
+        manual_evaluation=EvaluationService(gold_qa_benchmark=gold),
+    )
 
 
 def test_build_expectation_comparison_matched_and_missing():
@@ -209,11 +241,8 @@ def test_ordered_sources_from_pipeline_variants():
     assert _ordered_sources_from_pipeline(pl) == ["b.pdf", "c.pdf"]
 
 
-def test_evaluate_question_without_pipeline():
-    app = MagicMock()
-    app.get_project.return_value = MagicMock()
-    app.inspect_retrieval.return_value = None
-    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
+def test_run_manual_evaluation_without_pipeline():
+    bench = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -227,28 +256,28 @@ def test_evaluate_question_without_pipeline():
             )
         ],
     )
-    r = ManualEvaluationService.evaluate_question(
-        backend_client=app,
+    uc = _run_manual_evaluation_uc(
         user_id="u1",
         project_id="p1",
-        question="  What?  ",
+        inspect_return=None,
+        generate_answer=None,
+        benchmark=bench,
+    )
+    r = uc.execute(
+        RunManualEvaluationCommand(user_id="u1", project_id="p1", question="  What?  ")
     )
     assert r.question == "What?"
     assert r.answer_citation_quality is None
 
 
-def test_evaluate_question_with_pipeline_and_judge_branches():
+def test_run_manual_evaluation_with_pipeline_and_judge_branches():
     pipeline = PipelineBuildResult(
         prompt_sources=[{"source_file": "a.pdf"}, "x", {"source_file": "a.pdf"}],
         selected_doc_ids=["d1", ""],
         reranked_raw_assets=[{"k": 1}, "bad"],
         latency=PipelineLatency(query_rewrite_ms=1.0, retrieval_ms=2.0),
     )
-    app = MagicMock()
-    app.get_project.return_value = MagicMock()
-    app.inspect_retrieval.return_value = pipeline
-    app.generate_answer_from_pipeline.return_value = "  ans  "
-    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
+    bench = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -274,27 +303,30 @@ def test_evaluate_question_with_pipeline_and_judge_branches():
             )
         ],
     )
-    r = ManualEvaluationService.evaluate_question(
-        backend_client=app,
+    uc = _run_manual_evaluation_uc(
         user_id="u1",
         project_id="p1",
-        question="Q",
-        expected_doc_ids=["d1"],
-        expected_sources=["a.pdf"],
-        expected_answer="gold",
+        inspect_return=pipeline,
+        generate_answer="  ans  ",
+        benchmark=bench,
+    )
+    r = uc.execute(
+        RunManualEvaluationCommand(
+            user_id="u1",
+            project_id="p1",
+            question="Q",
+            expected_doc_ids=["d1"],
+            expected_sources=["a.pdf"],
+            expected_answer="gold",
+        )
     )
     assert "rate limited" in " ".join(r.detected_issues)
     assert r.expectation_comparison is not None
     assert r.answer_citation_quality is not None
 
 
-def test_evaluate_question_judge_failure_default_message():
-    pipeline = PipelineBuildResult()
-    app = MagicMock()
-    app.get_project.return_value = MagicMock()
-    app.inspect_retrieval.return_value = pipeline
-    app.generate_answer_from_pipeline.return_value = "ok"
-    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
+def test_run_manual_evaluation_judge_failure_default_message():
+    bench = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -309,19 +341,20 @@ def test_evaluate_question_judge_failure_default_message():
             )
         ],
     )
-    r = ManualEvaluationService.evaluate_question(
-        backend_client=app, user_id="u", project_id="p", question="Q"
+    uc = _run_manual_evaluation_uc(
+        user_id="u",
+        project_id="p",
+        inspect_return=PipelineBuildResult(),
+        generate_answer="ok",
+        benchmark=bench,
     )
+    r = uc.execute(RunManualEvaluationCommand(user_id="u", project_id="p", question="Q"))
     assert any("LLM judge could not score" in i for i in r.detected_issues)
     assert not any("rate limited" in i for i in r.detected_issues)
 
 
-def test_evaluate_question_pipeline_failed_banner():
-    app = MagicMock()
-    app.get_project.return_value = MagicMock()
-    app.inspect_retrieval.return_value = PipelineBuildResult()
-    app.generate_answer_from_pipeline.return_value = ""
-    app.evaluate_gold_qa_dataset_with_runner.return_value = BenchmarkResult(
+def test_run_manual_evaluation_pipeline_failed_banner():
+    bench = BenchmarkResult(
         summary=BenchmarkSummary(data={}),
         rows=[
             BenchmarkRow(
@@ -335,7 +368,12 @@ def test_evaluate_question_pipeline_failed_banner():
             )
         ],
     )
-    r = ManualEvaluationService.evaluate_question(
-        backend_client=app, user_id="u", project_id="p", question="Q"
+    uc = _run_manual_evaluation_uc(
+        user_id="u",
+        project_id="p",
+        inspect_return=PipelineBuildResult(),
+        generate_answer="",
+        benchmark=bench,
     )
+    r = uc.execute(RunManualEvaluationCommand(user_id="u", project_id="p", question="Q"))
     assert any("pipeline" in i.lower() for i in r.detected_issues)

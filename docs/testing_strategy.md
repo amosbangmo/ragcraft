@@ -19,6 +19,7 @@ The suite is organized as a **pyramid**: fast **architecture** import guards at 
 | **Chat RAG port wiring** | `test_application_chat_rag_boundary_ports.py` — inspect / answer-generation boundaries stay on domain ports |
 | **UI surface** | `test_streamlit_import_guardrails.py` — pages/ui import rules |
 | **Regression flows** | `test_migration_regression_flows.py` — smoke imports for `build_backend` |
+| **Manual eval orchestration** | `test_manual_evaluation_single_orchestrator.py` — no duplicate **`ManualEvaluationService`**-style orchestration in infrastructure |
 
 Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/architecture/README.md`**.
 
@@ -34,7 +35,7 @@ Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/archi
 - **`tests/apps_api/test_upload_adapter.py`** — Starlette/FastAPI upload chunked read and oversize rejection.
 - **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py`, `test_rag_inspect_answer_run.py` covers **`GoldQaPipelineRowInput`** via **`as_row_evaluation_input()`**, `test_retrieval_settings_override_spec.py`).
 - **`tests/application/use_cases/evaluation/test_rag_pipeline_orchestration.py`** — evaluation inspect+answer orchestration and **`RagInspectAnswerRun`** latency typing.
-- **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` asserts **`PipelineBuildResult.latency`** and **`RAGResponse.latency`** are **`PipelineLatency`**; evaluation / manual-eval tests use the same types).
+- **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` asserts **`PipelineBuildResult.latency`** and **`RAGResponse.latency`** are **`PipelineLatency`**; **`test_manual_evaluation_service.py`** exercises **`RunManualEvaluationUseCase`** with mocked inspect/generate/benchmark, not a legacy service orchestrator).
 
 ## What architecture tests do *not* prove
 
