@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
@@ -166,6 +167,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is missing")
 
+# HTTP E2E / local artifact runs use this placeholder so no real OpenAI traffic is required.
+CI_PLACEHOLDER_OPENAI_API_KEY = "ci-test-key"
+
 
 def _openai_request_timeout() -> float | None:
     """Optional OpenAI HTTP timeout (seconds). Unset or non-positive → langchain default."""
@@ -186,21 +190,70 @@ RETRIEVAL_CONFIG = APP_CONFIG.retrieval
 INGESTION_CONFIG = APP_CONFIG.ingestion
 USER_PROFILE_UPLOAD_CONFIG = APP_CONFIG.user_profile_upload
 
+_USE_CI_HTTP_LLM_STUBS = OPENAI_API_KEY.strip() == CI_PLACEHOLDER_OPENAI_API_KEY
+# Match ``text-embedding-3-small`` width so FAISS indices built under the stub stay consistent.
+_FAKE_EMBEDDING_DIM = _get_int_env("RAGCRAFT_CI_FAKE_EMBEDDING_DIM", 1536)
 
-_embeddings_kwargs: dict = {
-    "api_key": OPENAI_API_KEY,
-    "model": _get_str_env("OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"),
-}
-_llm_kwargs: dict = {
-    "api_key": OPENAI_API_KEY,
-    "model": _get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
-    "temperature": float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
-}
-if _OPENAI_REQUEST_TIMEOUT is not None:
-    _embeddings_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
-    _llm_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
 
-EMBEDDINGS = OpenAIEmbeddings(**_embeddings_kwargs)
+class _CiPlaceholderChatModel:
+    """
+    In-process LLM stand-in when ``OPENAI_API_KEY`` is the CI/E2E placeholder.
 
-LLM = ChatOpenAI(**_llm_kwargs)
+    Avoids hung HTTP calls (LangChain → OpenAI) that caused Cypress and artifact runs to hit
+    multi-minute timeouts. Routes a minimal JSON line for the LLM-judge prompt shape.
+    """
+
+    _JUDGE_HEAD = "You are an expert evaluator for retrieval-augmented"
+    _REWRITE_HEAD = "You rewrite user questions into compact retrieval queries"
+
+    def invoke(self, input: Any, config: Any = None, **kwargs: Any) -> Any:
+        del config, kwargs
+        from langchain_core.messages import AIMessage
+
+        prompt = input if isinstance(input, str) else str(input)
+        if self._JUDGE_HEAD in prompt:
+            content = (
+                '{"groundedness_score":0.9,"citation_faithfulness_score":0.9,'
+                '"answer_relevance_score":0.9,"hallucination_score":0.85,'
+                '"answer_correctness_score":0.88,"has_hallucination":false,'
+                '"reason":"ci-test-key stub judge"}'
+            )
+        elif self._REWRITE_HEAD in prompt:
+            marker = "Original question:\n"
+            idx = prompt.rfind(marker)
+            if idx != -1:
+                tail = prompt[idx + len(marker) :].strip()
+                line = tail.split("\n", 1)[0].strip()
+                content = line if line else "e2e retrieval query"
+            else:
+                content = "e2e retrieval query"
+        else:
+            content = (
+                "E2E stub answer (ci-test-key): placeholder response for HTTP tests; "
+                "no external LLM call."
+            )
+        return AIMessage(content=content)
+
+
+if _USE_CI_HTTP_LLM_STUBS:
+    from langchain_core.embeddings import DeterministicFakeEmbedding
+
+    EMBEDDINGS = DeterministicFakeEmbedding(size=_FAKE_EMBEDDING_DIM)
+    LLM = _CiPlaceholderChatModel()
+else:
+    _embeddings_kwargs: dict = {
+        "api_key": OPENAI_API_KEY,
+        "model": _get_str_env("OPENAI_EMBEDDINGS_MODEL", "text-embedding-3-small"),
+    }
+    _llm_kwargs: dict = {
+        "api_key": OPENAI_API_KEY,
+        "model": _get_str_env("OPENAI_CHAT_MODEL", "gpt-4o-mini"),
+        "temperature": float(os.getenv("OPENAI_CHAT_TEMPERATURE", "0")),
+    }
+    if _OPENAI_REQUEST_TIMEOUT is not None:
+        _embeddings_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
+        _llm_kwargs["request_timeout"] = _OPENAI_REQUEST_TIMEOUT
+
+    EMBEDDINGS = OpenAIEmbeddings(**_embeddings_kwargs)
+    LLM = ChatOpenAI(**_llm_kwargs)
 # NOTE: module-level ``LLM`` / ``EMBEDDINGS`` singletons; moving construction behind the composition root is a separate refactor (see ARCHITECTURE_TARGET.md).

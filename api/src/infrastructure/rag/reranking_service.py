@@ -1,4 +1,7 @@
+import os
 import re
+
+from infrastructure.config.config import CI_PLACEHOLDER_OPENAI_API_KEY
 
 DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
@@ -101,6 +104,11 @@ class RerankingService:
 
         if self._model is not None:
             return self._model
+
+        # CI / Cypress: skip CrossEncoder download + inference for predictable, fast HTTP E2E.
+        if os.getenv("OPENAI_API_KEY", "").strip() == CI_PLACEHOLDER_OPENAI_API_KEY:
+            self._model_load_failed = True
+            return None
 
         try:
             from sentence_transformers import CrossEncoder

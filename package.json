@@ -1,6 +1,10 @@
 {
   "name": "ragcraft",
   "private": true,
+  "overrides": {
+    "diff": "8.0.4",
+    "serialize-javascript": "7.0.4"
+  },
   "scripts": {
     "e2e:serve": "python scripts/e2e_api_server.py",
     "cy:open": "cypress open",

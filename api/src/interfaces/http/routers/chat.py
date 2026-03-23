@@ -119,7 +119,7 @@ def post_pipeline_inspect(
         body.question,
         body.chat_history,
         filters=filters,
-        retrieval_settings=body.retrieval_settings,
+        retrieval_overrides=_retrieval_overrides_from_body(body),
         enable_query_rewrite_override=body.enable_query_rewrite_override,
         enable_hybrid_retrieval_override=body.enable_hybrid_retrieval_override,
     )

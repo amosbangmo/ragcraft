@@ -44,16 +44,29 @@ def run(
     *,
     check: bool = True,
     capture: bool = False,
+    timeout_s: float | None = None,
+    timeout_level: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     print("+", " ".join(cmd), flush=True)
-    return subprocess.run(
-        cmd,
-        cwd=ROOT,
-        env=_env(),
-        check=check,
-        text=True,
-        capture_output=capture,
-    )
+    try:
+        return subprocess.run(
+            cmd,
+            cwd=ROOT,
+            env=_env(),
+            check=check,
+            text=True,
+            capture_output=capture,
+            timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired as exc:
+        label = timeout_level or "subprocess.run"
+        msg = (
+            f"[ragcraft-artifacts] TIMEOUT_LEVEL: {label} "
+            f"(command wall_limit={timeout_s}s)\n  cmd: {' '.join(cmd)}"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
+        raise exc
 
 
 def write_text(name: str, body: str) -> None:
@@ -105,9 +118,55 @@ def coverage_test_paths() -> list[str]:
     return paths
 
 
+def _extract_coverage_term_table(combined_output: str) -> str:
+    """
+    Pull the pytest-cov terminal table (Name / Stmts / Miss / Cover … TOTAL) from
+    captured stdout+stderr.
+    """
+    lines = combined_output.replace("\r\n", "\n").split("\n")
+    header_i: int | None = None
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped.startswith("Name"):
+            continue
+        if "Stmts" not in line or "Miss" not in line or "Cover" not in line:
+            continue
+        header_i = i
+        break
+    if header_i is None:
+        return combined_output.strip() or "(no coverage table in pytest output)"
+
+    start = header_i
+    if header_i > 0:
+        prev = lines[header_i - 1].strip()
+        if prev and set(prev) == {"-"}:
+            start = header_i - 1
+
+    total_i: int | None = None
+    for j in range(header_i, len(lines)):
+        if lines[j].strip().startswith("TOTAL"):
+            total_i = j
+            break
+    if total_i is None:
+        return "\n".join(lines[start:]).strip()
+
+    end = total_i
+    if total_i + 1 < len(lines):
+        nxt = lines[total_i + 1].strip()
+        if nxt and set(nxt) == {"-"}:
+            end = total_i + 1
+
+    chunk = lines[start : end + 1]
+    for k in range(end + 1, min(end + 4, len(lines))):
+        if "skipped due to complete coverage" in lines[k]:
+            chunk.append(lines[k])
+            break
+    return "\n".join(chunk).rstrip()
+
+
 def step_coverage() -> None:
     cov_xml = ART / "coverage.xml"
-    run(
+    cp = run(
         [
             sys.executable,
             "-m",
@@ -119,8 +178,23 @@ def step_coverage() -> None:
             "--cov-report=term:skip-covered",
             "-q",
             "--tb=no",
-        ]
+        ],
+        capture=True,
     )
+    if cp.stdout:
+        sys.stdout.write(cp.stdout)
+        if not cp.stdout.endswith("\n"):
+            sys.stdout.write("\n")
+        sys.stdout.flush()
+    if cp.stderr:
+        sys.stderr.write(cp.stderr)
+        if not cp.stderr.endswith("\n"):
+            sys.stderr.write("\n")
+        sys.stderr.flush()
+
+    combined = (cp.stdout or "") + "\n" + (cp.stderr or "")
+    term_table = _extract_coverage_term_table(combined)
+
     tree = ET.parse(cov_xml)
     root = tree.getroot()
     lv = root.get("lines-valid", "?")
@@ -137,25 +211,26 @@ def step_coverage() -> None:
             "\nNote: api/tests/domain is missing; coverage used api/tests/appli only "
             "(CI lists both paths when present).\n"
         )
+    body = textwrap.dedent(
+        f"""\
+        RAGCraft — résumé couverture (pytest-cov)
+        ==========================================
+
+        Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
+        Fichier machine: coverage.xml (Cobertura)
+
+        Globaux (packages application + domain)
+        ---------------------------------------
+        - Lignes couvertes: {lc} / {lv}
+        - Taux de ligne (line-rate): {rate_human}
+        {note}
+        Détail par fichier (sortie --cov-report=term:skip-covered)
+        ------------------------------------------------------------
+        """
+    ).strip()
     write_text(
         "COVERAGE_SUMMARY.txt",
-        textwrap.dedent(
-            f"""\
-            RAGCraft — résumé couverture (pytest-cov)
-            ==========================================
-
-            Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
-            Fichier: coverage.xml (Cobertura)
-
-            Globaux (packages application + domain)
-            ---------------------------------------
-            - Lignes couvertes: {lc} / {lv}
-            - Taux de ligne (line-rate): {rate_human}
-            {note}
-            Détail par fichier: ouvrir coverage.xml ou relancer avec
-            --cov-report=term-missing.
-            """
-        ),
+        body + "\n\n" + term_table + "\n",
     )
 
 
@@ -178,6 +253,21 @@ def step_cypress() -> None:
             fail_hint + "\n(npx introuvable — installez Node.js)\n",
         )
         raise SystemExit("npx not found; install Node.js and run npm ci")
+    if cp.returncode == 124:
+        msg = (
+            "[ragcraft-artifacts] Échec E2E: TIMEOUT_LEVEL=cypress_cli_subprocess "
+            "(durée max Cypress dépassée; défaut 2400s, surcharger avec "
+            "RAGCRAFT_CYPRESS_CLI_TIMEOUT_S). Voir la console et artifacts/cypress_run.log"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
+    elif cp.returncode == 125:
+        msg = (
+            "[ragcraft-artifacts] Échec E2E: TIMEOUT_LEVEL=e2e_api_server_listen "
+            "(API 127.0.0.1:18976 pas prête en 60s). Voir artifacts/cypress_run.log"
+        )
+        print(msg, flush=True)
+        print(msg, file=sys.stderr, flush=True)
     if cp.returncode != 0:
         write_text("CYPRESS_REPORT.txt", fail_hint)
         raise subprocess.CalledProcessError(
@@ -377,6 +467,11 @@ def main() -> None:
     print("Artifacts dir:", ART, flush=True)
     step_coverage()
     step_benchmark()
+    print(
+        "[ragcraft-artifacts] Mini-benchmark terminé (BENCHMARK_RUNTIME.txt). "
+        "Étape suivante: Cypress E2E (sortie en direct + artifacts/cypress_run.log)…",
+        flush=True,
+    )
     step_cypress()
     step_ci_log()
     print("Done.", flush=True)
