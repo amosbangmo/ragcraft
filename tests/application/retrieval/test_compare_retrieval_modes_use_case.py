@@ -42,7 +42,7 @@ class _FakeInspectRagPipelineUseCase:
         chat_history=None,
         *,
         filters=None,
-        retrieval_settings=None,
+        retrieval_overrides=None,
         enable_query_rewrite_override=None,
         enable_hybrid_retrieval_override=None,
     ):

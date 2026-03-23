@@ -12,6 +12,7 @@ import pytest
 
 from langchain_core.documents import Document
 
+from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from src.application.http.wire import (
     pipeline_build_result_to_wire_dict,
     preview_summary_recall_to_wire_dict,
@@ -58,16 +59,16 @@ def test_wire_helpers_normalize_chat_answer_pipeline_and_preview() -> None:
     assert out["answer"] == "a"
     assert out["source_documents"][0]["metadata"]["doc_id"] == "1"
 
-    preview = {
-        "rewritten_question": "rw",
-        "recalled_summary_docs": [SummaryRecallDocument(page_content="p", metadata={})],
-        "vector_summary_docs": [],
-        "bm25_summary_docs": [],
-        "retrieval_mode": "faiss",
-        "query_rewrite_enabled": True,
-        "hybrid_retrieval_enabled": False,
-        "use_adaptive_retrieval": False,
-    }
+    preview = SummaryRecallPreviewDTO(
+        rewritten_question="rw",
+        recalled_summary_docs=[SummaryRecallDocument(page_content="p", metadata={})],
+        vector_summary_docs=[],
+        bm25_summary_docs=[],
+        retrieval_mode="faiss",
+        query_rewrite_enabled=True,
+        hybrid_retrieval_enabled=False,
+        use_adaptive_retrieval=False,
+    )
     prev_out = preview_summary_recall_to_wire_dict(preview)
     assert prev_out is not None
     assert prev_out["recalled_summary_docs"][0]["page_content"] == "p"

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from time import perf_counter
-from typing import Any
-
 from src.application.common.safe_query_log import log_query_safely
 from src.application.common.pipeline_query_log import build_query_log_ingress_payload
 from src.domain.pipeline_latency import merge_with_answer_stage
@@ -10,6 +8,7 @@ from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
 from src.domain.retrieval_filters import RetrievalFilters
 from src.domain.ports import GenerationPort, QueryLogPort, RetrievalPort
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class AskQuestionUseCase:
@@ -38,7 +37,7 @@ class AskQuestionUseCase:
         chat_history: list[str] | None = None,
         *,
         filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> RAGResponse | None:
@@ -50,7 +49,7 @@ class AskQuestionUseCase:
             chat_history,
             emit_query_log=not defer_log,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=retrieval_overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )

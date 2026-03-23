@@ -77,6 +77,7 @@ from src.domain.project import Project
 from src.domain.query_intent import QueryIntent
 from src.domain.prompt_source import PromptSource
 from src.domain.summary_recall_document import SummaryRecallDocument
+from src.application.rag.dtos.recall_stages import VectorLexicalRecallBundle
 from src.application.chat.policies.pipeline_document_selection import deduplicate_summary_doc_ids
 from src.application.use_cases.chat.orchestration.summary_recall_ports import merge_summary_recall_documents
 from src.composition.chat_rag_wiring import ChatRagUseCases, build_chat_rag_use_cases, build_rag_retrieval_subgraph
@@ -258,7 +259,11 @@ class TestChatRagWiringComposition(unittest.TestCase):
         with patch.object(
             harness.summary_recall_stage,
             "fuse_vector_and_lexical_recalls",
-            return_value={"vector_summary_docs": [], "bm25_summary_docs": [], "recalled_summary_docs": []},
+            return_value=VectorLexicalRecallBundle(
+                vector_summary_docs=(),
+                bm25_summary_docs=(),
+                recalled_summary_docs=(),
+            ),
         ):
             result = harness.use_cases.build_rag_pipeline.execute(project=project, question="q")
 
@@ -307,11 +312,11 @@ class TestChatRagWiringComposition(unittest.TestCase):
             patch.object(
                 harness.summary_recall_stage,
                 "fuse_vector_and_lexical_recalls",
-                return_value={
-                    "vector_summary_docs": recalled_summary_docs,
-                    "bm25_summary_docs": [],
-                    "recalled_summary_docs": recalled_summary_docs,
-                },
+                return_value=VectorLexicalRecallBundle(
+                    vector_summary_docs=tuple(recalled_summary_docs),
+                    bm25_summary_docs=(),
+                    recalled_summary_docs=tuple(recalled_summary_docs),
+                ),
             ),
             patch.object(
                 harness.post_recall_stage_services.prompt_source_service,

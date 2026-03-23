@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from src.application.use_cases.chat.pipeline_use_case_ports import InspectRagPipelinePort
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from src.application.use_cases.retrieval.retrieval_mode_comparison import (
     compare_retrieval_modes_for_project,
@@ -45,14 +46,14 @@ class CompareRetrievalModesUseCase:
             enable_query_rewrite_override: bool | None = None,
             enable_hybrid_retrieval_override: bool | None = None,
             filters=None,
-            retrieval_settings=None,
+            retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
         ):
             return self._inspect_pipeline.execute(
                 proj,
                 question,
                 chat_history,
                 filters=filters,
-                retrieval_settings=retrieval_settings,
+                retrieval_overrides=retrieval_overrides,
                 enable_query_rewrite_override=enable_query_rewrite_override,
                 enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             )

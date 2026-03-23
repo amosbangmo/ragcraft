@@ -22,6 +22,7 @@ from apps.api.openapi_common import chat_route_responses
 from apps.api.schemas.chat import (
     ChatAskRequest,
     ChatAskResponse,
+    ChatPipelineRequestBase,
     PipelineInspectRequest,
     PipelineInspectResponse,
     PreviewSummaryRecallRequest,
@@ -41,8 +42,13 @@ from src.application.http.wire import (
 )
 from src.application.auth.authenticated_principal import AuthenticatedPrincipal
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+def _retrieval_overrides_from_body(body: ChatPipelineRequestBase) -> RetrievalSettingsOverrideSpec | None:
+    return RetrievalSettingsOverrideSpec.from_optional_mapping(body.retrieval_settings)
 
 
 @router.post(
@@ -69,7 +75,7 @@ def post_chat_ask(
         body.question,
         body.chat_history,
         filters=filters,
-        retrieval_settings=body.retrieval_settings,
+        retrieval_overrides=_retrieval_overrides_from_body(body),
         enable_query_rewrite_override=body.enable_query_rewrite_override,
         enable_hybrid_retrieval_override=body.enable_hybrid_retrieval_override,
     )
@@ -146,16 +152,16 @@ def post_preview_summary_recall(
     """
     project = resolve_project.execute(principal.user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
-    raw = use_case.execute(
+    preview_dto = use_case.execute(
         project,
         body.question,
         body.chat_history,
         filters=filters,
-        retrieval_settings=body.retrieval_settings,
+        retrieval_overrides=_retrieval_overrides_from_body(body),
         enable_query_rewrite_override=body.enable_query_rewrite_override,
         enable_hybrid_retrieval_override=body.enable_hybrid_retrieval_override,
     )
-    preview = PreviewSummaryRecallWirePayload.from_preview_dict(raw).preview
+    preview = PreviewSummaryRecallWirePayload.from_preview_dto(preview_dto).preview
     if preview is None:
         return PreviewSummaryRecallResponse(
             status="no_recall",

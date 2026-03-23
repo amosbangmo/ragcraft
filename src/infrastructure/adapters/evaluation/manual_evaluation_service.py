@@ -3,7 +3,7 @@ from __future__ import annotations
 from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
-from src.domain.pipeline_latency import merge_with_answer_stage
+from src.domain.pipeline_latency import PipelineLatency, merge_with_answer_stage
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.manual_evaluation_result import (
     ManualEvaluationAnswerCitationQuality,
@@ -395,11 +395,12 @@ def manual_evaluation_result_from_rag_outputs(
         expected_sources=exp_src,
     )
 
+    full_lat_obj = PipelineLatency.from_dict(full_latency_dict) if full_latency_dict else None
     run = RagInspectAnswerRun(
         pipeline=pipeline,
         answer=answer,
         latency_ms=latency_ms,
-        full_latency=full_latency_dict,
+        full_latency=full_lat_obj,
     )
 
     def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:
@@ -461,13 +462,14 @@ class ManualEvaluationService:
         latency_ms = (perf_counter() - started) * 1000.0
 
         full_latency_dict: dict[str, float] | None = None
+        full_lat_obj: PipelineLatency | None = None
         if pipeline is not None:
-            full_lat = merge_with_answer_stage(
+            full_lat_obj = merge_with_answer_stage(
                 pipeline.latency,
                 answer_generation_ms=answer_generation_ms,
                 total_ms=latency_ms,
             )
-            full_latency_dict = full_lat.to_dict()
+            full_latency_dict = full_lat_obj.to_dict()
             pipeline.latency = full_latency_dict
             pipeline.latency_ms = latency_ms
 
@@ -485,7 +487,7 @@ class ManualEvaluationService:
             pipeline=pipeline,
             answer=answer,
             latency_ms=latency_ms,
-            full_latency=full_latency_dict,
+            full_latency=full_lat_obj,
         )
 
         def pipeline_runner(_e: QADatasetEntry) -> RagInspectAnswerRun:

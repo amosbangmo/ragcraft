@@ -38,6 +38,7 @@ from src.domain.qa_dataset_entry import QADatasetEntry
 from src.domain.rag_inspect_answer_run import RagInspectAnswerRun
 from src.domain.project_settings import ProjectSettings
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.ui.streamlit_project_chain_session_cache import (
     invalidate_project_chain as _invalidate_streamlit_session_chain,
@@ -195,12 +196,13 @@ class InProcessBackendClient:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
+        overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
         return self._container.chat_ask_question_use_case.execute(
             project,
             question,
             chat_history,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
@@ -230,15 +232,17 @@ class InProcessBackendClient:
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
-        return self._container.chat_preview_summary_recall_use_case.execute(
+        overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
+        dto = self._container.chat_preview_summary_recall_use_case.execute(
             project,
             query,
             chat_history,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
+        return dto.to_dict() if dto is not None else None
 
     def inspect_retrieval(
         self,
@@ -253,12 +257,13 @@ class InProcessBackendClient:
         retrieval_settings: dict | None = None,
     ) -> PipelineBuildResult | None:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
+        overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
         return self._container.chat_inspect_pipeline_use_case.execute(
             project,
             question,
             chat_history,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )

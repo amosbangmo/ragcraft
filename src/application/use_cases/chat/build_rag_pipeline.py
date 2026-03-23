@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from time import perf_counter
-from typing import Any
-
 from src.application.use_cases.chat.orchestration.recall_then_assemble_pipeline import (
     run_recall_then_assemble_pipeline,
 )
@@ -43,7 +41,7 @@ class BuildRagPipelineUseCase:
         *,
         emit_query_log: bool = True,
         filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> PipelineBuildResult | None:
@@ -56,7 +54,7 @@ class BuildRagPipelineUseCase:
             pipeline_assembly_service=self._pipeline_assembly,
             pipeline_started_monotonic=pipeline_started,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=retrieval_overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )

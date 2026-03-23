@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class RAGPipelineQueryContext:
 
     chat_history: tuple[str, ...]
     filters: RetrievalFilters | None
-    retrieval_settings: dict[str, Any] | None
+    retrieval_overrides: RetrievalSettingsOverrideSpec | None
     enable_query_rewrite_override: bool | None
     enable_hybrid_retrieval_override: bool | None
 
@@ -26,14 +26,14 @@ class RAGPipelineQueryContext:
         chat_history: list[str] | None,
         *,
         filters: RetrievalFilters | None,
-        retrieval_settings: dict[str, Any] | None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None,
         enable_query_rewrite_override: bool | None,
         enable_hybrid_retrieval_override: bool | None,
     ) -> RAGPipelineQueryContext:
         return RAGPipelineQueryContext(
             chat_history=tuple(chat_history or ()),
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=retrieval_overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )

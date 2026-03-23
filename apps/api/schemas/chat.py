@@ -76,7 +76,11 @@ class ChatPipelineRequestBase(BaseModel):
     )
     retrieval_settings: dict[str, Any] | None = Field(
         default=None,
-        description="Optional overrides passed through to retrieval settings (advanced).",
+        description=(
+            "Optional partial overrides merged onto effective project retrieval settings. "
+            "Keys must match :class:`~src.domain.retrieval_settings.RetrievalSettings` field names; "
+            "the API maps this to :class:`~src.domain.retrieval_settings_override_spec.RetrievalSettingsOverrideSpec`."
+        ),
     )
     enable_query_rewrite_override: bool | None = Field(
         default=None,

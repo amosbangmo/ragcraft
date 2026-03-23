@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from src.domain.pipeline_payloads import (
     PipelineBuildResult,
     SectionExpansionPoolResult,
@@ -24,7 +25,7 @@ class SummaryRecallStagePort(Protocol):
         enable_query_rewrite_override: bool | None,
         enable_hybrid_retrieval_override: bool | None,
         filters: RetrievalFilters | None,
-        retrieval_settings: dict[str, Any] | None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None,
     ) -> SummaryRecallResult: ...
 
 

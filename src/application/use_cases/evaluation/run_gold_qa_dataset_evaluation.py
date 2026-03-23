@@ -11,6 +11,7 @@ from src.application.use_cases.chat.pipeline_use_case_ports import (
     GenerateAnswerFromPipelinePort,
     InspectRagPipelinePort,
 )
+from src.application.rag.dtos.evaluation_pipeline import RagEvaluationPipelineInput
 from src.application.use_cases.evaluation.rag_pipeline_orchestration import (
     execute_rag_inspect_then_answer_for_evaluation,
 )
@@ -50,10 +51,12 @@ class RunGoldQaDatasetEvaluationUseCase:
             return execute_rag_inspect_then_answer_for_evaluation(
                 inspect_pipeline=self._inspect_pipeline,
                 generate_answer_from_pipeline=self._generate_answer_from_pipeline,
-                project=project,
-                question=entry.question,
-                enable_query_rewrite=command.enable_query_rewrite,
-                enable_hybrid_retrieval=command.enable_hybrid_retrieval,
+                params=RagEvaluationPipelineInput(
+                    project=project,
+                    question=entry.question,
+                    enable_query_rewrite=command.enable_query_rewrite,
+                    enable_hybrid_retrieval=command.enable_hybrid_retrieval,
+                ),
             )
 
         return self._gold_benchmark.evaluate_gold_qa_dataset(

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from src.application.use_cases.chat.orchestration.ports import SummaryRecallStagePort
 from src.application.use_cases.chat.orchestration.summary_recall_from_request import (
     run_summary_recall_from_chat_request,
@@ -10,6 +8,7 @@ from src.application.common.summary_recall_preview import SummaryRecallPreviewDT
 from src.domain.pipeline_payloads import SummaryRecallResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 def _preview_from_summary_recall(bundle: SummaryRecallResult) -> SummaryRecallPreviewDTO | None:
@@ -28,7 +27,7 @@ def _preview_from_summary_recall(bundle: SummaryRecallResult) -> SummaryRecallPr
 
 
 class PreviewSummaryRecallUseCase:
-    """Runs the summary-recall stage only and returns the legacy preview dict for the UI / API."""
+    """Runs the summary-recall stage only and returns a typed preview DTO for wire/transport mappers."""
 
     def __init__(self, *, summary_recall_service: SummaryRecallStagePort) -> None:
         self._summary_recall = summary_recall_service
@@ -40,19 +39,18 @@ class PreviewSummaryRecallUseCase:
         chat_history: list[str] | None = None,
         *,
         filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> dict | None:
+    ) -> SummaryRecallPreviewDTO | None:
         bundle = run_summary_recall_from_chat_request(
             summary_recall_service=self._summary_recall,
             project=project,
             question=question,
             chat_history=chat_history,
             filters=filters,
-            retrieval_settings=retrieval_settings,
+            retrieval_overrides=retrieval_overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        preview = _preview_from_summary_recall(bundle)
-        return preview.to_dict() if preview is not None else None
+        return _preview_from_summary_recall(bundle)

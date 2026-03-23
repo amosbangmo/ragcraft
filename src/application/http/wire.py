@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, cast
 
+from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from src.application.ingestion.dtos import IngestDocumentResult
 from src.application.settings.dtos import EffectiveRetrievalSettingsView
 from src.domain.benchmark_result import BenchmarkResult
@@ -79,7 +80,14 @@ class PreviewSummaryRecallWirePayload:
     preview: dict[str, Any] | None
 
     @classmethod
+    def from_preview_dto(cls, preview: SummaryRecallPreviewDTO | None) -> PreviewSummaryRecallWirePayload:
+        if preview is None:
+            return cls(preview=None)
+        return cls(preview=cast(dict[str, Any], jsonify_value(preview.to_dict())))
+
+    @classmethod
     def from_preview_dict(cls, preview: dict[str, Any] | None) -> PreviewSummaryRecallWirePayload:
+        """Legacy path for raw dicts (e.g. tests); prefer :meth:`from_preview_dto`."""
         if preview is None:
             return cls(preview=None)
         return cls(preview=cast(dict[str, Any], jsonify_value(preview)))
@@ -222,9 +230,8 @@ def pipeline_build_result_to_wire_dict(result: PipelineBuildResult) -> dict[str,
     return PipelineSnapshotWirePayload.from_build_result(result).pipeline
 
 
-def preview_summary_recall_to_wire_dict(preview: dict[str, Any] | None) -> dict[str, Any] | None:
-    payload = PreviewSummaryRecallWirePayload.from_preview_dict(preview)
-    return payload.preview
+def preview_summary_recall_to_wire_dict(preview: SummaryRecallPreviewDTO | None) -> dict[str, Any] | None:
+    return PreviewSummaryRecallWirePayload.from_preview_dto(preview).preview
 
 
 def ingest_document_result_to_wire_dict(result: Any) -> dict[str, Any]:

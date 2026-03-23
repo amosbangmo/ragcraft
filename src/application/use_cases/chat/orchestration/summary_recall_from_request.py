@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from src.application.common.pipeline_query_context import RAGPipelineQueryContext
 from src.application.use_cases.chat.orchestration.ports import SummaryRecallStagePort
 from src.domain.pipeline_payloads import SummaryRecallResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 def run_summary_recall_from_chat_request(
@@ -18,7 +17,7 @@ def run_summary_recall_from_chat_request(
     question: str,
     chat_history: list[str] | None,
     filters: RetrievalFilters | None = None,
-    retrieval_settings: dict[str, Any] | None = None,
+    retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
     enable_query_rewrite_override: bool | None = None,
     enable_hybrid_retrieval_override: bool | None = None,
 ) -> SummaryRecallResult:
@@ -29,7 +28,7 @@ def run_summary_recall_from_chat_request(
     ctx = RAGPipelineQueryContext.from_chat_request(
         chat_history,
         filters=filters,
-        retrieval_settings=retrieval_settings,
+        retrieval_overrides=retrieval_overrides,
         enable_query_rewrite_override=enable_query_rewrite_override,
         enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
     )
@@ -40,5 +39,5 @@ def run_summary_recall_from_chat_request(
         enable_query_rewrite_override=ctx.enable_query_rewrite_override,
         enable_hybrid_retrieval_override=ctx.enable_hybrid_retrieval_override,
         filters=ctx.filters,
-        retrieval_settings=ctx.retrieval_settings,
+        retrieval_overrides=ctx.retrieval_overrides,
     )

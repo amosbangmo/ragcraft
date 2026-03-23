@@ -40,8 +40,8 @@ def test_preview_returns_dict_when_recall_present() -> None:
     uc = PreviewSummaryRecallUseCase(summary_recall_service=svc)
     project = Project(user_id="u", project_id="p")
 
-    raw = uc.execute(project, "question")
+    dto = uc.execute(project, "question")
 
-    assert raw is not None
-    assert raw["rewritten_question"] == "rw"
-    assert raw["retrieval_mode"] == "faiss"
+    assert dto is not None
+    assert dto.rewritten_question == "rw"
+    assert dto.retrieval_mode == "faiss"

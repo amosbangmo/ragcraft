@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from src.domain.pipeline_latency import PipelineLatency
 from src.domain.pipeline_payloads import PipelineBuildResult
 
 
@@ -15,7 +16,7 @@ class RagInspectAnswerRun:
     pipeline: PipelineBuildResult | None
     answer: str
     latency_ms: float
-    full_latency: dict[str, float] | None
+    full_latency: PipelineLatency | None
 
     def to_row_evaluation_dict(self) -> dict[str, Any]:
         """Shape expected by :meth:`RowEvaluationService.process_row`."""
@@ -23,5 +24,5 @@ class RagInspectAnswerRun:
             "pipeline": self.pipeline,
             "answer": self.answer,
             "latency_ms": self.latency_ms,
-            "latency": self.full_latency,
+            "latency": self.full_latency.to_dict() if self.full_latency is not None else None,
         }

@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Protocol
 
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.retrieval_filters import RetrievalFilters
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class InspectRagPipelinePort(Protocol):
@@ -19,7 +20,7 @@ class InspectRagPipelinePort(Protocol):
         chat_history: list[str] | None = None,
         *,
         filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> PipelineBuildResult | None: ...

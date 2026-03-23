@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from langchain_core.documents import Document
 
+from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from apps.api.schemas.serialization import (
     benchmark_result_to_api_dict,
     effective_retrieval_settings_view_to_api_dict,
@@ -65,8 +66,17 @@ def test_preview_summary_recall_to_api_dict_none() -> None:
 
 
 def test_preview_summary_recall_to_api_dict_pass_through() -> None:
-    doc = Document(page_content="p", metadata={})
-    prev = {"rewritten_question": "r", "recalled_summary_docs": [doc]}
+    sdoc = SummaryRecallDocument(page_content="p", metadata={})
+    prev = SummaryRecallPreviewDTO(
+        rewritten_question="r",
+        recalled_summary_docs=[sdoc],
+        vector_summary_docs=[],
+        bm25_summary_docs=[],
+        retrieval_mode="faiss",
+        query_rewrite_enabled=False,
+        hybrid_retrieval_enabled=False,
+        use_adaptive_retrieval=False,
+    )
     d = preview_summary_recall_to_api_dict(prev)
     assert d["recalled_summary_docs"] == [{"page_content": "p", "metadata": {}}]
 

@@ -8,6 +8,7 @@ from src.application.use_cases.chat.pipeline_use_case_ports import (
     GenerateAnswerFromPipelinePort,
     InspectRagPipelinePort,
 )
+from src.application.rag.dtos.evaluation_pipeline import RagEvaluationPipelineInput
 from src.application.use_cases.evaluation.rag_pipeline_orchestration import (
     execute_rag_inspect_then_answer_for_evaluation,
 )
@@ -40,10 +41,12 @@ class RunManualEvaluationUseCase:
         run = execute_rag_inspect_then_answer_for_evaluation(
             inspect_pipeline=self._inspect_pipeline,
             generate_answer_from_pipeline=self._generate_answer_from_pipeline,
-            project=project,
-            question=q,
-            enable_query_rewrite=command.enable_query_rewrite_override,
-            enable_hybrid_retrieval=command.enable_hybrid_retrieval_override,
+            params=RagEvaluationPipelineInput(
+                project=project,
+                question=q,
+                enable_query_rewrite=command.enable_query_rewrite_override,
+                enable_hybrid_retrieval=command.enable_hybrid_retrieval_override,
+            ),
         )
 
         return self._manual_evaluation.build_manual_evaluation_result(
@@ -56,5 +59,5 @@ class RunManualEvaluationUseCase:
             pipeline=run.pipeline,
             answer=run.answer,
             latency_ms=run.latency_ms,
-            full_latency_dict=run.full_latency,
+            full_latency_dict=run.full_latency.to_dict() if run.full_latency is not None else None,
         )

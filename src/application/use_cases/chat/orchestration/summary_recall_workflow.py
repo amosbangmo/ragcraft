@@ -10,8 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 from time import perf_counter
-from typing import Any
-
+from src.application.rag.dtos.recall_stages import VectorLexicalRecallBundle
 from src.application.settings.retrieval_settings_tuner import RetrievalSettingsTuner
 from src.application.use_cases.chat.orchestration.summary_recall_ports import (
     SummaryRecallTechnicalPorts,
@@ -52,7 +51,7 @@ class ApplicationSummaryRecallStage:
     def _merged_recall_settings(
         self,
         project: Project,
-        retrieval_settings: dict[str, Any] | None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None,
         *,
         enable_query_rewrite_override: bool | None,
         enable_hybrid_retrieval_override: bool | None,
@@ -60,7 +59,7 @@ class ApplicationSummaryRecallStage:
         tuner = self._settings_tuner
         settings = tuner.merge(
             tuner.from_project(project.user_id, project.project_id),
-            retrieval_settings,
+            retrieval_overrides.as_merge_mapping() if retrieval_overrides else None,
         )
         if enable_query_rewrite_override is not None:
             settings = replace(settings, enable_query_rewrite=enable_query_rewrite_override)
@@ -77,7 +76,7 @@ class ApplicationSummaryRecallStage:
         enable_hybrid_retrieval: bool,
         filters: RetrievalFilters | None,
         similarity_search_k: int | None,
-    ) -> dict[str, Any]:
+    ) -> VectorLexicalRecallBundle:
         """
         Vector (+ optional BM25) summary recall and RRF fusion.
 
@@ -121,11 +120,11 @@ class ApplicationSummaryRecallStage:
             max_docs=merged_limit,
         )
 
-        return {
-            "vector_summary_docs": vector_summary_docs,
-            "bm25_summary_docs": bm25_summary_docs,
-            "recalled_summary_docs": recalled_summary_docs,
-        }
+        return VectorLexicalRecallBundle(
+            vector_summary_docs=tuple(vector_summary_docs),
+            bm25_summary_docs=tuple(bm25_summary_docs),
+            recalled_summary_docs=tuple(recalled_summary_docs),
+        )
 
     def summary_recall_stage(
         self,
@@ -136,11 +135,11 @@ class ApplicationSummaryRecallStage:
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
-        retrieval_settings: dict[str, Any] | None = None,
+        retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
     ) -> SummaryRecallResult:
         settings = self._merged_recall_settings(
             project,
-            retrieval_settings,
+            retrieval_overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
@@ -205,8 +204,8 @@ class ApplicationSummaryRecallStage:
             enable_hybrid_retrieval=enable_hybrid_retrieval,
             enable_query_rewrite=enable_query_rewrite,
             filters_for_retrieval=filters_for_retrieval,
-            vector_summary_docs=retrieval_payload["vector_summary_docs"],
-            bm25_summary_docs=retrieval_payload["bm25_summary_docs"],
-            recalled_summary_docs=retrieval_payload["recalled_summary_docs"],
+            vector_summary_docs=list(retrieval_payload.vector_summary_docs),
+            bm25_summary_docs=list(retrieval_payload.bm25_summary_docs),
+            recalled_summary_docs=list(retrieval_payload.recalled_summary_docs),
             retrieval_ms=retrieval_ms,
         )

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
 from src.application.use_cases.chat.orchestration.ports import PipelineAssemblyPort, SummaryRecallStagePort
+from src.domain.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from src.application.use_cases.chat.orchestration.summary_recall_from_request import (
     run_summary_recall_from_chat_request,
 )
@@ -20,7 +19,7 @@ def run_recall_then_assemble_pipeline(
     pipeline_assembly_service: PipelineAssemblyPort,
     pipeline_started_monotonic: float,
     filters: RetrievalFilters | None = None,
-    retrieval_settings: dict[str, Any] | None = None,
+    retrieval_overrides: RetrievalSettingsOverrideSpec | None = None,
     enable_query_rewrite_override: bool | None = None,
     enable_hybrid_retrieval_override: bool | None = None,
 ) -> PipelineBuildResult | None:
@@ -35,7 +34,7 @@ def run_recall_then_assemble_pipeline(
         question=question,
         chat_history=chat_history,
         filters=filters,
-        retrieval_settings=retrieval_settings,
+        retrieval_overrides=retrieval_overrides,
         enable_query_rewrite_override=enable_query_rewrite_override,
         enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
     )

@@ -21,6 +21,7 @@ from src.application.http.wire import (
 from src.application.settings.dtos import EffectiveRetrievalSettingsView
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.pipeline_payloads import PipelineBuildResult
+from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from src.domain.rag_response import RAGResponse
 
 
@@ -28,7 +29,7 @@ def pipeline_build_result_to_api_dict(result: PipelineBuildResult) -> dict[str, 
     return pipeline_build_result_to_wire_dict(result)
 
 
-def preview_summary_recall_to_api_dict(preview: dict[str, Any] | None) -> dict[str, Any] | None:
+def preview_summary_recall_to_api_dict(preview: SummaryRecallPreviewDTO | None) -> dict[str, Any] | None:
     return preview_summary_recall_to_wire_dict(preview)
 
 

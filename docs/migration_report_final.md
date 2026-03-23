@@ -137,7 +137,31 @@ pytest tests/architecture/ -q
 
 ---
 
-## 10. Repository tree (main folders)
+## 10. RAG orchestration typed contracts (orchestration hardening)
+
+This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchestration boundaries and formalized DTOs for recall fusion and evaluation input.
+
+| Removed / tightened | Replacement |
+|--------------------|-------------|
+| ``retrieval_settings: dict[str, Any] \| None`` on **`RetrievalPort.execute`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, **`run_recall_then_assemble_pipeline`**, chat use cases | **`RetrievalSettingsOverrideSpec \| None`** (domain); validated partial merge mapping keyed only to **`RetrievalSettings`** fields |
+| Ad hoc recall fusion return shape | **`VectorLexicalRecallBundle`** in **`src/application/rag/dtos/recall_stages.py`** |
+| Untyped evaluation orchestration inputs | **`RagEvaluationPipelineInput`** |
+| **`RagInspectAnswerRun.full_latency`** as loose dict | **`PipelineLatency \| None`**; row export still uses **`to_row_evaluation_dict()`** |
+
+**Execution modes (unchanged intent, clearer contracts):**
+
+| Mode | Use case / entry | Query log | Answer generation |
+|------|------------------|-----------|-------------------|
+| Product ask | **`AskQuestionUseCase`** | Yes (via **`QueryLogPort`** / safe helpers, deferred) | Yes |
+| Inspect | **`InspectRagPipelineUseCase`** | **No** (`emit_query_log=False`) | **No** |
+| Preview recall | **`PreviewSummaryRecallUseCase`** | **No** | **No** (stops at recall; **`SummaryRecallPreviewDTO`**) |
+| Evaluation | **`execute_rag_inspect_then_answer_for_evaluation`** | **No** | Yes, via **`GenerateAnswerFromPipelinePort`**; returns **`RagInspectAnswerRun`** for **`BenchmarkExecutionUseCase`** |
+
+**Future hardening (optional):** Gateway HTTP client method signatures may still accept ``dict`` for ``retrieval_settings`` as transport-only JSON; tightening those to a shared wire type would be cosmetic unless validation is duplicated outside the API boundary.
+
+---
+
+## 11. Repository tree (main folders)
 
 ```text
 apps/api/

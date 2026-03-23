@@ -20,7 +20,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 - **`GoldQaBenchmarkAdapter`** — **`use_cases/evaluation/gold_qa_benchmark_adapter.py`**; implements **`GoldQaBenchmarkPort`** by delegating to **`BenchmarkExecutionUseCase`** (wired from composition, not from **`EvaluationService`** internals).
 - **Pipeline use-case ports** — `use_cases/chat/pipeline_use_case_ports.py` (`InspectRagPipelinePort`, `GenerateAnswerFromPipelinePort`) so evaluation does not depend on concrete chat use case classes.
 - **Policies** under `src/application/chat/policies/` — pure helpers (dedupe, wire shapes) used by orchestration; RRF merge lives in **domain** (`summary_document_fusion`).
-- **DTOs / wire helpers** — `application/http/wire.py`, evaluation DTOs, settings DTOs; **`build_query_log_ingress_payload`** builds domain **`QueryLogIngressPayload`**.
+- **DTOs / wire helpers** — `application/http/wire.py`, evaluation DTOs, settings DTOs; **`build_query_log_ingress_payload`** builds domain **`QueryLogIngressPayload`**. RAG orchestration DTOs under **`src/application/rag/dtos/`** (e.g. **`VectorLexicalRecallBundle`**, **`RagEvaluationPipelineInput`**) plus domain **`RetrievalSettingsOverrideSpec`** for typed retrieval overrides on chat/RAG ports.
 - **`frontend_support/`** — HTTP-mode stubs for the gateway (`http_backend_stubs.py`, `memory_chat_transcript.py`) so `src/frontend_gateway` does not import infrastructure.
 
 **Does not belong:** importing `src.infrastructure` (wiring uses composition). Use cases must not import `src.frontend_gateway`.
