@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from src.domain.buffered_document_upload import BufferedDocumentUpload
+
 
 @dataclass(frozen=True, slots=True)
 class UserProfileSummary:
@@ -90,10 +92,10 @@ class ChangeUserPasswordResult:
 
 @dataclass(frozen=True, slots=True)
 class UploadUserAvatarCommand:
+    """Avatar bytes after transport adaptation (:class:`~src.domain.buffered_document_upload.BufferedDocumentUpload`)."""
+
     user_id: str
-    upload_filename: str | None
-    raw: bytes
-    content_type: str | None
+    upload: BufferedDocumentUpload
 
 
 @dataclass(frozen=True, slots=True)

@@ -58,7 +58,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 ## `apps/api/`
 
-**Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`. Multipart document ingest uses **`apps/api/upload_adapter.read_buffered_document_upload`** (chunked read, size cap) before **`IngestUploadedFileCommand`**.
+**Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`. Multipart uploads (**documents** and **avatars**) use **`apps.api.upload_adapter`** — chunked reads with per-route byte caps → domain **`BufferedDocumentUpload`** → use cases (**`IngestUploadedFileCommand`**, **`UploadUserAvatarCommand`**). Strategy is documented in **`src/application/ingestion/upload_boundary.py`** (bounded buffering, not socket-to-parser streaming).
 
 **Identity:** Routes that require a logged-in workspace user depend on **`get_authenticated_principal`**, which parses **`Authorization: Bearer`** in **`dependencies.py`**, delegates verification to **`AuthenticationPort`** (implemented by **`JwtAuthenticationAdapter`** in infrastructure), and returns a framework-agnostic **`AuthenticatedPrincipal`**. Handlers pass **`principal.user_id`** into use cases only; they never interpret raw tokens.
 

@@ -1,4 +1,8 @@
-"""Application rules for uploaded document bytes (name normalization, size, emptiness)."""
+"""Application rules for uploaded document bytes (name normalization, size, emptiness).
+
+Transport policy (chunked read, caps) lives in ``apps.api.upload_adapter``; see
+:mod:`src.application.ingestion.upload_boundary`.
+"""
 
 from __future__ import annotations
 

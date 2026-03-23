@@ -210,12 +210,15 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 ## 11. Ingestion, project document details, and evaluation wire (API / application hardening)
 
-**Document upload boundary**
+**Multipart upload boundary (documents + avatars)**
 
-- **Transport:** ``apps/api/upload_adapter.py`` reads multipart bodies in **chunks** (1 MiB) and rejects payloads larger than ``INGESTION_CONFIG.max_upload_bytes`` (env **`RAG_MAX_UPLOAD_BYTES`**, default 100 MiB) with **HTTP 413** before the ingest use case runs.
-- **Domain:** **`BufferedDocumentUpload`** (`src/domain/buffered_document_upload.py`) is the stable name + bytes (+ optional declared media type) object passed into **`DocumentIngestionPort.ingest_uploaded_file`** and **`IngestUploadedFileCommand`** (field **`upload`**).
-- **Application validation:** **`validate_buffered_document_upload`** (`src/application/ingestion/upload_policy.py`) enforces non-empty body, size cap (defense in depth), and basename-only filenames.
-- **Streaming:** Extraction still runs from a **persisted file** on disk (existing pipeline); streaming directly into unstructured is **not** implemented — the adapter documents this limitation.
+- **Final strategy (explicit):** **bounded chunked buffering** — reads proceed in **1 MiB** slices while tracking cumulative size; if the cap is exceeded, the adapter raises **before** buffering the remainder. After a successful read, bytes are concatenated in memory for the application. This is **not** true streaming from the socket into extraction or indexing.
+- **Canonical module:** **`src/application/ingestion/upload_boundary.py`** documents the contract; transport implementation is **`apps/api/upload_adapter.py`** (**`read_buffered_document_upload`**, **`read_buffered_avatar_upload`** sharing **`_read_starlette_upload_bounded`**).
+- **Documents:** cap **`INGESTION_CONFIG.max_upload_bytes`** (**`RAG_MAX_UPLOAD_BYTES`**, default 100 MiB) → **HTTP 413** on oversize → **`IngestUploadedFileCommand`** / **`validate_buffered_document_upload`** (defense in depth).
+- **Avatars:** cap **`USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes`** (**`RAG_MAX_AVATAR_UPLOAD_BYTES`**, default 2 MiB); routers no longer use raw **`await file.read()`**. **`UploadUserAvatarCommand`** carries **`BufferedDocumentUpload`** only; **`validate_buffered_avatar_upload`** (`src/application/users/avatar_upload_policy.py`) + **`FileAvatarStorage`** (infrastructure) enforce format and size again at save time.
+- **Domain:** **`BufferedDocumentUpload`** — shared typed payload for both flows after transport adaptation.
+- **On-disk pipeline:** Document extraction still runs from a **persisted file**; streaming multipart directly into unstructured is **not** implemented.
+- **Lazy unstructured imports:** **`src/infrastructure/ingestion/unstructured_extractor.py`** imports **`unstructured`** chunking/partition entry points **on first extraction**, not at module import time, so **`create_app()`** / **`BackendApplicationContainer`** construction does not pull optional partition backends (e.g. **pdfminer**) until a document is actually parsed. A full **`requirements.txt`** install remains required for real PDF/DOCX/PPTX extraction.
 
 **Settings**
 

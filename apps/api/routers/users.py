@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from apps.api.dependencies import (
     get_authenticated_principal,
@@ -28,6 +28,11 @@ from apps.api.schemas.users import (
     ProfileUpdateResponse,
     SimpleStatusResponse,
     UserMeResponse,
+)
+from apps.api.upload_adapter import (
+    StarletteUploadPayloadError,
+    StarletteUploadTooLargeError,
+    read_buffered_avatar_upload,
 )
 from src.application.auth.authenticated_principal import AuthenticatedPrincipal
 from src.application.auth.dtos import (
@@ -99,19 +104,34 @@ def post_password(
     return SimpleStatusResponse(success=True, message=result.message)
 
 
-@router.post("/me/avatar", response_model=SimpleStatusResponse, summary="Upload avatar image")
+@router.post(
+    "/me/avatar",
+    response_model=SimpleStatusResponse,
+    summary="Upload avatar image",
+    responses={
+        400: {"description": "Invalid or unreadable upload"},
+        413: {"description": "Avatar larger than RAG_MAX_AVATAR_UPLOAD_BYTES"},
+    },
+)
 async def post_avatar(
     principal: PrincipalDep,
     use_case: UploadAvatarUCDep,
     file: UploadFile = File(..., description="PNG, JPG, JPEG, or WEBP (max 2 MB)."),
 ) -> SimpleStatusResponse:
-    raw = await file.read()
+    """
+    Multipart field ``file`` is read in chunks up to ``RAG_MAX_AVATAR_UPLOAD_BYTES`` (default 2 MiB),
+    same policy as document ingest (see ``apps.api.upload_adapter``).
+    """
+    try:
+        upload = await read_buffered_avatar_upload(file)
+    except StarletteUploadTooLargeError as exc:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
+    except StarletteUploadPayloadError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     result = use_case.execute(
         UploadUserAvatarCommand(
             user_id=principal.user_id,
-            upload_filename=file.filename,
-            raw=raw,
-            content_type=file.content_type,
+            upload=upload,
         )
     )
     return SimpleStatusResponse(success=True, message=result.message)

@@ -10,10 +10,9 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from src.core.config import USER_PROFILE_UPLOAD_CONFIG
 from src.core.paths import get_data_root
-from src.domain.ports.avatar_storage_port import AvatarStoragePort
 
-_MAX_AVATAR_BYTES = 2 * 1024 * 1024
 _ALLOWED_AVATAR_EXT = frozenset({".png", ".jpg", ".jpeg", ".webp"})
 _SUFFIX_TO_MIMES: dict[str, frozenset[str]] = {
     ".png": frozenset({"image/png"}),
@@ -82,7 +81,7 @@ class FileAvatarStorage:
         content_type: str | None,
     ) -> str:
         suffix = avatar_suffix_from_upload_filename(upload_filename)
-        if len(raw) > _MAX_AVATAR_BYTES:
+        if len(raw) > USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes:
             raise ValueError("Avatar exceeds maximum size.")
         validate_avatar_mime(suffix, content_type)
         validate_avatar_magic(suffix, raw)

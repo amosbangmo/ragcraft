@@ -17,6 +17,9 @@ class IngestUploadedFileUseCase:
     """
     Save an uploaded file into the project workspace, replace any prior index rows for that
     filename, then run the same pipeline as :class:`IngestFilePathUseCase`.
+
+    Expects ``command.upload`` as domain :class:`~src.domain.buffered_document_upload.BufferedDocumentUpload`
+    (HTTP workers build it via ``apps.api.upload_adapter``; see :mod:`src.application.ingestion.upload_boundary`).
     """
 
     def __init__(

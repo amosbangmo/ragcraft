@@ -7,11 +7,11 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from tests.apps_api.bearer_auth import bearer_headers
 
 from apps.api.dependencies import get_user_repository
 from apps.api.main import create_app
 from src.auth.password_utils import hash_password
-from tests.apps_api.bearer_auth import bearer_headers
 
 
 def _hdr(uid: str = "u1") -> dict[str, str]:
@@ -341,7 +341,7 @@ def test_post_avatar_rejects_oversize(
         headers=_hdr(),
         files={"file": ("huge.png", raw, "image/png")},
     )
-    assert r.status_code == 400
+    assert r.status_code == 413
 
 
 def test_post_avatar_success(

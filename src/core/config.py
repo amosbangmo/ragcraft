@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-
 load_dotenv()
 
 
@@ -132,9 +131,24 @@ class IngestionConfig:
 
 
 @dataclass(frozen=True)
+class UserProfileUploadConfig:
+    """
+    Caps for profile multipart bodies (e.g. avatars).
+
+    The HTTP layer reads uploads in chunks and stops at ``max_avatar_bytes``; see
+    ``apps.api.upload_adapter``.
+    """
+
+    max_avatar_bytes: int = field(
+        default_factory=lambda: _get_int_env("RAG_MAX_AVATAR_UPLOAD_BYTES", 2 * 1024 * 1024)
+    )
+
+
+@dataclass(frozen=True)
 class RAGConfig:
     retrieval: RetrievalConfig = field(default_factory=RetrievalConfig)
     ingestion: IngestionConfig = field(default_factory=IngestionConfig)
+    user_profile_upload: UserProfileUploadConfig = field(default_factory=UserProfileUploadConfig)
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -146,6 +160,7 @@ if not OPENAI_API_KEY:
 APP_CONFIG = RAGConfig()
 RETRIEVAL_CONFIG = APP_CONFIG.retrieval
 INGESTION_CONFIG = APP_CONFIG.ingestion
+USER_PROFILE_UPLOAD_CONFIG = APP_CONFIG.user_profile_upload
 
 
 EMBEDDINGS = OpenAIEmbeddings(

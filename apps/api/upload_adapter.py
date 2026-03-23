@@ -1,9 +1,14 @@
 """
 FastAPI / Starlette multipart → domain :class:`~src.domain.buffered_document_upload.BufferedDocumentUpload`.
 
-**Policy:** uploads are read in chunks with a hard byte cap so oversized bodies are rejected without
-buffering the full file. True streaming into extraction is not supported yet; the bounded buffer is
-passed to the application use case, which persists then runs the existing on-disk pipeline.
+**Policy — bounded chunked buffering (not streaming into business logic):**
+
+- Each body is read in ``_READ_CHUNK``-sized slices while tracking cumulative size.
+- If the limit is exceeded mid-stream, :class:`StarletteUploadTooLargeError` is raised immediately
+  (no full-file buffer for oversized uploads).
+- After a successful read, bytes are concatenated into a single buffer for the application layer.
+  True streaming from the socket into extraction/indexing is **not** implemented; document
+  ingestion persists then runs the on-disk pipeline. See ``src.application.ingestion.upload_boundary``.
 """
 
 from __future__ import annotations
@@ -12,7 +17,7 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from src.core.config import INGESTION_CONFIG
+from src.core.config import INGESTION_CONFIG, USER_PROFILE_UPLOAD_CONFIG
 from src.domain.buffered_document_upload import BufferedDocumentUpload
 
 _READ_CHUNK = 1024 * 1024
@@ -23,7 +28,7 @@ class StarletteUploadPayloadError(ValueError):
 
 
 class StarletteUploadTooLargeError(StarletteUploadPayloadError):
-    """Total body size exceeds configured ``RAG_MAX_UPLOAD_BYTES`` / :attr:`INGESTION_CONFIG.max_upload_bytes`."""
+    """Total body size exceeds the configured cap for this upload kind."""
 
 
 def _client_filename(upload: UploadFile, *, default_name: str) -> str:
@@ -32,20 +37,19 @@ def _client_filename(upload: UploadFile, *, default_name: str) -> str:
     return base if base and base not in {".", ".."} else default_name
 
 
-async def read_buffered_document_upload(
+async def _read_starlette_upload_bounded(
     upload: UploadFile,
     *,
-    default_name: str = "upload",
-    max_bytes: int | None = None,
+    default_name: str,
+    max_bytes: int,
 ) -> BufferedDocumentUpload:
     """
-    Read the upload body up to ``max_bytes`` (default: ingestion config).
+    Read upload body in chunks until EOF or ``max_bytes`` exceeded.
 
     Raises:
         StarletteUploadTooLargeError: if more than ``max_bytes`` would be required.
         StarletteUploadPayloadError: if the stream cannot be read.
     """
-    limit = INGESTION_CONFIG.max_upload_bytes if max_bytes is None else max_bytes
     name = _client_filename(upload, default_name=default_name)
     chunks: list[bytes] = []
     total = 0
@@ -55,9 +59,9 @@ async def read_buffered_document_upload(
             if not chunk:
                 break
             total += len(chunk)
-            if total > limit:
+            if total > max_bytes:
                 raise StarletteUploadTooLargeError(
-                    f"Upload exceeds maximum size of {limit} bytes (configured via RAG_MAX_UPLOAD_BYTES)."
+                    f"Upload exceeds maximum size of {max_bytes} bytes."
                 )
             chunks.append(chunk)
     except StarletteUploadTooLargeError:
@@ -71,4 +75,40 @@ async def read_buffered_document_upload(
         source_filename=name,
         body=body,
         declared_media_type=media,
+    )
+
+
+async def read_buffered_document_upload(
+    upload: UploadFile,
+    *,
+    default_name: str = "upload",
+    max_bytes: int | None = None,
+) -> BufferedDocumentUpload:
+    """
+    Document ingest: read up to ``max_bytes`` (default: ``INGESTION_CONFIG.max_upload_bytes`` /
+    ``RAG_MAX_UPLOAD_BYTES``).
+
+    Raises:
+        StarletteUploadTooLargeError: if more than ``max_bytes`` would be required.
+        StarletteUploadPayloadError: if the stream cannot be read.
+    """
+    limit = INGESTION_CONFIG.max_upload_bytes if max_bytes is None else max_bytes
+    return await _read_starlette_upload_bounded(upload, default_name=default_name, max_bytes=limit)
+
+
+async def read_buffered_avatar_upload(
+    upload: UploadFile,
+    *,
+    default_name: str = "avatar",
+) -> BufferedDocumentUpload:
+    """
+    Profile avatar: read up to ``USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes`` /
+    ``RAG_MAX_AVATAR_UPLOAD_BYTES`` (default 2 MiB).
+
+    Same chunked policy as :func:`read_buffered_document_upload`.
+    """
+    return await _read_starlette_upload_bounded(
+        upload,
+        default_name=default_name,
+        max_bytes=USER_PROFILE_UPLOAD_CONFIG.max_avatar_bytes,
     )

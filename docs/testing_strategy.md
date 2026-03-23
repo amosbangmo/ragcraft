@@ -32,7 +32,9 @@ Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/archi
 ## Service / use case unit tests
 
 - **`tests/application/`** — use case behavior with mocks (e.g. **`test_ask_question_use_case.py`**, **`test_inspect_rag_pipeline_use_case.py`**, **`test_benchmark_execution_use_case.py`**, **`test_upload_policy.py`**, **`test_ingest_uploaded_file_use_case.py`**, **`test_get_project_document_details_use_case.py`**, **`test_generate_qa_dataset_use_case.py`**).
-- **`tests/apps_api/test_upload_adapter.py`** — Starlette/FastAPI upload chunked read and oversize rejection.
+- **`tests/apps_api/test_upload_adapter.py`** — Starlette/FastAPI chunked reads for **document** and **avatar** adapters; oversize rejection.
+- **`tests/application/users/test_avatar_upload_policy.py`** — application-layer avatar size/emptiness checks.
+- **Config monkeypatching:** modules bind **`USER_PROFILE_UPLOAD_CONFIG`** at import time; tests that override avatar limits should patch **`apps.api.upload_adapter`**, **`src.application.users.avatar_upload_policy`**, or **`src.infrastructure.adapters.filesystem.file_avatar_storage`** as appropriate (not only **`src.core.config`**).
 - **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py`, `test_rag_inspect_answer_run.py` covers **`GoldQaPipelineRowInput`** via **`as_row_evaluation_input()`**, `test_retrieval_settings_override_spec.py`).
 - **`tests/application/use_cases/evaluation/test_rag_pipeline_orchestration.py`** — evaluation inspect+answer orchestration and **`RagInspectAnswerRun`** latency typing.
 - **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` asserts **`PipelineBuildResult.latency`** and **`RAGResponse.latency`** are **`PipelineLatency`**; **`test_manual_evaluation_service.py`** exercises **`RunManualEvaluationUseCase`** with mocked inspect/generate/benchmark, not a legacy service orchestrator).

@@ -1,4 +1,10 @@
-"""Bounded in-memory representation of an uploaded file for ingestion (name + bytes)."""
+"""
+Bounded in-memory representation of an HTTP-multipart upload after transport adaptation.
+
+Used for **document ingestion** and **profile avatar** uploads: the API adapter reads the body in
+chunks with a byte cap, then passes this type into application use cases (no ``UploadFile`` in
+``src/application``).
+"""
 
 from __future__ import annotations
 

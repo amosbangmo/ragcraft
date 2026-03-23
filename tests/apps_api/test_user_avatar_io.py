@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
+import src.core.config as core_config
 import src.infrastructure.adapters.filesystem.file_avatar_storage as fas
 from src.infrastructure.adapters.filesystem.file_avatar_storage import FileAvatarStorage
 
@@ -37,14 +40,19 @@ def test_avatar_suffix_rejects_blank_filename() -> None:
 
 
 def test_save_avatar_respects_max_size(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(fas, "_MAX_AVATAR_BYTES", 8)
+    monkeypatch.setattr(
+        fas,
+        "USER_PROFILE_UPLOAD_CONFIG",
+        replace(core_config.USER_PROFILE_UPLOAD_CONFIG, max_avatar_bytes=8),
+    )
     data_root = tmp_path / "data"
     storage = FileAvatarStorage(data_root=data_root)
+    raw = b"\x89PNG\r\n\x1a\n" + b"xx"  # 10 bytes, valid header prefix, over cap 8
     with pytest.raises(ValueError, match="maximum size"):
         storage.save_avatar(
             user_id="u1",
             upload_filename="x.png",
-            raw=b"123456789",
+            raw=raw,
             content_type="image/png",
         )
 

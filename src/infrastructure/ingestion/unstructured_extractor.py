@@ -1,12 +1,9 @@
 import re
 import uuid
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-
-from unstructured.chunking.title import chunk_by_title
-from unstructured.partition.docx import partition_docx
-from unstructured.partition.pdf import partition_pdf
-from unstructured.partition.pptx import partition_pptx
+from typing import Any
 
 from src.core.config import INGESTION_CONFIG
 from src.core.exceptions import OCRDependencyError
@@ -14,7 +11,6 @@ from src.infrastructure.ingestion.image_utils import (
     bytes_to_base64,
     guess_mime_type_from_suffix,
 )
-
 
 # ---------------------------------------------------------------------
 # Constants
@@ -31,6 +27,47 @@ _CAPTION_RE = re.compile(
     r"^\s*(figure|fig\.?|table|tableau)\s*[A-Za-z0-9\-.:]*",
     re.IGNORECASE,
 )
+
+_chunk_by_title: Callable[..., Any] | None = None
+_partition_docx: Callable[..., Any] | None = None
+_partition_pdf: Callable[..., Any] | None = None
+_partition_pptx: Callable[..., Any] | None = None
+
+
+def _load_chunk_by_title() -> Callable[..., Any]:
+    global _chunk_by_title
+    if _chunk_by_title is None:
+        from unstructured.chunking.title import chunk_by_title as loaded
+
+        _chunk_by_title = loaded
+    return _chunk_by_title
+
+
+def _load_partition_docx() -> Callable[..., Any]:
+    global _partition_docx
+    if _partition_docx is None:
+        from unstructured.partition.docx import partition_docx as loaded
+
+        _partition_docx = loaded
+    return _partition_docx
+
+
+def _load_partition_pdf() -> Callable[..., Any]:
+    global _partition_pdf
+    if _partition_pdf is None:
+        from unstructured.partition.pdf import partition_pdf as loaded
+
+        _partition_pdf = loaded
+    return _partition_pdf
+
+
+def _load_partition_pptx() -> Callable[..., Any]:
+    global _partition_pptx
+    if _partition_pptx is None:
+        from unstructured.partition.pptx import partition_pptx as loaded
+
+        _partition_pptx = loaded
+    return _partition_pptx
 
 
 # ---------------------------------------------------------------------
@@ -253,6 +290,7 @@ def _partition_pdf_with_fallback(file_path: str):
     If OCR fails due to missing dependencies, fallback to a simpler strategy.
     """
 
+    partition_pdf = _load_partition_pdf()
     try:
         elements = partition_pdf(
             filename=file_path,
@@ -408,6 +446,7 @@ def _flush_text_run(extracted, text_run, source_file):
     if not text_run:
         return
 
+    chunk_by_title = _load_chunk_by_title()
     chunks = chunk_by_title(
         text_run,
         max_characters=INGESTION_CONFIG.text_chunking_max_characters,
@@ -496,10 +535,10 @@ def _extract_docx_or_pptx_text_and_tables(file_path: str, source_file: str) -> l
     suffix = Path(file_path).suffix.lower()
 
     if suffix == ".docx":
-        elements = partition_docx(filename=file_path)
+        elements = _load_partition_docx()(filename=file_path)
 
     elif suffix == ".pptx":
-        elements = partition_pptx(filename=file_path)
+        elements = _load_partition_pptx()(filename=file_path)
 
     else:
         raise ValueError(f"Unsupported file type: {suffix}")
