@@ -313,7 +313,7 @@ Enforced by **`api/tests/architecture/`** (see **`docs/dependency_rules.md`**).
 ### 18.4 Final integration model
 
 - **HTTP:** JWT bearer, Pydantic request/response models, shared **error envelope** (**`docs/api.md`**).  
-- **Streamlit:** **`frontend/src/services/api_client.py`** façade; **`http_client.py`** + **`http_payloads.py`** / **`evaluation_wire_parse.py`** — **no** **`domain`** / **`application.dto`** on the HTTP hot path (**§14**).  
+- **Streamlit:** **`frontend/src/services/api_client.py`** façade; HTTP implementation under **`api/src/application/frontend_support/http_backend_client.py`** with **`http_payloads.py`** / **`evaluation_wire_parse.py`** — **no** **`domain`** on the HTTP hot path (**§14**).  
 - **Feature map:** **`docs/product_features.md`** (**§17**).
 
 ### 18.5 Final validation and test guardrails
@@ -324,7 +324,7 @@ Enforced by **`api/tests/architecture/`** (see **`docs/dependency_rules.md`**).
 | Full regression (after gate) | **`scripts/run_tests.sh`** / **`.ps1`** → same gate, then **`api/tests`** (minus arch/bootstrap) + **`frontend/tests`** |
 | Lint + gate (quick) | **`scripts/validate.sh`** / **`.ps1`** → **`lint.sh`** + **`validate_architecture`** |
 
-Documented in **`docs/testing_strategy.md`** (including **“Final verification (closure checklist)”**).
+Documented in **`docs/testing_strategy.md`** (§8 closure checklist).
 
 ### 18.6 Confidence rating by dimension (9/10+ for stated scope)
 
@@ -347,6 +347,8 @@ The **remaining ~1/10** is **intentional** and **non-blocking** for using this r
 **`ARCHITECTURE_TARGET.md`** was aligned with the enforced tree: it **no longer** lists non-existent **`api/src/auth`** or **`api/src/core`** packages; auth placement matches **§4** and **`docs/rag_orchestration.md`**. **`scripts/validate.sh`** documentation now states **Ruff + architecture + bootstrap**, not architecture-only pytest.
 
 **`test_no_legacy_paths.py`** blocks reintroduction of pre-migration path spellings (alternate **`apps`** + **`/api`** tree, monolith **`src`** + **`.ui`** / **`/ui`**, **`frontend_`**+**`gateway`** identifiers, and **`frontend_`**+**`gateway`** directory segments). The monolith-import shim module was renamed to **`test_deprecated_backend_shim_guardrails.py`** (no “gateway” in the filename). The obsolete root **`source_bundle.txt`** aggregate (stale full-tree copy) was removed in favor of the live repository tree.
+
+**Core docs (final alignment):** **`docs/architecture.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, and **`docs/testing_strategy.md`** share a consistent outline (purpose → numbered sections → cross-links). Path references match the current tree (**`application/frontend_support/`**, **`api/tests/reliability/`**, **`http_backend_client.py`**); legacy monolith spellings are not used as living examples.
 
 ### 18.8 Typed use-case contracts (dict ban)
 

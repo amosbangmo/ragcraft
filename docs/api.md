@@ -1,105 +1,99 @@
 # HTTP API (FastAPI)
 
-The HTTP API is implemented under **`api/src/interfaces/http/`** (routers, schemas, dependencies, upload helpers). The ASGI application object is built by **`create_app()`** in that package and exposed as **`app`** from **`api/main.py`** for Uvicorn.
+FastAPI app under **`api/src/interfaces/http/`** (routers, schemas, **`dependencies.py`**, upload helpers). **`create_app()`** builds the ASGI app; **`api/main.py`** exposes **`app`** for Uvicorn.
 
-**Regression tests:** **`api/tests/bootstrap/test_asgi_entrypoint.py`** asserts **`api/main.py`** still wires **`interfaces.http.main:create_app`**, that **`create_app()`** serves **`/health`** and **`/openapi.json`**, and that the **`api/main.py`** file can be executed like Uvicorn (without conflicting with the **`api`** test package on **`PYTHONPATH`**). HTTP contracts live under **`api/tests/api/`** (e.g. **`test_core_routes.py`**, **`test_http_pipeline_e2e.py`**).
+**Related:** **`docs/architecture.md`**, **`docs/testing_strategy.md`**, **`docs/product_features.md`**. **Smoke:** **`api/tests/bootstrap/`**, **`api/tests/reliability/test_app_boot.py`**. **Contracts:** **`api/tests/api/`**.
 
-**CI-style checks:** **`scripts/validate_architecture.*`** runs architecture + bootstrap tests; **`scripts/run_tests.*`** runs that gate then the rest of **`api/tests`** (except duplicates) plus **`frontend/tests`** — see **`docs/testing_strategy.md`**.
+---
 
-**Run locally (repository root on `PYTHONPATH` so the `api` package resolves):**
+## 1. Run locally
+
+Repository root; set **`PYTHONPATH`** so **`api.main`** resolves (or rely on **`scripts/run_tests`** / IDE config).
 
 ```bash
 export PYTHONPATH="$(pwd)"   # Linux / macOS / Git Bash
 python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**PowerShell:**
-
 ```powershell
 $env:PYTHONPATH = (Get-Location).Path
 python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Set **`RAGCRAFT_JWT_SECRET`** (see below) before starting the server.
+Set **`RAGCRAFT_JWT_SECRET`** before accepting real logins.
 
 ---
 
-## Authentication
+## 2. Authentication
 
-1. **Obtain a token** — `POST /auth/login` or `POST /auth/register` with JSON credentials. The response includes:
-   - **`access_token`** — JWT for subsequent requests  
-   - **`token_type`** — always **`bearer`**  
-   - **`user`** — profile summary (`user_id`, `username`, …)
-
-2. **Call scoped routes** — send:
-
-   `Authorization: Bearer <access_token>`
-
-   Typical scoped areas: **`/users/me`**, **`/projects`**, **`/chat/*`**, **`/evaluation/*`** (unless a route is explicitly public).
-
-   **Types:** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`api/src/domain/`** (e.g. **`domain/auth/`**, **`domain/common/ports/`**).  
-   **`api/src/interfaces/http/dependencies.py`** obtains **`AuthenticationPort`** from the composition root; routers depend on **`AuthenticatedPrincipal`** via **`Depends`**, not on infrastructure types.
-
-3. **Configuration**
-
-   - **`RAGCRAFT_JWT_SECRET`** (required) — symmetric key for HS256 signing and verification.  
-   - Optional: **`RAGCRAFT_JWT_ISSUER`**, **`RAGCRAFT_JWT_AUDIENCE`**, **`RAGCRAFT_JWT_ALGORITHM`** (default **`HS256`**), **`RAGCRAFT_ACCESS_TOKEN_EXPIRE_MINUTES`**.
+1. **`POST /auth/login`** or **`POST /auth/register`** → JSON with **`access_token`**, **`token_type`** (`bearer`), **`user`** profile.
+2. Scoped routes: header **`Authorization: Bearer <access_token>`** — e.g. **`/users/me`**, **`/projects`**, **`/chat/*`**, **`/evaluation/*`**.
+3. Types: **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`** in **`api/src/domain/`**. **`interfaces/http/dependencies.py`** resolves auth from the composition root; handlers use **`AuthenticatedPrincipal`**, not raw infra types.
+4. **Env:** **`RAGCRAFT_JWT_SECRET`** (required). Optional: **`RAGCRAFT_JWT_ISSUER`**, **`RAGCRAFT_JWT_AUDIENCE`**, **`RAGCRAFT_JWT_ALGORITHM`**, **`RAGCRAFT_ACCESS_TOKEN_EXPIRE_MINUTES`**.
 
 ---
 
-## Error envelope
+## 3. Error envelope
 
-Failures return JSON with at least: **`detail`**, **`message`**, **`error_type`**, **`code`**, **`category`**. Authentication problems typically use **`401`** (`authentication_required`, `invalid_token`, `expired_token`) or **`400`** (`malformed_authorization_header`).
-
----
-
-## Multipart uploads (documents and avatars)
-
-**Strategy:** bounded chunked buffering — the server reads **`UploadFile`** in chunks and enforces a maximum size before passing a **`BufferedDocumentUpload`** into use cases (not raw socket-to-parser streaming).
-
-- **`POST /projects/{project_id}/documents/ingest`** — form field **`file`**. Implemented via **`interfaces.http.upload_adapter.read_buffered_document_upload`**, capped by **`RAG_MAX_UPLOAD_BYTES`** (default 100 MiB; see **`INGESTION_CONFIG.max_upload_bytes`**).  
-- **`POST /users/me/avatar`** — form field **`file`**. Uses **`read_buffered_avatar_upload`**, capped by **`RAG_MAX_AVATAR_UPLOAD_BYTES`** (default 2 MiB). Oversized bodies → **HTTP 413**.
-
-Canonical contract: **`api/src/application/ingestion/upload_boundary.py`**.
+JSON includes **`detail`**, **`message`**, **`error_type`**, **`code`**, **`category`**. Auth issues: **`401`** / **`400`** for malformed headers (see **`RAGCraftError`** handlers).
 
 ---
 
-## OpenAPI
+## 4. Multipart uploads
 
-Interactive docs: **`/docs`** and **`/redoc`**. The schema includes **`BearerAuth`** (JWT) under **`components.securitySchemes`**.
+Bounded reads into **`BufferedDocumentUpload`** / avatar buffers — not unbounded streaming.
 
----
+| Route | Field | Cap |
+|-------|--------|-----|
+| **`POST /projects/{project_id}/documents/ingest`** | **`file`** | **`RAG_MAX_UPLOAD_BYTES`** (~100 MiB default) |
+| **`POST /users/me/avatar`** | **`file`** | **`RAG_MAX_AVATAR_UPLOAD_BYTES`** (~2 MiB) |
 
-## Route ownership
-
-Routers live only under **`api/src/interfaces/http/routers/`**. Each route module should stay thin: validate input, resolve **`AuthenticatedPrincipal`** where required, call a use case from **`BackendApplicationContainer`**, and map results to Pydantic response types from **`api/src/interfaces/http/schemas/`**.
-
----
-
-## API conventions (consistency)
-
-- **`project_id` in JSON bodies** (chat, manual evaluation, benchmark run, etc.): required **non-empty string**; invalid or missing fields yield **`422`** with FastAPI validation detail (and, where configured, the shared error helper’s **`error_type`** / **`code`** for app-level errors).
-- **`project_id` in paths** (`**/projects/{project_id}/**`): identifies the project resource; resolution failures map to the appropriate **`4xx`** / **`5xx`** via use cases and exception handlers.
-- **Bearer JWT** on all scoped routes; omitting or sending a bad token yields **`401`** (or **`400`** for malformed `Authorization`), not **`5xx`**.
-- **Multipart** document and avatar uploads use bounded readers and return **`413`** when over policy limits (see **Multipart uploads** above).
-
-**Product ↔ route map (tests + Streamlit):** **`docs/product_features.md`**.
+Oversized → **413**. Policy: **`api/src/application/ingestion/upload_boundary.py`**, **`interfaces/http/upload_adapter`**.
 
 ---
 
-## Streamlit client (frontend) — canonical contract
+## 5. OpenAPI
 
-The Streamlit app must not treat **`application.dto`** or **`domain`** types as the HTTP wire shape. Integration is owned by:
+**`/docs`**, **`/redoc`**, **`/openapi.json`**. **`BearerAuth`** in **`components.securitySchemes`**.
 
-| Piece | Path | Role |
-|-------|------|------|
-| Public façade | **`frontend/src/services/api_client.py`** | **Only** module pages/components use for **`BackendClient`**, **`HttpBackendClient`**, **`get_backend_client`**, wire/view-model helpers, and preset-merge ports (implementation under **`application/frontend_support/`**) |
-| HTTP implementation | **`api/src/application/frontend_support/http_backend_client.py`** | Builds requests and parses JSON using **only** wire modules (no **`domain`** / **`application.dto`** imports on the hot path) |
-| Wire DTOs | **`frontend/src/services/api_contract_models.py`** | Projects, chat (**`RAGAnswer`**), retrieval filters/settings, ingestion/QA payloads |
-| Evaluation wire | **`frontend/src/services/evaluation_wire_models.py`**, **`evaluation_wire_parse.py`** | Manual eval + benchmark results from API JSON |
-| JSON helpers | **`frontend/src/services/http_payloads.py`** | **`rag_answer_from_ask_api_dict`**, retrieval settings, QA generate, export artifacts, … |
-| In-process mapping | **`api/src/application/frontend_support/client_wire_mappers.py`** | Maps domain/application results → wire types at the **`InProcessBackendClient`** boundary |
+---
 
-**Environment (local dev):** set **`RAGCRAFT_BACKEND_CLIENT`** to **`http`** (default), **`api`**, or **`remote`** to use **`HttpBackendClient`**; set **`RAGCRAFT_API_BASE_URL`** to the API root (no trailing slash), e.g. **`http://127.0.0.1:8000`**. Optional: **`RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS`**, **`RAGCRAFT_API_READ_TIMEOUT_SECONDS`** (or legacy **`RAGCRAFT_API_TIMEOUT_SECONDS`**). The JWT from Streamlit session state is sent as **`Authorization: Bearer`** on scoped calls (**`services/http_transport.py`**).
+## 6. Route ownership
 
-**Errors:** non-success responses are turned into **`BackendHttpError`** or mapped **`RAGCraftError`** subclasses when **`error_type`** is present (**`services/http_error_map.py`**).
+Routers only under **`api/src/interfaces/http/routers/`**. Handlers: validate → **`AuthenticatedPrincipal`** where needed → use case from container → Pydantic response (**`interfaces/http/schemas/`**). **No** **`infrastructure.*`** imports in routers.
+
+---
+
+## 7. API conventions
+
+- **`project_id`** in JSON bodies: non-empty string; bad shape → **422**.
+- **`project_id`** in paths: resource id; failures → documented **4xx/5xx**.
+- **Bearer** on scoped routes; bad/missing token → **401** or **400**, not **5xx**.
+- **Multipart** over limit → **413**.
+
+**Feature ↔ route map:** **`docs/product_features.md`**.
+
+---
+
+## 8. Streamlit client (wire contract)
+
+The UI must treat **HTTP JSON** as the contract, not **`application.dto`** / **`domain`** types in **`frontend/src`**.
+
+| Piece | Location | Role |
+|-------|----------|------|
+| **Public façade** | **`frontend/src/services/api_client.py`** | **Only** import for pages/components: **`BackendClient`**, **`get_backend_client`**, wire/view-model helpers, preset merge |
+| **HTTP client impl.** | **`api/src/application/frontend_support/http_backend_client.py`** | Requests + JSON → **`services.api_contract_models`** / **`evaluation_wire_models`** (no **`domain`** on hot path) |
+| **Wire DTOs** | **`frontend/src/services/api_contract_models.py`**, **`evaluation_wire_*`**, **`http_payloads.py`** | Match FastAPI JSON |
+| **In-process mapping** | **`api/src/application/frontend_support/client_wire_mappers.py`** | Domain/application results → same wire shapes as HTTP |
+
+**Streamlit env:** **`RAGCRAFT_BACKEND_CLIENT`** = **`http`** (default), **`api`**, **`remote`**, or **`in_process`**. **`RAGCRAFT_API_BASE_URL`**, timeouts (**`RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS`**, **`RAGCRAFT_API_READ_TIMEOUT_SECONDS`** / legacy **`RAGCRAFT_API_TIMEOUT_SECONDS`**). **`Authorization: Bearer`** from session — **`frontend/src/services/http_transport.py`**. Errors → **`BackendHttpError`** / **`RAGCraftError`** via **`services/http_error_map.py`**.
+
+---
+
+## 9. Regression tests (pointer)
+
+| Concern | Location |
+|---------|----------|
+| ASGI / **`api/main.py`** | **`api/tests/bootstrap/test_asgi_entrypoint.py`**, **`api/tests/reliability/test_app_boot.py`** |
+| Routes, OpenAPI, pipelines | **`api/tests/api/`** (**`test_http_pipeline_e2e.py`**, …) |
+| Auth + **`/users/me`** flow | **`api/tests/reliability/test_auth_flow.py`**, **`api/tests/api/test_auth_router.py`** |
