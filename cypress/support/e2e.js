@@ -77,9 +77,14 @@ Cypress.on("fail", (err, runnable) => {
   throw err;
 });
 
-beforeEach(() => {
+beforeEach(function () {
   const skip = Cypress.env("SKIP_GLOBAL_VISIT");
   if (skip === true || skip === 1 || skip === "1" || String(skip).toLowerCase() === "true") {
+    return;
+  }
+  const spec = (Cypress.spec && Cypress.spec.relative) || "";
+  const norm = String(spec).replace(/\\/g, "/");
+  if (norm.includes("/streamlit/")) {
     return;
   }
   cy.visit("/docs", {

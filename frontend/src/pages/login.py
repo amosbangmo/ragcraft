@@ -75,7 +75,7 @@ if streamlit_auth.is_authenticated():
 
 st.markdown(
     """
-    <div class="login-card">
+    <div class="login-card" data-testid="ragcraft-login-shell">
         <div class="login-logo">🔐</div>
         <div style="text-align:center;">
             <div class="login-badge">Authentication</div>
@@ -95,7 +95,7 @@ with tab_login:
     username = st.text_input("Username", key="login_username")
     password = st.text_input("Password", type="password", key="login_password")
 
-    if st.button("Sign in", use_container_width=True):
+    if st.button("Sign in", use_container_width=True, key="login_submit"):
         success, message = streamlit_auth.login(username, password)
 
         if success:

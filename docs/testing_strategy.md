@@ -19,7 +19,7 @@ Tests are **layered** for **structural confidence**: layout and imports, bootstr
 | **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
 | **Composition** | **`api/tests/composition/`** | Wiring smoke |
 | **E2E / regression** | **`api/tests/e2e/`** | Heavier / env-sensitive gates |
-| **Browser E2E** | **`cypress/e2e/`** | Cypress against **live uvicorn**: surface publique (`public_surface.cy.js`) + parcours API aligné Streamlit HTTP (`workspace_journey.cy.js` — auth, projet, ingest, ask/sources, réglages retrieval, évaluation manuelle, erreurs JSON) via **`npm run cy:ci`** / **`scripts/run_cypress_e2e.py`**. |
+| **Browser E2E** | **`cypress/e2e/`** | Cypress : **uvicorn E2E** + **Streamlit headless** (voir **`docs/cypress_scope.md`**). Specs HTTP (`workspace_journey.cy.js`, …) + specs Streamlit (`streamlit/*.cy.js` — iframe, login, shell **`data-testid`**). Commande **`npm run cy:ci`** / **`scripts/run_cypress_e2e.py`**. |
 | **Frontend** | **`frontend/tests/`** | **`test_api_client.py`**, Streamlit, wire parsing, route literal contract |
 
 **Product matrix:** **`docs/product_features.md`**.
@@ -81,6 +81,8 @@ python -m pytest api/tests frontend/tests -q
 | **`test_frontend_streamlit_services_entrypoint.py`** | Pages/components: allowlisted **`services.*`** only |
 | **`test_fastapi_migration_guardrails.py`**, **`test_layer_boundaries.py`**, … | Layers and delivery boundaries |
 | **`test_composition_import_boundaries.py`** | Composition must not import **`services`** |
+| **`test_docs_transport_and_client_topology.py`** | Docs : transport UI HTTP-only ; pas de référence à l’ancien module composition Streamlit supprimé (hors **`migration_report_final.md`**) |
+| **`test_application_preview_dto_wire_only.py`** | **`SummaryRecallPreviewDTO`** sans **`to_dict`** |
 
 Full list: **`api/tests/architecture/README.md`**, **`import_scanner.py`**.
 

@@ -16,7 +16,7 @@ apply_layout()
 
 st.markdown(
     """
-    <div class="hero-card">
+    <div class="hero-card" data-testid="ragcraft-app-shell">
         <div class="hero-badge">RAGCraft</div>
         <h1 class="hero-title">Build, search and chat with your document knowledge bases</h1>
         <p class="hero-subtitle">

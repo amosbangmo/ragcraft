@@ -201,12 +201,56 @@ def main() -> int:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
         )
+        streamlit_proc: subprocess.Popen | None = None
         try:
             try:
                 _wait_port("127.0.0.1", 18976)
             except RuntimeError as exc:
                 LOG.write_text(f"{exc}\n", encoding="utf-8")
                 return 125
+            env["RAGCRAFT_API_BASE_URL"] = "http://127.0.0.1:18976"
+            streamlit_port = 18975
+            if os.environ.get("RAGCRAFT_CYPRESS_SKIP_STREAMLIT", "").strip().lower() not in (
+                "1",
+                "true",
+                "yes",
+            ):
+                print(
+                    f"[ragcraft-e2e] Lancement Streamlit (127.0.0.1:{streamlit_port}) → API…",
+                    flush=True,
+                )
+                streamlit_proc = subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "streamlit",
+                        "run",
+                        str(ROOT / "frontend" / "app.py"),
+                        "--server.port",
+                        str(streamlit_port),
+                        "--server.address",
+                        "127.0.0.1",
+                        "--server.headless",
+                        "true",
+                        "--browser.gatherUsageStats",
+                        "false",
+                    ],
+                    cwd=str(ROOT),
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                )
+                try:
+                    _wait_port("127.0.0.1", streamlit_port, timeout_s=120.0)
+                except RuntimeError as exc:
+                    LOG.write_text(f"Streamlit failed to listen: {exc}\n", encoding="utf-8")
+                    streamlit_proc.terminate()
+                    try:
+                        streamlit_proc.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        streamlit_proc.kill()
+                    return 125
+                env["CYPRESS_STREAMLIT_ORIGIN"] = f"http://127.0.0.1:{streamlit_port}"
             print(
                 "[ragcraft-e2e] API prête sur 127.0.0.1:18976 — lancement de Cypress…",
                 flush=True,
@@ -220,14 +264,13 @@ def main() -> int:
                 return 127
             print(f"[ragcraft-e2e] Commande: {' '.join(argv)}", flush=True)
             try:
-                rc = _run_cypress_streaming(
+                return _run_cypress_streaming(
                     argv,
                     cwd=ROOT,
                     env=env,
                     log_path=LOG,
                     timeout_s=cy_timeout,
                 )
-                return rc
             except subprocess.TimeoutExpired:
                 _log_timeout_level(
                     "[ragcraft-artifacts] TIMEOUT_LEVEL: cypress_cli_subprocess "
@@ -235,6 +278,12 @@ def main() -> int:
                 )
                 return 124
         finally:
+            if streamlit_proc is not None:
+                streamlit_proc.terminate()
+                try:
+                    streamlit_proc.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    streamlit_proc.kill()
             server.terminate()
             try:
                 server.wait(timeout=15)
