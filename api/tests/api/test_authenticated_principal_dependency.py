@@ -11,7 +11,7 @@ from interfaces.http.error_handlers import register_exception_handlers
 from domain.auth.authenticated_principal import AuthenticatedPrincipal
 from infrastructure.auth.jwt_auth_settings import JwtAuthSettings
 from infrastructure.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
-from apps_api.bearer_auth import bearer_headers
+from api.bearer_auth import bearer_headers
 
 
 def _jwt_adapter() -> JwtAuthenticationAdapter:

@@ -41,7 +41,7 @@ from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
 from domain.rag.rag_response import RAGResponse
-from apps_api.bearer_auth import bearer_headers
+from api.bearer_auth import bearer_headers
 
 
 def _uid_header(user_id: str = "test-user-api") -> dict[str, str]:

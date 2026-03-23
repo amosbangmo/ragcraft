@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from interfaces.http.dependencies import get_invalidate_project_chain_cache_use_case
 from interfaces.http.main import create_app
-from apps_api.bearer_auth import bearer_headers
+from api.bearer_auth import bearer_headers
 
 
 def test_import_dependencies_module_does_not_load_streamlit() -> None:

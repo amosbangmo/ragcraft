@@ -6,7 +6,7 @@ As of the **api/frontend split** refactor, the canonical layout is:
 
 - **Backend:** `api/src/` — top-level packages `domain`, `application`, `infrastructure`, `composition`, `interfaces` (FastAPI under `interfaces/http/`). Entry: `api/main.py`.
 - **Frontend:** `frontend/src/` — Streamlit pages, components, services (former `frontend_gateway`), utils. Entry: `frontend/app.py`.
-- **Tests:** `api/tests/` (architecture, application_tests, infrastructure_tests, apps_api, e2e, …) and `frontend/tests/`.
+- **Tests:** `api/tests/` (architecture, appli, infra, `api/` HTTP contract tests, e2e, …) and `frontend/tests/`.
 - **Removed:** root `src/`, root `apps/`, root `pages/`, root `streamlit_app.py` (replaced by the tree above).
 
 ### Structure cleanup closure (final)
@@ -37,7 +37,7 @@ CI-oriented scripts: **`scripts/validate_architecture.sh`** (architecture tests 
 
 **`api/tests/architecture/test_required_tree.py`** adds **positive** guardrails: it fails if required folders or **architectural anchor files** disappear (e.g. `api/src/composition/backend_composition.py`, `api/src/interfaces/http/dependencies.py`, router/schema modules listed in the test module, `frontend/app.py`, `frontend/src/pages/settings.py`, `frontend/src/state/session_state.py`, `frontend/src/services/api_client.py`, and the documented doc/script paths). It intentionally does **not** freeze every new feature file.
 
-**Note on test directory names:** the suite expects **`api/tests/application_tests`**, **`api/tests/infrastructure_tests`**, and **`api/tests/apps_api`** (not `api/tests/application/` or `api/tests/api/`) so test package names do not shadow **`application`**, **`infrastructure`**, or **`api`** on **`PYTHONPATH`**.
+**Note on test directory names:** the suite expects **`api/tests/appli`**, **`api/tests/infra`**, and **`api/tests/api/`** (FastAPI tests; import package name **`api`** with **`api/tests`** on **`PYTHONPATH`** as in **`scripts/run_tests.*`** — distinct from the repo-root ASGI package **`api`** used for **`uvicorn api.main:app`** when the repository root is on **`PYTHONPATH`**). **`appli`** / **`infra`** avoid shadowing **`application`** / **`infrastructure`** under **`api/src`**.
 
 ---
 
@@ -320,12 +320,12 @@ api/
       http/             # FastAPI app, routers, schemas, dependencies, upload_adapter
   tests/
     architecture/
-    apps_api/
-    application_tests/
+    api/
+    appli/
     composition/
     domain/
     e2e/
-    infrastructure_tests/
+    infra/
 frontend/
   app.py                # Streamlit entry
   src/

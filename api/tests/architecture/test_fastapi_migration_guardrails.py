@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 _HTTP = REPO_ROOT / "api" / "src" / "interfaces" / "http"
 
 
-def test_apps_api_package_avoids_streamlit_and_ui_layers() -> None:
+def test_interfaces_http_package_avoids_streamlit_and_ui_layers() -> None:
     """HTTP stack must stay independent of Streamlit and legacy ``src.ui`` widgets."""
     violations = collect_import_violations(
         [_HTTP],
@@ -37,7 +37,7 @@ def test_apps_api_package_avoids_streamlit_and_ui_layers() -> None:
     assert not violations, msg + "\n".join(violations)
 
 
-def test_apps_api_package_avoids_runtime_services_layer() -> None:
+def test_interfaces_http_package_avoids_runtime_services_layer() -> None:
     """
     FastAPI wires use cases from the composition root; it must not import the legacy ``src.services``
     namespace, removed ``src.backend`` / ``src.adapters`` / ``infrastructure.services`` packages, or the

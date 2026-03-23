@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from apps_api.bearer_auth import bearer_headers
+from api.bearer_auth import bearer_headers
 
 from interfaces.http.dependencies import get_user_repository
 from interfaces.http.main import create_app

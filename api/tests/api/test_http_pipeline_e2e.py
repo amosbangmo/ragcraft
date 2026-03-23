@@ -40,7 +40,7 @@ from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
 from domain.rag.rag_response import RAGResponse
-from apps_api.bearer_auth import bearer_headers
+from api.bearer_auth import bearer_headers
 
 
 def _hdr(uid: str = "e2e-http-user") -> dict[str, str]:

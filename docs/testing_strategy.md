@@ -45,7 +45,7 @@ Root **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`testpaths`** a
 | Area | Examples |
 |------|-----------|
 | **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/`, composition/orchestration trees |
-| **Required skeleton** | `test_required_tree.py` — explicit **must-exist** directories and anchor files (backend composition + HTTP stack, frontend entry/pages/services/state, docs/scripts, test subtrees `application_tests` / `infrastructure_tests` / `apps_api` / `e2e`) without enumerating every future file |
+| **Required skeleton** | `test_required_tree.py` — explicit **must-exist** directories and anchor files (backend composition + HTTP stack, frontend entry/pages/services/state, docs/scripts, test subtrees `appli` / `infra` / `api` / `e2e`) without enumerating every future file |
 | **Layer imports** | `test_layer_import_rules.py` — domain, application, HTTP routers (AST top-level imports) |
 | **Infra + composition** | `test_layer_boundaries.py` — infrastructure vs application/Streamlit; composition vs Streamlit |
 | **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit or legacy `src.*` / `apps.*` namespaces under `interfaces/http` |
@@ -66,15 +66,15 @@ Shared helper: **`api/tests/architecture/import_scanner.py`**. Index: **`api/tes
 
 ## Integration and API tests
 
-- **`api/tests/apps_api/`** — FastAPI contracts, dependency overrides, OpenAPI.
-- **`api/tests/application_tests/_unclassified_tests/integration/`** — heavier flows (optional deps).
+- **`api/tests/api/`** — FastAPI contracts, dependency overrides, OpenAPI (import as ``api`` only with ``api/tests`` on ``PYTHONPATH``, e.g. ``scripts/run_tests.sh``).
+- **`api/tests/appli/_unclassified_tests/integration/`** — heavier flows (optional deps).
 - **`api/tests/composition/`** — `build_backend_composition` / container wiring (may skip without unstructured/langchain).
 
 ## Service / use case unit tests
 
-- **`api/tests/application_tests/`** — use case behavior with mocks.
+- **`api/tests/appli/`** — use case behavior with mocks.
 - **`api/tests/domain/`** — pure domain policy.
-- **`api/tests/infrastructure_tests/`** — adapter behavior.
+- **`api/tests/infra/`** — adapter behavior.
 - **`frontend/tests/`** — Streamlit/UI and gateway client tests.
 
 ## What architecture tests do *not* prove

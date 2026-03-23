@@ -230,7 +230,7 @@ ragcraft/
 │       ├── pages/
 │       ├── components/
 │       └── services/            # BackendClient, HTTP / in-process clients
-├── api/tests/                   # pytest (architecture/, apps_api/, application_tests/, …)
+├── api/tests/                   # pytest (architecture/, api/, appli/, infra/, …)
 ├── frontend/tests/
 ├── docs/
 ├── scripts/                     # validate_architecture, run_tests, lint, …

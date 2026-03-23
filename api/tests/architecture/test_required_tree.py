@@ -4,10 +4,11 @@ Required repository skeleton (PROMPT 3).
 Asserts that canonical directories and **architectural anchor files** exist. This complements
 forbidden-drift tests: it locks the **target tree**, not every future feature module.
 
-**Test package naming:** the repo uses ``application_tests``, ``infrastructure_tests``, and
-``apps_api`` under ``api/tests/`` (avoid shadowing ``application`` / ``infrastructure`` / ``api``
-when ``api/src`` is on ``PYTHONPATH``). Those directories are the required counterparts to
-“application / infrastructure / API” test areas.
+**Test package naming:** the repo uses ``appli``, ``infra``, and ``api`` (the **test** package under
+``api/tests/api/``) under ``api/tests/``. The names ``appli`` / ``infra`` avoid shadowing
+``application`` / ``infrastructure`` on ``PYTHONPATH``. The HTTP contract tests use the import name
+``api`` only when ``api/tests`` is on ``PYTHONPATH`` (as in ``scripts/run_tests.*``) — not the
+repository root package ``api`` used for ``uvicorn api.main:app``.
 """
 
 from __future__ import annotations
@@ -52,9 +53,9 @@ def test_backend_layer_directories(repo_root: Path) -> None:
 def test_backend_test_package_directories(repo_root: Path) -> None:
     t = repo_root / "api" / "tests"
     _dir(t / "architecture")
-    _dir(t / "application_tests")
-    _dir(t / "infrastructure_tests")
-    _dir(t / "apps_api")
+    _dir(t / "appli")
+    _dir(t / "infra")
+    _dir(t / "api")
     _dir(t / "e2e")
 
 

@@ -4,7 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 repls = [
-    ("from tests.apps_api.", "from apps_api."),
+    ("from tests.apps_api.", "from api."),
+    ("from tests.api.", "from api."),
     ("from tests.architecture.", "from architecture."),
     ("from tests.support.", "from support."),
     ("from tests.fixtures.", "from fixtures."),

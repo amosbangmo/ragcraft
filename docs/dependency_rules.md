@@ -12,7 +12,7 @@ Import directions enforced in code and by **`api/tests/architecture/`** (AST sca
 
 Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`**. See **`docs/testing_strategy.md`** and **`docs/README.md`**.
 
-**Required skeleton:** **`test_required_tree.py`** asserts that canonical directories (e.g. `api/src/domain/`, `frontend/src/pages/`, `api/tests/application_tests/`) and **anchor files** (composition wiring modules, core routers/schemas, `frontend/app.py`, key docs/scripts) still exist. It does not list every future module—only the architectural spine—so legitimate feature growth stays unblocked.
+**Required skeleton:** **`test_required_tree.py`** asserts that canonical directories (e.g. `api/src/domain/`, `frontend/src/pages/`, `api/tests/appli/`) and **anchor files** (composition wiring modules, core routers/schemas, `frontend/app.py`, key docs/scripts) still exist. It does not list every future module—only the architectural spine—so legitimate feature growth stays unblocked.
 
 ## Allowed directions
 

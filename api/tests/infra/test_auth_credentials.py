@@ -1,6 +1,6 @@
 from infrastructure.auth.auth_credentials import try_login, try_register
 from infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
-from apps_api.test_auth_router import FakeRepo, _row
+from api.test_auth_router import FakeRepo, _row
 
 _HASHER = BcryptPasswordHasher()
 
