@@ -1,6 +1,6 @@
 """
 Retrieval pipeline inspector. Uses :func:`~services.api_client.BackendClient.inspect_retrieval`
-(``POST /chat/pipeline/inspect`` over HTTP when ``RAGCRAFT_BACKEND_CLIENT=http``).
+(``POST /chat/pipeline/inspect`` over HTTP).
 """
 
 import json

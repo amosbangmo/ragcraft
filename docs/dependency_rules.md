@@ -54,7 +54,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 - Infrastructure **must not** host a second RAG orchestration façade (**`test_no_rag_service_facade.py`**).  
 - Chat orchestration folders **must not** import **`infrastructure`** or delivery stacks (**`test_orchestration_package_import_boundaries.py`**).  
 - **`interfaces/http`** and **`frontend/src/services`** **must not** import **`infrastructure.rag`** directly (**`test_orchestration_boundaries.py`**).  
-- **Composition** **must not** import **`services`** (frontend); Streamlit transcript wiring lives in **`application.frontend_support.streamlit_backend_factory`** (**`test_composition_import_boundaries.py`**).
+- **Composition** **must not** import **`services`** (frontend); Streamlit session-aware test containers use **`support.backend_container.build_streamlit_session_aware_backend_container_for_tests`** (**`api/tests/support/backend_container.py`**; **`PYTHONPATH`** inclut **`api/tests`**) (**`test_composition_import_boundaries.py`**).
 
 ---
 
@@ -64,7 +64,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 - **`EvaluationJudgeMetricsRow`** — **`api/src/domain/evaluation/judge_metrics_row.py`**.  
 - **`GoldQaPipelineRowInput`** — **`api/src/domain/evaluation/gold_qa_row_input.py`**.  
 - **`RetrievalModeComparisonResult`** / **`RetrievalModeComparisonRow`** — **`api/src/application/dto/retrieval_comparison.py`** (FAISS vs hybrid comparison; wire serialization via **`application/http/wire`**).  
-- **`MemoryChatTranscript`** — only **`api/src/application/frontend_support/memory_chat_transcript.py`** (HTTP worker + tests); no duplicate under **`infrastructure`**.
+- **`MemoryChatTranscript`** — **`api/src/application/services/memory_chat_transcript.py`** (FastAPI worker + tests); no duplicate under **`infrastructure`**.
 
 ---
 

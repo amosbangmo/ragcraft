@@ -32,3 +32,26 @@ def build_backend_container_for_tests(
         invalidate_chain_key=invalidate_chain_key or noop_chain_invalidate,
         backend=resolved_backend,
     )
+
+
+def build_streamlit_session_aware_backend_container_for_tests() -> BackendApplicationContainer:
+    """
+    Same composition graph as production, with Streamlit session chain eviction hooks.
+
+    **Tests and E2E only** — not imported by the Streamlit UI. The product UI uses HTTP only
+    (:class:`~services.http_backend_client.HttpBackendClient`).
+    """
+    from components.shared.streamlit_project_chain_session_cache import (
+        invalidate_project_chain as _invalidate_streamlit_session_chain,
+    )
+    from composition.wiring import process_scoped_chain_invalidate_key
+    from services.factories.chat_service_factory import build_chat_service
+
+    def _invalidate_process_and_streamlit_chain_cache(project_id: str) -> None:
+        process_scoped_chain_invalidate_key()(project_id)
+        _invalidate_streamlit_session_chain(project_id)
+
+    return build_backend(
+        invalidate_chain_key=_invalidate_process_and_streamlit_chain_cache,
+        backend=build_backend_composition(chat_transcript=build_chat_service()),
+    )

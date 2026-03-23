@@ -1,6 +1,6 @@
 """
 Projects workspace UI. All backend access goes through :class:`~services.api_client.BackendClient`
-(:func:`~services.api_client.get_backend_client`); set ``RAGCRAFT_BACKEND_CLIENT=http``
+(:func:`~services.api_client.get_backend_client`); configure ``RAGCRAFT_API_BASE_URL``
 to use FastAPI as system of record.
 """
 

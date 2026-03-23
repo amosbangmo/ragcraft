@@ -1,4 +1,4 @@
-"""Configuration for Streamlit → backend wiring (in-process vs HTTP)."""
+"""HTTP client settings for Streamlit → FastAPI (base URL and timeouts)."""
 
 from __future__ import annotations
 

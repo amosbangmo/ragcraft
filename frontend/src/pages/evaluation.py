@@ -1,6 +1,6 @@
 """
 Evaluation hub. Dataset benchmark and related calls use :class:`~services.api_client.BackendClient`
-(``POST /evaluation/dataset/run`` and siblings when ``RAGCRAFT_BACKEND_CLIENT=http``).
+(``POST /evaluation/dataset/run`` and siblings over HTTP).
 """
 
 from typing import Any

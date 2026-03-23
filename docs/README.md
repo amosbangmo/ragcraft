@@ -25,6 +25,7 @@ Structural rules are **enforced in CI** by **`api/tests/architecture/`** (see **
 | **[api.md](api.md)** | How to run Uvicorn, JWT auth, uploads, OpenAPI, route ownership, API conventions |
 | **[product_features.md](product_features.md)** | Supported features matrix: routes, DTOs, errors, tests, Streamlit |
 | **[testing_strategy.md](testing_strategy.md)** | Scripts, pytest layout, architecture test index |
+| **[cypress_scope.md](cypress_scope.md)** | Cypress (parcours HTTP + Streamlit), artefacts, commandes locales / CI |
 | **[migration_report_final.md](migration_report_final.md)** | Closure report: what is fixed, what is enforced, what is out of scope |
 
 ---
@@ -50,6 +51,6 @@ Or: **`./scripts/validate_architecture.sh`** / **`.\scripts\validate_architectur
 
 - **API:** set **`RAGCRAFT_JWT_SECRET`**, repo root on **`PYTHONPATH`**, then **`python -m uvicorn api.main:app --reload`** (see **`docs/api.md`**).
 - **Streamlit:** from **`frontend/`**, **`streamlit run app.py`** with **`PYTHONPATH`** including repo root, **`api/src`**, and **`frontend/src`** (see root **`README.md`**).
-- **Streamlit → API:** **`RAGCRAFT_BACKEND_CLIENT=http`** and **`RAGCRAFT_API_BASE_URL`**. **In-process:** **`RAGCRAFT_BACKEND_CLIENT=in_process`** (no Uvicorn; same use cases).
+- **Streamlit → API:** **`RAGCRAFT_API_BASE_URL`** (and optional timeout env vars — see **`docs/api.md`**). The UI uses **HTTP only**; run Uvicorn for the API separately.
 
 Optional upload caps: **`RAG_MAX_UPLOAD_BYTES`**, **`RAG_MAX_AVATAR_UPLOAD_BYTES`** (**`docs/api.md`**, **`migration_report_final.md`**).

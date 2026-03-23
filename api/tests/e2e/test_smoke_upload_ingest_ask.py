@@ -15,7 +15,6 @@ _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "services.factories.chat_service_factory",
     "services.factories",
-    "application.frontend_support.streamlit_backend_factory",
     "infrastructure.evaluation.qa_dataset_generation_service",
     "infrastructure.evaluation.qa_dataset_service",
     "infrastructure.persistence.sqlite.qa_dataset_repository",
@@ -67,8 +66,8 @@ def setUpModule():
     _install_module("infrastructure.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("infrastructure.rag.reranking_service", RerankingService=_DummyService)
 
-    from application.frontend_support.streamlit_backend_factory import (
-        build_streamlit_backend_application_container as _build,
+    from support.backend_container import (
+        build_streamlit_session_aware_backend_container_for_tests as _build,
     )
 
     _build_streamlit_container = _build

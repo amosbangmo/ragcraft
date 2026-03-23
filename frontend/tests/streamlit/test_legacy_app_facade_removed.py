@@ -16,7 +16,7 @@ _LEGACY_MONOLITH_STREAMLIT_APP = "src.app.ragcraft_app"
     "relative_path",
     [
         Path("api") / "src" / "infrastructure" / "config" / "app_state.py",
-        Path("api") / "src" / "application" / "frontend_support" / "streamlit_backend_factory.py",
+        Path("api") / "tests" / "support" / "backend_container.py",
     ],
 )
 def test_streamlit_runtime_modules_do_not_reference_removed_app_facade(relative_path: Path) -> None:
@@ -29,8 +29,8 @@ def test_importing_streamlit_backend_factory_does_not_load_removed_app_module() 
     import sys
 
     sys.modules.pop(_LEGACY_MONOLITH_STREAMLIT_APP, None)
-    from application.frontend_support.streamlit_backend_factory import (  # noqa: F401
-        build_streamlit_backend_application_container,
+    from support.backend_container import (  # noqa: F401
+        build_streamlit_session_aware_backend_container_for_tests,
     )
 
     assert _LEGACY_MONOLITH_STREAMLIT_APP not in sys.modules

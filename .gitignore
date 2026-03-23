@@ -106,6 +106,7 @@ yarn-error.log*
 docker-compose.override.yml
 
 # Misc
+SOURCE_BUNDLE.txt
 *.sqlite
 *.db
 *.sqlite3

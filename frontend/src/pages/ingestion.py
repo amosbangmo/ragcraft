@@ -1,6 +1,6 @@
 """
 Ingestion UI. All project/document operations use :class:`~services.api_client.BackendClient`
-(``RAGCRAFT_BACKEND_CLIENT=http`` → FastAPI).
+(HTTP → FastAPI).
 """
 
 import streamlit as st

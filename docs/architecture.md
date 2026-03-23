@@ -39,7 +39,7 @@ Delivery (interfaces/http, Streamlit pages/components → services.api_client)
 - **Infrastructure** — implements ports; does not import **`application`** (except documented exceptions, e.g. auth credentials).
 - **`interfaces/http`** — FastAPI, **`Depends`**, container, **domain** types in handlers; routers **do not** import **`infrastructure.*`**.
 - **`frontend/src/pages`** and **`components`** — allowed **`services.*`** imports only (**`api_client`**, **`ui_errors`**, **`streamlit_context`**, **`settings_dtos`**, **`streamlit_auth`**) plus **`infrastructure.auth`** for guards; **no** direct **`domain`**, **`application`**, **`composition`**, or **`interfaces`** (see **`test_frontend_streamlit_services_entrypoint.py`**).
-- **`services/api_client.py`** — sole bridge from the frontend tree into **`application.frontend_support`** (protocol, HTTP and in-process clients, wire mappers, Streamlit factory glue).
+- **`services/api_client.py`** — sole façade from Streamlit into HTTP wire types and **`HttpBackendClient`** (no **`application`** / **`domain`** imports in **`frontend/src/services`**).
 
 ---
 
@@ -57,7 +57,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 | Orchestration | **`application/orchestration/rag/`**, **`orchestration/evaluation/`** | Recall → assembly, evaluation pipelines, benchmarks |
 | DTOs / wire | **`application/dto/`**, **`application/http/wire/`** | Typed commands/results; JSON at transport edge |
 | RAG DTOs | **`application/rag/dtos/`** | Recall bundles, evaluation inputs |
-| Streamlit ↔ backend glue | **`frontend/src/services/`** | **`BackendClient`** protocol, **`HttpBackendClient`**, HTTP payloads, wire DTOs (**`services.api_client`** façade); **`application/frontend_support/`** keeps only **`backend_client_protocol` re-export** and **`streamlit_backend_factory`** for composition/tests |
+| Streamlit ↔ backend glue | **`frontend/src/services/`** | **`BackendClient`** protocol, **`HttpBackendClient`**, HTTP payloads, wire DTOs (**`services.api_client`** façade). **`application/frontend_support/`** — optional **`BackendClient` type re-export** only (no UI transport). Test composition: **`api/tests/support/backend_container.py`**. |
 | API worker transcript | **`application/services/memory_chat_transcript.py`** | In-memory **`ChatTranscriptPort`** for HTTP (not Streamlit) |
 
 **Rule:** Post-recall **ordering** lives in **application**; **infrastructure/rag** exposes single-purpose steps behind ports.
@@ -74,7 +74,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 
 ## 6. Composition (`api/src/composition/`)
 
-**`build_backend_composition`**, **`BackendApplicationContainer`**, **`chat_rag_wiring`**, **`evaluation_wiring`**, lifecycle in **`wiring.py`**. **`streamlit_backend_factory`** still builds a container for tests/tooling; the Streamlit UI does **not** use an in-process **`BackendClient`** — it uses **HTTP** only (**`infrastructure.config.app_state`**).
+**`build_backend_composition`**, **`BackendApplicationContainer`**, **`chat_rag_wiring`**, **`evaluation_wiring`**, lifecycle in **`wiring.py`**. Pytest builds containers via **`support.backend_container`** (**`api/tests/support/backend_container.py`**); the Streamlit UI uses **HTTP** only (**`infrastructure.config.app_state`** → **`HttpBackendClient`**).
 
 ---
 
@@ -87,7 +87,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 ## 8. Frontend integration (`frontend/src/`)
 
 - **`services/api_client.py`** — **only** module **pages** and **components** use for backend façade types and **`get_backend_client`**.
-- **`services/`** wire helpers — **`api_contract_models`**, **`evaluation_wire_*`**, **`http_payloads`**, **`http_transport`**, auth/session modules; implementation of HTTP/in-process **clients** lives under **`api/src/application/frontend_support/`**, re-exported through **`api_client`**.
+- **`services/`** wire helpers — **`api_contract_models`**, **`evaluation_wire_*`**, **`http_payloads`**, **`http_transport`**, auth/session modules. The **only** supported UI client is **`HttpBackendClient`** in **`http_backend_client.py`** (typed protocol in **`backend_client_protocol.py`**).
 
 ---
 
@@ -108,7 +108,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 flowchart TB
   subgraph delivery["Delivery"]
     HTTP["interfaces/http"]
-    AC["services.api_client"]
+    AC["services.api_client + HttpBackendClient"]
     UI["pages + components"]
   end
   subgraph comp["Composition"]
@@ -117,7 +117,6 @@ flowchart TB
   subgraph app["Application"]
     UC["use_cases"]
     ORCH["orchestration"]
-    FS["frontend_support"]
   end
   subgraph dom["Domain"]
     PORTS["ports + entities"]
@@ -129,7 +128,6 @@ flowchart TB
   end
   HTTP --> UC
   HTTP --> COMP
-  AC --> FS
   UI --> AC
   COMP --> UC
   COMP --> infra
@@ -137,7 +135,6 @@ flowchart TB
   ORCH --> PORTS
   UC --> PORTS
   infra --> PORTS
-  FS --> PORTS
 ```
 
 ---

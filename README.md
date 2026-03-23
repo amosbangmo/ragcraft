@@ -85,8 +85,8 @@ The demo allows you to:
 # 🏗️ Architecture Overview
 
 - **FastAPI** under **`api/src/interfaces/http/`** (ASGI entry **`api/main.py`**) is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
-- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. Pages and components import **`BackendClient`**, **`get_backend_client`**, wire types, and UI helpers **only** from **`frontend/src/services/api_client.py`**. In-process wiring, the **`BackendClient`** protocol, HTTP transport, and domain→wire mappers live under **`api/src/application/frontend_support/`** (see **`docs/api.md`**). UI code must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
-- **Default Streamlit mode** is **`RAGCRAFT_BACKEND_CLIENT=http`**: the UI calls the API over HTTP like any other client. **`in_process`** builds a **`BackendApplicationContainer`** inside the Streamlit process (no uvicorn) for fast local work — same use cases, different transport.
+- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. Pages and components import **`BackendClient`**, **`get_backend_client`**, wire types, and UI helpers **only** from **`frontend/src/services/api_client.py`**. The **`BackendClient`** protocol and **`HttpBackendClient`** live in **`frontend/src/services/`**; **`api/src/application/frontend_support/`** only mirrors the protocol type for optional merged-**`PYTHONPATH`** tooling (see **`docs/api.md`**). UI code must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
+- **Streamlit always uses HTTP** to reach FastAPI (**`RAGCRAFT_API_BASE_URL`**). Pytest/E2E may build an in-process **`BackendApplicationContainer`** via **`api/tests/support/backend_container.py`** — that path is **not** a supported UI transport.
 - **Angular or other SPAs** should use the **same HTTP API**: obtain a JWT from `POST /auth/login` or `/auth/register`, then send `Authorization: Bearer <access_token>` on scoped routes.
 
 ```text
@@ -96,8 +96,8 @@ User (Browser)
       ▼                              ▼
 Streamlit UI                  Angular / API clients
       │                              │
-      │  BackendClient               │  HTTP (+ Bearer JWT)
-      │  (in-process OR HTTP)        │
+      │  HttpBackendClient           │  HTTP (+ Bearer JWT)
+      │  (JSON + Bearer JWT)         │
       ▼                              ▼
 BackendApplicationContainer (use cases + infrastructure services)
       │
@@ -303,7 +303,7 @@ python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
 PowerShell: `$env:PYTHONPATH = (Get-Location).Path` then the same `uvicorn` command.
 
 - **Docs:** http://127.0.0.1:8000/docs  
-- **Streamlit + API:** set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (see **`docs/README.md`** — local development).
+- **Streamlit + API:** set `RAGCRAFT_API_BASE_URL` to the running Uvicorn origin (see **`docs/README.md`** — local development).
 
 ### Environment variables
 

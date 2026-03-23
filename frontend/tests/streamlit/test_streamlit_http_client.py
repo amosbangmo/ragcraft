@@ -132,7 +132,6 @@ def test_frontend_backend_settings_split_timeouts(monkeypatch: pytest.MonkeyPatc
     from services import settings as fg_settings
 
     fg_settings.load_frontend_backend_settings.cache_clear()
-    monkeypatch.setenv("RAGCRAFT_BACKEND_CLIENT", "in_process")
     monkeypatch.setenv("RAGCRAFT_API_BASE_URL", "http://127.0.0.1:9999")
     monkeypatch.setenv("RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS", "7")
     monkeypatch.setenv("RAGCRAFT_API_READ_TIMEOUT_SECONDS", "120")

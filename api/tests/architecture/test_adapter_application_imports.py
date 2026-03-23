@@ -26,9 +26,6 @@ def test_adapters_do_not_import_application() -> None:
         if rel.parts[:1] == ("auth",) and rel.name == "auth_credentials.py":
             # FastAPI OAuth2 form wiring imports login/register use cases (transport-adjacent).
             continue
-        if rel.as_posix() == "config/app_state.py":
-            # Streamlit session wiring resolves BackendClient implementations from application.frontend_support.
-            continue
         for mod in imported_top_level_modules(path):
             if mod != "application" and not mod.startswith("application."):
                 continue

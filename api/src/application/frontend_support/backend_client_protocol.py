@@ -1,4 +1,4 @@
-"""Compatibility re-export; canonical protocol lives in :mod:`services.backend_client_protocol`."""
+"""Re-export of the frontend protocol type; canonical definition is :mod:`services.backend_client_protocol`."""
 
 from __future__ import annotations
 

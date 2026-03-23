@@ -1,6 +1,6 @@
 """
 RAG chat UI. Uses :class:`~services.api_client.BackendClient` for ``ask_question``; HTTP mode
-targets ``POST /chat/ask`` on the FastAPI app (``RAGCRAFT_BACKEND_CLIENT=http``).
+targets ``POST /chat/ask`` on the FastAPI app over HTTP.
 """
 
 import streamlit as st
