@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from infrastructure.config.paths import get_data_root
 from domain.projects.project import Project
+from infrastructure.config.paths import get_data_root
 
 
 class ProjectService:

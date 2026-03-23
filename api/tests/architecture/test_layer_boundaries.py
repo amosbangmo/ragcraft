@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from architecture.import_scanner import (
     any_module_matches,
     imported_top_level_modules,

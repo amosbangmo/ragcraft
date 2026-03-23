@@ -5,14 +5,13 @@ from pathlib import Path
 
 import streamlit as st
 
-from infrastructure.persistence.sqlite.user_repository import SqliteUserRepository
+from domain.common.ports.password_hasher_port import PasswordHasherPort
+from domain.common.ports.user_repository_port import UserRepositoryPort
 from infrastructure.auth.auth_credentials import try_login, try_register
 from infrastructure.auth.password_utils import hash_password, verify_password
 from infrastructure.config.paths import get_data_root
-from domain.common.ports.password_hasher_port import PasswordHasherPort
-from domain.common.ports.user_repository_port import UserRepositoryPort
 from infrastructure.persistence.db import init_app_db
-
+from infrastructure.persistence.sqlite.user_repository import SqliteUserRepository
 
 DATA_ROOT = get_data_root()
 MAX_AVATAR_SIZE_MB = 2
@@ -180,7 +179,10 @@ class AuthService:
             return False, "Username and display name are required."
 
         if not re.fullmatch(r"[a-z0-9._-]{3,30}", new_username):
-            return False, "Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens."
+            return (
+                False,
+                "Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens.",
+            )
 
         current_user = self.user_repository.get_by_user_id(user_id)
         if not current_user:

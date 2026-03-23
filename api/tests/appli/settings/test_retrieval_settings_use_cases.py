@@ -6,6 +6,7 @@ from application.dto.settings import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
 from application.use_cases.settings.get_effective_retrieval_settings import (
     GetEffectiveRetrievalSettingsUseCase,
 )
@@ -14,7 +15,6 @@ from application.use_cases.settings.update_project_retrieval_settings import (
 )
 from domain.projects.project_settings import ProjectSettings, default_project_settings
 from domain.rag.retrieval_presets import RetrievalPreset
-from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
 
 
 class _MemoryProjectSettingsRepo:
@@ -71,9 +71,10 @@ def test_get_effective_advanced_overrides_merge() -> None:
     view = uc.execute(GetEffectiveRetrievalSettingsQuery(user_id="u", project_id="p"))
     assert view.effective_retrieval.enable_query_rewrite is False
     assert view.effective_retrieval.enable_hybrid_retrieval is True
-    assert view.effective_retrieval.similarity_search_k == retrieval.from_preset(
-        RetrievalPreset.PRECISE.value
-    ).similarity_search_k
+    assert (
+        view.effective_retrieval.similarity_search_k
+        == retrieval.from_preset(RetrievalPreset.PRECISE.value).similarity_search_k
+    )
 
 
 def test_update_then_load_round_trip() -> None:

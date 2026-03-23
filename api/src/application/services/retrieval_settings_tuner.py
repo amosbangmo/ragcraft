@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import fields, replace
-from typing import Any, Mapping
+from typing import Any
 
-from infrastructure.config.config import RETRIEVAL_CONFIG, RetrievalConfig
+from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from domain.projects.project_settings import ProjectSettings
 from domain.rag.retrieval_presets import (
     PRECISE_SEARCH_K,
@@ -13,7 +14,7 @@ from domain.rag.retrieval_presets import (
     parse_retrieval_preset,
 )
 from domain.rag.retrieval_settings import RetrievalSettings
-from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from infrastructure.config.config import RETRIEVAL_CONFIG, RetrievalConfig
 
 
 class RetrievalSettingsTuner:

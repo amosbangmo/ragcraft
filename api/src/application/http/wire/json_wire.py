@@ -11,7 +11,11 @@ from typing import Any
 
 
 def _is_document_like(value: Any) -> bool:
-    return hasattr(value, "page_content") and hasattr(value, "metadata") and not isinstance(value, type)
+    return (
+        hasattr(value, "page_content")
+        and hasattr(value, "metadata")
+        and not isinstance(value, type)
+    )
 
 
 def jsonify_value(value: Any) -> Any:
@@ -20,7 +24,8 @@ def jsonify_value(value: Any) -> Any:
         return {
             "page_content": getattr(value, "page_content", "") or "",
             "metadata": {
-                str(k): jsonify_value(v) for k, v in dict(getattr(value, "metadata", None) or {}).items()
+                str(k): jsonify_value(v)
+                for k, v in dict(getattr(value, "metadata", None) or {}).items()
             },
         }
     if isinstance(value, dict):

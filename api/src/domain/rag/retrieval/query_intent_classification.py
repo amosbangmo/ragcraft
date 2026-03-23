@@ -122,9 +122,7 @@ def _classify_query_intent_inner(query: str | None) -> QueryIntent:
     if word_count >= 25 or len(q) >= 200:
         return QueryIntent.EXPLORATORY
 
-    if word_count <= 18 and (
-        q.endswith("?") or any(q.startswith(p) for p in _FACTUAL_PREFIXES)
-    ):
+    if word_count <= 18 and (q.endswith("?") or any(q.startswith(p) for p in _FACTUAL_PREFIXES)):
         return QueryIntent.FACTUAL
 
     if word_count <= 12 and len(q) <= 72:

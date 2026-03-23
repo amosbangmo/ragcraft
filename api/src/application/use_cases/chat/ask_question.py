@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from time import perf_counter
-from application.common.safe_query_log import log_query_safely
+
 from application.common.pipeline_query_log import build_query_log_ingress_payload
-from domain.rag.pipeline_latency import merge_with_answer_stage
+from application.common.safe_query_log import log_query_safely
+from domain.common.ports import GenerationPort, QueryLogPort, RetrievalPort
 from domain.projects.project import Project
+from domain.rag.pipeline_latency import merge_with_answer_stage
 from domain.rag.rag_response import RAGResponse
 from domain.rag.retrieval_filters import RetrievalFilters
-from domain.common.ports import GenerationPort, QueryLogPort, RetrievalPort
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 

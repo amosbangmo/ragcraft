@@ -6,12 +6,12 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from interfaces.http.dependencies import get_authenticated_principal, get_authentication_port
-from interfaces.http.error_handlers import register_exception_handlers
+from api.bearer_auth import bearer_headers
 from domain.auth.authenticated_principal import AuthenticatedPrincipal
 from infrastructure.auth.jwt_auth_settings import JwtAuthSettings
 from infrastructure.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
-from api.bearer_auth import bearer_headers
+from interfaces.http.dependencies import get_authenticated_principal, get_authentication_port
+from interfaces.http.error_handlers import register_exception_handlers
 
 
 def _jwt_adapter() -> JwtAuthenticationAdapter:

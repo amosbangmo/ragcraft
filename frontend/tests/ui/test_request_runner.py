@@ -4,8 +4,8 @@ import contextlib
 import unittest
 from unittest.mock import MagicMock, patch
 
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from components.shared import request_runner as rr
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 
 
 class _RerunStub(Exception):
@@ -48,13 +48,9 @@ class TestRunnerPayloadHelpers(unittest.TestCase):
 
     def test_read_dataset_evaluation_session_payload_none_and_errors(self) -> None:
         self.assertIsNone(rr.read_dataset_evaluation_session_payload(None))
-        self.assertIsNone(
-            rr.read_dataset_evaluation_session_payload({rr.RUNNER_ERROR_KEY: "x"})
-        )
+        self.assertIsNone(rr.read_dataset_evaluation_session_payload({rr.RUNNER_ERROR_KEY: "x"}))
         self.assertIsNone(rr.read_dataset_evaluation_session_payload({"foo": 1}))
-        self.assertIsNone(
-            rr.read_dataset_evaluation_session_payload({"result": "not-coercible"})
-        )
+        self.assertIsNone(rr.read_dataset_evaluation_session_payload({"result": "not-coercible"}))
 
     def test_read_dataset_evaluation_session_payload_success(self) -> None:
         bench = BenchmarkResult(

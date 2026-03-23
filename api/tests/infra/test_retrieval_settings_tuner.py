@@ -3,13 +3,13 @@ import unittest
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
-from infrastructure.config.config import RETRIEVAL_CONFIG, RetrievalConfig
 from unittest.mock import MagicMock
 
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
 from domain.projects.project_settings import ProjectSettings
 from domain.rag.retrieval_presets import PRECISE_SEARCH_K, RetrievalPreset
 from domain.rag.retrieval_settings import RetrievalSettings
-from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
+from infrastructure.config.config import RETRIEVAL_CONFIG, RetrievalConfig
 
 
 class TestRetrievalSettingsTuner(unittest.TestCase):

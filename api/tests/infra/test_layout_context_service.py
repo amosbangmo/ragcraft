@@ -31,12 +31,22 @@ class TestLayoutContextService(unittest.TestCase):
         a = {
             "source_file": "f.pdf",
             "content_type": "text",
-            "metadata": {"page_number": 1, "chunk_title": "Intro", "start_element_index": 0, "end_element_index": 0},
+            "metadata": {
+                "page_number": 1,
+                "chunk_title": "Intro",
+                "start_element_index": 0,
+                "end_element_index": 0,
+            },
         }
         b = {
             "source_file": "f.pdf",
             "content_type": "text",
-            "metadata": {"page_number": 2, "chunk_title": "Intro", "start_element_index": 1, "end_element_index": 1},
+            "metadata": {
+                "page_number": 2,
+                "chunk_title": "Intro",
+                "start_element_index": 1,
+                "end_element_index": 1,
+            },
         }
         groups = self.svc.group_assets([a, b])
         self.assertEqual(len(groups), 2)
@@ -45,12 +55,22 @@ class TestLayoutContextService(unittest.TestCase):
         a = {
             "source_file": "f.pdf",
             "content_type": "text",
-            "metadata": {"page_number": 1, "chunk_title": "X", "start_element_index": 0, "end_element_index": 0},
+            "metadata": {
+                "page_number": 1,
+                "chunk_title": "X",
+                "start_element_index": 0,
+                "end_element_index": 0,
+            },
         }
         b = {
             "source_file": "f.pdf",
             "content_type": "text",
-            "metadata": {"page_number": 1, "chunk_title": "X", "start_element_index": 10, "end_element_index": 10},
+            "metadata": {
+                "page_number": 1,
+                "chunk_title": "X",
+                "start_element_index": 10,
+                "end_element_index": 10,
+            },
         }
         groups = self.svc.group_assets([a, b])
         self.assertEqual(len(groups), 2)

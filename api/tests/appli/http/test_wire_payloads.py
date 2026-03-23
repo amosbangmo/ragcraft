@@ -7,12 +7,11 @@ from types import SimpleNamespace
 from langchain_core.documents import Document
 
 from application.common.summary_recall_preview import SummaryRecallPreviewDTO
+from application.dto.settings import EffectiveRetrievalSettingsView
 from application.http.wire import (
     BenchmarkRunWirePayload,
     EffectiveRetrievalSettingsWirePayload,
-    IngestDocumentWirePayload,
     PipelineSnapshotWirePayload,
-    PreviewSummaryRecallWirePayload,
     RagAnswerWirePayload,
     benchmark_result_to_wire_dict,
     effective_retrieval_settings_view_to_wire_dict,
@@ -21,18 +20,17 @@ from application.http.wire import (
     preview_summary_recall_to_wire_dict,
     rag_response_to_wire_dict,
 )
-from application.dto.settings import EffectiveRetrievalSettingsView
-from infrastructure.config.config import RETRIEVAL_CONFIG
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from domain.projects.project_settings import ProjectSettings
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.rag.summary_recall_document import SummaryRecallDocument
-from domain.projects.project_settings import ProjectSettings
 from domain.rag.query_intent import QueryIntent
 from domain.rag.rag_response import RAGResponse
 from domain.rag.retrieval_settings import RetrievalSettings
 from domain.rag.retrieval_strategy import RetrievalStrategy
+from domain.rag.summary_recall_document import SummaryRecallDocument
+from infrastructure.config.config import RETRIEVAL_CONFIG
 
 
 def test_rag_answer_wire_payload_normalizes_documents() -> None:

@@ -3,18 +3,17 @@ Evaluation hub. Dataset benchmark and related calls use :class:`~services.protoc
 (``POST /evaluation/dataset/run`` and siblings when ``RAGCRAFT_BACKEND_CLIENT=http``).
 """
 
-import streamlit as st
-
 from typing import Any
 
-from services.protocol import BackendClient
-from services.view_models import BenchmarkResult
+import streamlit as st
+
+from components.shared.evaluation_tabs import render_evaluation_tabs
 from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
-from components.shared.evaluation_tabs import render_evaluation_tabs
 from components.shared.request_runner import analyze_dataset_evaluation_session_payload
 from infrastructure.auth.guards import require_authentication
-
+from services.protocol import BackendClient
+from services.view_models import BenchmarkResult
 
 st.set_page_config(
     page_title="Evaluation | RAGCraft",
@@ -62,9 +61,7 @@ def _reset_evaluation_context_if_project_changed(project_id: str) -> str:
         st.session_state.pop("qa_dataset_error_message", None)
         st.session_state.pop(BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY, None)
         for k in list(st.session_state.keys()):
-            if k.startswith(
-                ("dataset_eval_metrics_", "delete_qa_entry_dataset_")
-            ):
+            if k.startswith(("dataset_eval_metrics_", "delete_qa_entry_dataset_")):
                 st.session_state.pop(k, None)
     st.session_state[_EVAL_PAGE_LAST_PROJECT_KEY] = project_id
     return suffix

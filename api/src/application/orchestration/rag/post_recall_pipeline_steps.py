@@ -11,22 +11,22 @@ from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
 
+from application.orchestration.rag.ports import PostRecallStagePorts
+from application.orchestration.rag.section_expansion_corpus import (
+    build_section_expansion_corpus,
+)
 from application.policies.pipeline_document_selection import (
     deduplicate_summary_doc_ids,
     select_summary_documents_by_doc_ids,
 )
 from application.policies.prompt_source_wire import prompt_source_to_wire_dict
-from application.orchestration.rag.ports import PostRecallStagePorts
-from application.orchestration.rag.section_expansion_corpus import (
-    build_section_expansion_corpus,
-)
+from domain.projects.project import Project
 from domain.rag.pipeline_payloads import (
     ContextCompressionStats,
     SectionExpansionPoolResult,
     SectionExpansionStats,
     SummaryRecallResult,
 )
-from domain.projects.project import Project
 from domain.rag.retrieval_settings import RetrievalSettings
 
 
@@ -137,18 +137,14 @@ def step_rerank_and_select_summaries(
         raw_assets=pre_rerank_raw_assets,
         top_k=settings.max_prompt_assets,
         prefer_tables=table_aware_qa_enabled,
-        table_boost=(
-            stages.table_qa.table_priority_boost() if table_aware_qa_enabled else 0.0
-        ),
+        table_boost=(stages.table_qa.table_priority_boost() if table_aware_qa_enabled else 0.0),
     )
     reranking_ms = (perf_counter() - t0) * 1000.0
 
     if not reranked_raw_assets:
         return None
 
-    selected_doc_ids = [
-        asset.get("doc_id") for asset in reranked_raw_assets if asset.get("doc_id")
-    ]
+    selected_doc_ids = [asset.get("doc_id") for asset in reranked_raw_assets if asset.get("doc_id")]
     selected_summary_docs = select_summary_documents_by_doc_ids(
         recall.recalled_summary_docs,
         selected_doc_ids,

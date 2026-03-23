@@ -19,7 +19,9 @@ class RetrievalFiltersPayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    source_files: list[str] = Field(default_factory=list, description="Restrict to these source filenames.")
+    source_files: list[str] = Field(
+        default_factory=list, description="Restrict to these source filenames."
+    )
     content_types: list[str] = Field(
         default_factory=list,
         description='e.g. ["text","table","image"]',
@@ -182,4 +184,3 @@ class PreviewSummaryRecallResponse(BaseModel):
         default=None,
         description="Rewritten question, recalled_summary_docs, vector/bm25 splits, mode flags.",
     )
-

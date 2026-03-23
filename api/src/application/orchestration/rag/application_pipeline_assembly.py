@@ -8,8 +8,8 @@ from application.orchestration.rag.assemble_pipeline_from_recall import (
     assemble_pipeline_from_recall,
 )
 from application.orchestration.rag.ports import PostRecallStagePorts
-from domain.rag.pipeline_payloads import PipelineBuildResult, SummaryRecallResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult, SummaryRecallResult
 
 
 @dataclass

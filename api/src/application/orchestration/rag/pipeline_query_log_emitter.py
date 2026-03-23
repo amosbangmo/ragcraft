@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from application.common.pipeline_query_log import build_query_log_ingress_payload
 from application.common.safe_query_log import log_query_safely
-from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.common.ports import QueryLogPort
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 
 
 class PipelineQueryLogEmitter:

@@ -69,40 +69,33 @@ def collect_benchmark_regression_violations(
         actual = _summary_int(summary, "successful_queries")
         if actual < thresholds.min_successful_queries:
             violations.append(
-                "successful_queries "
-                f"{actual} < minimum {thresholds.min_successful_queries}"
+                f"successful_queries {actual} < minimum {thresholds.min_successful_queries}"
             )
 
     if thresholds.min_avg_recall_at_k is not None:
         actual = _summary_float(summary, "avg_recall_at_k")
         if actual < thresholds.min_avg_recall_at_k:
             violations.append(
-                "avg_recall_at_k "
-                f"{actual} < minimum {thresholds.min_avg_recall_at_k}"
+                f"avg_recall_at_k {actual} < minimum {thresholds.min_avg_recall_at_k}"
             )
 
     if thresholds.min_avg_answer_f1 is not None:
         actual = _summary_float(summary, "avg_answer_f1")
         if actual < thresholds.min_avg_answer_f1:
-            violations.append(
-                "avg_answer_f1 "
-                f"{actual} < minimum {thresholds.min_avg_answer_f1}"
-            )
+            violations.append(f"avg_answer_f1 {actual} < minimum {thresholds.min_avg_answer_f1}")
 
     if thresholds.min_avg_prompt_doc_id_f1 is not None:
         actual = _summary_float(summary, "avg_prompt_doc_id_f1")
         if actual < thresholds.min_avg_prompt_doc_id_f1:
             violations.append(
-                "avg_prompt_doc_id_f1 "
-                f"{actual} < minimum {thresholds.min_avg_prompt_doc_id_f1}"
+                f"avg_prompt_doc_id_f1 {actual} < minimum {thresholds.min_avg_prompt_doc_id_f1}"
             )
 
     if thresholds.min_avg_groundedness_score is not None:
         actual = _summary_float(summary, "avg_groundedness_score")
         if actual < thresholds.min_avg_groundedness_score:
             violations.append(
-                "avg_groundedness_score "
-                f"{actual} < minimum {thresholds.min_avg_groundedness_score}"
+                f"avg_groundedness_score {actual} < minimum {thresholds.min_avg_groundedness_score}"
             )
 
     if thresholds.min_avg_answer_relevance_score is not None:

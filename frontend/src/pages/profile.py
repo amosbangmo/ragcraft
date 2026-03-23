@@ -5,14 +5,13 @@ Account profile UI. Mutations use :class:`~services.protocol.BackendClient`; ses
 
 import streamlit as st
 
-from infrastructure.auth.guards import require_authentication
-from services.protocol import BackendClient
-from services.streamlit_context import refresh_streamlit_auth_session_from_user_id
 from components.shared.avatar import render_user_avatar
 from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.section_card import inject_section_card_styles, section_card
-
+from infrastructure.auth.guards import require_authentication
+from services.protocol import BackendClient
+from services.streamlit_context import refresh_streamlit_auth_session_from_user_id
 
 require_authentication("pages/profile.py")
 apply_layout()
@@ -22,7 +21,7 @@ header = render_page_header(
     badge="Profile",
     title="Manage your account",
     subtitle="Update your personal information, avatar and password.",
-    show_project_selector=False
+    show_project_selector=False,
 )
 
 client: BackendClient = header["backend_client"]
@@ -130,6 +129,7 @@ def confirm_delete_account_dialog(user_id: str, current_password: str):
             else:
                 st.session_state["profile_error_message"] = message
                 st.rerun()
+
 
 if "profile_success_message" in st.session_state:
     st.success(st.session_state.pop("profile_success_message"))

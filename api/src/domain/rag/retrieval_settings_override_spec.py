@@ -20,7 +20,9 @@ class RetrievalSettingsOverrideSpec:
     _patch: tuple[tuple[str, Any], ...]
 
     @classmethod
-    def from_optional_mapping(cls, raw: Mapping[str, Any] | None) -> RetrievalSettingsOverrideSpec | None:
+    def from_optional_mapping(
+        cls, raw: Mapping[str, Any] | None
+    ) -> RetrievalSettingsOverrideSpec | None:
         if raw is None or len(raw) == 0:
             return None
         from domain.rag.retrieval_settings import RetrievalSettings

@@ -11,11 +11,11 @@ from __future__ import annotations
 from typing import Any
 
 from application.use_cases.chat.pipeline_use_case_ports import InspectRagPipelinePort
-from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from application.use_cases.retrieval.retrieval_mode_comparison import (
     compare_retrieval_modes_for_project,
 )
+from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class CompareRetrievalModesUseCase:

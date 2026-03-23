@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from domain.rag.query_log_ingress_payload import QueryLogIngressPayload
+from domain.projects.project import Project
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
+from domain.rag.query_log_ingress_payload import QueryLogIngressPayload
 
 
 def latency_fields_for_query_log(latency: PipelineLatency) -> dict[str, float]:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TypeAlias
 
-from domain.common.ports.chat_transcript_port import ChatTranscriptPort
 from services.streamlit_chat_transcript import StreamlitChatTranscript
 
 ChatService: TypeAlias = StreamlitChatTranscript

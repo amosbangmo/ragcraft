@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from application.dto.auth import RemoveUserAvatarCommand, RemoveUserAvatarResult
-from infrastructure.config.exceptions import UserAccountNotFoundError
 from domain.common.ports.avatar_storage_port import AvatarStoragePort
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import UserAccountNotFoundError
 
 
 class RemoveUserAvatarUseCase:

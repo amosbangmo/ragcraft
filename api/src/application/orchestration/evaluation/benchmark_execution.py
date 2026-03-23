@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-from domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
-from domain.evaluation.multimodal_metrics import aggregate_multimodal_metrics
 from domain.common.ports.benchmark_orchestration_ports import (
     AutoDebugSuggestionsPort,
     BenchmarkFailureAnalysisPort,
@@ -16,6 +12,10 @@ from domain.common.ports.benchmark_orchestration_ports import (
     CorrelationComputePort,
     ExplainabilityBuildPort,
 )
+from domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from domain.evaluation.multimodal_metrics import aggregate_multimodal_metrics
+from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 
 logger = logging.getLogger(__name__)
 
@@ -114,9 +114,7 @@ class BenchmarkExecutionUseCase:
             d["failure_labels"] = list(labels)
             d["failure_critical"] = bool(crit) if crit is not None else False
             self._attach_explainability(d)
-            rebuilt.append(
-                BenchmarkRow(entry_id=row.entry_id, question=row.question, data=d)
-            )
+            rebuilt.append(BenchmarkRow(entry_id=row.entry_id, question=row.question, data=d))
 
         row_dicts_final = [row.to_dict() for row in rebuilt]
         mm_raw = aggregate_multimodal_metrics(row_dicts_final)

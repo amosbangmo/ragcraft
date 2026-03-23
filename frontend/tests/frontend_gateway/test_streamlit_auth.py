@@ -20,7 +20,9 @@ def test_login_delegates_to_auth_service_when_in_process() -> None:
     mock_svc.login.assert_called_once_with("u", "p")
 
 
-def test_logout_clears_session_without_auth_service_instance(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_logout_clears_session_without_auth_service_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     state: dict = {
         AuthService.SESSION_AUTH_KEY: True,
         AuthService.SESSION_USER_KEY: "alice",

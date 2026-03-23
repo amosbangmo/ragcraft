@@ -5,18 +5,17 @@ Ingestion UI. All project/document operations use :class:`~services.protocol.Bac
 
 import streamlit as st
 
-from services.protocol import BackendClient
+from components.shared.document_actions import handle_document_action
+from components.shared.document_table import render_document_table
 from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
-from components.shared.document_table import render_document_table
-from components.shared.document_actions import handle_document_action
 from components.shared.request_runner import (
     is_request_running,
-    run_request_action,
     render_result_payload,
+    run_request_action,
 )
 from infrastructure.auth.guards import require_authentication
-
+from services.protocol import BackendClient
 
 st.set_page_config(
     page_title="Ingestion | RAGCraft",

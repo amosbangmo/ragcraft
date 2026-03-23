@@ -21,7 +21,6 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
-from infrastructure.auth.auth_service import AuthService
 from composition.evaluation_wiring import (
     build_evaluation_service,
     default_evaluation_wiring_parts,
@@ -30,24 +29,25 @@ from domain.common.ports.avatar_storage_port import AvatarStoragePort
 from domain.common.ports.chat_transcript_port import ChatTranscriptPort
 from domain.common.ports.password_hasher_port import PasswordHasherPort
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from infrastructure.auth.auth_service import AuthService
 from infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from infrastructure.auth.jwt_auth_settings import JwtAuthSettings
 from infrastructure.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
 from infrastructure.evaluation.evaluation_service import EvaluationService
-from infrastructure.storage.file_avatar_storage import FileAvatarStorage
 from infrastructure.evaluation.qa_dataset_generation_service import (
     QADatasetGenerationService,
 )
 from infrastructure.evaluation.qa_dataset_service import QADatasetService
 from infrastructure.observability.query_log_service import QueryLogService
-from infrastructure.rag.docstore_service import DocStoreService
-from infrastructure.rag.reranking_service import RerankingService
+from infrastructure.persistence.db import init_app_db
+from infrastructure.persistence.project_service import ProjectService
 from infrastructure.persistence.sqlite.project_settings_repository import (
     SqliteProjectSettingsRepository,
 )
 from infrastructure.persistence.sqlite.user_repository import SqliteUserRepository
-from infrastructure.persistence.project_service import ProjectService
-from infrastructure.persistence.db import init_app_db
+from infrastructure.rag.docstore_service import DocStoreService
+from infrastructure.rag.reranking_service import RerankingService
+from infrastructure.storage.file_avatar_storage import FileAvatarStorage
 
 if TYPE_CHECKING:
     from infrastructure.rag.ingestion_service import IngestionService

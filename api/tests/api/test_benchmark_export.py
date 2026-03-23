@@ -6,19 +6,19 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from interfaces.http.dependencies import get_build_benchmark_export_artifacts_use_case
-from interfaces.http.main import create_app
 from application.orchestration.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
+from interfaces.http.dependencies import get_build_benchmark_export_artifacts_use_case
+from interfaces.http.main import create_app
 
 
 @pytest.fixture
 def client() -> TestClient:
     """Inject the export use case only so tests do not require the full service graph (e.g. unstructured)."""
     app = create_app()
-    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = (
-        lambda: BuildBenchmarkExportArtifactsUseCase()
+    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = lambda: (
+        BuildBenchmarkExportArtifactsUseCase()
     )
     with TestClient(app) as tc:
         yield tc
@@ -51,7 +51,14 @@ def test_post_benchmark_export_bundle_all_default_format(client: TestClient) -> 
     data = r.json()
     assert "metadata" in data
     assert data["metadata"]["project_id"] == "demo"
-    for key in ("json_base64", "csv_base64", "markdown_base64", "json_filename", "csv_filename", "markdown_filename"):
+    for key in (
+        "json_base64",
+        "csv_base64",
+        "markdown_base64",
+        "json_filename",
+        "csv_filename",
+        "markdown_filename",
+    ):
         assert key in data
     raw_json = base64.standard_b64decode(data["json_base64"])
     parsed = json.loads(raw_json.decode("utf-8"))

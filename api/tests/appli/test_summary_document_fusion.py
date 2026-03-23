@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from infrastructure.config.config import RETRIEVAL_CONFIG
 from domain.rag.retrieval_settings import RetrievalSettings
 from domain.rag.summary_document_fusion import merge_summary_documents_weighted_rrf
 from domain.rag.summary_recall_document import SummaryRecallDocument
+from infrastructure.config.config import RETRIEVAL_CONFIG
 
 
 def _settings(*, hybrid_beta: float = 0.5, rrf_k: int = 60) -> RetrievalSettings:

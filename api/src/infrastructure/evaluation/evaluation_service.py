@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from domain.common.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from domain.evaluation.benchmark_result import BenchmarkResult
 from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.common.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
-from infrastructure.evaluation.answer_quality_aggregation_service import AnswerQualityAggregationService
+from infrastructure.evaluation.answer_quality_aggregation_service import (
+    AnswerQualityAggregationService,
+)
 from infrastructure.evaluation.retrieval_metrics_service import RetrievalMetricsService
 
 _DEFAULT_RETRIEVAL = RetrievalMetricsService()

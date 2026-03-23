@@ -1,11 +1,11 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from infrastructure.rag.llm.qa_dataset_llm_gateway import extract_json_array
 from infrastructure.evaluation.qa_dataset_generation_service import (
     MAX_CONTEXT_CHARS,
     QADatasetGenerationService,
 )
+from infrastructure.rag.llm.qa_dataset_llm_gateway import extract_json_array
 
 
 class TestQADatasetGenerationService(unittest.TestCase):
@@ -21,9 +21,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
         project.list_project_documents.return_value = ["b.pdf", "a.pdf"]
         svc = self._svc(docstore, project)
 
-        all_files = svc._resolve_source_files(
-            user_id="u", project_id="p", source_files=None
-        )
+        all_files = svc._resolve_source_files(user_id="u", project_id="p", source_files=None)
         self.assertEqual(all_files, ["b.pdf", "a.pdf"])
 
         filtered = svc._resolve_source_files(
@@ -45,16 +43,12 @@ class TestQADatasetGenerationService(unittest.TestCase):
         project.list_project_documents.return_value = []
         svc = self._svc(docstore, project)
         with self.assertRaisesRegex(ValueError, "No project documents"):
-            svc.generate_entries(
-                user_id="u", project_id="p", num_questions=3, source_files=None
-            )
+            svc.generate_entries(user_id="u", project_id="p", num_questions=3, source_files=None)
 
         project.list_project_documents.return_value = ["f.pdf"]
         docstore.list_assets_for_source_file.return_value = []
         with self.assertRaisesRegex(ValueError, "No indexed assets"):
-            svc.generate_entries(
-                user_id="u", project_id="p", num_questions=1, source_files=None
-            )
+            svc.generate_entries(user_id="u", project_id="p", num_questions=1, source_files=None)
 
     @patch("infrastructure.rag.llm.qa_dataset_llm_gateway.LLM")
     def test_generate_entries_success_and_clamp(self, mock_llm) -> None:
@@ -76,9 +70,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
         project.list_project_documents.return_value = ["f.pdf"]
         svc = self._svc(docstore, project)
 
-        out = svc.generate_entries(
-            user_id="u", project_id="p", num_questions=50, source_files=None
-        )
+        out = svc.generate_entries(user_id="u", project_id="p", num_questions=50, source_files=None)
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].question, "Q1")
 
@@ -107,9 +99,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
         project = MagicMock()
         project.list_project_documents.return_value = ["f.pdf"]
         svc = self._svc(docstore, project)
-        out = svc.generate_entries(
-            user_id="u", project_id="p", num_questions=5, source_files=None
-        )
+        out = svc.generate_entries(user_id="u", project_id="p", num_questions=5, source_files=None)
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0].question, "ok")
 
@@ -132,21 +122,15 @@ class TestQADatasetGenerationService(unittest.TestCase):
 
         mock_llm.invoke.return_value = MagicMock(content="not json")
         with self.assertRaises(ValueError):
-            svc.generate_entries(
-                user_id="u", project_id="p", num_questions=1, source_files=None
-            )
+            svc.generate_entries(user_id="u", project_id="p", num_questions=1, source_files=None)
 
         mock_llm.invoke.return_value = MagicMock(content='{"a":1}')
         with self.assertRaisesRegex(ValueError, "JSON array"):
-            svc.generate_entries(
-                user_id="u", project_id="p", num_questions=1, source_files=None
-            )
+            svc.generate_entries(user_id="u", project_id="p", num_questions=1, source_files=None)
 
         mock_llm.invoke.return_value = MagicMock(content="[]")
         with self.assertRaisesRegex(ValueError, "did not return any valid"):
-            svc.generate_entries(
-                user_id="u", project_id="p", num_questions=1, source_files=None
-            )
+            svc.generate_entries(user_id="u", project_id="p", num_questions=1, source_files=None)
 
     def test_asset_priority_and_other_content_type(self) -> None:
         docstore = MagicMock()

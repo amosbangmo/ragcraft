@@ -1,17 +1,17 @@
 import unittest
 from dataclasses import replace
 
-from domain.evaluation.llm_judge_result import LLMJudgeResult
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-from composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
-
 from e2e.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
     assert_benchmark_meets_thresholds,
     collect_benchmark_regression_violations,
 )
+
+from composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
+from domain.evaluation.llm_judge_result import LLMJudgeResult
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 
 
 class StubLLMJudgeService:
@@ -34,7 +34,13 @@ def _good_pipeline_for(entry: QADatasetEntry) -> PipelineBuildResult:
     for doc_id, src in zip(doc_ids, sources):
         refs.append({"doc_id": doc_id, "source_file": src, "content_type": "text"})
     if not refs and doc_ids:
-        refs = [{"doc_id": doc_ids[0], "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}]
+        refs = [
+            {
+                "doc_id": doc_ids[0],
+                "source_file": sources[0] if sources else "s.pdf",
+                "content_type": "text",
+            }
+        ]
     base_doc = doc_ids[0] if doc_ids else "d1"
     base_src = sources[0] if sources else "s.pdf"
     prompt_assets = [
@@ -44,7 +50,13 @@ def _good_pipeline_for(entry: QADatasetEntry) -> PipelineBuildResult:
     return PipelineBuildResult(
         selected_doc_ids=doc_ids or ["d1"],
         prompt_sources=refs
-        or [{"doc_id": "d1", "source_file": sources[0] if sources else "s.pdf", "content_type": "text"}],
+        or [
+            {
+                "doc_id": "d1",
+                "source_file": sources[0] if sources else "s.pdf",
+                "content_type": "text",
+            }
+        ],
         prompt_context_assets=prompt_assets,
         confidence=0.9,
         retrieval_mode="hybrid",

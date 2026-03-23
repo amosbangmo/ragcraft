@@ -11,14 +11,45 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from starlette.responses import Response
 
+from application.dto.benchmark_export import BuildBenchmarkExportCommand
+from application.dto.evaluation import (
+    CreateQaDatasetEntryCommand,
+    DeleteQaDatasetEntryCommand,
+    GenerateQaDatasetCommand,
+    ListQaDatasetEntriesQuery,
+    ListRetrievalQueryLogsQuery,
+    RunGoldQaDatasetEvaluationCommand,
+    RunManualEvaluationCommand,
+    UpdateQaDatasetEntryCommand,
+)
+from application.http.wire import (
+    BenchmarkExportBundleWirePayload,
+    BenchmarkRunWirePayload,
+    QaDatasetGenerateWirePayload,
+)
+from application.orchestration.evaluation.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
+)
+from application.use_cases.evaluation.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+from application.use_cases.evaluation.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
+from application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
+from application.use_cases.evaluation.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
+from application.use_cases.evaluation.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
+from application.use_cases.evaluation.run_gold_qa_dataset_evaluation import (
+    RunGoldQaDatasetEvaluationUseCase,
+)
+from application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
+from application.use_cases.evaluation.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
+from domain.auth.authenticated_principal import AuthenticatedPrincipal
+from domain.evaluation.benchmark_result import coerce_benchmark_result
 from interfaces.http.dependencies import (
+    get_authenticated_principal,
     get_build_benchmark_export_artifacts_use_case,
     get_create_qa_dataset_entry_use_case,
     get_delete_qa_dataset_entry_use_case,
     get_generate_qa_dataset_use_case,
     get_list_qa_dataset_entries_use_case,
     get_list_retrieval_query_logs_use_case,
-    get_authenticated_principal,
     get_run_gold_qa_dataset_evaluation_use_case,
     get_run_manual_evaluation_use_case,
     get_update_qa_dataset_entry_use_case,
@@ -45,38 +76,6 @@ from interfaces.http.schemas.mappers import (
     qa_dataset_entry_to_response,
     retrieval_query_log_rows_to_entries,
 )
-from application.http.wire import (
-    BenchmarkExportBundleWirePayload,
-    BenchmarkRunWirePayload,
-    QaDatasetGenerateWirePayload,
-)
-from application.dto.benchmark_export import BuildBenchmarkExportCommand
-from application.orchestration.evaluation.build_benchmark_export_artifacts import (
-    BuildBenchmarkExportArtifactsUseCase,
-)
-from application.use_cases.evaluation.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
-from application.use_cases.evaluation.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
-from application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
-from application.use_cases.evaluation.list_qa_dataset_entries import ListQaDatasetEntriesUseCase
-from application.use_cases.evaluation.list_retrieval_query_logs import ListRetrievalQueryLogsUseCase
-from application.use_cases.evaluation.run_gold_qa_dataset_evaluation import (
-    RunGoldQaDatasetEvaluationUseCase,
-)
-from application.use_cases.evaluation.run_manual_evaluation import RunManualEvaluationUseCase
-from application.use_cases.evaluation.update_qa_dataset_entry import UpdateQaDatasetEntryUseCase
-from application.dto.evaluation import (
-    CreateQaDatasetEntryCommand,
-    DeleteQaDatasetEntryCommand,
-    GenerateQaDatasetCommand,
-    ListQaDatasetEntriesQuery,
-    ListRetrievalQueryLogsQuery,
-    RunGoldQaDatasetEvaluationCommand,
-    RunManualEvaluationCommand,
-    UpdateQaDatasetEntryCommand,
-)
-from domain.auth.authenticated_principal import AuthenticatedPrincipal
-from domain.evaluation.benchmark_result import coerce_benchmark_result
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
 
 router = APIRouter(prefix="/evaluation", tags=["evaluation"])
 
@@ -161,7 +160,9 @@ def get_dataset_entries(
     project_id: Annotated[str, Query(min_length=1)],
     use_case: Annotated[ListQaDatasetEntriesUseCase, Depends(get_list_qa_dataset_entries_use_case)],
 ) -> QaDatasetEntryListResponse:
-    rows = use_case.execute(ListQaDatasetEntriesQuery(user_id=principal.user_id, project_id=project_id))
+    rows = use_case.execute(
+        ListQaDatasetEntriesQuery(user_id=principal.user_id, project_id=project_id)
+    )
     return QaDatasetEntryListResponse(entries=[qa_dataset_entry_to_response(e) for e in rows])
 
 
@@ -226,7 +227,9 @@ def delete_dataset_entry(
     use_case: Annotated[DeleteQaDatasetEntryUseCase, Depends(get_delete_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryDeleteResponse:
     use_case.execute(
-        DeleteQaDatasetEntryCommand(entry_id=entry_id, user_id=principal.user_id, project_id=project_id)
+        DeleteQaDatasetEntryCommand(
+            entry_id=entry_id, user_id=principal.user_id, project_id=project_id
+        )
     )
     return QaDatasetEntryDeleteResponse(deleted=True, entry_id=entry_id)
 
@@ -266,7 +269,9 @@ def post_dataset_generate(
 def get_retrieval_logs(
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     project_id: Annotated[str, Query(min_length=1)],
-    use_case: Annotated[ListRetrievalQueryLogsUseCase, Depends(get_list_retrieval_query_logs_use_case)],
+    use_case: Annotated[
+        ListRetrievalQueryLogsUseCase, Depends(get_list_retrieval_query_logs_use_case)
+    ],
     since: Annotated[str | None, Query(description="ISO-8601 lower bound (inclusive)")] = None,
     until: Annotated[str | None, Query(description="ISO-8601 upper bound (inclusive)")] = None,
     limit: Annotated[int | None, Query(ge=1, le=5000, description="Max rows")] = None,
@@ -349,17 +354,23 @@ def post_benchmark_export(
         return Response(
             content=artifacts.json_bytes,
             media_type="application/json; charset=utf-8",
-            headers={"Content-Disposition": _content_disposition_attachment(artifacts.json_filename)},
+            headers={
+                "Content-Disposition": _content_disposition_attachment(artifacts.json_filename)
+            },
         )
     if fmt == "csv":
         return Response(
             content=artifacts.csv_bytes,
             media_type="text/csv; charset=utf-8",
-            headers={"Content-Disposition": _content_disposition_attachment(artifacts.csv_filename)},
+            headers={
+                "Content-Disposition": _content_disposition_attachment(artifacts.csv_filename)
+            },
         )
     # fmt == "markdown"
     return Response(
         content=artifacts.markdown_bytes,
         media_type="text/markdown; charset=utf-8",
-        headers={"Content-Disposition": _content_disposition_attachment(artifacts.markdown_filename)},
+        headers={
+            "Content-Disposition": _content_disposition_attachment(artifacts.markdown_filename)
+        },
     )

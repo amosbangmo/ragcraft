@@ -1,11 +1,12 @@
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.evaluation.qa_dataset_repository_port import QADatasetRepositoryPort
 from domain.evaluation.qa_question_key import normalized_qa_question_key
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from infrastructure.persistence.sqlite.qa_dataset_repository import QADatasetRepository
 
 
 class QADatasetService:
     """Implements :class:`~domain.common.ports.qa_dataset_entries_port.QADatasetEntriesPort` via SQLite."""
+
     def __init__(self, repository: QADatasetRepositoryPort | None = None):
         self.repository: QADatasetRepositoryPort = (
             repository if repository is not None else QADatasetRepository()

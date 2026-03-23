@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from application.dto.auth import RegisterUserCommand, RegisterUserResult, UserProfileSummary
 from application.auth.username_rules import is_valid_username, normalized_username
-from infrastructure.config.exceptions import AuthValidationError, UsernameTakenError
+from application.dto.auth import RegisterUserCommand, RegisterUserResult, UserProfileSummary
 from domain.common.ports.password_hasher_port import PasswordHasherPort
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import AuthValidationError, UsernameTakenError
 
 
 class RegisterUserUseCase:

@@ -64,7 +64,9 @@ def test_pages_and_components_avoid_domain_and_application_except_documented_shi
                     violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
                 if mod == "application" or mod.startswith("application."):
                     violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-    assert not violations, "Pages/components must not import domain or application.\n" + "\n".join(violations)
+    assert not violations, "Pages/components must not import domain or application.\n" + "\n".join(
+        violations
+    )
 
 
 def test_pages_and_components_infrastructure_limited_to_auth_guards() -> None:

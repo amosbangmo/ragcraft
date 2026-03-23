@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-
 _KEYWORD_RE = re.compile(r"[a-zA-Z0-9_/-]+")
 
 

@@ -1,4 +1,5 @@
 """Filesystem phases for run_structure_migration."""
+
 from __future__ import annotations
 
 import shutil
@@ -491,7 +492,7 @@ def phase_api_main(api: Path) -> None:
         "from __future__ import annotations\n\n"
         "import sys\nfrom pathlib import Path\n\n"
         "_API_DIR = Path(__file__).resolve().parent\n"
-        "_SRC = _API_DIR / \"src\"\n"
+        '_SRC = _API_DIR / "src"\n'
         "if str(_SRC) not in sys.path:\n    sys.path.insert(0, str(_SRC))\n\n"
         "from interfaces.http.main import create_app\n\n"
         "app = create_app()\n",
@@ -514,19 +515,19 @@ def phase_delete_old_roots(root: Path) -> None:
 def phase_root_scripts(root: Path) -> None:
     scripts = root / "scripts"
     (scripts / "validate_architecture.sh").write_text(
-        "#!/usr/bin/env bash\nset -euo pipefail\nROOT=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n"
-        "export PYTHONPATH=\"${ROOT}/api/src\"\n"
-        "python -m pytest \"${ROOT}/api/tests/architecture\" -q \"$@\"\n",
+        '#!/usr/bin/env bash\nset -euo pipefail\nROOT="$(cd "$(dirname "$0")/.." && pwd)"\n'
+        'export PYTHONPATH="${ROOT}/api/src"\n'
+        'python -m pytest "${ROOT}/api/tests/architecture" -q "$@"\n',
         encoding="utf-8",
     )
     (scripts / "run_tests.sh").write_text(
-        "#!/usr/bin/env bash\nset -euo pipefail\nROOT=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n"
-        "export PYTHONPATH=\"${ROOT}/api/src:${ROOT}/frontend/src\"\n"
-        "python -m pytest \"${ROOT}/api/tests\" \"${ROOT}/frontend/tests\" -q \"$@\"\n",
+        '#!/usr/bin/env bash\nset -euo pipefail\nROOT="$(cd "$(dirname "$0")/.." && pwd)"\n'
+        'export PYTHONPATH="${ROOT}/api/src:${ROOT}/frontend/src"\n'
+        'python -m pytest "${ROOT}/api/tests" "${ROOT}/frontend/tests" -q "$@"\n',
         encoding="utf-8",
     )
     (scripts / "lint.sh").write_text(
-        "#!/usr/bin/env bash\nset -euo pipefail\nROOT=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n"
-        "python -m ruff check \"${ROOT}/api/src\" \"${ROOT}/frontend/src\" \"$@\"\n",
+        '#!/usr/bin/env bash\nset -euo pipefail\nROOT="$(cd "$(dirname "$0")/.." && pwd)"\n'
+        'python -m ruff check "${ROOT}/api/src" "${ROOT}/frontend/src" "$@"\n',
         encoding="utf-8",
     )

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from application.dto.auth import UploadUserAvatarCommand, UploadUserAvatarResult
 from application.policies.avatar_upload_policy import validate_buffered_avatar_upload
-from infrastructure.config.exceptions import AuthValidationError, UserAccountNotFoundError
 from domain.common.ports.avatar_storage_port import AvatarStoragePort
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import AuthValidationError, UserAccountNotFoundError
 
 
 class UploadUserAvatarUseCase:

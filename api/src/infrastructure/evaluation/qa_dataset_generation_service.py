@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from domain.evaluation.qa_dataset_proposal import ProposedQaDatasetRow
-from infrastructure.rag.llm.qa_dataset_llm_gateway import QADatasetLlmGateway
-from infrastructure.rag.docstore_service import DocStoreService
 from infrastructure.persistence.project_service import ProjectService
-
+from infrastructure.rag.docstore_service import DocStoreService
+from infrastructure.rag.llm.qa_dataset_llm_gateway import QADatasetLlmGateway
 
 MAX_ASSETS_PER_GENERATION = 12
 MAX_TEXT_CHARS_PER_ASSET = 1400

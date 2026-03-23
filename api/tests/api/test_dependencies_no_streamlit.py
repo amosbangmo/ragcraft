@@ -12,9 +12,9 @@ import sys
 
 from fastapi.testclient import TestClient
 
+from api.bearer_auth import bearer_headers
 from interfaces.http.dependencies import get_invalidate_project_chain_cache_use_case
 from interfaces.http.main import create_app
-from api.bearer_auth import bearer_headers
 
 
 def test_import_dependencies_module_does_not_load_streamlit() -> None:
@@ -43,8 +43,8 @@ def test_post_invalidate_retrieval_cache_invokes_use_case() -> None:
             calls.append((user_id, project_id))
 
     app = create_app()
-    app.dependency_overrides[get_invalidate_project_chain_cache_use_case] = (
-        lambda: _FakeInvalidateProjectChain()
+    app.dependency_overrides[get_invalidate_project_chain_cache_use_case] = lambda: (
+        _FakeInvalidateProjectChain()
     )
     try:
         with TestClient(app) as client:

@@ -15,8 +15,6 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-import pytest
-
 from architecture.import_scanner import collect_import_violations
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -83,9 +81,7 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
         "apps.",
     )
     violations = collect_import_violations(roots, forbidden=forbidden, repo_root=REPO_ROOT)
-    msg = (
-        "Streamlit pages/components must not use removed ``src.*`` monolith imports or ``apps.api``.\n"
-    )
+    msg = "Streamlit pages/components must not use removed ``src.*`` monolith imports or ``apps.api``.\n"
     assert not violations, msg + "\n".join(violations)
 
 
@@ -118,7 +114,9 @@ def test_http_and_in_process_backend_clients_expose_same_gateway_operations() ->
     http_only = http_api - proc_api
     allowed_http_only = {"close"}
     unexpected = http_only - allowed_http_only
-    assert not unexpected, f"InProcessBackendClient missing operations present on HTTP client: {sorted(unexpected)}"
+    assert not unexpected, (
+        f"InProcessBackendClient missing operations present on HTTP client: {sorted(unexpected)}"
+    )
 
     missing_on_http = proc_api - http_api
     assert not missing_on_http, (

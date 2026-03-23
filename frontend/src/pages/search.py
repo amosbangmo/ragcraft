@@ -4,8 +4,6 @@ Summary / recall search UI. Uses :class:`~services.protocol.BackendClient.search
 
 import streamlit as st
 
-from services.protocol import BackendClient
-from services.view_models import RetrievalFilters
 from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.retrieval_settings_panel import (
@@ -13,12 +11,13 @@ from components.shared.retrieval_settings_panel import (
     retrieval_settings_to_request_dict,
 )
 from infrastructure.auth.guards import require_authentication
+from services.protocol import BackendClient
 from services.ui_errors import (
     DocStoreError,
     VectorStoreError,
     get_user_error_message,
 )
-
+from services.view_models import RetrievalFilters
 
 st.set_page_config(
     page_title="Search | RAGCraft",
@@ -112,7 +111,10 @@ if query:
             f"Hybrid: **{'on' if preview['hybrid_retrieval_enabled'] else 'off'}** · "
             f"Adaptive: **{'on' if preview['use_adaptive_retrieval'] else 'off'}**"
         )
-        if preview.get("rewritten_question") and preview["rewritten_question"].strip() != query.strip():
+        if (
+            preview.get("rewritten_question")
+            and preview["rewritten_question"].strip() != query.strip()
+        ):
             st.caption(f"Retrieval query: {preview['rewritten_question']}")
 
         st.metric("Retrieved summaries", len(docs))

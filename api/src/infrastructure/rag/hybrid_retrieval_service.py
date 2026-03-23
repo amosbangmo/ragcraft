@@ -151,11 +151,7 @@ class HybridRetrievalService:
         return "\n".join(parts)
 
     def _tokenize(self, text: str) -> list[str]:
-        return [
-            token
-            for token in re.findall(r"[a-zA-Z0-9_/-]+", text.lower())
-            if len(token) > 1
-        ]
+        return [token for token in re.findall(r"[a-zA-Z0-9_/-]+", text.lower()) if len(token) > 1]
 
     def _normalize_scores(self, raw_scores: list[float]) -> list[float]:
         if not raw_scores:
@@ -169,7 +165,4 @@ class HybridRetrievalService:
                 return [0.0 for _ in raw_scores]
             return [1.0 for _ in raw_scores]
 
-        return [
-            float((score - min_score) / (max_score - min_score))
-            for score in raw_scores
-        ]
+        return [float((score - min_score) / (max_score - min_score)) for score in raw_scores]

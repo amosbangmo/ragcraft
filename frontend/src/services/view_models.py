@@ -16,9 +16,12 @@ from domain.evaluation.benchmark_failure_analysis import FailureAnalysisService
 from domain.evaluation.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from domain.evaluation.evaluation_display_text import format_bool_toggle_on_off
 from domain.evaluation.llm_judge_constants import JUDGE_FAILURE_REASON
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult, is_manual_evaluation_result_like
-from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.evaluation.manual_evaluation_result import (
+    ManualEvaluationResult,
+    is_manual_evaluation_result_like,
+)
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.query_log_timestamp import parse_query_log_timestamp
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_presets import (

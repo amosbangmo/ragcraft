@@ -124,7 +124,9 @@ class ManualEvaluationResult:
             "prompt_source_quality": self.prompt_source_quality.to_dict()
             if self.prompt_source_quality
             else None,
-            "retrieval_quality": self.retrieval_quality.to_dict() if self.retrieval_quality else None,
+            "retrieval_quality": self.retrieval_quality.to_dict()
+            if self.retrieval_quality
+            else None,
             "pipeline_signals": self.pipeline_signals.to_dict() if self.pipeline_signals else None,
             "expectation_comparison": self.expectation_comparison.to_dict()
             if self.expectation_comparison
@@ -177,14 +179,18 @@ def manual_evaluation_result_from_plain_dict(d: dict[str, Any]) -> ManualEvaluat
         judge_failure_reason=d.get("judge_failure_reason"),
         prompt_sources=list(d.get("prompt_sources") or []),
         raw_assets=list(d.get("raw_assets") or []),
-        answer_quality=_optional_subdataclass(ManualEvaluationAnswerQuality, d.get("answer_quality")),
+        answer_quality=_optional_subdataclass(
+            ManualEvaluationAnswerQuality, d.get("answer_quality")
+        ),
         answer_citation_quality=_optional_subdataclass(
             ManualEvaluationAnswerCitationQuality, d.get("answer_citation_quality")
         ),
         prompt_source_quality=_optional_subdataclass(
             ManualEvaluationPromptSourceQuality, d.get("prompt_source_quality")
         ),
-        retrieval_quality=_optional_subdataclass(ManualEvaluationRetrievalQuality, d.get("retrieval_quality")),
+        retrieval_quality=_optional_subdataclass(
+            ManualEvaluationRetrievalQuality, d.get("retrieval_quality")
+        ),
         pipeline_signals=_pipeline_signals_from_plain_dict(d.get("pipeline_signals")),
         expectation_comparison=_optional_subdataclass(
             ManualEvaluationExpectationComparison, d.get("expectation_comparison")

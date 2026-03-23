@@ -5,13 +5,12 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from application.dto.ingestion import IngestDocumentResult
 from application.ingestion.ingestion_diagnostics_log import log_ingestion_diagnostics
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.common.ports import AssetRepositoryPort, VectorStorePort
 from domain.projects.project import Project
 from domain.rag.summary_recall_document import SummaryRecallDocument
-
-from application.dto.ingestion import IngestDocumentResult
 
 
 def finalize_ingestion_pipeline(

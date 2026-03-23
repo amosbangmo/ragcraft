@@ -10,14 +10,15 @@ from __future__ import annotations
 import logging
 from dataclasses import replace
 from time import perf_counter
+
 from application.dto.rag.recall_stages import VectorLexicalRecallBundle
-from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
 from application.orchestration.rag.summary_recall_ports import (
     SummaryRecallTechnicalPorts,
     merge_summary_recall_documents,
 )
-from domain.rag.pipeline_payloads import SummaryRecallResult
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import SummaryRecallResult
 from domain.rag.retrieval.query_intent_classification import classify_query_intent
 from domain.rag.retrieval.summary_recall_execution_plan import resolve_summary_recall_execution_plan
 from domain.rag.retrieval.table_qa_policy import is_table_focused_question
@@ -179,9 +180,7 @@ class ApplicationSummaryRecallStage:
             )
         )
 
-        filters_for_retrieval = (
-            filters if filters is not None and not filters.is_empty() else None
-        )
+        filters_for_retrieval = filters if filters is not None and not filters.is_empty() else None
 
         t1 = perf_counter()
         retrieval_payload = self.fuse_vector_and_lexical_recalls(

@@ -10,7 +10,7 @@ import csv
 import io
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from application.dto.benchmark_export import (
@@ -28,17 +28,17 @@ from domain.evaluation.evaluation_display_text import (
 
 def utc_timestamp_for_filename(when: datetime) -> str:
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     else:
-        when = when.astimezone(timezone.utc)
+        when = when.astimezone(UTC)
     return when.strftime("%Y%m%dT%H%M%SZ")
 
 
 def iso_utc(when: datetime) -> str:
     if when.tzinfo is None:
-        when = when.replace(tzinfo=timezone.utc)
+        when = when.replace(tzinfo=UTC)
     else:
-        when = when.astimezone(timezone.utc)
+        when = when.astimezone(UTC)
     return when.isoformat().replace("+00:00", "Z")
 
 
@@ -100,7 +100,7 @@ class BenchmarkReportFormatter:
     """Builds downloadable report bytes from a typed benchmark result and run command."""
 
     def build_artifacts(self, command: BuildBenchmarkExportCommand) -> BenchmarkExportArtifacts:
-        when = coerce_generated_at(command.generated_at) or datetime.now(timezone.utc)
+        when = coerce_generated_at(command.generated_at) or datetime.now(UTC)
         ts_file = utc_timestamp_for_filename(when)
         ts_meta = iso_utc(when)
 
@@ -128,7 +128,9 @@ class BenchmarkReportFormatter:
             run_id=result.run_id,
         )
 
-    def _build_json_bytes(self, *, metadata: BenchmarkRunMetadata, result: BenchmarkResult) -> bytes:
+    def _build_json_bytes(
+        self, *, metadata: BenchmarkRunMetadata, result: BenchmarkResult
+    ) -> bytes:
         payload = {
             "metadata": metadata.to_dict(),
             "summary": result.summary.to_dict(),
@@ -167,7 +169,9 @@ class BenchmarkReportFormatter:
 
         return buffer.getvalue().encode("utf-8-sig")
 
-    def _build_markdown_bytes(self, *, metadata: BenchmarkRunMetadata, result: BenchmarkResult) -> bytes:
+    def _build_markdown_bytes(
+        self, *, metadata: BenchmarkRunMetadata, result: BenchmarkResult
+    ) -> bytes:
         summary = result.summary.to_dict()
         lines: list[str] = [
             "# RAGCraft benchmark report",

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from domain.evaluation.benchmark_result import BenchmarkRow
 from domain.evaluation.benchmark_accumulator import BenchmarkAccumulator
 from domain.evaluation.benchmark_math import latency_stage_row_fields, r2
+from domain.evaluation.benchmark_result import BenchmarkRow
 from domain.evaluation.gold_qa_row_input import GoldQaPipelineRowInput
 from domain.evaluation.judge_metrics_row import EvaluationJudgeMetricsRow
 from domain.evaluation.multimodal_metrics import (
@@ -134,25 +134,15 @@ class RowEvaluationService:
 
         pl = pipeline.to_dict() if isinstance(pipeline, PipelineBuildResult) else pipeline
 
-        ranked_doc_ids = [
-            doc_id
-            for doc_id in pl.get("selected_doc_ids", [])
-            if doc_id
-        ]
+        ranked_doc_ids = [doc_id for doc_id in pl.get("selected_doc_ids", []) if doc_id]
         selected_doc_ids = set(ranked_doc_ids)
 
         prompt_sources = pl.get("prompt_sources", []) or []
         selected_sources = {
-            ref.get("source_file")
-            for ref in prompt_sources
-            if ref.get("source_file")
+            ref.get("source_file") for ref in prompt_sources if ref.get("source_file")
         }
 
-        prompt_source_doc_ids = {
-            ref.get("doc_id")
-            for ref in prompt_sources
-            if ref.get("doc_id")
-        }
+        prompt_source_doc_ids = {ref.get("doc_id") for ref in prompt_sources if ref.get("doc_id")}
 
         answer_cited_doc_id_set = answer_cited_doc_ids(
             answer=answer,

@@ -7,18 +7,18 @@ then :meth:`~domain.common.ports.manual_evaluation_from_rag_port.ManualEvaluatio
 
 from __future__ import annotations
 
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from application.dto.evaluation import RunManualEvaluationCommand
-from application.use_cases.chat.pipeline_use_case_ports import (
-    GenerateAnswerFromPipelinePort,
-    InspectRagPipelinePort,
-)
 from application.dto.rag.evaluation_pipeline import RagEvaluationPipelineInput
 from application.orchestration.evaluation.rag_pipeline_orchestration import (
     execute_rag_inspect_then_answer_for_evaluation,
 )
+from application.use_cases.chat.pipeline_use_case_ports import (
+    GenerateAnswerFromPipelinePort,
+    InspectRagPipelinePort,
+)
 from domain.common.ports.manual_evaluation_from_rag_port import ManualEvaluationFromRagPort
 from domain.common.ports.project_workspace_port import ProjectWorkspacePort
+from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 
 
 class RunManualEvaluationUseCase:

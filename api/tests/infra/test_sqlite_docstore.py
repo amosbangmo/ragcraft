@@ -3,8 +3,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from infrastructure.persistence.sqlite.asset_repository import SQLiteAssetRepository as SQLiteDocStore
 from infrastructure.persistence.db import init_app_db
+from infrastructure.persistence.sqlite.asset_repository import (
+    SQLiteAssetRepository as SQLiteDocStore,
+)
 
 
 class TestSQLiteDocStore(unittest.TestCase):

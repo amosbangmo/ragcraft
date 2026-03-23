@@ -1,9 +1,9 @@
 import unittest
 
 from application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
+from domain.projects.project import Project
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.summary_recall_document import SummaryRecallDocument
-from domain.projects.project import Project
 
 
 def _fake_pipeline(

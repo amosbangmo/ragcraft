@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from infrastructure.config.paths import get_data_root
 from domain.common.shared.query_log_port import QueryLogPersistencePort
+from infrastructure.config.paths import get_data_root
 
 
 def _parse_entry_timestamp(entry: dict) -> datetime | None:
@@ -21,8 +21,8 @@ def _parse_entry_timestamp(entry: dict) -> datetime | None:
     except ValueError:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 QueryLogStore = QueryLogPersistencePort
@@ -99,7 +99,7 @@ class QueryLogRepository:
             rows.append(row)
 
         rows.sort(
-            key=lambda r: _parse_entry_timestamp(r) or datetime.min.replace(tzinfo=timezone.utc),
+            key=lambda r: _parse_entry_timestamp(r) or datetime.min.replace(tzinfo=UTC),
             reverse=True,
         )
         if limit is not None and limit >= 0:

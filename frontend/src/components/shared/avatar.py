@@ -1,4 +1,5 @@
 import html
+
 import streamlit as st
 
 
@@ -50,9 +51,11 @@ def render_initials_avatar(display_name: str | None, size: int = 64):
 def render_user_avatar(avatar_path: str | None, display_name: str | None, size: int = 64):
     if avatar_path:
         try:
-            st.markdown('<div style="display:flex;justify-content:center;">', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="display:flex;justify-content:center;">', unsafe_allow_html=True
+            )
             st.image(avatar_path, width=size)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
             return
         except Exception:
             pass

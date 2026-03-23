@@ -16,11 +16,15 @@ def _latest_ingested_iso(value: object) -> str | None:
 class GetProjectDocumentDetailsUseCase:
     """Build document listing rows (paths, sizes, asset stats) for a project root directory."""
 
-    def __init__(self, *, resolve_project: ResolveProjectUseCase, asset_repository: AssetRepositoryPort) -> None:
+    def __init__(
+        self, *, resolve_project: ResolveProjectUseCase, asset_repository: AssetRepositoryPort
+    ) -> None:
         self._resolve_project = resolve_project
         self._assets = asset_repository
 
-    def execute(self, *, user_id: str, project_id: str, document_names: list[str]) -> list[ProjectDocumentDetailRow]:
+    def execute(
+        self, *, user_id: str, project_id: str, document_names: list[str]
+    ) -> list[ProjectDocumentDetailRow]:
         project = self._resolve_project.execute(user_id, project_id)
         details: list[ProjectDocumentDetailRow] = []
 

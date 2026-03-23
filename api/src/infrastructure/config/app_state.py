@@ -17,7 +17,6 @@ from composition import BackendApplicationContainer
 from services.protocol import BackendClient
 from services.settings import load_frontend_backend_settings, use_http_backend_client
 
-
 BACKEND_CONTAINER_KEY = "streamlit_backend_application_container"
 HTTP_BACKEND_CLIENT_KEY = "ragcraft_http_backend_client"
 

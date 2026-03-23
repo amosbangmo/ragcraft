@@ -10,7 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from architecture.import_scanner import any_module_matches, imported_top_level_modules, iter_python_files
+from architecture.import_scanner import (
+    any_module_matches,
+    imported_top_level_modules,
+    iter_python_files,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -26,7 +30,9 @@ def use_case_files() -> list[Path]:
     return iter_python_files(root) if root.is_dir() else []
 
 
-def test_application_avoids_delivery_and_storage_tech_imports(application_files: list[Path]) -> None:
+def test_application_avoids_delivery_and_storage_tech_imports(
+    application_files: list[Path],
+) -> None:
     forbidden = (
         "fastapi",
         "starlette",

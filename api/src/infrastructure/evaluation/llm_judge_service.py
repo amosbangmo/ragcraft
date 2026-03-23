@@ -4,9 +4,9 @@ import json
 import re
 from typing import Any
 
-from infrastructure.config.config import LLM
 from domain.evaluation.llm_judge_constants import JUDGE_FAILURE_REASON
 from domain.evaluation.llm_judge_result import LLMJudgeResult
+from infrastructure.config.config import LLM
 
 
 class LLMJudgeService:
@@ -139,7 +139,9 @@ ASSISTANT ANSWER:
             return text[: self._MAX_REF_JSON_CHARS] + "\n... (truncated)"
         return text
 
-    def _parse_response(self, text: str) -> tuple[float, float, float, float, float, bool, str | None] | None:
+    def _parse_response(
+        self, text: str
+    ) -> tuple[float, float, float, float, float, bool, str | None] | None:
         cleaned = text.strip()
         if cleaned.startswith("```"):
             cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)

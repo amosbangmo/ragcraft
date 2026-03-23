@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from application.dto.auth import UserProfileSummary
+from application.dto.projects import ProjectDocumentDetailRow
 from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
-
 from interfaces.http.schemas.evaluation import (
     ManualEvaluationResponse,
     QaDatasetEntryResponse,
@@ -19,9 +20,6 @@ from interfaces.http.schemas.evaluation import (
 )
 from interfaces.http.schemas.projects import DocumentAssetRow, ProjectDocumentDetailItem
 from interfaces.http.schemas.users import UserMeResponse
-
-from application.dto.auth import UserProfileSummary
-from application.dto.projects import ProjectDocumentDetailRow
 
 
 def user_profile_summary_to_me(user: UserProfileSummary) -> UserMeResponse:
@@ -48,7 +46,9 @@ def qa_dataset_entry_to_response(entry: QADatasetEntry) -> QaDatasetEntryRespons
     )
 
 
-def manual_evaluation_result_to_response(result: ManualEvaluationResult) -> ManualEvaluationResponse:
+def manual_evaluation_result_to_response(
+    result: ManualEvaluationResult,
+) -> ManualEvaluationResponse:
     return ManualEvaluationResponse(
         question=result.question,
         answer=result.answer,

@@ -6,6 +6,11 @@ from typing import TYPE_CHECKING
 
 import streamlit as st
 
+from services.retrieval_settings_merge import (
+    RetrievalPresetMergePort,
+    default_retrieval_preset_merge_port,
+)
+from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
 from services.view_models import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -14,11 +19,6 @@ from services.view_models import (
     RetrievalSettings,
     parse_retrieval_preset,
 )
-from services.retrieval_settings_merge import (
-    RetrievalPresetMergePort,
-    default_retrieval_preset_merge_port,
-)
-from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
 
 if TYPE_CHECKING:
     from services.protocol import BackendClient

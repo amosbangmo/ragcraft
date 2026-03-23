@@ -1,5 +1,6 @@
-import streamlit as st
 from contextlib import contextmanager
+
+import streamlit as st
 
 
 def inject_section_card_styles() -> None:

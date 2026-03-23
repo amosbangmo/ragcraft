@@ -207,10 +207,7 @@ def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:
         except (TypeError, ValueError, KeyError):
             return None
     to_dict = getattr(value, "to_dict", None)
-    if (
-        type(value).__name__ == "BenchmarkResult"
-        and callable(to_dict)
-    ):
+    if type(value).__name__ == "BenchmarkResult" and callable(to_dict):
         try:
             dumped = to_dict()
             if isinstance(dumped, dict):

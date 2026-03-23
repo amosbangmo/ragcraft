@@ -14,7 +14,9 @@ def test_legacy_app_shell_not_exposed_from_dependencies() -> None:
 
 def test_primary_container_getter_is_cached() -> None:
     assert callable(api_dependencies.get_backend_application_container)
-    assert getattr(api_dependencies.get_backend_application_container, "cache_info", None) is not None
+    assert (
+        getattr(api_dependencies.get_backend_application_container, "cache_info", None) is not None
+    )
 
 
 def test_dependencies_module_has_no_legacy_db_bootstrap() -> None:

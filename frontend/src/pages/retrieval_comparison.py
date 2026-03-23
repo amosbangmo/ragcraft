@@ -4,6 +4,13 @@ Retrieval A/B comparison via :class:`~services.protocol.BackendClient.compare_re
 
 import streamlit as st
 
+from components.shared.layout import apply_layout
+from components.shared.page_header import render_page_header
+from components.shared.request_runner import (
+    is_request_running,
+    render_result_payload,
+    run_request_action,
+)
 from infrastructure.auth.guards import require_authentication
 from services.protocol import BackendClient
 from services.ui_errors import (
@@ -12,14 +19,6 @@ from services.ui_errors import (
     VectorStoreError,
     get_user_error_message,
 )
-from components.shared.layout import apply_layout
-from components.shared.page_header import render_page_header
-from components.shared.request_runner import (
-    is_request_running,
-    run_request_action,
-    render_result_payload,
-)
-
 
 st.set_page_config(
     page_title="Retrieval Comparison | RAGCraft",
@@ -86,7 +85,9 @@ def _map_comparison_error(exc: Exception) -> str:
     if isinstance(exc, DocStoreError):
         return get_user_error_message(exc, "Unable to inspect project assets from SQLite.")
     if isinstance(exc, LLMServiceError):
-        return get_user_error_message(exc, "The language model failed while rewriting one or more retrieval queries.")
+        return get_user_error_message(
+            exc, "The language model failed while rewriting one or more retrieval queries."
+        )
     return get_user_error_message(exc, f"Unexpected error while running the comparison: {exc}")
 
 

@@ -8,8 +8,8 @@ from application.orchestration.rag.assemble_pipeline_from_recall import (
     assemble_pipeline_from_recall,
 )
 from application.orchestration.rag.ports import PostRecallStagePorts
-from domain.rag.pipeline_payloads import SectionExpansionPoolResult, SummaryRecallResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import SectionExpansionPoolResult, SummaryRecallResult
 from domain.rag.query_intent import QueryIntent
 from domain.rag.retrieval_settings import RetrievalSettings
 from domain.rag.retrieval_strategy import RetrievalStrategy
@@ -88,7 +88,9 @@ def test_assemble_pipeline_invokes_stages_in_order() -> None:
     compression.prompt_char_estimate.side_effect = _char_est
 
     prompt_sources = MagicMock()
-    prompt_sources.build_prompt_sources.side_effect = _append("prompt_sources.build_prompt_sources", [])
+    prompt_sources.build_prompt_sources.side_effect = _append(
+        "prompt_sources.build_prompt_sources", []
+    )
 
     layout = MagicMock()
     layout.group_assets.side_effect = _append("layout.group_assets", [])
@@ -102,7 +104,9 @@ def test_assemble_pipeline_invokes_stages_in_order() -> None:
     )
 
     render = MagicMock()
-    render.prepare_image_contexts.side_effect = _append("render.prepare_image_contexts", ({}, False))
+    render.prepare_image_contexts.side_effect = _append(
+        "render.prepare_image_contexts", ({}, False)
+    )
     render.build_raw_context.side_effect = _append("render.build_raw_context", "ctx")
     render.build_answer_prompt.side_effect = _append("render.build_answer_prompt", "prompt")
 

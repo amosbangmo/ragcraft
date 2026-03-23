@@ -17,7 +17,6 @@ from components.shared.request_runner import (
     run_request_action,
 )
 
-
 REINDEXING_DOC_KEY = "reindexing_document_key"
 PENDING_REINDEX_DIALOG_KEY = "pending_reindex_dialog_payload"
 
@@ -304,9 +303,7 @@ def confirm_reindex_document_dialog(
     result_payload = st.session_state.get(result_key)
     if is_runner_error_payload(result_payload):
         raw_err = result_payload.get(RUNNER_ERROR_KEY)
-        st.session_state[error_message_key] = (
-            raw_err if isinstance(raw_err, str) else str(raw_err)
-        )
+        st.session_state[error_message_key] = raw_err if isinstance(raw_err, str) else str(raw_err)
         clear_result_payload(result_key)
         clear_document_reindexing()
         clear_pending_reindex_dialog()
@@ -410,7 +407,11 @@ def inspect_document_dialog(
             else:
                 title_parts.append(f"— pages {page_start}-{page_end}")
 
-        if content_type == "text" and start_element_index is not None and end_element_index is not None:
+        if (
+            content_type == "text"
+            and start_element_index is not None
+            and end_element_index is not None
+        ):
             if start_element_index == end_element_index:
                 title_parts.append(f"— element {start_element_index}")
             else:

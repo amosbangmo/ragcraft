@@ -85,7 +85,9 @@ def test_domain_imports_stay_inner_layer(domain_files: list[Path]) -> None:
     assert not v, "Domain must not depend on transport or composition.\n" + "\n".join(v)
 
 
-def test_application_avoids_transport_and_concrete_infrastructure(application_files: list[Path]) -> None:
+def test_application_avoids_transport_and_concrete_infrastructure(
+    application_files: list[Path],
+) -> None:
     violations: list[str] = []
     for path in application_files:
         mods = imported_top_level_modules(path)

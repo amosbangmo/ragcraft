@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from time import perf_counter
-from application.orchestration.rag.recall_then_assemble_pipeline import (
-    run_recall_then_assemble_pipeline,
-)
+
 from application.orchestration.rag.ports import (
     PipelineAssemblyPort,
     PipelineBuildQueryLogEmitterPort,
     SummaryRecallStagePort,
 )
-from domain.rag.pipeline_payloads import PipelineBuildResult
+from application.orchestration.rag.recall_then_assemble_pipeline import (
+    run_recall_then_assemble_pipeline,
+)
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 

@@ -16,6 +16,19 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.bearer_auth import bearer_headers
+from application.dto.ingestion import IngestDocumentResult
+from application.orchestration.evaluation.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
+)
+from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
+from domain.projects.project import Project
+from domain.rag.pipeline_latency import PipelineLatency
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.rag_response import RAGResponse
+from infrastructure.config.exceptions import DomainError, LLMServiceError, VectorStoreError
 from interfaces.http.dependencies import (
     get_ask_question_use_case,
     get_build_benchmark_export_artifacts_use_case,
@@ -29,19 +42,6 @@ from interfaces.http.dependencies import (
     get_run_manual_evaluation_use_case,
 )
 from interfaces.http.main import create_app
-from application.orchestration.evaluation.build_benchmark_export_artifacts import (
-    BuildBenchmarkExportArtifactsUseCase,
-)
-from application.dto.ingestion import IngestDocumentResult
-from infrastructure.config.exceptions import DomainError, LLMServiceError, VectorStoreError
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
-from domain.rag.pipeline_latency import PipelineLatency
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
-from domain.rag.rag_response import RAGResponse
-from api.bearer_auth import bearer_headers
 
 
 def _uid_header(user_id: str = "test-user-api") -> dict[str, str]:
@@ -154,7 +154,9 @@ def test_projects_list_and_create_happy_path(override_app: tuple[TestClient, Fas
 
 def test_projects_create_validation_error_422(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_create_project_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_create_project_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
     r = tc.post(
         "/projects",
         headers=_uid_header(),
@@ -165,9 +167,13 @@ def test_projects_create_validation_error_422(override_app: tuple[TestClient, Fa
     assert body.get("code") == "request_validation_failed"
 
 
-def test_projects_create_extra_field_forbidden_422(override_app: tuple[TestClient, FastAPI]) -> None:
+def test_projects_create_extra_field_forbidden_422(
+    override_app: tuple[TestClient, FastAPI],
+) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_create_project_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_create_project_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
     r = tc.post(
         "/projects",
         headers=_uid_header(),
@@ -196,7 +202,9 @@ def test_project_documents_happy_path(override_app: tuple[TestClient, FastAPI]) 
 
 def test_project_documents_missing_bearer_401(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
-    app.dependency_overrides[get_list_project_documents_use_case] = lambda: _CallableUseCase(lambda *a, **k: [])
+    app.dependency_overrides[get_list_project_documents_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: []
+    )
     r = tc.get("/projects/demo/documents")
     assert r.status_code == 401
 
@@ -282,7 +290,9 @@ def test_chat_ask_validation_without_loading_composition(
     app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
         _FakeProjectService()
     )
-    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
 
     r = tc.post(
         "/chat/ask",
@@ -326,7 +336,9 @@ def test_chat_ask_no_pipeline_status(override_app: tuple[TestClient, FastAPI]) -
     app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
         _FakeProjectService()
     )
-    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
 
     r = tc.post(
         "/chat/ask",
@@ -413,7 +425,9 @@ def test_pipeline_inspect_no_pipeline(override_app: tuple[TestClient, FastAPI]) 
     app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
         _FakeProjectService()
     )
-    app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
 
     r = tc.post(
         "/chat/pipeline/inspect",
@@ -478,7 +492,9 @@ def test_evaluation_manual_happy_path(override_app: tuple[TestClient, FastAPI]) 
 def test_evaluation_manual_missing_bearer_401(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
     app.dependency_overrides[get_run_manual_evaluation_use_case] = lambda: _CallableUseCase(
-        lambda *a, **k: ManualEvaluationResult(question="q", answer="a", expected_answer=None, confidence=0.0)
+        lambda *a, **k: ManualEvaluationResult(
+            question="q", answer="a", expected_answer=None, confidence=0.0
+        )
     )
     r = tc.post("/evaluation/manual", json={"project_id": "demo", "question": "Q"})
     assert r.status_code == 401
@@ -512,7 +528,9 @@ def test_evaluation_dataset_run_happy_path(override_app: tuple[TestClient, FastA
             run_id="run-test",
         )
 
-    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: _CallableUseCase(_bench)
+    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: (
+        _CallableUseCase(_bench)
+    )
 
     r = tc.post(
         "/evaluation/dataset/run",
@@ -536,7 +554,9 @@ def test_evaluation_dataset_run_vector_store_503(override_app: tuple[TestClient,
     def _raise(*a: Any, **k: Any) -> BenchmarkResult:
         raise VectorStoreError("v", user_message="store")
 
-    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: _CallableUseCase(_raise)
+    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: (
+        _CallableUseCase(_raise)
+    )
     r = tc.post(
         "/evaluation/dataset/run",
         headers=_uid_header(),
@@ -552,8 +572,8 @@ def test_evaluation_dataset_run_vector_store_503(override_app: tuple[TestClient,
 def test_evaluation_export_benchmark_smoke(override_app: tuple[TestClient, FastAPI]) -> None:
     """End-to-end export route with the real export use case (pure application code)."""
     tc, app = override_app
-    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = (
-        lambda: BuildBenchmarkExportArtifactsUseCase()
+    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = lambda: (
+        BuildBenchmarkExportArtifactsUseCase()
     )
 
     info = tc.get("/evaluation/export/benchmark")
@@ -582,7 +602,9 @@ def test_value_error_not_found_maps_to_404(override_app: tuple[TestClient, FastA
     app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
         _FakeProjectService(get_project_hook=_missing)
     )
-    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(lambda *a, **k: None)
+    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
 
     r = tc.post(
         "/chat/ask",

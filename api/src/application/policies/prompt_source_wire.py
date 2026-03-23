@@ -6,9 +6,7 @@ from domain.rag.prompt_source import PromptSource
 
 
 def prompt_source_to_wire_dict(prompt_source: PromptSource) -> dict:
-    rerank_score = (
-        prompt_source.metadata.get("rerank_score") if prompt_source.metadata else None
-    )
+    rerank_score = prompt_source.metadata.get("rerank_score") if prompt_source.metadata else None
 
     return {
         "source_number": prompt_source.source_number,

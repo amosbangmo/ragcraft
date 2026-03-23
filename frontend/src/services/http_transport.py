@@ -77,7 +77,9 @@ class HttpTransport:
                 req_kw["json"] = json_body
             resp = self._client.request(method, path, **req_kw)
         except httpx.RequestError as exc:
-            raise BackendHttpError(f"HTTP request failed: {exc}", status_code=None, payload=None) from exc
+            raise BackendHttpError(
+                f"HTTP request failed: {exc}", status_code=None, payload=None
+            ) from exc
 
         if httpx.codes.is_success(resp.status_code):
             if not resp.content:

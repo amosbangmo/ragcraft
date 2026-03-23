@@ -1,4 +1,5 @@
 """Import path rewrites after physical migration."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -78,14 +79,23 @@ def apply_text_rewrites(root: Path, api: Path, fe: Path) -> None:
     add("from src.application.ingestion.dtos", "from application.dto.ingestion")
     add("from src.application.settings.dtos", "from application.dto.settings")
     add("from src.application.evaluation.dtos", "from application.dto.evaluation")
-    add("from src.application.evaluation.benchmark_export_dtos", "from application.dto.benchmark_export")
+    add(
+        "from src.application.evaluation.benchmark_export_dtos",
+        "from application.dto.benchmark_export",
+    )
     add("from src.application.rag.dtos", "from application.dto.rag")
     add("from src.application.http.wire", "from application.http.wire")
     add("from src.application.json_wire", "from application.http.wire.json_wire")
     add("from src.application.frontend_support.", "from application.services.")
-    add("from src.application.users.avatar_upload_policy", "from application.policies.avatar_upload_policy")
+    add(
+        "from src.application.users.avatar_upload_policy",
+        "from application.policies.avatar_upload_policy",
+    )
     add("from src.application.auth.identity_ports", "from application.ports.identity_ports")
-    add("from src.application.settings.retrieval_merge_default", "from application.services.retrieval_merge_default")
+    add(
+        "from src.application.settings.retrieval_merge_default",
+        "from application.services.retrieval_merge_default",
+    )
     add(
         "from src.application.settings.retrieval_preset_merge_port",
         "from application.services.retrieval_preset_merge_port",

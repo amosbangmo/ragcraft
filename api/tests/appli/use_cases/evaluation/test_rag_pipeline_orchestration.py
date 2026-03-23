@@ -8,8 +8,8 @@ from application.dto.rag.evaluation_pipeline import RagEvaluationPipelineInput
 from application.orchestration.evaluation.rag_pipeline_orchestration import (
     execute_rag_inspect_then_answer_for_evaluation,
 )
-from domain.rag.pipeline_latency import PipelineLatency
 from domain.projects.project import Project
+from domain.rag.pipeline_latency import PipelineLatency
 
 
 def test_evaluation_orchestration_merges_latency_when_pipeline_present() -> None:

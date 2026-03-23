@@ -30,7 +30,9 @@ def _confidence_value(row: dict) -> float | None:
     return _as_float(row.get("confidence"))
 
 
-def distribution_buckets(values: Sequence[float], *, bin_count: int = 12) -> tuple[list[float], list[int]]:
+def distribution_buckets(
+    values: Sequence[float], *, bin_count: int = 12
+) -> tuple[list[float], list[int]]:
     """Fixed-width bins from min..max for lightweight testing and tables."""
     clean = sorted(v for v in values if v == v)  # drop NaN
     if not clean or bin_count < 1:
@@ -143,7 +145,9 @@ def _sort_logs_by_confidence_asc(logs: Sequence[dict]) -> list[dict]:
 
 def render_retrieval_dashboard(logs: list[dict]) -> None:
     if not logs:
-        st.info("No query logs match the current filters. Run queries from chat or evaluation to populate data.")
+        st.info(
+            "No query logs match the current filters. Run queries from chat or evaluation to populate data."
+        )
         return
 
     m = compute_retrieval_dashboard_metrics(logs)
@@ -216,7 +220,15 @@ def render_retrieval_dashboard(logs: list[dict]) -> None:
     st.dataframe(_table_rows(logs, limit=25), use_container_width=True, hide_index=True)
 
     st.subheader("Highest latency")
-    st.dataframe(_table_rows(_sort_logs_by_latency_desc(logs), limit=15), use_container_width=True, hide_index=True)
+    st.dataframe(
+        _table_rows(_sort_logs_by_latency_desc(logs), limit=15),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     st.subheader("Lowest confidence")
-    st.dataframe(_table_rows(_sort_logs_by_confidence_asc(logs), limit=15), use_container_width=True, hide_index=True)
+    st.dataframe(
+        _table_rows(_sort_logs_by_confidence_asc(logs), limit=15),
+        use_container_width=True,
+        hide_index=True,
+    )

@@ -10,10 +10,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from domain.projects.project_settings import ProjectSettings
 from domain.common.ports.chat_transcript_port import ChatTranscriptPort
 from domain.common.ports.retrieval_preset_merge_port import RetrievalPresetMergePort
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from domain.projects.project_settings import ProjectSettings
 
 
 class _UnsupportedBackendAttribute:

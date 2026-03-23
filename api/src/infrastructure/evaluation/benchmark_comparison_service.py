@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from domain.evaluation.benchmark_comparison import (
-    LOWER_IS_BETTER_METRICS,
     compare_benchmark_failure_counts,
     compare_benchmark_summaries,
 )

@@ -14,8 +14,12 @@ from application.dto.auth import (
 from application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
 from application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
 from application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
-from infrastructure.config.exceptions import AuthCredentialsInvalidError, UserAccountNotFoundError, UsernameTakenError
 from infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
+from infrastructure.config.exceptions import (
+    AuthCredentialsInvalidError,
+    UserAccountNotFoundError,
+    UsernameTakenError,
+)
 
 
 def _row(
@@ -82,9 +86,7 @@ def test_update_profile_username_taken() -> None:
     users.set_username_conflict({**_row(), "user_id": "other", "username": "taken"})
     uc = UpdateUserProfileUseCase(users=users)
     with pytest.raises(UsernameTakenError):
-        uc.execute(
-            UpdateUserProfileCommand(user_id="u1", username="taken", display_name="Alice A")
-        )
+        uc.execute(UpdateUserProfileCommand(user_id="u1", username="taken", display_name="Alice A"))
 
 
 def test_change_password_wrong_current() -> None:

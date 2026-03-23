@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 

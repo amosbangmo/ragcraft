@@ -485,7 +485,7 @@ def render_metric_with_help(
     metric_key: str | None = None,
     help_text: str | None = None,
     delta: Any = None,
-    delta_color: str = "normal"
+    delta_color: str = "normal",
 ) -> None:
     """
     Render ``st.metric`` with optional centralized help (tooltip).

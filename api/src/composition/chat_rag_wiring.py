@@ -26,13 +26,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from application.chat.multimodal_prompt_hints import MultimodalPromptHints
-from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
-from application.use_cases.chat.ask_question import AskQuestionUseCase
-from application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
-from application.use_cases.chat.generate_answer_from_pipeline import (
-    GenerateAnswerFromPipelineUseCase,
-)
-from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from application.orchestration.rag.application_pipeline_assembly import (
     ApplicationPipelineAssembly,
 )
@@ -46,9 +39,16 @@ from application.orchestration.rag.summary_recall_ports import (
 from application.orchestration.rag.summary_recall_workflow import (
     ApplicationSummaryRecallStage,
 )
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
+from application.use_cases.chat.ask_question import AskQuestionUseCase
+from application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from application.use_cases.chat.generate_answer_from_pipeline import (
+    GenerateAnswerFromPipelineUseCase,
+)
+from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
 from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
-from infrastructure.config.config import RETRIEVAL_CONFIG
 from domain.common.ports import QueryLogPort
+from infrastructure.config.config import RETRIEVAL_CONFIG
 from infrastructure.rag.answer_generation_service import AnswerGenerationService
 from infrastructure.rag.docstore_service import DocStoreService
 from infrastructure.rag.hybrid_retrieval_service import HybridRetrievalService

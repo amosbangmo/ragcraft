@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from domain.rag.query_log_ingress_payload import QueryLogIngressPayload
 from domain.rag.query_intent import QueryIntent
-from domain.rag.query_log_timestamp import parse_query_log_timestamp
-from infrastructure.observability.logging.query_log_repository import QueryLogRepository, QueryLogStore
+from domain.rag.query_log_ingress_payload import QueryLogIngressPayload
+from infrastructure.observability.logging.query_log_repository import (
+    QueryLogRepository,
+    QueryLogStore,
+)
 from infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
 
 _MAX_TEXT_FIELD_LEN = 2000
@@ -37,6 +39,7 @@ def _normalize_id_list(value: object) -> list[str] | None:
 
 class QueryLogService:
     """Application query-log façade; implements :class:`~domain.common.ports.query_log_port.QueryLogPort`."""
+
     def __init__(self, repository: QueryLogStore | None = None) -> None:
         self._repository = repository or SQLiteQueryLogRepository()
 
@@ -51,14 +54,20 @@ class QueryLogService:
     def _build_entry(self, payload: dict) -> dict:
         ts = payload.get("timestamp")
         if not isinstance(ts, str) or not ts.strip():
-            ts = datetime.now(timezone.utc).isoformat()
+            ts = datetime.now(UTC).isoformat()
 
         question = payload.get("question")
         rewritten = payload.get("rewritten_query")
         answer = payload.get("answer")
 
-        q_str = question if isinstance(question, str) else (None if question is None else str(question))
-        rw_str = rewritten if isinstance(rewritten, str) else (None if rewritten is None else str(rewritten))
+        q_str = (
+            question if isinstance(question, str) else (None if question is None else str(question))
+        )
+        rw_str = (
+            rewritten
+            if isinstance(rewritten, str)
+            else (None if rewritten is None else str(rewritten))
+        )
         ans_str = answer if isinstance(answer, str) else (None if answer is None else str(answer))
 
         confidence = payload.get("confidence")
@@ -92,8 +101,14 @@ class QueryLogService:
 
         project_id = payload.get("project_id")
         user_id = payload.get("user_id")
-        proj_str = project_id if isinstance(project_id, str) else (None if project_id is None else str(project_id))
-        user_str = user_id if isinstance(user_id, str) else (None if user_id is None else str(user_id))
+        proj_str = (
+            project_id
+            if isinstance(project_id, str)
+            else (None if project_id is None else str(project_id))
+        )
+        user_str = (
+            user_id if isinstance(user_id, str) else (None if user_id is None else str(user_id))
+        )
 
         entry: dict = {
             "question": _truncate_str(q_str, _MAX_TEXT_FIELD_LEN),

@@ -9,10 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from infrastructure.config.config import RETRIEVAL_CONFIG
 from domain.rag.pipeline_payloads import SectionExpansionPoolResult
 from domain.rag.prompt_source import PromptSource
 from domain.rag.retrieval_settings import RetrievalSettings
+from infrastructure.config.config import RETRIEVAL_CONFIG
 from infrastructure.rag.confidence_service import ConfidenceService
 from infrastructure.rag.contextual_compression_service import ContextualCompressionService
 from infrastructure.rag.docstore_service import DocStoreService

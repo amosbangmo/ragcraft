@@ -2,7 +2,6 @@ from domain.rag.prompt_source import PromptSource
 from infrastructure.rag.image_context_service import ImageContextService
 from infrastructure.rag.layout_context_service import describe_layout_group
 
-
 _MAX_STRUCTURED_TABLE_ROWS = 14
 _MAX_STRUCTURED_CELL_CHARS = 88
 
@@ -108,7 +107,9 @@ class PromptBuilderService:
         for group in asset_groups:
             header = describe_layout_group(group)
             inner = "\n\n".join(format_one(a, layout_mode=True) for a in group)
-            parts.append(f"=== {header} ===\nRelated assets (same area of the document; use order and proximity):\n\n{inner}")
+            parts.append(
+                f"=== {header} ===\nRelated assets (same area of the document; use order and proximity):\n\n{inner}"
+            )
         return "\n\n".join(parts)
 
     def build_prompt(
@@ -210,15 +211,11 @@ Instructions:
 
         ncol = max(len(headers), max((len(r) for r in rows), default=0))
         two_col_kv = (
-            ncol == 2
-            and rows
-            and all(len(r) >= 2 for r in rows[:_MAX_STRUCTURED_TABLE_ROWS])
+            ncol == 2 and rows and all(len(r) >= 2 for r in rows[:_MAX_STRUCTURED_TABLE_ROWS])
         )
 
         if headers:
-            hdr_line = "Column headers: " + " | ".join(
-                self._truncate_cell(h) for h in headers
-            )
+            hdr_line = "Column headers: " + " | ".join(self._truncate_cell(h) for h in headers)
             consume(hdr_line)
 
         if two_col_kv:
@@ -288,13 +285,9 @@ Raw text:
             structured = metadata.get("structured_table") or {}
             has_structured = bool(structured.get("rows") or structured.get("headers"))
             excerpt = (
-                self._format_structured_table_excerpt(structured)
-                if has_structured
-                else ""
+                self._format_structured_table_excerpt(structured) if has_structured else ""
             ).strip()
-            meta_for_prompt = {
-                k: v for k, v in (metadata or {}).items() if k != "structured_table"
-            }
+            meta_for_prompt = {k: v for k, v in (metadata or {}).items() if k != "structured_table"}
             if excerpt:
                 meta_for_prompt["structured_table"] = "(see Structured table excerpt below)"
 

@@ -13,21 +13,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
     "relative_path,expected_substrings",
     [
         (
-            Path("api")
-            / "src"
-            / "application"
-            / "use_cases"
-            / "chat"
-            / "ask_question.py",
+            Path("api") / "src" / "application" / "use_cases" / "chat" / "ask_question.py",
             ("RetrievalPort", "GenerationPort", "QueryLogPort"),
         ),
         (
-            Path("api")
-            / "src"
-            / "application"
-            / "use_cases"
-            / "chat"
-            / "inspect_rag_pipeline.py",
+            Path("api") / "src" / "application" / "use_cases" / "chat" / "inspect_rag_pipeline.py",
             ("RetrievalPort",),
         ),
         (

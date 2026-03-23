@@ -2,22 +2,22 @@
 
 from __future__ import annotations
 
-from domain.evaluation.benchmark_result import BenchmarkResult
 from application.dto.evaluation import (
     ListQaDatasetEntriesQuery,
     RunGoldQaDatasetEvaluationCommand,
-)
-from application.use_cases.chat.pipeline_use_case_ports import (
-    GenerateAnswerFromPipelinePort,
-    InspectRagPipelinePort,
 )
 from application.dto.rag.evaluation_pipeline import RagEvaluationPipelineInput
 from application.orchestration.evaluation.rag_pipeline_orchestration import (
     execute_rag_inspect_then_answer_for_evaluation,
 )
-from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
+from application.use_cases.chat.pipeline_use_case_ports import (
+    GenerateAnswerFromPipelinePort,
+    InspectRagPipelinePort,
+)
 from domain.common.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from domain.common.ports.project_workspace_port import ProjectWorkspacePort
+from domain.evaluation.benchmark_result import BenchmarkResult
+from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 
 from .list_qa_dataset_entries import ListQaDatasetEntriesUseCase
 

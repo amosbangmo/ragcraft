@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Protocol, TypeAlias, runtime_checkable
 
-from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 
 
 @runtime_checkable

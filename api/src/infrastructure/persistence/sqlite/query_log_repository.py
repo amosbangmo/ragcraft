@@ -7,7 +7,7 @@ Implements :class:`domain.common.shared.query_log_port.QueryLogPersistencePort`.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from infrastructure.persistence.db import get_connection
 
@@ -74,11 +74,15 @@ class SQLiteQueryLogRepositoryAdapter:
     def log(self, entry: dict) -> None:
         try:
             question = entry.get("question")
-            q = question if isinstance(question, str) else ("" if question is None else str(question))
+            q = (
+                question
+                if isinstance(question, str)
+                else ("" if question is None else str(question))
+            )
 
             created_at = entry.get("timestamp")
             if not isinstance(created_at, str) or not created_at.strip():
-                created_at = datetime.now(timezone.utc).isoformat()
+                created_at = datetime.now(UTC).isoformat()
 
             hybrid = entry.get("hybrid_retrieval_enabled")
             hybrid_sql = None if hybrid is None else (1 if bool(hybrid) else 0)

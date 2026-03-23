@@ -3,8 +3,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from infrastructure.persistence.sqlite.qa_dataset_repository import SQLiteQADatasetRepository as QADatasetRepository
 from infrastructure.persistence.db import init_app_db
+from infrastructure.persistence.sqlite.qa_dataset_repository import (
+    SQLiteQADatasetRepository as QADatasetRepository,
+)
 
 
 class TestQADatasetRepository(unittest.TestCase):
@@ -36,9 +38,7 @@ class TestQADatasetRepository(unittest.TestCase):
         self.assertGreater(eid, 0)
         rows = self.repo.list_entries(user_id="u1", project_id="p1")
         self.assertEqual(len(rows), 1)
-        got = self.repo.get_entry_by_id(
-            entry_id=eid, user_id="u1", project_id="p1"
-        )
+        got = self.repo.get_entry_by_id(entry_id=eid, user_id="u1", project_id="p1")
         self.assertIsNotNone(got)
         assert got is not None
         self.assertEqual(got["question"], "What?")
@@ -53,20 +53,14 @@ class TestQADatasetRepository(unittest.TestCase):
             expected_sources=[],
         )
         self.assertTrue(ok)
-        refreshed = self.repo.get_entry_by_id(
-            entry_id=eid, user_id="u1", project_id="p1"
-        )
+        refreshed = self.repo.get_entry_by_id(entry_id=eid, user_id="u1", project_id="p1")
         self.assertIsNotNone(refreshed)
         assert refreshed is not None
         self.assertEqual(refreshed["question"], "Why?")
         self.assertIsNone(refreshed["expected_answer"])
 
-        self.assertTrue(
-            self.repo.delete_entry(entry_id=eid, user_id="u1", project_id="p1")
-        )
-        self.assertIsNone(
-            self.repo.get_entry_by_id(entry_id=eid, user_id="u1", project_id="p1")
-        )
+        self.assertTrue(self.repo.delete_entry(entry_id=eid, user_id="u1", project_id="p1"))
+        self.assertIsNone(self.repo.get_entry_by_id(entry_id=eid, user_id="u1", project_id="p1"))
 
     def test_get_update_delete_wrong_scope(self) -> None:
         eid = self.repo.create_entry(
@@ -77,9 +71,7 @@ class TestQADatasetRepository(unittest.TestCase):
             expected_doc_ids=None,
             expected_sources=None,
         )
-        self.assertIsNone(
-            self.repo.get_entry_by_id(entry_id=eid, user_id="other", project_id="p1")
-        )
+        self.assertIsNone(self.repo.get_entry_by_id(entry_id=eid, user_id="other", project_id="p1"))
         self.assertFalse(
             self.repo.update_entry(
                 entry_id=eid,
@@ -88,17 +80,11 @@ class TestQADatasetRepository(unittest.TestCase):
                 question="Nope",
             )
         )
-        self.assertFalse(
-            self.repo.delete_entry(entry_id=eid, user_id="other", project_id="p1")
-        )
+        self.assertFalse(self.repo.delete_entry(entry_id=eid, user_id="other", project_id="p1"))
 
     def test_delete_all_entries(self) -> None:
-        self.repo.create_entry(
-            user_id="u1", project_id="p1", question="a", expected_answer=None
-        )
-        self.repo.create_entry(
-            user_id="u1", project_id="p1", question="b", expected_answer=None
-        )
+        self.repo.create_entry(user_id="u1", project_id="p1", question="a", expected_answer=None)
+        self.repo.create_entry(user_id="u1", project_id="p1", question="b", expected_answer=None)
         n = self.repo.delete_all_entries(user_id="u1", project_id="p1")
         self.assertEqual(n, 2)
         self.assertEqual(len(self.repo.list_entries(user_id="u1", project_id="p1")), 0)

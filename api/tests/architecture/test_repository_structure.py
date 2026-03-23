@@ -173,10 +173,7 @@ def test_fastapi_schemas_only_under_http_schemas() -> None:
                         if isinstance(base, ast.Name) and base.id == "BaseModel":
                             offenders.append(path.relative_to(REPO_ROOT).as_posix())
                             break
-                        if (
-                            isinstance(base, ast.Attribute)
-                            and base.attr == "BaseModel"
-                        ):
+                        if isinstance(base, ast.Attribute) and base.attr == "BaseModel":
                             offenders.append(path.relative_to(REPO_ROOT).as_posix())
                             break
     assert not offenders, (
@@ -207,7 +204,9 @@ def test_no_infrastructure_adapters_under_application() -> None:
     app = API_SRC / "application"
     for p in app.rglob("*"):
         if p.is_dir() and p.name == "adapters":
-            pytest.fail(f"Forbidden adapters directory under application: {p.relative_to(REPO_ROOT)}")
+            pytest.fail(
+                f"Forbidden adapters directory under application: {p.relative_to(REPO_ROOT)}"
+            )
 
 
 def test_docs_and_validation_scripts_present() -> None:

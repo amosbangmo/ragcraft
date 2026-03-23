@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
-from jwt.exceptions import ExpiredSignatureError, InvalidTokenError as PyJWTInvalidTokenError
+from jwt.exceptions import ExpiredSignatureError
+from jwt.exceptions import InvalidTokenError as PyJWTInvalidTokenError
 
 from domain.auth.authenticated_principal import AuthenticatedPrincipal
 from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
 from domain.common.ports.authentication_port import AuthenticationPort
-from infrastructure.config.exceptions import ExpiredTokenError, InvalidTokenError
 from infrastructure.auth.jwt_auth_settings import JwtAuthSettings
+from infrastructure.config.exceptions import ExpiredTokenError, InvalidTokenError
 
 
 class JwtAuthenticationAdapter(AuthenticationPort, AccessTokenIssuerPort):
@@ -26,7 +27,7 @@ class JwtAuthenticationAdapter(AuthenticationPort, AccessTokenIssuerPort):
         uid = str(user_id).strip()
         if not uid:
             raise ValueError("user_id is required to issue an access token")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         exp = now + timedelta(minutes=self._settings.access_token_expire_minutes)
         payload: dict[str, str | int] = {
             "sub": subject or uid,
@@ -43,7 +44,9 @@ class JwtAuthenticationAdapter(AuthenticationPort, AccessTokenIssuerPort):
     def authenticate_bearer_token(self, raw_token: str) -> AuthenticatedPrincipal:
         token = str(raw_token).strip()
         if not token:
-            raise InvalidTokenError("empty bearer token", user_message="Invalid or missing access token.")
+            raise InvalidTokenError(
+                "empty bearer token", user_message="Invalid or missing access token."
+            )
 
         decode_kw: dict[str, object] = {
             "algorithms": [self._settings.algorithm],
@@ -74,4 +77,6 @@ class JwtAuthenticationAdapter(AuthenticationPort, AccessTokenIssuerPort):
                 user_message="Invalid access token.",
             )
         sub = str(claims.get("sub") or uid)
-        return AuthenticatedPrincipal(user_id=uid, subject=sub, auth_method="jwt_bearer", is_authenticated=True)
+        return AuthenticatedPrincipal(
+            user_id=uid, subject=sub, auth_method="jwt_bearer", is_authenticated=True
+        )

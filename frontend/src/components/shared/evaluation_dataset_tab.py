@@ -4,33 +4,21 @@ Dataset evaluation tab: benchmark the gold QA dataset with Overview / Entries su
 
 from __future__ import annotations
 
-from dataclasses import replace
-from datetime import datetime, timezone
-from typing import Any, cast
 import uuid
+from dataclasses import replace
+from datetime import UTC, datetime
+from typing import Any, cast
 
 import streamlit as st
 
-from services.protocol import BackendClient
-from services.view_models import (
-    BenchmarkResult,
-    QADatasetEntry,
-    compare_benchmark_failure_counts,
-    compare_benchmark_summaries,
-    coerce_benchmark_result,
-)
-from services.ui_errors import (
-    get_user_error_message,
-    map_evaluation_flow_exception,
-)
 from components.shared.evaluation_dashboard import render_evaluation_dashboard
 from components.shared.evaluation_history_labels import (
     build_benchmark_history_entry_label,
     format_benchmark_run_selector_label,
 )
-from components.shared.evaluation_summary_metrics import render_summary_metric_from_mapping
 from components.shared.evaluation_question_detail import render_benchmark_row_detail
 from components.shared.evaluation_reports_tab import render_evaluation_reports_tab
+from components.shared.evaluation_summary_metrics import render_summary_metric_from_mapping
 from components.shared.metric_help import render_metric_with_help
 from components.shared.request_runner import (
     RUNNER_ERROR_KEY,
@@ -38,6 +26,18 @@ from components.shared.request_runner import (
     read_dataset_evaluation_session_payload,
     render_result_payload,
     run_request_action,
+)
+from services.protocol import BackendClient
+from services.ui_errors import (
+    get_user_error_message,
+    map_evaluation_flow_exception,
+)
+from services.view_models import (
+    BenchmarkResult,
+    QADatasetEntry,
+    coerce_benchmark_result,
+    compare_benchmark_failure_counts,
+    compare_benchmark_summaries,
 )
 
 BENCHMARK_RUN_HISTORY_BY_PROJECT_KEY = "benchmark_run_history_by_project"
@@ -111,9 +111,7 @@ def _render_dataset_overview(
         )
     with c2:
         render_metric_with_help(
-            label="Current project",
-            value=project_id,
-            metric_key="evaluation_project_context"
+            label="Current project", value=project_id, metric_key="evaluation_project_context"
         )
 
     if not summary and not rows:
@@ -204,7 +202,7 @@ def _render_dataset_evaluation_run_and_results(
             "result": result,
             "enable_query_rewrite": dataset_enable_query_rewrite,
             "enable_hybrid_retrieval": dataset_enable_hybrid_retrieval,
-            "generated_at": datetime.now(timezone.utc),
+            "generated_at": datetime.now(UTC),
         }
 
     def _map_dataset_evaluation_error(exc: Exception) -> str:
@@ -218,7 +216,9 @@ def _render_dataset_evaluation_run_and_results(
     )
 
     if dataset_run_clicked and not entries:
-        st.warning("Please add at least one gold QA dataset entry before running dataset evaluation.")
+        st.warning(
+            "Please add at least one gold QA dataset entry before running dataset evaluation."
+        )
     else:
         run_request_action(
             request_key=dataset_evaluation_request_key,
@@ -309,13 +309,10 @@ def _render_dataset_evaluation_run_and_results(
             "and **B** (candidate) side by side."
         )
 
-    if (
-        not summary
-        and not rows
-        and comparison_rows is None
-        and failure_comparison_rows is None
-    ):
-        st.info("Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics.")
+    if not summary and not rows and comparison_rows is None and failure_comparison_rows is None:
+        st.info(
+            "Run **dataset evaluation** above to populate retrieval, judge, and per-entry metrics."
+        )
     else:
         render_evaluation_dashboard(
             summary or {},
@@ -502,7 +499,9 @@ def render_evaluation_dataset_tab(payload: dict[str, Any]) -> None:
                         with st.expander("Latest benchmark scores for this entry", expanded=False):
                             render_benchmark_row_detail(br, include_full_row_json_expander=True)
                     else:
-                        st.caption("Run dataset evaluation from the **Overview** tab to attach scores to this entry.")
+                        st.caption(
+                            "Run dataset evaluation from the **Overview** tab to attach scores to this entry."
+                        )
 
                     if st.button(
                         "Delete entry",

@@ -29,21 +29,21 @@ from application.dto.settings import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
-from composition import BackendApplicationContainer
-from domain.projects.buffered_document_upload import BufferedDocumentUpload
-from domain.evaluation.benchmark_result import BenchmarkResult
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-from domain.projects.project_settings import ProjectSettings
-from domain.rag.retrieval_filters import RetrievalFilters
-from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
-from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from components.shared.streamlit_project_chain_session_cache import (
     invalidate_project_chain as _invalidate_streamlit_session_chain,
 )
+from composition import BackendApplicationContainer
+from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from domain.evaluation.benchmark_result import BenchmarkResult
+from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from domain.projects.project import Project
+from domain.projects.project_settings import ProjectSettings
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
+from domain.rag.retrieval_filters import RetrievalFilters
+from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class InProcessBackendClient:
@@ -62,7 +62,9 @@ class InProcessBackendClient:
     def add_chat_assistant_message(self, content: str) -> None:
         self._container.chat_transcript.add_assistant_message(content)
 
-    def generate_answer_from_pipeline(self, *, project: Project, pipeline: PipelineBuildResult) -> str:
+    def generate_answer_from_pipeline(
+        self, *, project: Project, pipeline: PipelineBuildResult
+    ) -> str:
         return self._container.chat_generate_answer_from_pipeline_use_case.execute(
             project=project, pipeline=pipeline
         )
@@ -146,7 +148,9 @@ class InProcessBackendClient:
         return self._container.projects_list_project_documents_use_case.execute(user_id, project_id)
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]:
-        documents = self._container.projects_list_project_documents_use_case.execute(user_id, project_id)
+        documents = self._container.projects_list_project_documents_use_case.execute(
+            user_id, project_id
+        )
         return self._container.projects_get_project_document_details_use_case.execute(
             user_id=user_id, project_id=project_id, document_names=documents
         )

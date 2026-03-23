@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Protocol
 
-from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
+from domain.projects.project import Project
 from domain.rag.pipeline_payloads import (
     PipelineBuildResult,
     SectionExpansionPoolResult,
     SummaryRecallResult,
 )
-from domain.projects.project import Project
 from domain.rag.prompt_source import PromptSource
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings import RetrievalSettings
+from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 class SummaryRecallStagePort(Protocol):

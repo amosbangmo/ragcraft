@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from application.dto.settings import UpdateProjectRetrievalSettingsCommand
-from domain.projects.project_settings import ProjectSettings
 from domain.common.ports import ProjectSettingsRepositoryPort
+from domain.projects.project_settings import ProjectSettings
 from domain.rag.retrieval_presets import parse_retrieval_preset
 
 

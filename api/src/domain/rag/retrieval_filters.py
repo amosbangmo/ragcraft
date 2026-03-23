@@ -181,7 +181,9 @@ def summary_document_matches_filters(doc: SummaryRecallDocument, filters: Retrie
     return True
 
 
-def filter_raw_assets_by_filters(assets: list[dict], filters: RetrievalFilters | None) -> list[dict]:
+def filter_raw_assets_by_filters(
+    assets: list[dict], filters: RetrievalFilters | None
+) -> list[dict]:
     if filters is None or filters.is_empty():
         return list(assets)
     return [a for a in assets if raw_asset_matches_filters(a, filters)]

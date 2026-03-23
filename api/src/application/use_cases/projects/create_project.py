@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from domain.projects.project import Project
 from domain.common.ports.project_workspace_port import ProjectWorkspacePort
+from domain.projects.project import Project
 
 
 class CreateProjectUseCase:

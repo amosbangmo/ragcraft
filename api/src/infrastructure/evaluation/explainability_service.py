@@ -33,11 +33,7 @@ class ExplainabilityService:
                 "LLM judge failed for this row; judge-based scores are unavailable."
             )
             jr = row.get("judge_failure_reason")
-            if (
-                isinstance(jr, str)
-                and jr.strip()
-                and jr.strip() != JUDGE_FAILURE_REASON
-            ):
+            if isinstance(jr, str) and jr.strip() and jr.strip() != JUDGE_FAILURE_REASON:
                 explanations.append(f"Judge failure reason: {jr.strip()}.")
             suggestions.append(
                 "Retry evaluation after checking judge model configuration, connectivity, and provider responses."
@@ -75,7 +71,9 @@ class ExplainabilityService:
 
             if bool(hallucination):
                 explanations.append("Answer likely contains hallucinated content.")
-                suggestions.append("Increase grounding constraints or reduce generation temperature.")
+                suggestions.append(
+                    "Increase grounding constraints or reduce generation temperature."
+                )
 
         if (
             _is_score(confidence)

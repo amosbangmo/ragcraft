@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from infrastructure.config.config import INGESTION_CONFIG
-from domain.common.ports import AssetRepositoryPort, VectorStorePort
-from domain.common.ports.document_ingestion_port import DocumentIngestionPort
-
 from application.dto.ingestion import IngestDocumentResult, IngestUploadedFileCommand
 from application.ingestion.upload_policy import validate_buffered_document_upload
+from domain.common.ports import AssetRepositoryPort, VectorStorePort
+from domain.common.ports.document_ingestion_port import DocumentIngestionPort
+from infrastructure.config.config import INGESTION_CONFIG
 
 from .ingest_common import finalize_ingestion_pipeline
 from .replace_document_assets import replace_document_assets_for_reingest

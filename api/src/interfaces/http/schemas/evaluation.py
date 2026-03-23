@@ -11,7 +11,6 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # --- Manual evaluation ---
 
 
@@ -169,7 +168,9 @@ class RetrievalQueryLogEntry(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    question: str | None = Field(default=None, description="Original user question (truncated at ingest).")
+    question: str | None = Field(
+        default=None, description="Original user question (truncated at ingest)."
+    )
     rewritten_query: str | None = None
     project_id: str | None = None
     user_id: str | None = None

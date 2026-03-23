@@ -7,10 +7,9 @@ Used by :class:`~infrastructure.rag.vectorstore_service.VectorStoreService`.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
-from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
 
 from infrastructure.config.config import EMBEDDINGS
 
@@ -37,7 +36,7 @@ def save_vector_store(vector_store, index_path: Path):
     vector_store.save_local(str(index_path))
 
 
-def create_or_update_vector_store(chunks: List[Document], index_path: Path):
+def create_or_update_vector_store(chunks: list[Document], index_path: Path):
     """
     Create or update a FAISS vector store while avoiding duplicate
     indexing based on doc_id metadata.
@@ -55,10 +54,7 @@ def create_or_update_vector_store(chunks: List[Document], index_path: Path):
             ids=ids,
         )
 
-    existing_doc_ids = {
-        doc.metadata.get("doc_id")
-        for doc in vector_store.docstore._dict.values()
-    }
+    existing_doc_ids = {doc.metadata.get("doc_id") for doc in vector_store.docstore._dict.values()}
 
     new_chunks = []
     new_ids = []
@@ -105,7 +101,7 @@ class FAISSVectorStoreAdapter:
     def save_vector_store(self, vector_store, index_path: Path) -> None:
         save_vector_store(vector_store, index_path)
 
-    def create_or_update_vector_store(self, chunks: List[Document], index_path: Path):
+    def create_or_update_vector_store(self, chunks: list[Document], index_path: Path):
         return create_or_update_vector_store(chunks, index_path)
 
     def delete_documents_from_vector_store(self, index_path: Path, doc_ids: list[str]):

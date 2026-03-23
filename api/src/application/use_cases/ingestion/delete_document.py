@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from application.dto.ingestion import DeleteDocumentCommand, DeleteDocumentResult
 from domain.common.ports import AssetRepositoryPort, VectorStorePort
 
-from application.dto.ingestion import DeleteDocumentCommand, DeleteDocumentResult
 from .ingest_common import resolve_project_file_path
 
 

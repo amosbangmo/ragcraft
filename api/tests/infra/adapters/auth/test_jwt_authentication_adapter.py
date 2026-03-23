@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
 
-from infrastructure.config.exceptions import ExpiredTokenError, InvalidTokenError
 from infrastructure.auth.jwt_auth_settings import JwtAuthSettings
 from infrastructure.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
+from infrastructure.config.exceptions import ExpiredTokenError, InvalidTokenError
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def test_issue_and_authenticate_round_trip(adapter: JwtAuthenticationAdapter) ->
 
 def test_authenticate_expired_token(adapter: JwtAuthenticationAdapter) -> None:
     secret = os.environ["RAGCRAFT_JWT_SECRET"]
-    past = int((datetime.now(timezone.utc) - timedelta(hours=1)).timestamp())
+    past = int((datetime.now(UTC) - timedelta(hours=1)).timestamp())
     payload = {"sub": "u", "user_id": "u", "iat": past - 3600, "exp": past}
     tok = jwt.encode(payload, secret, algorithm="HS256")
     with pytest.raises(ExpiredTokenError):

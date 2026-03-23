@@ -40,9 +40,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
                 "confidence": {"answer_f1": 0.8},
             },
             "highlights": {
-                "strong_positive": [
-                    {"metric_a": "confidence", "metric_b": "answer_f1", "r": 0.8}
-                ],
+                "strong_positive": [{"metric_a": "confidence", "metric_b": "answer_f1", "r": 0.8}],
                 "strong_negative": [],
             },
             "sample_size": 5,
@@ -111,9 +109,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
         ed._histogram_bar_chart("L", pd.Series([float("nan")]))
         ed._histogram_bar_chart("L", pd.Series([0.1, 0.2, 0.3]))
         ed.render_overview_insight_charts([])
-        ed.render_overview_insight_charts(
-            [{"groundedness_score": 0.5, "recall_at_k": 0.25}]
-        )
+        ed.render_overview_insight_charts([{"groundedness_score": 0.5, "recall_at_k": 0.25}])
 
 
 if __name__ == "__main__":

@@ -6,10 +6,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.view_models import ManualEvaluationResult
-from components.shared.metric_help import render_metric_with_help
 from components.shared.manual_evaluation import render_manual_evaluation_result
+from components.shared.metric_help import render_metric_with_help
 from components.shared.section_card import inject_section_card_styles, section_card
+from services.view_models import ManualEvaluationResult
 
 
 def render_evaluation_question_detail(result: ManualEvaluationResult) -> None:
@@ -370,7 +370,9 @@ def render_benchmark_row_detail(row: dict, *, include_full_row_json_expander: bo
         raw_expl = row.get("explanations")
         raw_sugg = row.get("suggestions")
         if raw_expl is None and raw_sugg is None:
-            st.caption("Explainability hints are not stored on this row — run a fresh dataset evaluation.")
+            st.caption(
+                "Explainability hints are not stored on this row — run a fresh dataset evaluation."
+            )
         else:
             explanations = list(raw_expl) if isinstance(raw_expl, list) else []
             suggestions = list(raw_sugg) if isinstance(raw_sugg, list) else []

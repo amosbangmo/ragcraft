@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from domain.evaluation.qa_question_key import normalized_qa_question_key
-from domain.common.ports import QADatasetEntriesPort
-from domain.common.ports.qa_dataset_generation_port import QaDatasetGenerationPort
-
-from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
-from .delete_all_qa_dataset_entries import DeleteAllQaDatasetEntriesUseCase
 from application.dto.evaluation import (
     CreateQaDatasetEntryCommand,
     DeleteAllQaDatasetEntriesCommand,
     GenerateQaDatasetCommand,
     GenerateQaDatasetResult,
 )
+from domain.common.ports import QADatasetEntriesPort
+from domain.common.ports.qa_dataset_generation_port import QaDatasetGenerationPort
+from domain.evaluation.qa_question_key import normalized_qa_question_key
+
+from .create_qa_dataset_entry import CreateQaDatasetEntryUseCase
+from .delete_all_qa_dataset_entries import DeleteAllQaDatasetEntriesUseCase
 
 
 class GenerateQaDatasetUseCase:

@@ -62,12 +62,7 @@ class AutoDebugService:
 
         conf = summary.get("avg_confidence")
         f1 = summary.get("avg_answer_f1")
-        if (
-            _is_score(conf)
-            and _is_score(f1)
-            and float(conf) > 0.7
-            and float(f1) < 0.5
-        ):
+        if _is_score(conf) and _is_score(f1) and float(conf) > 0.7 and float(f1) < 0.5:
             add(
                 "Fix overconfidence",
                 "Model confidence is high despite low correctness. Recalibrate confidence scoring or thresholds.",

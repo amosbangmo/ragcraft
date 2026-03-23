@@ -20,9 +20,7 @@ class TestProjectService(unittest.TestCase):
             names = svc.list_projects("user1")
             self.assertEqual(names, ["proj-a", "proj-b"])
 
-            doc_path = (
-                root / "users" / "user1" / "projects" / "proj-a" / "readme.txt"
-            )
+            doc_path = root / "users" / "user1" / "projects" / "proj-a" / "readme.txt"
             doc_path.parent.mkdir(parents=True, exist_ok=True)
             doc_path.write_text("hi", encoding="utf-8")
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from application.dto.evaluation import ListRetrievalQueryLogsQuery
 from domain.common.ports import QueryLogPort
@@ -17,8 +17,8 @@ def _parse_iso_utc(value: str | None) -> datetime | None:
     except ValueError:
         return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
 class ListRetrievalQueryLogsUseCase:

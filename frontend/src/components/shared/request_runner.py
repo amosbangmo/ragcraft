@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import streamlit as st
 
@@ -69,9 +69,7 @@ def analyze_dataset_evaluation_session_payload(raw: Any) -> DatasetEvaluationSes
     if is_runner_error_payload(raw):
         msg = raw.get(RUNNER_ERROR_KEY)
         text = msg if isinstance(msg, str) else (str(msg) if msg is not None else "")
-        return DatasetEvaluationSessionView(
-            kind="runner_error", runner_error_message=text or None
-        )
+        return DatasetEvaluationSessionView(kind="runner_error", runner_error_message=text or None)
     if not isinstance(raw, dict) or "result" not in raw:
         return DatasetEvaluationSessionView(kind="invalid_shape")
     coerced = coerce_benchmark_result(raw.get("result"))
@@ -95,7 +93,6 @@ def read_dataset_evaluation_session_payload(
     ``result`` field; otherwise None. ``meta`` includes ``enable_query_rewrite``,
     ``enable_hybrid_retrieval``, and ``generated_at`` when present on the payload.
     """
-    from services.view_models import BenchmarkResult
 
     view = analyze_dataset_evaluation_session_payload(raw)
     if view.kind != "ok" or view.result is None:

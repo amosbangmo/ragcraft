@@ -1,4 +1,5 @@
 """API entry: python -m uvicorn api.main:app with repo root on PYTHONPATH."""
+
 from __future__ import annotations
 
 import sys

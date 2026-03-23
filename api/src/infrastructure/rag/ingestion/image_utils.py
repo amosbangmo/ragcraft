@@ -5,7 +5,6 @@ from typing import Any
 
 from PIL import Image
 
-
 SUPPORTED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"}
 
 

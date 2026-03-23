@@ -12,7 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from architecture.import_scanner import any_module_matches, imported_top_level_modules, iter_python_files
+from architecture.import_scanner import (
+    any_module_matches,
+    imported_top_level_modules,
+    iter_python_files,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 

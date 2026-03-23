@@ -174,7 +174,9 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
         expected_index_chunks = [
             SummaryRecallDocument(page_content="summary", metadata={}),
         ]
-        backend.vectorstore_service.index_documents.assert_called_once_with(project, expected_index_chunks)
+        backend.vectorstore_service.index_documents.assert_called_once_with(
+            project, expected_index_chunks
+        )
         self.assertIsNotNone(ask_result)
         self.assertTrue(ask_result.prompt_sources)
         self.assertEqual(ask_result.prompt_sources[0]["doc_id"], "doc-1")

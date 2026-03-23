@@ -34,6 +34,6 @@ def test_interfaces_http_avoids_legacy_monolith_namespaces() -> None:
         ),
         repo_root=REPO_ROOT,
     )
-    assert not violations, "interfaces/http must not depend on removed monolith namespaces.\n" + "\n".join(
-        violations
+    assert not violations, (
+        "interfaces/http must not depend on removed monolith namespaces.\n" + "\n".join(violations)
     )

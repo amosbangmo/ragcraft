@@ -3,7 +3,6 @@ import streamlit as st
 from components.shared.layout import apply_layout
 from services import streamlit_auth
 
-
 st.set_page_config(
     page_title="Login | RAGCraft",
     page_icon="🔐",
@@ -111,7 +110,9 @@ with tab_signup:
     display_name = st.text_input("Display name", key="signup_display_name")
     username = st.text_input("Username", key="signup_username")
     password = st.text_input("Password", type="password", key="signup_password")
-    confirm_password = st.text_input("Confirm password", type="password", key="signup_confirm_password")
+    confirm_password = st.text_input(
+        "Confirm password", type="password", key="signup_confirm_password"
+    )
 
     if st.button("Create account", use_container_width=True):
         success, message = streamlit_auth.register(

@@ -70,18 +70,22 @@ if "infrastructure.rag.vectorstores.faiss.vector_store" not in sys.modules:
     faiss_store_module.delete_documents_from_vector_store = _noop
     sys.modules["infrastructure.rag.vectorstores.faiss.vector_store"] = faiss_store_module
 
-from infrastructure.config.exceptions import LLMServiceError
+from application.dto.rag.recall_stages import VectorLexicalRecallBundle
+from application.orchestration.rag.summary_recall_ports import merge_summary_recall_documents
+from application.policies.pipeline_document_selection import deduplicate_summary_doc_ids
 from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
+from composition.chat_rag_wiring import (
+    ChatRagUseCases,
+    build_chat_rag_use_cases,
+    build_rag_retrieval_subgraph,
+)
+from domain.projects.project import Project
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import ContextCompressionStats, PipelineBuildResult
-from domain.projects.project import Project
-from domain.rag.query_intent import QueryIntent
 from domain.rag.prompt_source import PromptSource
+from domain.rag.query_intent import QueryIntent
 from domain.rag.summary_recall_document import SummaryRecallDocument
-from application.dto.rag.recall_stages import VectorLexicalRecallBundle
-from application.policies.pipeline_document_selection import deduplicate_summary_doc_ids
-from application.orchestration.rag.summary_recall_ports import merge_summary_recall_documents
-from composition.chat_rag_wiring import ChatRagUseCases, build_chat_rag_use_cases, build_rag_retrieval_subgraph
+from infrastructure.config.exceptions import LLMServiceError
 from infrastructure.rag.confidence_service import ConfidenceService
 
 
@@ -278,7 +282,13 @@ class TestChatRagWiringComposition(unittest.TestCase):
             SummaryRecallDocument(page_content="sum2", metadata={"doc_id": "d2"}),
         ]
         raw_assets = [
-            {"doc_id": "d1", "content_type": "text", "source_file": "f1", "raw_content": "raw", "metadata": {}}
+            {
+                "doc_id": "d1",
+                "content_type": "text",
+                "source_file": "f1",
+                "raw_content": "raw",
+                "metadata": {},
+            }
         ]
         reranked_assets = [
             {
@@ -389,7 +399,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
         project = Project(user_id="u1", project_id="p1")
         pipeline = PipelineBuildResult(
             prompt="prompt text",
-            selected_summary_docs=[SummaryRecallDocument(page_content="sum", metadata={"doc_id": "d1"})],
+            selected_summary_docs=[
+                SummaryRecallDocument(page_content="sum", metadata={"doc_id": "d1"})
+            ],
             reranked_raw_assets=[{"doc_id": "d1"}],
             prompt_sources=[{"doc_id": "d1"}],
             confidence=0.8,
@@ -413,7 +425,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
 
         with patch.object(harness.use_cases.ask_question, "_retrieval") as mock_retrieval:
             mock_retrieval.execute.return_value = pipeline
-            response = harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
+            response = harness.use_cases.ask_question.execute(
+                project=project, question="Q", chat_history=[]
+            )
 
         self.assertEqual(response.answer, "final answer")
         self.assertEqual(response.confidence, 0.8)
@@ -438,7 +452,9 @@ class TestChatRagWiringComposition(unittest.TestCase):
         with patch.object(harness.use_cases.ask_question, "_retrieval") as mock_retrieval:
             mock_retrieval.execute.return_value = pipeline
             with self.assertRaises(LLMServiceError):
-                harness.use_cases.ask_question.execute(project=project, question="Q", chat_history=[])
+                harness.use_cases.ask_question.execute(
+                    project=project, question="Q", chat_history=[]
+                )
 
     @patch("infrastructure.rag.answer_generation_service.LLM")
     def test_ask_question_emits_query_log_when_configured(self, mock_llm):

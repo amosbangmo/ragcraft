@@ -1,11 +1,11 @@
 import unittest
 
-from fixtures.benchmark_results import make_benchmark_result
 from e2e.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
     assert_benchmark_meets_thresholds,
     collect_benchmark_regression_violations,
 )
+from fixtures.benchmark_results import make_benchmark_result
 
 
 class TestBenchmarkRegressionThresholds(unittest.TestCase):

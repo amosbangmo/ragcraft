@@ -9,8 +9,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from langchain_core.documents import Document
+from support.backend_container import build_backend_container_for_tests
 
 from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.http.wire import (
@@ -24,8 +24,6 @@ from domain.rag.query_intent import QueryIntent
 from domain.rag.rag_response import RAGResponse
 from domain.rag.retrieval_strategy import RetrievalStrategy
 from domain.rag.summary_recall_document import SummaryRecallDocument
-
-from support.backend_container import build_backend_container_for_tests
 
 
 def _require_full_backend_stack() -> None:

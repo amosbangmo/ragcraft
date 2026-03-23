@@ -14,6 +14,4 @@ BENCHMARK_MARKDOWN_NOTE_PIPELINE_VS_JUDGE = (
     "- **`pipeline_failure_rate`** counts only rows where the answer pipeline did not complete "
     "(distinct from judge failures)."
 )
-BENCHMARK_MARKDOWN_NOTE_JUDGE_ROW_FIELDS = (
-    "- Per-row judge fields may be blank / `None` when the judge failed for that entry — that is not a score of zero."
-)
+BENCHMARK_MARKDOWN_NOTE_JUDGE_ROW_FIELDS = "- Per-row judge fields may be blank / `None` when the judge failed for that entry — that is not a score of zero."

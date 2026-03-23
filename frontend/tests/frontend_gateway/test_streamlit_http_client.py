@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkSummary
+from domain.evaluation.benchmark_result import BenchmarkResult
 from services.http_client import HttpBackendClient
 
 

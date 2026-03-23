@@ -4,7 +4,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from application.dto.projects import ProjectDocumentDetailRow
-from application.use_cases.projects.get_project_document_details import GetProjectDocumentDetailsUseCase
+from application.use_cases.projects.get_project_document_details import (
+    GetProjectDocumentDetailsUseCase,
+)
 
 
 def test_document_details_returns_typed_rows(tmp_path: Path) -> None:

@@ -1,4 +1,5 @@
 import streamlit as st
+
 from components.shared.layout import apply_layout
 from utils.guards import require_authentication
 

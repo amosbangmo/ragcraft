@@ -63,12 +63,32 @@ class TestDocStoreService(unittest.TestCase):
 
         method_calls = [
             ("get_assets_by_doc_ids", (["d1", "d2"],), {}),
-            ("get_doc_ids_for_source_file", (), {"user_id": "u1", "project_id": "p1", "source_file": "f"}),
-            ("count_assets_for_source_file", (), {"user_id": "u1", "project_id": "p1", "source_file": "f"}),
-            ("get_asset_stats_for_source_file", (), {"user_id": "u1", "project_id": "p1", "source_file": "f"}),
-            ("list_assets_for_source_file", (), {"user_id": "u1", "project_id": "p1", "source_file": "f"}),
+            (
+                "get_doc_ids_for_source_file",
+                (),
+                {"user_id": "u1", "project_id": "p1", "source_file": "f"},
+            ),
+            (
+                "count_assets_for_source_file",
+                (),
+                {"user_id": "u1", "project_id": "p1", "source_file": "f"},
+            ),
+            (
+                "get_asset_stats_for_source_file",
+                (),
+                {"user_id": "u1", "project_id": "p1", "source_file": "f"},
+            ),
+            (
+                "list_assets_for_source_file",
+                (),
+                {"user_id": "u1", "project_id": "p1", "source_file": "f"},
+            ),
             ("list_assets_for_project", (), {"user_id": "u1", "project_id": "p1"}),
-            ("delete_assets_for_source_file", (), {"user_id": "u1", "project_id": "p1", "source_file": "f"}),
+            (
+                "delete_assets_for_source_file",
+                (),
+                {"user_id": "u1", "project_id": "p1", "source_file": "f"},
+            ),
         ]
 
         for method_name, args, kwargs in method_calls:

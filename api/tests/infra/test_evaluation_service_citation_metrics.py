@@ -1,11 +1,11 @@
 import unittest
 from dataclasses import replace
 
-from domain.evaluation.llm_judge_result import LLMJudgeResult
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 from composition.evaluation_wiring import build_evaluation_service, default_evaluation_wiring_parts
+from domain.evaluation.llm_judge_result import LLMJudgeResult
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 
 
 class _StubJudge:

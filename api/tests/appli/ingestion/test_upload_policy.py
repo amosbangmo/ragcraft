@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from application.ingestion.upload_policy import (
+    normalize_source_filename,
+    validate_buffered_document_upload,
+)
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
-from application.ingestion.upload_policy import normalize_source_filename, validate_buffered_document_upload
 
 
 def test_normalize_strips_path_segments() -> None:

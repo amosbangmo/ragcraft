@@ -6,10 +6,12 @@ from domain.projects.project import Project
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings import RetrievalSettings
 from domain.rag.summary_recall_document import SummaryRecallDocument
-from infrastructure.rag.summary_recall_document_adapter import summary_recall_document_from_langchain
 from infrastructure.rag.docstore_service import DocStoreService
 from infrastructure.rag.hybrid_retrieval_service import HybridRetrievalService
 from infrastructure.rag.query_rewrite_service import QueryRewriteService
+from infrastructure.rag.summary_recall_document_adapter import (
+    summary_recall_document_from_langchain,
+)
 from infrastructure.rag.vectorstore_service import VectorStoreService
 
 

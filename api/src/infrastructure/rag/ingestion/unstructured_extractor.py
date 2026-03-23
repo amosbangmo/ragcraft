@@ -74,6 +74,7 @@ def _load_partition_pptx() -> Callable[..., Any]:
 # Small helpers
 # ---------------------------------------------------------------------
 
+
 def _metadata_of(element):
     """Safely access the metadata attribute of an Unstructured element."""
     return getattr(element, "metadata", None)
@@ -99,6 +100,7 @@ def _page_number_of(element) -> int | None:
 # OCR fallback detection
 # ---------------------------------------------------------------------
 
+
 def _is_tesseract_missing_error(exc: Exception) -> bool:
     """
     Detect if the exception is caused by a missing Tesseract installation.
@@ -110,6 +112,7 @@ def _is_tesseract_missing_error(exc: Exception) -> bool:
 # ---------------------------------------------------------------------
 # Runtime metadata for traceability
 # ---------------------------------------------------------------------
+
 
 def _set_runtime_element_metadata(element, element_index: int) -> None:
     """
@@ -148,6 +151,7 @@ def _get_runtime_element_index(element) -> int | None:
 # Element classification
 # ---------------------------------------------------------------------
 
+
 def _is_textual_element(element) -> bool:
     """
     Determine whether an element should be treated as textual content.
@@ -167,6 +171,7 @@ def _is_textual_element(element) -> bool:
 # ---------------------------------------------------------------------
 # Caption inference
 # ---------------------------------------------------------------------
+
 
 def _infer_nearby_title(elements: list, element_index: int) -> str | None:
     """
@@ -188,10 +193,7 @@ def _infer_nearby_title(elements: list, element_index: int) -> str | None:
         page = _page_number_of(element)
 
         same_page = page == current_page
-        adjacent_page = (
-            current_page is not None
-            and page in {current_page - 1, current_page + 1}
-        )
+        adjacent_page = current_page is not None and page in {current_page - 1, current_page + 1}
 
         if not same_page and not (allow_adjacent_page and adjacent_page):
             return None
@@ -283,6 +285,7 @@ def _surrounding_text_snippet(
 # PDF partition with OCR fallback
 # ---------------------------------------------------------------------
 
+
 def _partition_pdf_with_fallback(file_path: str):
     """
     Extract PDF elements using the preferred strategy.
@@ -302,7 +305,6 @@ def _partition_pdf_with_fallback(file_path: str):
         return elements, True
 
     except Exception as exc:
-
         if not _is_tesseract_missing_error(exc):
             raise
 
@@ -326,6 +328,7 @@ def _partition_pdf_with_fallback(file_path: str):
 # ---------------------------------------------------------------------
 # Asset builders
 # ---------------------------------------------------------------------
+
 
 def _infer_chunk_title_from_orig_elements(orig_elements) -> str | None:
     for el in orig_elements or []:
@@ -439,6 +442,7 @@ def _build_image_asset(elements, element_index, element, source_file, image_bloc
 # Core extraction logic
 # ---------------------------------------------------------------------
 
+
 def _flush_text_run(extracted, text_run, source_file):
     """
     Convert a sequence of textual elements into chunked text assets.
@@ -473,7 +477,6 @@ def _extract_partitioned_elements(elements, source_file, *, image_block_extracti
     text_run = []
 
     for index, element in enumerate(elements):
-
         _set_runtime_element_metadata(element, index)
 
         category = _category_of(element)
@@ -519,6 +522,7 @@ def _extract_partitioned_elements(elements, source_file, *, image_block_extracti
 # File type extraction
 # ---------------------------------------------------------------------
 
+
 def _extract_pdf_elements(file_path: str, source_file: str) -> list[dict]:
 
     elements, image_enabled = _partition_pdf_with_fallback(file_path)
@@ -554,6 +558,7 @@ def _extract_docx_or_pptx_text_and_tables(file_path: str, source_file: str) -> l
 # Embedded image fallback (DOCX / PPTX)
 # ---------------------------------------------------------------------
 
+
 def _extract_embedded_images_from_zip(
     file_path: str,
     source_file: str,
@@ -565,7 +570,6 @@ def _extract_embedded_images_from_zip(
 
     try:
         with zipfile.ZipFile(file_path, "r") as archive:
-
             media_files = [
                 name
                 for name in archive.namelist()
@@ -573,7 +577,6 @@ def _extract_embedded_images_from_zip(
             ]
 
             for image_index, media_name in enumerate(media_files, start=1):
-
                 try:
                     image_bytes = archive.read(media_name)
                     image_base64 = bytes_to_base64(image_bytes)
@@ -606,6 +609,7 @@ def _extract_embedded_images_from_zip(
 # ---------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------
+
 
 def extract_elements(
     file_path: str,

@@ -1,10 +1,16 @@
 import unittest
 
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary, coerce_benchmark_result
-from fixtures.benchmark_results import make_benchmark_result
 from e2e.benchmark_regression_checks import (
     BenchmarkRegressionThresholds,
     collect_benchmark_regression_violations,
+)
+from fixtures.benchmark_results import make_benchmark_result
+
+from domain.evaluation.benchmark_result import (
+    BenchmarkResult,
+    BenchmarkRow,
+    BenchmarkSummary,
+    coerce_benchmark_result,
 )
 
 
@@ -50,7 +56,9 @@ class TestBenchmarkRegressionSummaryParsing(unittest.TestCase):
 
 class TestBenchmarkResultSessionRoundTrip(unittest.TestCase):
     def test_from_plain_dict_round_trips_to_dict(self):
-        row = BenchmarkRow(entry_id=7, question="What?", data={"confidence": 0.5, "recall_at_k": 0.8})
+        row = BenchmarkRow(
+            entry_id=7, question="What?", data={"confidence": 0.5, "recall_at_k": 0.8}
+        )
         correlations = {"available": True, "pairwise": {"confidence_vs_latency_ms": 0.25}}
         failures = {"failed_row_count": 1, "counts": {"retrieval_failure": 1}}
         multimodal_metrics = {"table_usage_rate": 0.25, "has_multimodal_assets": True}

@@ -3,9 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from application.use_cases.chat.ask_question import AskQuestionUseCase
+from domain.projects.project import Project
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 

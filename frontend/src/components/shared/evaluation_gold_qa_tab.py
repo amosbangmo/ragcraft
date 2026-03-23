@@ -8,15 +8,19 @@ from typing import Any, cast
 
 import streamlit as st
 
+from components.shared.evaluation_csv_utils import parse_evaluation_csv_list
+from components.shared.metric_help import render_metric_with_help
+from components.shared.request_runner import (
+    is_request_running,
+    render_result_payload,
+    run_request_action,
+)
 from services.protocol import BackendClient
 from services.ui_errors import (
     DocStoreError,
     LLMServiceError,
     get_user_error_message,
 )
-from components.shared.evaluation_csv_utils import parse_evaluation_csv_list
-from components.shared.metric_help import render_metric_with_help
-from components.shared.request_runner import is_request_running, render_result_payload, run_request_action
 
 
 def _render_dataset_generation_result(payload: dict[str, Any]) -> None:
@@ -139,7 +143,9 @@ def render_evaluation_gold_qa_tab(payload: dict[str, Any]) -> None:
                 return get_user_error_message(
                     exc, "The language model failed while generating QA dataset entries."
                 )
-            return get_user_error_message(exc, f"Unexpected error while generating QA dataset entries: {exc}")
+            return get_user_error_message(
+                exc, f"Unexpected error while generating QA dataset entries: {exc}"
+            )
 
         generate_clicked = st.button(
             "Generate QA dataset entries",

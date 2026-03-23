@@ -5,6 +5,20 @@ targets ``POST /chat/ask`` on the FastAPI app (``RAGCRAFT_BACKEND_CLIENT=http``)
 
 import streamlit as st
 
+from components.shared.confidence_display import confidence_band
+from components.shared.layout import apply_layout
+from components.shared.page_header import render_page_header
+from components.shared.prompt_sources import render_prompt_sources
+from components.shared.raw_assets import render_raw_assets
+from components.shared.request_runner import (
+    is_request_running,
+    render_result_payload,
+    run_request_action,
+)
+from components.shared.retrieval_settings_panel import (
+    render_retrieval_settings_panel,
+    retrieval_settings_to_request_dict,
+)
 from infrastructure.auth.guards import require_authentication
 from services.protocol import BackendClient
 from services.ui_errors import (
@@ -13,21 +27,6 @@ from services.ui_errors import (
     VectorStoreError,
     get_user_error_message,
 )
-from components.shared.layout import apply_layout
-from components.shared.page_header import render_page_header
-from components.shared.raw_assets import render_raw_assets
-from components.shared.request_runner import (
-    is_request_running,
-    render_result_payload,
-    run_request_action,
-)
-from components.shared.confidence_display import confidence_band
-from components.shared.retrieval_settings_panel import (
-    render_retrieval_settings_panel,
-    retrieval_settings_to_request_dict,
-)
-from components.shared.prompt_sources import render_prompt_sources
-
 
 st.set_page_config(
     page_title="Chat | RAGCraft",
@@ -171,6 +170,10 @@ with st.chat_message("assistant"):
     except DocStoreError as exc:
         st.error(get_user_error_message(exc, "Unable to retrieve supporting assets from SQLite."))
     except LLMServiceError as exc:
-        st.error(get_user_error_message(exc, "The language model failed while generating the answer."))
+        st.error(
+            get_user_error_message(exc, "The language model failed while generating the answer.")
+        )
     except Exception as exc:
-        st.error(get_user_error_message(exc, f"Unexpected error while answering the question: {exc}"))
+        st.error(
+            get_user_error_message(exc, f"Unexpected error while answering the question: {exc}")
+        )

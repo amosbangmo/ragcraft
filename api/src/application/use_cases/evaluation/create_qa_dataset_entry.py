@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from application.dto.evaluation import CreateQaDatasetEntryCommand
 from domain.common.ports import QADatasetEntriesPort
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from application.dto.evaluation import CreateQaDatasetEntryCommand
 
 
 class CreateQaDatasetEntryUseCase:

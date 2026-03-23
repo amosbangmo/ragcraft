@@ -67,7 +67,9 @@ class SectionRetrievalService:
 
         neighbor_window = max(0, int(getattr(config, "section_expansion_neighbor_window", 2)))
         max_per_section = max(1, int(getattr(config, "section_expansion_max_per_section", 12)))
-        global_max = max(len(retrieved_assets), int(getattr(config, "section_expansion_global_max", 64)))
+        global_max = max(
+            len(retrieved_assets), int(getattr(config, "section_expansion_global_max", 64))
+        )
 
         by_id: dict[str, dict] = {}
         for a in all_assets:
@@ -92,9 +94,7 @@ class SectionRetrievalService:
             k = anchor_cap_key(a)
             key_counts[k] = key_counts.get(k, 0) + 1
 
-        seeds_by_id: dict[str, dict] = {
-            str(s["doc_id"]): s for s in pool if s.get("doc_id")
-        }
+        seeds_by_id: dict[str, dict] = {str(s["doc_id"]): s for s in pool if s.get("doc_id")}
 
         pair_scores: list[tuple[int, str, str, dict]] = []
         for seed in pool:

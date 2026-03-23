@@ -2,11 +2,11 @@ import unittest
 
 import pandas as pd
 
-from infrastructure.evaluation.benchmark_comparison_service import (
-    BenchmarkComparisonService,
-    LOWER_IS_BETTER_METRICS,
-)
 from components.shared import evaluation_dashboard as ed
+from infrastructure.evaluation.benchmark_comparison_service import (
+    LOWER_IS_BETTER_METRICS,
+    BenchmarkComparisonService,
+)
 
 
 class TestEvaluationDashboardCoercions(unittest.TestCase):

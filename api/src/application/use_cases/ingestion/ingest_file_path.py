@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from application.dto.ingestion import IngestDocumentResult, IngestFilePathCommand
 from domain.common.ports import AssetRepositoryPort, VectorStorePort
 from domain.common.ports.document_ingestion_port import DocumentIngestionPort
-
-from application.dto.ingestion import IngestDocumentResult, IngestFilePathCommand
 
 from .ingest_common import (
     default_empty_replacement_info,

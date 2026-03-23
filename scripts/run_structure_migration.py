@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run from repository root: python scripts/run_structure_migration.py"""
+
 from __future__ import annotations
 
 import sys

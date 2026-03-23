@@ -1,5 +1,7 @@
-from infrastructure.persistence.sqlite.asset_repository import SQLiteAssetRepository as SQLiteDocStore
 from infrastructure.config.exceptions import DocStoreError
+from infrastructure.persistence.sqlite.asset_repository import (
+    SQLiteAssetRepository as SQLiteDocStore,
+)
 
 
 class DocStoreService:

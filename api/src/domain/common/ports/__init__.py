@@ -5,8 +5,6 @@ Concrete types live in feature packages (``documents``, ``retrieval``, ``evaluat
 this package provides a single import path for composition roots and use cases.
 """
 
-from domain.projects.documents.asset_repository_port import AssetRepositoryPort
-from domain.evaluation.qa_dataset_repository_port import QADatasetRepositoryPort
 from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
 from domain.common.ports.answer_generation_port import AnswerGenerationPort, GenerationPort
 from domain.common.ports.authentication_port import AuthenticationPort
@@ -31,9 +29,11 @@ from domain.common.ports.retrieval_port import RetrievalPort
 from domain.common.ports.retrieval_preset_merge_port import RetrievalPresetMergePort
 from domain.common.ports.retrieval_settings_resolution_port import RetrievalSettingsResolutionPort
 from domain.common.ports.user_repository_port import UserRepositoryPort
-from domain.rag.retrieval.vector_store_port import VectorStorePort
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from domain.common.shared.query_log_port import QueryLogPersistencePort
+from domain.evaluation.qa_dataset_repository_port import QADatasetRepositoryPort
+from domain.projects.documents.asset_repository_port import AssetRepositoryPort
+from domain.rag.retrieval.vector_store_port import VectorStorePort
 
 __all__ = [
     "AccessTokenIssuerPort",

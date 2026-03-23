@@ -35,9 +35,10 @@ if "infrastructure.rag.vectorstores.faiss.vector_store" not in sys.modules:
     sys.modules["infrastructure.rag.vectorstores.faiss.vector_store"] = faiss_store_module
 
 from langchain_core.documents import Document
-from infrastructure.config.exceptions import VectorStoreError
+
 from domain.projects.project import Project
 from domain.rag.summary_recall_document import SummaryRecallDocument
+from infrastructure.config.exceptions import VectorStoreError
 from infrastructure.persistence.caching.process_project_chain_cache import ProcessProjectChainCache
 from infrastructure.rag.vectorstore_service import VectorStoreService
 
@@ -90,7 +91,9 @@ class TestVectorStoreService(unittest.TestCase):
 
     @patch("infrastructure.rag.vectorstore_service.save_vector_store")
     @patch("infrastructure.rag.vectorstore_service.create_or_update_vector_store")
-    def test_index_documents_saves_vector_store_when_created(self, mock_create_or_update, mock_save):
+    def test_index_documents_saves_vector_store_when_created(
+        self, mock_create_or_update, mock_save
+    ):
         chunks = [SummaryRecallDocument(page_content="chunk", metadata={"doc_id": "d1"})]
         vector_store = MagicMock()
         mock_create_or_update.return_value = vector_store

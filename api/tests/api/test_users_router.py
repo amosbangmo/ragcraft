@@ -7,11 +7,11 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from api.bearer_auth import bearer_headers
 
+from api.bearer_auth import bearer_headers
+from infrastructure.auth.password_utils import hash_password
 from interfaces.http.dependencies import get_user_repository
 from interfaces.http.main import create_app
-from infrastructure.auth.password_utils import hash_password
 
 
 def _hdr(uid: str = "u1") -> dict[str, str]:
@@ -40,7 +40,9 @@ def _sample_row(
 class FakeUserRepository:
     """Minimal stand-in for :class:`~infrastructure.auth.user_repository.UserRepository`."""
 
-    def __init__(self, row: dict[str, Any] | None, *, username_conflict: dict[str, Any] | None = None):
+    def __init__(
+        self, row: dict[str, Any] | None, *, username_conflict: dict[str, Any] | None = None
+    ):
         self._row = dict(row) if row else None
         self.username_conflict = username_conflict
         self.last_avatar_path: str | None | object = object()

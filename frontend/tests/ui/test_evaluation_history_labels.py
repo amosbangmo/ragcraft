@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from components.shared.evaluation_history_labels import (
     build_benchmark_history_entry_label,
@@ -9,7 +9,7 @@ from components.shared.evaluation_history_labels import (
 
 class TestBuildBenchmarkHistoryEntryLabel(unittest.TestCase):
     def test_datetime_run_id_and_settings(self) -> None:
-        dt = datetime(2025, 3, 1, 14, 30, 0, tzinfo=timezone.utc)
+        dt = datetime(2025, 3, 1, 14, 30, 0, tzinfo=UTC)
         lab = build_benchmark_history_entry_label(
             generated_at=dt,
             run_id="abcdef123456",

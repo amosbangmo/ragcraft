@@ -9,18 +9,20 @@ from urllib.parse import quote
 
 import httpx
 
-from application.dto.settings import UpdateProjectRetrievalSettingsCommand
+from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
+from application.dto.settings import (
+    EffectiveRetrievalSettingsView,
+    UpdateProjectRetrievalSettingsCommand,
+)
 from domain.evaluation.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from domain.evaluation.manual_evaluation_result import manual_evaluation_result_from_plain_dict
-from domain.rag.pipeline_latency import PipelineLatency
-from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.projects.project import Project
 from domain.projects.project_settings import ProjectSettings
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.rag.pipeline_latency import PipelineLatency
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_response import RAGResponse
 from domain.rag.retrieval_filters import RetrievalFilters
-from application.dto.settings import EffectiveRetrievalSettingsView
-from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
 from services.http_payloads import (
     benchmark_export_artifacts_from_api_dict,
     delete_document_result_from_api_dict,
@@ -237,7 +239,9 @@ class HttpBackendClient:
         return self.get_project(user_id, project_id)
 
     def get_project(self, user_id: str, project_id: str) -> Any:
-        data = self._t.request_json("GET", f"/projects/{quote(project_id)}", bearer_token=self._bearer())
+        data = self._t.request_json(
+            "GET", f"/projects/{quote(project_id)}", bearer_token=self._bearer()
+        )
         return Project(user_id=str(data["user_id"]), project_id=str(data["project_id"]))
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
@@ -338,7 +342,9 @@ class HttpBackendClient:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        data = self._t.request_json("POST", "/chat/ask", bearer_token=self._bearer(), json_body=body)
+        data = self._t.request_json(
+            "POST", "/chat/ask", bearer_token=self._bearer(), json_body=body
+        )
         if data.get("status") == "no_pipeline":
             return None
         lat_raw = data.get("latency")
@@ -435,7 +441,9 @@ class HttpBackendClient:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        data = self._t.request_json("POST", "/chat/pipeline/inspect", bearer_token=self._bearer(), json_body=body)
+        data = self._t.request_json(
+            "POST", "/chat/pipeline/inspect", bearer_token=self._bearer(), json_body=body
+        )
         if data.get("status") != "ok":
             return None
         pl = data.get("pipeline")
@@ -526,7 +534,11 @@ class HttpBackendClient:
     ) -> Any:
         ga: str | None = None
         if generated_at is not None:
-            ga = generated_at.isoformat() if hasattr(generated_at, "isoformat") else str(generated_at)
+            ga = (
+                generated_at.isoformat()
+                if hasattr(generated_at, "isoformat")
+                else str(generated_at)
+            )
         data = self._t.request_json(
             "POST",
             "/evaluation/export/benchmark",

@@ -8,9 +8,6 @@ from typing import Any, cast
 
 import streamlit as st
 
-from services.protocol import BackendClient
-from services.ui_errors import map_evaluation_flow_exception
-from services.view_models import ManualEvaluationResult, is_manual_evaluation_result_like
 from components.shared.evaluation_csv_utils import parse_evaluation_csv_list
 from components.shared.manual_evaluation import render_manual_evaluation_result
 from components.shared.raw_assets import render_raw_assets
@@ -22,6 +19,9 @@ from components.shared.request_runner import (
     render_result_payload,
     run_request_action,
 )
+from services.protocol import BackendClient
+from services.ui_errors import map_evaluation_flow_exception
+from services.view_models import ManualEvaluationResult, is_manual_evaluation_result_like
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:

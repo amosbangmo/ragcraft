@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from application.orchestration.rag.ports import PipelineAssemblyPort, SummaryRecallStagePort
-from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from application.orchestration.rag.summary_recall_from_request import (
     run_summary_recall_from_chat_request,
 )
-from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.retrieval_filters import RetrievalFilters
+from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 
 def run_recall_then_assemble_pipeline(

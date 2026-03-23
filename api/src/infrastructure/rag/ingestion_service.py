@@ -3,18 +3,18 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
+from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from domain.projects.project import Project
 from infrastructure.config.config import INGESTION_CONFIG
 from infrastructure.config.exceptions import (
     DocumentExtractionError,
     LLMServiceError,
     OCRDependencyError,
 )
-from domain.projects.buffered_document_upload import BufferedDocumentUpload
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.projects.project import Project
 from infrastructure.rag.ingestion.loader import save_uploaded_file
-from infrastructure.rag.ingestion.unstructured_extractor import extract_elements
 from infrastructure.rag.ingestion.summarizer import ElementSummarizer
+from infrastructure.rag.ingestion.unstructured_extractor import extract_elements
 from infrastructure.rag.table_parsing_service import TableParsingService
 
 
@@ -131,7 +131,7 @@ class IngestionService:
                     parsed_table = self.table_parser.parse(raw_content)
                 except Exception:
                     parsed_table = {"headers": [], "rows": []}
-                if (parsed_table.get("rows") or parsed_table.get("headers")):
+                if parsed_table.get("rows") or parsed_table.get("headers"):
                     metadata["structured_table"] = parsed_table
 
             if content_type == "image":

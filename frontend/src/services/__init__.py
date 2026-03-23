@@ -1,11 +1,3 @@
-"""
-Frontend boundary: protocol, HTTP and in-process clients, Streamlit settings.
-
-Exports are loaded lazily (PEP 562) so ``import services.<submodule>`` does not
-eagerly import HTTP or in-process backend clients unless those symbols are requested. The default
-Streamlit mode is API-first (``RAGCRAFT_BACKEND_CLIENT=http``).
-"""
-
 from __future__ import annotations
 
 __all__ = [

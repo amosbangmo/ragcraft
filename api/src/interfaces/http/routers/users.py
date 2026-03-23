@@ -11,6 +11,21 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from application.dto.auth import (
+    ChangeUserPasswordCommand,
+    DeleteUserAccountCommand,
+    GetUserProfileCommand,
+    RemoveUserAvatarCommand,
+    UpdateUserProfileCommand,
+    UploadUserAvatarCommand,
+)
+from application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
+from application.use_cases.users.delete_user_account import DeleteUserAccountUseCase
+from application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
+from application.use_cases.users.remove_user_avatar import RemoveUserAvatarUseCase
+from application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
+from application.use_cases.users.upload_user_avatar import UploadUserAvatarUseCase
+from domain.auth.authenticated_principal import AuthenticatedPrincipal
 from interfaces.http.dependencies import (
     get_authenticated_principal,
     get_change_user_password_use_case,
@@ -34,28 +49,17 @@ from interfaces.http.upload_adapter import (
     StarletteUploadTooLargeError,
     read_buffered_avatar_upload,
 )
-from domain.auth.authenticated_principal import AuthenticatedPrincipal
-from application.dto.auth import (
-    ChangeUserPasswordCommand,
-    DeleteUserAccountCommand,
-    GetUserProfileCommand,
-    RemoveUserAvatarCommand,
-    UpdateUserProfileCommand,
-    UploadUserAvatarCommand,
-)
-from application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
-from application.use_cases.users.delete_user_account import DeleteUserAccountUseCase
-from application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
-from application.use_cases.users.remove_user_avatar import RemoveUserAvatarUseCase
-from application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
-from application.use_cases.users.upload_user_avatar import UploadUserAvatarUseCase
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 PrincipalDep = Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)]
-GetProfileUCDep = Annotated[GetCurrentUserProfileUseCase, Depends(get_get_current_user_profile_use_case)]
+GetProfileUCDep = Annotated[
+    GetCurrentUserProfileUseCase, Depends(get_get_current_user_profile_use_case)
+]
 UpdateProfileUCDep = Annotated[UpdateUserProfileUseCase, Depends(get_update_user_profile_use_case)]
-ChangePasswordUCDep = Annotated[ChangeUserPasswordUseCase, Depends(get_change_user_password_use_case)]
+ChangePasswordUCDep = Annotated[
+    ChangeUserPasswordUseCase, Depends(get_change_user_password_use_case)
+]
 UploadAvatarUCDep = Annotated[UploadUserAvatarUseCase, Depends(get_upload_user_avatar_use_case)]
 RemoveAvatarUCDep = Annotated[RemoveUserAvatarUseCase, Depends(get_remove_user_avatar_use_case)]
 DeleteAccountUCDep = Annotated[DeleteUserAccountUseCase, Depends(get_delete_user_account_use_case)]
@@ -67,7 +71,9 @@ def get_me(principal: PrincipalDep, use_case: GetProfileUCDep) -> UserMeResponse
     return user_profile_summary_to_me(result.user)
 
 
-@router.patch("/me", response_model=ProfileUpdateResponse, summary="Update username and display name")
+@router.patch(
+    "/me", response_model=ProfileUpdateResponse, summary="Update username and display name"
+)
 def patch_me(
     body: ProfileUpdateRequest,
     principal: PrincipalDep,

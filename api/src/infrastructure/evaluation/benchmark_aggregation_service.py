@@ -33,7 +33,9 @@ class BenchmarkAggregationService:
             "avg_prompt_doc_id_precision": mean_round(acc.prompt_doc_id_precision_values, 2),
             "avg_prompt_doc_id_recall": mean_round(acc.prompt_doc_id_recall_values, 2),
             "avg_prompt_doc_id_f1": mean_round(acc.prompt_doc_id_f1_values, 2),
-            "prompt_doc_id_hit_rate": rate(acc.prompt_doc_id_hits, acc.entries_with_expected_doc_ids),
+            "prompt_doc_id_hit_rate": rate(
+                acc.prompt_doc_id_hits, acc.entries_with_expected_doc_ids
+            ),
             "avg_citation_doc_id_precision": mean_round(acc.citation_doc_id_precision_values, 2),
             "avg_citation_doc_id_recall": mean_round(acc.citation_doc_id_recall_values, 2),
             "avg_citation_doc_id_f1": mean_round(acc.citation_doc_id_f1_values, 2),

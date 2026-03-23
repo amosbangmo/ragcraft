@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from infrastructure.auth.guards import require_authentication
 from components.shared.layout import apply_layout
 from components.shared.page_header import render_page_header
 from components.shared.retrieval_settings_panel import render_retrieval_settings_panel
+from infrastructure.auth.guards import require_authentication
 from services.protocol import BackendClient
 
 st.set_page_config(

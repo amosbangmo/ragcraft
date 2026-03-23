@@ -7,6 +7,10 @@ import pytest
 pytest.importorskip("unstructured", reason="backend composition loads ingestion adapters")
 pytest.importorskip("langchain_community", reason="backend composition loads vector store stack")
 
+from support.backend_container import build_backend_container_for_tests, noop_chain_invalidate
+
+import composition.application_container as application_container_module
+from application.services.memory_chat_transcript import MemoryChatTranscript
 from composition import (
     BackendApplicationContainer,
     BackendComposition,
@@ -14,11 +18,6 @@ from composition import (
     build_backend_application_container,
     build_backend_composition,
 )
-import composition.application_container as application_container_module
-
-from support.backend_container import build_backend_container_for_tests, noop_chain_invalidate
-
-from application.services.memory_chat_transcript import MemoryChatTranscript
 
 
 def test_build_backend_composition_returns_typed_service_graph() -> None:
@@ -63,13 +62,13 @@ def test_key_use_cases_resolve() -> None:
     except Exception as exc:  # pragma: no cover
         pytest.skip(f"Composition unavailable in this environment: {exc}")
 
-    from application.use_cases.projects.list_projects import ListProjectsUseCase
-    from application.use_cases.evaluation.list_retrieval_query_logs import (
-        ListRetrievalQueryLogsUseCase,
-    )
     from application.orchestration.evaluation.build_benchmark_export_artifacts import (
         BuildBenchmarkExportArtifactsUseCase,
     )
+    from application.use_cases.evaluation.list_retrieval_query_logs import (
+        ListRetrievalQueryLogsUseCase,
+    )
+    from application.use_cases.projects.list_projects import ListProjectsUseCase
 
     assert isinstance(container.projects_list_projects_use_case, ListProjectsUseCase)
     assert isinstance(

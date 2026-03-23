@@ -7,7 +7,22 @@ import json
 
 import streamlit as st
 
+from components.shared.confidence_display import format_confidence_with_band
+from components.shared.layout import apply_layout
+from components.shared.page_header import render_page_header
+from components.shared.request_runner import (
+    is_request_running,
+    render_result_payload,
+    run_request_action,
+)
+from infrastructure.auth.guards import require_authentication
 from services.protocol import BackendClient
+from services.ui_errors import (
+    DocStoreError,
+    LLMServiceError,
+    VectorStoreError,
+    get_user_error_message,
+)
 from services.view_models import (
     PRESET_UI_LABELS,
     PipelineBuildResult,
@@ -15,22 +30,6 @@ from services.view_models import (
     RetrievalSettings,
     parse_retrieval_preset,
 )
-from infrastructure.auth.guards import require_authentication
-from services.ui_errors import (
-    DocStoreError,
-    LLMServiceError,
-    VectorStoreError,
-    get_user_error_message,
-)
-from components.shared.confidence_display import format_confidence_with_band
-from components.shared.layout import apply_layout
-from components.shared.page_header import render_page_header
-from components.shared.request_runner import (
-    is_request_running,
-    run_request_action,
-    render_result_payload,
-)
-
 
 st.set_page_config(
     page_title="Retrieval Inspector | RAGCraft",
@@ -256,9 +255,7 @@ rs_panel = st.session_state.get("retrieval_settings")
 if isinstance(rs_panel, RetrievalSettings):
     st.markdown("### Retrieval panel (session)")
     _pr = st.session_state.get("retrieval_preset")
-    preset_label = (
-        PRESET_UI_LABELS[parse_retrieval_preset(_pr)] if _pr is not None else "—"
-    )
+    preset_label = PRESET_UI_LABELS[parse_retrieval_preset(_pr)] if _pr is not None else "—"
     st.caption(
         f"Preset: **{preset_label}** · Query rewrite: **{'On' if rs_panel.enable_query_rewrite else 'Off'}** · "
         f"Hybrid retrieval: **{'On' if rs_panel.enable_hybrid_retrieval else 'Off'}**"
@@ -379,7 +376,9 @@ def _map_inspection_error(exc: Exception) -> str:
     if isinstance(exc, DocStoreError):
         return get_user_error_message(exc, "Unable to reload retrieved assets from SQLite.")
     if isinstance(exc, LLMServiceError):
-        return get_user_error_message(exc, "The language model failed while preparing the final prompt or answer.")
+        return get_user_error_message(
+            exc, "The language model failed while preparing the final prompt or answer."
+        )
     return get_user_error_message(exc, f"Unexpected error while inspecting retrieval: {exc}")
 
 
@@ -467,7 +466,9 @@ def _render_inspection_result(pipeline):
     with recall_cols[1]:
         st.metric("BM25 recall", len(pipeline["bm25_summary_docs"]))
     with recall_cols[2]:
-        prompt_assets = pipeline.get("prompt_context_assets") or pipeline.get("reranked_raw_assets") or []
+        prompt_assets = (
+            pipeline.get("prompt_context_assets") or pipeline.get("reranked_raw_assets") or []
+        )
         st.metric("Prompt assets", len(prompt_assets))
     with recall_cols[3]:
         st.metric(
@@ -482,8 +483,7 @@ def _render_inspection_result(pipeline):
         if mm.get(key)
     ]
     st.caption(
-        "Modalities in final prompt: "
-        + (", ".join(mm_labels) if mm_labels else "none detected")
+        "Modalities in final prompt: " + (", ".join(mm_labels) if mm_labels else "none detected")
     )
 
     se = pipeline.get("section_expansion") or {}
@@ -556,8 +556,10 @@ def _render_inspection_result(pipeline):
             title_prefix="Raw asset",
         )
         pre_pool = pipeline.get("pre_rerank_raw_assets")
-        if isinstance(pre_pool, list) and pre_pool and (
-            len(pre_pool) != len(pipeline.get("recalled_raw_assets") or [])
+        if (
+            isinstance(pre_pool, list)
+            and pre_pool
+            and (len(pre_pool) != len(pipeline.get("recalled_raw_assets") or []))
         ):
             st.markdown("#### Pre-rerank pool (after section expansion)")
             _render_raw_assets(pre_pool, title_prefix="Pool asset")

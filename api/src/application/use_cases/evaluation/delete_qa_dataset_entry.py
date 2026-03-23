@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from domain.common.ports import QADatasetEntriesPort
 from application.dto.evaluation import DeleteQaDatasetEntryCommand
+from domain.common.ports import QADatasetEntriesPort
 
 
 class DeleteQaDatasetEntryUseCase:

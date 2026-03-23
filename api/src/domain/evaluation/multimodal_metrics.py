@@ -197,7 +197,11 @@ def aggregate_multimodal_metrics(rows: list[dict[str, Any]]) -> dict[str, Any] |
 
     by_modality: dict[str, Any] = {
         "text_only": {
-            "row_count": sum(1 for r in eligible if not r.get("context_uses_table") and not r.get("context_uses_image")),
+            "row_count": sum(
+                1
+                for r in eligible
+                if not r.get("context_uses_table") and not r.get("context_uses_image")
+            ),
             "avg_answer_f1": _mean_float(text_only_f1),
             "avg_groundedness_score": _mean_float(text_only_g),
         },

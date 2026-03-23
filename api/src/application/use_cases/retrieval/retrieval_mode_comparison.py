@@ -6,8 +6,8 @@ from collections.abc import Callable
 from time import perf_counter
 from typing import Any
 
-from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 
 InspectPipelineFn = Callable[..., PipelineBuildResult | None]
 

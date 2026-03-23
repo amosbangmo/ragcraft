@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from domain.common.ports import AssetRepositoryPort, VectorStorePort
-from domain.common.ports.document_ingestion_port import DocumentIngestionPort
-
 from application.dto.ingestion import (
     IngestDocumentResult,
     IngestFilePathCommand,
     ReindexDocumentCommand,
 )
+from domain.common.ports import AssetRepositoryPort, VectorStorePort
+from domain.common.ports.document_ingestion_port import DocumentIngestionPort
+
 from .ingest_common import resolve_project_file_path
 from .ingest_file_path import IngestFilePathUseCase
 from .replace_document_assets import replace_document_assets_for_reingest

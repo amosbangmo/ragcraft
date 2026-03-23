@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from application.dto.auth import DeleteUserAccountCommand, DeleteUserAccountResult
-from infrastructure.config.exceptions import AuthCredentialsInvalidError, UserAccountNotFoundError
 from domain.common.ports.avatar_storage_port import AvatarStoragePort
 from domain.common.ports.password_hasher_port import PasswordHasherPort
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import AuthCredentialsInvalidError, UserAccountNotFoundError
 
 
 class DeleteUserAccountUseCase:
@@ -24,7 +24,9 @@ class DeleteUserAccountUseCase:
         if not user:
             raise UserAccountNotFoundError("user missing", user_message="User not found.")
 
-        if not self._password_hasher.verify_password(command.current_password, user["password_hash"]):
+        if not self._password_hasher.verify_password(
+            command.current_password, user["password_hash"]
+        ):
             raise AuthCredentialsInvalidError(
                 "wrong password for delete",
                 user_message="Current password is incorrect.",

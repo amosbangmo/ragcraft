@@ -3,8 +3,8 @@ import unittest
 from components.shared import metric_help
 from domain.evaluation import benchmark_metric_taxonomy as bmt
 from infrastructure.evaluation.benchmark_comparison_service import (
-    BenchmarkComparisonService,
     LOWER_IS_BETTER_METRICS,
+    BenchmarkComparisonService,
 )
 
 
@@ -22,9 +22,7 @@ class TestBenchmarkMetricTaxonomy(unittest.TestCase):
         self.assertEqual(missing, [])
 
     def test_lower_is_better_includes_historical_summary_keys(self) -> None:
-        historical = frozenset(
-            {"avg_latency_ms", "pipeline_failure_rate", "hallucination_rate"}
-        )
+        historical = frozenset({"avg_latency_ms", "pipeline_failure_rate", "hallucination_rate"})
         self.assertTrue(historical <= bmt.LOWER_IS_BETTER_METRIC_KEYS)
         self.assertEqual(LOWER_IS_BETTER_METRICS, bmt.LOWER_IS_BETTER_METRIC_KEYS)
 

@@ -2,21 +2,23 @@ import time
 
 from langchain_core.documents import Document
 
-from domain.projects.project import Project
 from domain.common.ports.project_chain_handle_cache_port import ProjectChainHandleCachePort
+from domain.projects.project import Project
 from domain.rag.summary_recall_document import SummaryRecallDocument
+from infrastructure.config.exceptions import VectorStoreError
+from infrastructure.persistence.caching.process_project_chain_cache import (
+    get_default_process_project_chain_cache,
+)
 from infrastructure.rag.summary_recall_document_adapter import (
     langchain_document_from_summary_recall,
     summary_recall_document_from_langchain,
 )
-from infrastructure.persistence.caching.process_project_chain_cache import get_default_process_project_chain_cache
 from infrastructure.rag.vectorstores.faiss.vector_store import (
-    load_vector_store,
-    save_vector_store,
     create_or_update_vector_store,
     delete_documents_from_vector_store,
+    load_vector_store,
+    save_vector_store,
 )
-from infrastructure.config.exceptions import VectorStoreError
 
 
 class VectorStoreService:
@@ -98,7 +100,9 @@ class VectorStoreService:
                 user_message="Unable to update the FAISS index while deleting document vectors.",
             ) from exc
 
-    def similarity_search(self, project: Project, query: str, k: int = 3) -> list[SummaryRecallDocument]:
+    def similarity_search(
+        self, project: Project, query: str, k: int = 3
+    ) -> list[SummaryRecallDocument]:
         try:
             vector_store = self.load(project)
 

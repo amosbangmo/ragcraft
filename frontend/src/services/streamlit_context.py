@@ -24,7 +24,6 @@ def refresh_streamlit_auth_session_from_user_id(user_id: str) -> None:
     In HTTP backend mode, pulls ``GET /users/me`` instead of reading SQLite in-process.
     """
     from services.settings import use_http_backend_client
-    from services.streamlit_api_client import get_backend_client
     from services.streamlit_session import apply_auth_user_dict_to_streamlit_session
 
     if use_http_backend_client():

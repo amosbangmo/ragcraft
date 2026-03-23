@@ -1,9 +1,12 @@
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from application.dto.benchmark_export import BuildBenchmarkExportCommand
-from application.evaluation.benchmark_report_formatter import coerce_generated_at, safe_filename_segment
+from application.evaluation.benchmark_report_formatter import (
+    coerce_generated_at,
+    safe_filename_segment,
+)
 from application.orchestration.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
@@ -25,13 +28,13 @@ class TestCoerceGeneratedAt(unittest.TestCase):
         self.assertIsNone(coerce_generated_at(12345))
 
     def test_datetime_passthrough(self) -> None:
-        dt = datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        dt = datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC)
         self.assertEqual(coerce_generated_at(dt), dt)
 
     def test_iso_string_z_suffix(self) -> None:
         out = coerce_generated_at("2025-01-02T03:04:05Z")
         assert out is not None
-        self.assertEqual(out.tzinfo, timezone.utc)
+        self.assertEqual(out.tzinfo, UTC)
 
 
 class TestSafeFilenameSegment(unittest.TestCase):
@@ -77,7 +80,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=True,
                 enable_hybrid_retrieval=False,
-                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC),
             )
         )
         md = art.markdown_bytes.decode("utf-8")
@@ -108,7 +111,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=False,
                 enable_hybrid_retrieval=True,
-                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC),
             )
         )
         md = art.markdown_bytes.decode("utf-8")
@@ -131,7 +134,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=True,
                 enable_hybrid_retrieval=True,
-                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, 3, 4, 5, tzinfo=UTC),
             )
         )
         md = art.markdown_bytes.decode("utf-8")
@@ -157,7 +160,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=False,
                 enable_hybrid_retrieval=False,
-                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, tzinfo=UTC),
             )
         )
         payload = json.loads(art.json_bytes.decode("utf-8"))
@@ -184,7 +187,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=True,
                 enable_hybrid_retrieval=False,
-                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, tzinfo=UTC),
             )
         )
         raw = art.csv_bytes
@@ -206,7 +209,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=False,
                 enable_hybrid_retrieval=False,
-                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, tzinfo=UTC),
             )
         )
         md = art.markdown_bytes.decode("utf-8")
@@ -230,7 +233,7 @@ class TestBenchmarkExportArtifactsUseCase(unittest.TestCase):
                 result=result,
                 enable_query_rewrite=False,
                 enable_hybrid_retrieval=False,
-                generated_at=datetime(2025, 1, 2, tzinfo=timezone.utc),
+                generated_at=datetime(2025, 1, 2, tzinfo=UTC),
             )
         )
         md = art.markdown_bytes.decode("utf-8")

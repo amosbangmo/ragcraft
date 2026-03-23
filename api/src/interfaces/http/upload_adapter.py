@@ -17,8 +17,8 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
-from infrastructure.config.config import INGESTION_CONFIG, USER_PROFILE_UPLOAD_CONFIG
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from infrastructure.config.config import INGESTION_CONFIG, USER_PROFILE_UPLOAD_CONFIG
 
 _READ_CHUNK = 1024 * 1024
 

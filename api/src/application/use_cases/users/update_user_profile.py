@@ -1,9 +1,17 @@
 from __future__ import annotations
 
-from application.dto.auth import UpdateUserProfileCommand, UpdateUserProfileResult, UserProfileSummary
 from application.auth.username_rules import is_valid_username, normalized_username
-from infrastructure.config.exceptions import AuthValidationError, UserAccountNotFoundError, UsernameTakenError
+from application.dto.auth import (
+    UpdateUserProfileCommand,
+    UpdateUserProfileResult,
+    UserProfileSummary,
+)
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import (
+    AuthValidationError,
+    UserAccountNotFoundError,
+    UsernameTakenError,
+)
 
 
 class UpdateUserProfileUseCase:
@@ -47,6 +55,8 @@ class UpdateUserProfileUseCase:
         )
         updated = self._users.get_by_user_id(command.user_id)
         if updated is None:
-            raise UserAccountNotFoundError("user missing after update", user_message="User not found.")
+            raise UserAccountNotFoundError(
+                "user missing after update", user_message="User not found."
+            )
         profile = UserProfileSummary.from_repository_row(updated)
         return UpdateUserProfileResult(message="Profile updated successfully.", user=profile)

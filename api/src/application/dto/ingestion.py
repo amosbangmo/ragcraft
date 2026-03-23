@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from domain.projects.buffered_document_upload import BufferedDocumentUpload
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.projects.buffered_document_upload import BufferedDocumentUpload
 from domain.projects.project import Project
 
 

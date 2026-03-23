@@ -110,7 +110,10 @@ class FailureAnalysisService:
         failed_row_count = sum(1 for rf in row_failures if rf["failure_labels"])
         top_failure_types = sorted(
             ((k, v) for k, v in counts.items() if v > 0),
-            key=lambda kv: (-kv[1], FAILURE_LABEL_ORDER.index(kv[0]) if kv[0] in FAILURE_LABEL_ORDER else 99),
+            key=lambda kv: (
+                -kv[1],
+                FAILURE_LABEL_ORDER.index(kv[0]) if kv[0] in FAILURE_LABEL_ORDER else 99,
+            ),
         )
 
         return {
@@ -210,9 +213,7 @@ class FailureAnalysisService:
         if (
             ctx_image
             and not judge_failed
-            and (
-                (hall_score is not None and hall_score < self._hall) or hall_flag is True
-            )
+            and ((hall_score is not None and hall_score < self._hall) or hall_flag is True)
         ):
             labels.append("image_hallucination")
 
@@ -244,7 +245,9 @@ class FailureAnalysisService:
             "question": q if isinstance(q, str) else (str(q) if q is not None else ""),
             "failure_labels": list(labels),
             "failure_critical": bool(critical),
-            "answer_preview": row.get("answer_preview") if isinstance(row.get("answer_preview"), str) else "",
+            "answer_preview": row.get("answer_preview")
+            if isinstance(row.get("answer_preview"), str)
+            else "",
             "recall_at_k": _coerce_float(row.get("recall_at_k")),
             "answer_f1": _coerce_float(row.get("answer_f1")),
             "groundedness_score": _coerce_float(row.get("groundedness_score")),

@@ -93,7 +93,8 @@ def _assert_no_application_use_case_imports(path: Path) -> None:
                 if alias.name.startswith("application.use_cases"):
                     offenders.append(f"import {alias.name}")
     assert not offenders, (
-        f"{path.relative_to(REPO_ROOT)} must not import application use_cases:\n" + "\n".join(offenders)
+        f"{path.relative_to(REPO_ROOT)} must not import application use_cases:\n"
+        + "\n".join(offenders)
     )
 
 
@@ -168,7 +169,9 @@ def test_assemble_pipeline_orchestration_lives_in_application() -> None:
         "stages.reranking.rerank_assets",
         "stages.prompt_render.build_answer_prompt",
     ):
-        assert needle in combined, f"expected orchestration step {needle!r} in post-recall orchestration"
+        assert needle in combined, (
+            f"expected orchestration step {needle!r} in post-recall orchestration"
+        )
     assert "step_docstore_hydration" in coordinator
     assert "step_prompt_assembly" in coordinator
     assemble_lines = coordinator.splitlines()

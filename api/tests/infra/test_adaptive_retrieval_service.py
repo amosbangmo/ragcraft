@@ -1,8 +1,8 @@
 import unittest
 
-from infrastructure.config.config import RetrievalConfig
 from domain.rag.query_intent import QueryIntent
 from domain.rag.retrieval_settings import RetrievalSettings
+from infrastructure.config.config import RetrievalConfig
 from infrastructure.rag.adaptive_retrieval_service import AdaptiveRetrievalService
 
 

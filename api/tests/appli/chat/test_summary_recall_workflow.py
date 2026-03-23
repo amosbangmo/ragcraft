@@ -7,9 +7,9 @@ import pytest
 
 from application.orchestration.rag.summary_recall_ports import SummaryRecallTechnicalPorts
 from application.orchestration.rag.summary_recall_workflow import ApplicationSummaryRecallStage
-from infrastructure.config.config import RETRIEVAL_CONFIG
 from domain.projects.project import Project
 from domain.rag.retrieval_settings import RetrievalSettings
+from infrastructure.config.config import RETRIEVAL_CONFIG
 
 
 def _base_settings() -> RetrievalSettings:
@@ -73,7 +73,9 @@ def test_query_rewrite_port_invoked_when_enabled() -> None:
         (False, False),
     ],
 )
-def test_adaptive_flag_follows_hybrid_override(override_hybrid: bool | None, expect_adaptive: bool) -> None:
+def test_adaptive_flag_follows_hybrid_override(
+    override_hybrid: bool | None, expect_adaptive: bool
+) -> None:
     tuner = MagicMock()
     s = _base_settings()
     tuner.from_project.return_value = s

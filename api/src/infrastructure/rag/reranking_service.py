@@ -1,6 +1,5 @@
 import re
 
-
 DEFAULT_RERANKER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
@@ -92,7 +91,9 @@ class RerankingService:
             except Exception:
                 pass
 
-        return [self._fallback_score(query, candidate["candidate_text"]) for candidate in candidates]
+        return [
+            self._fallback_score(query, candidate["candidate_text"]) for candidate in candidates
+        ]
 
     def _get_model(self):
         if self._model_load_failed:
@@ -169,8 +170,4 @@ class RerankingService:
         return float(query_coverage + phrase_bonus)
 
     def _tokenize(self, text: str) -> set[str]:
-        return {
-            token
-            for token in re.findall(r"[a-zA-Z0-9_/-]+", text.lower())
-            if len(token) > 1
-        }
+        return {token for token in re.findall(r"[a-zA-Z0-9_/-]+", text.lower()) if len(token) > 1}

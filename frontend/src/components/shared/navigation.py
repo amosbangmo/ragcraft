@@ -1,8 +1,8 @@
 import streamlit as st
 
+from components.shared.avatar import render_user_avatar
 from services import streamlit_auth
 from services.streamlit_context import get_backend_client, get_user_id
-from components.shared.avatar import render_user_avatar
 
 
 def render_navigation(hide_sidebar: bool = False):
@@ -45,7 +45,9 @@ def render_navigation(hide_sidebar: bool = False):
 
     with st.sidebar:
         st.markdown('<div class="nav-title">🚀 RAGCraft</div>', unsafe_allow_html=True)
-        st.markdown('<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="nav-subtitle">AI Knowledge Workspace</div>', unsafe_allow_html=True
+        )
 
         if streamlit_auth.is_authenticated():
             render_user_avatar(
@@ -94,6 +96,6 @@ def render_navigation(hide_sidebar: bool = False):
                 {len(projects)}
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
         st.markdown("</div>", unsafe_allow_html=True)

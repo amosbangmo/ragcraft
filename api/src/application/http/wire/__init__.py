@@ -15,10 +15,10 @@ from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.dto.benchmark_export import BenchmarkExportArtifacts
 from application.dto.evaluation import GenerateQaDatasetResult
 from application.dto.ingestion import IngestDocumentResult
-from application.http.wire.json_wire import jsonify_value
 from application.dto.settings import EffectiveRetrievalSettingsView
-from domain.evaluation.benchmark_result import BenchmarkResult
+from application.http.wire.json_wire import jsonify_value
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.evaluation.benchmark_result import BenchmarkResult
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_response import RAGResponse
 
@@ -83,7 +83,9 @@ class PreviewSummaryRecallWirePayload:
     preview: dict[str, Any] | None
 
     @classmethod
-    def from_preview_dto(cls, preview: SummaryRecallPreviewDTO | None) -> PreviewSummaryRecallWirePayload:
+    def from_preview_dto(
+        cls, preview: SummaryRecallPreviewDTO | None
+    ) -> PreviewSummaryRecallWirePayload:
         if preview is None:
             return cls(preview=None)
         return cls(preview=cast(dict[str, Any], jsonify_value(preview.to_dict())))
@@ -141,7 +143,9 @@ class EffectiveRetrievalSettingsWirePayload:
     effective_retrieval: dict[str, Any]
 
     @classmethod
-    def from_view(cls, view: EffectiveRetrievalSettingsView) -> EffectiveRetrievalSettingsWirePayload:
+    def from_view(
+        cls, view: EffectiveRetrievalSettingsView
+    ) -> EffectiveRetrievalSettingsWirePayload:
         return cls(
             preferences=cast(dict[str, Any], asdict(view.preferences)),
             effective_retrieval=cast(dict[str, Any], asdict(view.effective_retrieval)),
@@ -262,7 +266,9 @@ class BenchmarkExportBundleWirePayload:
     bundle: dict[str, Any]
 
     @classmethod
-    def from_artifacts(cls, artifacts: BenchmarkExportArtifacts) -> BenchmarkExportBundleWirePayload:
+    def from_artifacts(
+        cls, artifacts: BenchmarkExportArtifacts
+    ) -> BenchmarkExportBundleWirePayload:
         return cls(bundle=dict(artifacts.to_http_bundle_dict()))
 
     def as_json_dict(self) -> dict[str, Any]:
@@ -280,7 +286,9 @@ def pipeline_build_result_to_wire_dict(result: PipelineBuildResult) -> dict[str,
     return PipelineSnapshotWirePayload.from_build_result(result).pipeline
 
 
-def preview_summary_recall_to_wire_dict(preview: SummaryRecallPreviewDTO | None) -> dict[str, Any] | None:
+def preview_summary_recall_to_wire_dict(
+    preview: SummaryRecallPreviewDTO | None,
+) -> dict[str, Any] | None:
     return PreviewSummaryRecallWirePayload.from_preview_dto(preview).preview
 
 
@@ -290,7 +298,9 @@ def ingest_document_result_to_wire_dict(result: Any) -> dict[str, Any]:
     return IngestDocumentWirePayload.from_duck_typed_ingest_result(result).as_json_dict()
 
 
-def effective_retrieval_settings_view_to_wire_dict(view: EffectiveRetrievalSettingsView) -> dict[str, Any]:
+def effective_retrieval_settings_view_to_wire_dict(
+    view: EffectiveRetrievalSettingsView,
+) -> dict[str, Any]:
     return EffectiveRetrievalSettingsWirePayload.from_view(view).as_json_dict()
 
 

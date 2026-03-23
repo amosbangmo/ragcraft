@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from infrastructure.config.config import LLM
 from infrastructure.config.exceptions import LLMServiceError
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
 from infrastructure.rag.llm.answer_generator import LLMAnswerGenerator
 
 

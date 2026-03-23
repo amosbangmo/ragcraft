@@ -1,6 +1,9 @@
 import unittest
 
-from components.shared.retrieval_dashboard import compute_retrieval_dashboard_metrics, distribution_buckets
+from components.shared.retrieval_dashboard import (
+    compute_retrieval_dashboard_metrics,
+    distribution_buckets,
+)
 
 
 class TestRetrievalDashboard(unittest.TestCase):
@@ -28,6 +31,7 @@ class TestRetrievalDashboard(unittest.TestCase):
         edges, counts = distribution_buckets([3.0, 3.0, 3.0], bin_count=5)
         self.assertEqual(edges, [3.0])
         self.assertEqual(counts, [3])
+
 
 if __name__ == "__main__":
     unittest.main()

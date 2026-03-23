@@ -7,9 +7,9 @@ from domain.evaluation.manual_evaluation_result import (
     ManualEvaluationResult,
     is_manual_evaluation_result_like,
 )
+from domain.projects.project import Project
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
 from infrastructure.evaluation.evaluation_service import EvaluationService
 from infrastructure.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 from infrastructure.evaluation.manual_evaluation_service import (
@@ -235,9 +235,7 @@ def test_ordered_sources_from_pipeline_variants():
             ]
         }
     ) == ["a.pdf"]
-    pl = PipelineBuildResult(
-        prompt_sources=[{"source_file": "b.pdf"}, {"source_file": "c.pdf"}]
-    )
+    pl = PipelineBuildResult(prompt_sources=[{"source_file": "b.pdf"}, {"source_file": "c.pdf"}])
     assert _ordered_sources_from_pipeline(pl) == ["b.pdf", "c.pdf"]
 
 
@@ -263,9 +261,7 @@ def test_run_manual_evaluation_without_pipeline():
         generate_answer=None,
         benchmark=bench,
     )
-    r = uc.execute(
-        RunManualEvaluationCommand(user_id="u1", project_id="p1", question="  What?  ")
-    )
+    r = uc.execute(RunManualEvaluationCommand(user_id="u1", project_id="p1", question="  What?  "))
     assert r.question == "What?"
     assert r.answer_citation_quality is None
 

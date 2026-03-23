@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-
 DEFAULT_DATA_ROOT = "data"
 DEFAULT_DB_FILENAME = "ragcraft.db"
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
 from domain.common.ports import GenerationPort
+from domain.projects.project import Project
+from domain.rag.pipeline_payloads import PipelineBuildResult
 
 
 class GenerateAnswerFromPipelineUseCase:

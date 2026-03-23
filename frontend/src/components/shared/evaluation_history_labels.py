@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from services.view_models import format_bool_toggle_on_off
@@ -22,7 +22,7 @@ def build_benchmark_history_entry_label(
     """
     rid = (run_id or "")[:12]
     if isinstance(generated_at, datetime):
-        tlabel = generated_at.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        tlabel = generated_at.astimezone(UTC).strftime("%Y-%m-%d %H:%M UTC")
     else:
         tlabel = str(generated_at)[:32] if generated_at else ""
     qr_on = enable_query_rewrite is True
@@ -52,7 +52,5 @@ def format_benchmark_run_selector_label(entry: dict[str, Any], index: int) -> st
     qr = entry.get("enable_query_rewrite")
     hy = entry.get("enable_hybrid_retrieval")
     if isinstance(qr, bool) and isinstance(hy, bool):
-        parts.append(
-            f"QR {format_bool_toggle_on_off(qr)} · Hyb {format_bool_toggle_on_off(hy)}"
-        )
+        parts.append(f"QR {format_bool_toggle_on_off(qr)} · Hyb {format_bool_toggle_on_off(hy)}")
     return " — ".join(parts)

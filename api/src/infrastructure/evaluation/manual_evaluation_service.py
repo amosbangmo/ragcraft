@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from domain.common.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
 from domain.evaluation.manual_evaluation_result import (
     ManualEvaluationAnswerCitationQuality,
     ManualEvaluationAnswerQuality,
@@ -11,10 +12,9 @@ from domain.evaluation.manual_evaluation_result import (
     ManualEvaluationResult,
     ManualEvaluationRetrievalQuality,
 )
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.common.ports.gold_qa_benchmark_port import GoldQaBenchmarkPort
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 from infrastructure.evaluation.llm_judge_service import JUDGE_FAILURE_REASON
 
@@ -216,15 +216,19 @@ def manual_evaluation_result_from_eval_row(
     confidence = float(conf_raw) if conf_raw is not None else 0.0
 
     groundedness = _row_optional_float(row, "groundedness_score") if judge_metrics_ok else None
-    answer_relevance = _row_optional_float(row, "answer_relevance_score") if judge_metrics_ok else None
-    hallucination_score = _row_optional_float(row, "hallucination_score") if judge_metrics_ok else None
+    answer_relevance = (
+        _row_optional_float(row, "answer_relevance_score") if judge_metrics_ok else None
+    )
+    hallucination_score = (
+        _row_optional_float(row, "hallucination_score") if judge_metrics_ok else None
+    )
     hallu_raw = row.get("has_hallucination")
     has_hallucination = (
-        None
-        if not judge_metrics_ok
-        else (None if hallu_raw is None else bool(hallu_raw))
+        None if not judge_metrics_ok else (None if hallu_raw is None else bool(hallu_raw))
     )
-    citation_faith = _row_optional_float(row, "citation_faithfulness_score") if judge_metrics_ok else None
+    citation_faith = (
+        _row_optional_float(row, "citation_faithfulness_score") if judge_metrics_ok else None
+    )
 
     recall_at_k_v = _row_optional_float(row, "recall_at_k") if exp_docs else None
     source_recall_v = _row_optional_float(row, "source_recall") if exp_src else None
@@ -306,20 +310,14 @@ def manual_evaluation_result_from_eval_row(
     )
 
     jfr_raw = row.get("judge_failure_reason")
-    judge_failure_reason = (
-        jfr_raw.strip()
-        if isinstance(jfr_raw, str) and jfr_raw.strip()
-        else None
-    )
+    judge_failure_reason = jfr_raw.strip() if isinstance(jfr_raw, str) and jfr_raw.strip() else None
 
     head_issues: list[str] = []
     if pipeline_failed:
         head_issues.append("Retrieval pipeline did not complete for this question.")
     elif judge_failed:
         if judge_failure_reason and judge_failure_reason != JUDGE_FAILURE_REASON:
-            head_issues.append(
-                f"LLM judge could not score this answer ({judge_failure_reason})."
-            )
+            head_issues.append(f"LLM judge could not score this answer ({judge_failure_reason}).")
         else:
             head_issues.append("LLM judge could not score this answer.")
 

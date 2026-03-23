@@ -1,15 +1,17 @@
 import os
 import unittest
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock
 
-from datetime import datetime, timezone
-
 from infrastructure.observability.logging.query_log_repository import QueryLogRepository
-from infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
+from infrastructure.observability.query_log_service import (
+    QueryLogService,
+    parse_query_log_timestamp,
+)
 from infrastructure.persistence.db import init_app_db
-from infrastructure.observability.query_log_service import QueryLogService, parse_query_log_timestamp
+from infrastructure.persistence.sqlite.query_log_repository import SQLiteQueryLogRepository
 
 
 class TestSQLiteQueryLogRepository(unittest.TestCase):
@@ -112,7 +114,7 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
             repo.log(
                 {
                     "question": f"q{i}",
-                    "timestamp": f"2025-06-{10+i:02d}T12:00:00+00:00",
+                    "timestamp": f"2025-06-{10 + i:02d}T12:00:00+00:00",
                     "project_id": "px",
                     "user_id": uid,
                 }
@@ -267,8 +269,8 @@ class TestQueryLogService(unittest.TestCase):
                 )
             rows = service.load_logs(project_id="p1", last_n=2)
             self.assertEqual([r["question"] for r in rows], ["c", "b"])
-            since = datetime(2024, 3, 1, tzinfo=timezone.utc)
-            until = datetime(2024, 9, 1, tzinfo=timezone.utc)
+            since = datetime(2024, 3, 1, tzinfo=UTC)
+            until = datetime(2024, 9, 1, tzinfo=UTC)
             mid = service.load_logs(project_id="p1", since_utc=since, until_utc=until)
             self.assertEqual(len(mid), 1)
             self.assertEqual(mid[0]["question"], "b")

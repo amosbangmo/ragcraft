@@ -38,7 +38,9 @@ def test_read_buffered_avatar_upload_happy_path() -> None:
     assert up.body.startswith(b"\x89PNG")
 
 
-def test_read_buffered_avatar_upload_rejects_over_default_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_read_buffered_avatar_upload_rejects_over_default_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         "interfaces.http.upload_adapter.USER_PROFILE_UPLOAD_CONFIG",
         replace(cfg.USER_PROFILE_UPLOAD_CONFIG, max_avatar_bytes=5),

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from domain.projects.buffered_document_upload import BufferedDocumentUpload
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.projects.project import Project
 from application.dto.ingestion import (
     DeleteDocumentResult,
     IngestDocumentResult,
     IngestUploadedFileCommand,
 )
+from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from domain.projects.project import Project
 
 
 def test_ingest_upload_file_command_holds_handles() -> None:

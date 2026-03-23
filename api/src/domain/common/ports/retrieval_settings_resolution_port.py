@@ -10,4 +10,6 @@ from domain.rag.retrieval_settings import RetrievalSettings
 
 @runtime_checkable
 class RetrievalSettingsResolutionPort(Protocol):
-    def retrieval_settings_for_saved_project(self, settings: ProjectSettings) -> RetrievalSettings: ...
+    def retrieval_settings_for_saved_project(
+        self, settings: ProjectSettings
+    ) -> RetrievalSettings: ...

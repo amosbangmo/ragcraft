@@ -28,24 +28,27 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
+from composition.backend_composition import BackendComposition
 from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
 from domain.common.ports.authentication_port import AuthenticationPort
-from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
-from infrastructure.auth.auth_service import AuthService
-from composition.backend_composition import BackendComposition
 from domain.common.ports.chat_transcript_port import ChatTranscriptPort
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
+from infrastructure.auth.auth_service import AuthService
 from infrastructure.evaluation.evaluation_service import EvaluationService
 from infrastructure.evaluation.qa_dataset_generation_service import (
     QADatasetGenerationService,
 )
 from infrastructure.evaluation.qa_dataset_service import QADatasetService
 from infrastructure.observability.query_log_service import QueryLogService
+from infrastructure.persistence.project_service import ProjectService
 from infrastructure.rag.docstore_service import DocStoreService
 from infrastructure.rag.reranking_service import RerankingService
-from infrastructure.persistence.project_service import ProjectService
 
 if TYPE_CHECKING:
+    from application.orchestration.evaluation.build_benchmark_export_artifacts import (
+        BuildBenchmarkExportArtifactsUseCase,
+    )
     from application.use_cases.chat.ask_question import AskQuestionUseCase
     from application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
     from application.use_cases.chat.generate_answer_from_pipeline import (
@@ -53,9 +56,6 @@ if TYPE_CHECKING:
     )
     from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
     from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
-    from application.orchestration.evaluation.build_benchmark_export_artifacts import (
-        BuildBenchmarkExportArtifactsUseCase,
-    )
     from application.use_cases.evaluation.create_qa_dataset_entry import (
         CreateQaDatasetEntryUseCase,
     )

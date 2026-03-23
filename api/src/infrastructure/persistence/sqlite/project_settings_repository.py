@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from domain.projects.project_settings import ProjectSettings, default_project_settings
 from domain.rag.retrieval_presets import parse_retrieval_preset
@@ -65,7 +65,7 @@ class SqliteProjectSettingsRepository:
                 1 if settings.retrieval_advanced else 0,
                 1 if settings.enable_query_rewrite else 0,
                 1 if settings.enable_hybrid_retrieval else 0,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
         conn.commit()

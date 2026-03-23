@@ -17,6 +17,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from api.bearer_auth import bearer_headers
+from application.dto.ingestion import IngestDocumentResult
+from application.orchestration.evaluation.build_benchmark_export_artifacts import (
+    BuildBenchmarkExportArtifactsUseCase,
+)
+from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from domain.projects.project import Project
+from domain.rag.pipeline_latency import PipelineLatency
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.rag_response import RAGResponse
 from interfaces.http.dependencies import (
     get_ask_question_use_case,
     get_build_benchmark_export_artifacts_use_case,
@@ -30,17 +41,6 @@ from interfaces.http.main import create_app
 from interfaces.http.schemas.chat import ChatAskResponse, PipelineInspectResponse
 from interfaces.http.schemas.evaluation import BenchmarkResultResponse
 from interfaces.http.schemas.projects import CreateProjectResponse, IngestDocumentResponse
-from application.orchestration.evaluation.build_benchmark_export_artifacts import (
-    BuildBenchmarkExportArtifactsUseCase,
-)
-from application.dto.ingestion import IngestDocumentResult
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.rag.pipeline_latency import PipelineLatency
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project import Project
-from domain.rag.rag_response import RAGResponse
-from api.bearer_auth import bearer_headers
 
 
 def _hdr(uid: str = "e2e-http-user") -> dict[str, str]:
@@ -98,15 +98,17 @@ def pipeline_client() -> Iterator[tuple[TestClient, FastAPI]]:
     app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(
         lambda *a, **k: PipelineBuildResult()
     )
-    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: _CallableUseCase(
-        lambda cmd: BenchmarkResult(
-            summary=BenchmarkSummary(data={"rows": 1}),
-            rows=[BenchmarkRow(entry_id=1, question="Q?", data={})],
-            run_id="e2e-run",
+    app.dependency_overrides[get_run_gold_qa_dataset_evaluation_use_case] = lambda: (
+        _CallableUseCase(
+            lambda cmd: BenchmarkResult(
+                summary=BenchmarkSummary(data={"rows": 1}),
+                rows=[BenchmarkRow(entry_id=1, question="Q?", data={})],
+                run_id="e2e-run",
+            )
         )
     )
-    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = (
-        lambda: BuildBenchmarkExportArtifactsUseCase()
+    app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = lambda: (
+        BuildBenchmarkExportArtifactsUseCase()
     )
 
     with TestClient(app) as tc:
@@ -196,13 +198,23 @@ def test_http_pipeline_project_ingest_chat_inspect_benchmark_export(
     "method,path,kwargs",
     [
         ("POST", "/projects", {"json": {"project_id": "x"}}),
-        ("POST", "/projects/x/documents/ingest", {"files": {"file": ("a.txt", b"a", "text/plain")}}),
+        (
+            "POST",
+            "/projects/x/documents/ingest",
+            {"files": {"file": ("a.txt", b"a", "text/plain")}},
+        ),
         ("POST", "/chat/ask", {"json": {"project_id": "x", "question": "q"}}),
         ("POST", "/chat/pipeline/inspect", {"json": {"project_id": "x", "question": "q"}}),
         (
             "POST",
             "/evaluation/dataset/run",
-            {"json": {"project_id": "x", "enable_query_rewrite": True, "enable_hybrid_retrieval": True}},
+            {
+                "json": {
+                    "project_id": "x",
+                    "enable_query_rewrite": True,
+                    "enable_hybrid_retrieval": True,
+                }
+            },
         ),
     ],
 )
@@ -220,7 +232,9 @@ def test_http_scoped_routes_require_bearer_token(
     assert "Bearer" in (err.get("message") or "")
 
 
-def test_http_chat_ask_validation_error_returns_422(pipeline_client: tuple[TestClient, FastAPI]) -> None:
+def test_http_chat_ask_validation_error_returns_422(
+    pipeline_client: tuple[TestClient, FastAPI],
+) -> None:
     tc, _ = pipeline_client
     r = tc.post(
         "/chat/ask",

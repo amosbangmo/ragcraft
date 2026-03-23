@@ -13,34 +13,20 @@ def render_project_selector(
     projects = backend_client.list_projects(user_id)
 
     if not projects:
-
         if show_create_button:
-
-            col_left, col_right = st.columns(
-                [5, 1],
-                vertical_alignment="center"
-            )
+            col_left, col_right = st.columns([5, 1], vertical_alignment="center")
 
             with col_left:
-                st.warning(
-                    "No project available yet. Create one in the Projects page.",
-                    icon="📁"
-                )
+                st.warning("No project available yet. Create one in the Projects page.", icon="📁")
 
             with col_right:
                 if st.button(
-                    "Create project",
-                    key=f"create_project_{label}",
-                    use_container_width=True
+                    "Create project", key=f"create_project_{label}", use_container_width=True
                 ):
                     st.switch_page("pages/projects.py")
 
         else:
-
-            st.warning(
-                "No project available yet. Create one in the Projects page.",
-                icon="📁"
-            )
+            st.warning("No project available yet. Create one in the Projects page.", icon="📁")
 
         st.session_state["project_id"] = None
         return None

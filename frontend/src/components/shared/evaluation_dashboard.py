@@ -15,13 +15,15 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from services.view_models import LOWER_IS_BETTER_METRICS, FailureAnalysisService
 from components.shared.evaluation_summary_metrics import (
     coerce_float_for_summary_metric as _coerce_float,
+)
+from components.shared.evaluation_summary_metrics import (
     render_summary_metric_from_mapping as _summary_metric,
 )
 from components.shared.metric_help import render_metric_with_help
 from components.shared.section_card import inject_section_card_styles, section_card
+from services.view_models import LOWER_IS_BETTER_METRICS, FailureAnalysisService
 
 
 def _coerce_hallucination_flag(value: object) -> bool:
@@ -102,17 +104,13 @@ def _render_correlation_analysis(
         sp = correlations.get("highlights", {}).get("strong_positive") or []
         sn = correlations.get("highlights", {}).get("strong_negative") or []
         if sp:
-            st.markdown("**Strong positive (r ≥ {:.1f})**".format(thr))
+            st.markdown(f"**Strong positive (r ≥ {thr:.1f})**")
             for item in sp[:6]:
-                st.caption(
-                    f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**"
-                )
+                st.caption(f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**")
         if sn:
-            st.markdown("**Strong negative (r ≤ -{:.1f})**".format(thr))
+            st.markdown(f"**Strong negative (r ≤ -{thr:.1f})**")
             for item in sn[:6]:
-                st.caption(
-                    f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**"
-                )
+                st.caption(f"• {item['metric_a']} ↔ {item['metric_b']}: **{item['r']}**")
         if not sp and not sn:
             st.caption("No pairs reached the strong |r| threshold for this run.")
 
@@ -421,7 +419,9 @@ def _render_multimodal_performance(multimodal_metrics: dict[str, Any]) -> None:
 
         eligible = multimodal_metrics.get("eligible_rows")
         if eligible is not None:
-            st.caption(f"Based on **{int(eligible)}** successful pipeline row(s) with modality metadata.")
+            st.caption(
+                f"Based on **{int(eligible)}** successful pipeline row(s) with modality metadata."
+            )
 
         by_mod = multimodal_metrics.get("by_modality")
         if isinstance(by_mod, dict) and by_mod:
@@ -544,7 +544,9 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         if sort_choice == "groundedness ↓" and gs is not None:
             preview = preview.assign(_g=gs).sort_values("_g", ascending=False).drop(columns=["_g"])
         elif sort_choice == "confidence ↓" and conf is not None:
-            preview = preview.assign(_c=conf).sort_values("_c", ascending=False).drop(columns=["_c"])
+            preview = (
+                preview.assign(_c=conf).sort_values("_c", ascending=False).drop(columns=["_c"])
+            )
         elif sort_choice == "hallucination score ↑" and hal is not None:
             preview = preview.assign(_h=hal).sort_values("_h", ascending=True).drop(columns=["_h"])
 
@@ -608,9 +610,7 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
             trend_df = pd.DataFrame(trend_parts)
             trend_df.index = range(len(trend_df))
             tdf = trend_df.reset_index().rename(columns={"index": "query_index"})
-            long_df = tdf.melt(
-                id_vars="query_index", var_name="metric", value_name="value"
-            )
+            long_df = tdf.melt(id_vars="query_index", var_name="metric", value_name="value")
             trend_chart = (
                 alt.Chart(long_df)
                 .mark_line()
@@ -683,7 +683,9 @@ def _render_advanced_analytics(rows: list[dict], *, widget_key_prefix: str) -> N
         rel = _numeric_series(df, "answer_relevance_score")
         g3 = _numeric_series(df, "groundedness_score")
         if rel is not None and g3 is not None:
-            scatter2 = pd.DataFrame({"groundedness_score": g3, "answer_relevance_score": rel}).dropna()
+            scatter2 = pd.DataFrame(
+                {"groundedness_score": g3, "answer_relevance_score": rel}
+            ).dropna()
             if len(scatter2) >= 1:
                 st.caption("Answer relevance vs groundedness (judge scores)")
                 sc2_chart = (
@@ -709,7 +711,7 @@ def _render_health_overview(
     n = int(summary.get("total_entries") or len(rows) or 0)
     if n <= 0:
         return
-    
+
     with section_card(
         title="System health overview",
         subtitle="Run-wide hallucination flag rate and heuristic retrieval / relevance failure shares.",
@@ -813,7 +815,9 @@ def _render_benchmark_comparison(
                 st.markdown("**Failure tag counts**")
                 deltas = pd.to_numeric(fdf["delta"], errors="coerce").fillna(0)
                 if deltas.eq(0).all():
-                    st.success("Failure-tag counts match between A and B — no shift in heuristic failure labels.")
+                    st.success(
+                        "Failure-tag counts match between A and B — no shift in heuristic failure labels."
+                    )
                 else:
                     st.caption(
                         "Δ = (rows tagged in **B**) − (rows tagged in **A**). **Positive Δ** means that label "
@@ -887,7 +891,9 @@ def render_evaluation_dashboard(
         min_height=0,
     ):
         if not has_exp_docs:
-            st.caption("No gold expected_doc_ids in this dataset — ranked-doc metrics are not applicable (—).")
+            st.caption(
+                "No gold expected_doc_ids in this dataset — ranked-doc metrics are not applicable (—)."
+            )
         r1, r2, r3 = st.columns(3)
         with r1:
             _summary_metric(summary, "avg_recall_at_k", "Avg recall@K")
@@ -948,7 +954,9 @@ def render_evaluation_dashboard(
         min_height=0,
     ):
         if not has_exp_docs:
-            st.caption("No gold expected_doc_ids — prompt doc ID overlap metrics are not applicable (—).")
+            st.caption(
+                "No gold expected_doc_ids — prompt doc ID overlap metrics are not applicable (—)."
+            )
         pr1, pr2, pr3, pr4 = st.columns(4)
         with pr1:
             _summary_metric(summary, "avg_prompt_doc_id_precision", "Prompt doc ID P")
@@ -957,7 +965,9 @@ def render_evaluation_dashboard(
         with pr3:
             _summary_metric(summary, "avg_prompt_doc_id_f1", "Prompt doc ID F1")
         with pr4:
-            _summary_metric(summary, "prompt_doc_id_hit_rate", "Prompt doc ID hit rate", as_percent=True)
+            _summary_metric(
+                summary, "prompt_doc_id_hit_rate", "Prompt doc ID hit rate", as_percent=True
+            )
 
     with section_card(
         title="Answer citation overlap",
@@ -974,7 +984,9 @@ def render_evaluation_dashboard(
         with ci3:
             _summary_metric(summary, "avg_citation_doc_id_f1", "Citation doc ID F1")
         with ci4:
-            _summary_metric(summary, "citation_doc_id_hit_rate", "Citation doc ID hit rate", as_percent=True)
+            _summary_metric(
+                summary, "citation_doc_id_hit_rate", "Citation doc ID hit rate", as_percent=True
+            )
 
     with section_card(
         title="LLM judge",
@@ -986,7 +998,9 @@ def render_evaluation_dashboard(
             "(rows with judge failures are excluded from these aggregates)."
         )
         if not has_exp_answers:
-            st.caption("Avg answer correctness is N/A without gold answers; other judge scores still reflect this run.")
+            st.caption(
+                "Avg answer correctness is N/A without gold answers; other judge scores still reflect this run."
+            )
         j1, j2, j3 = st.columns(3)
         with j1:
             _summary_metric(summary, "avg_groundedness_score", "Avg groundedness")
@@ -1000,7 +1014,9 @@ def render_evaluation_dashboard(
         with j5:
             _summary_metric(summary, "avg_hallucination_score", "Avg hallucination score")
         with j6:
-            _summary_metric(summary, "hallucination_rate", "Hallucination flag rate", as_percent=True)
+            _summary_metric(
+                summary, "hallucination_rate", "Hallucination flag rate", as_percent=True
+            )
 
     if multimodal_metrics:
         _render_multimodal_performance(multimodal_metrics)
@@ -1042,11 +1058,7 @@ def render_evaluation_dashboard(
         elif not hallucination_rows:
             st.success("No hallucinations flagged for this run.")
         else:
-            view_tag = (
-                "dataset metrics"
-                if widget_key_prefix.startswith("dataset_")
-                else "analysis"
-            )
+            view_tag = "dataset metrics" if widget_key_prefix.startswith("dataset_") else "analysis"
             for idx, row in enumerate(hallucination_rows):
                 q = row.get("question") or "—"
                 score = _coerce_float(row.get("hallucination_score"))

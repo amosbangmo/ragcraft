@@ -11,7 +11,47 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
+from application.dto.ingestion import (
+    DeleteDocumentCommand,
+    IngestUploadedFileCommand,
+    ReindexDocumentCommand,
+)
+from application.dto.settings import (
+    GetEffectiveRetrievalSettingsQuery,
+    UpdateProjectRetrievalSettingsCommand,
+)
+from application.http.wire import (
+    EffectiveRetrievalSettingsWirePayload,
+    IngestDocumentWirePayload,
+)
+from application.use_cases.ingestion.delete_document import DeleteDocumentUseCase
+from application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
+from application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
+from application.use_cases.projects.create_project import CreateProjectUseCase
+from application.use_cases.projects.get_project_document_details import (
+    GetProjectDocumentDetailsUseCase,
+)
+from application.use_cases.projects.get_project_retrieval_preset_label import (
+    GetProjectRetrievalPresetLabelUseCase,
+)
+from application.use_cases.projects.invalidate_project_chain_cache import (
+    InvalidateProjectChainCacheUseCase,
+)
+from application.use_cases.projects.list_document_assets_for_source import (
+    ListDocumentAssetsForSourceUseCase,
+)
+from application.use_cases.projects.list_project_documents import ListProjectDocumentsUseCase
+from application.use_cases.projects.list_projects import ListProjectsUseCase
+from application.use_cases.projects.resolve_project import ResolveProjectUseCase
+from application.use_cases.settings.get_effective_retrieval_settings import (
+    GetEffectiveRetrievalSettingsUseCase,
+)
+from application.use_cases.settings.update_project_retrieval_settings import (
+    UpdateProjectRetrievalSettingsUseCase,
+)
+from domain.auth.authenticated_principal import AuthenticatedPrincipal
 from interfaces.http.dependencies import (
+    get_authenticated_principal,
     get_create_project_use_case,
     get_delete_document_use_case,
     get_get_effective_retrieval_settings_use_case,
@@ -23,7 +63,6 @@ from interfaces.http.dependencies import (
     get_list_project_documents_use_case,
     get_list_projects_use_case,
     get_reindex_document_use_case,
-    get_authenticated_principal,
     get_resolve_project_use_case,
     get_update_project_retrieval_settings_use_case,
 )
@@ -46,48 +85,11 @@ from interfaces.http.schemas.projects import (
     RetrievalPresetLabelResponse,
     UpdateProjectRetrievalSettingsRequest,
 )
-from application.http.wire import (
-    EffectiveRetrievalSettingsWirePayload,
-    IngestDocumentWirePayload,
-)
 from interfaces.http.upload_adapter import (
     StarletteUploadPayloadError,
     StarletteUploadTooLargeError,
     read_buffered_document_upload,
 )
-from application.dto.ingestion import (
-    DeleteDocumentCommand,
-    IngestUploadedFileCommand,
-    ReindexDocumentCommand,
-)
-from application.dto.settings import (
-    GetEffectiveRetrievalSettingsQuery,
-    UpdateProjectRetrievalSettingsCommand,
-)
-from application.use_cases.projects.create_project import CreateProjectUseCase
-from application.use_cases.projects.list_project_documents import ListProjectDocumentsUseCase
-from application.use_cases.projects.list_projects import ListProjectsUseCase
-from application.use_cases.settings.get_effective_retrieval_settings import (
-    GetEffectiveRetrievalSettingsUseCase,
-)
-from application.use_cases.settings.update_project_retrieval_settings import (
-    UpdateProjectRetrievalSettingsUseCase,
-)
-from application.use_cases.ingestion.delete_document import DeleteDocumentUseCase
-from application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
-from application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
-from application.use_cases.projects.get_project_document_details import GetProjectDocumentDetailsUseCase
-from application.use_cases.projects.get_project_retrieval_preset_label import (
-    GetProjectRetrievalPresetLabelUseCase,
-)
-from application.use_cases.projects.invalidate_project_chain_cache import (
-    InvalidateProjectChainCacheUseCase,
-)
-from application.use_cases.projects.list_document_assets_for_source import (
-    ListDocumentAssetsForSourceUseCase,
-)
-from domain.auth.authenticated_principal import AuthenticatedPrincipal
-from application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -170,7 +172,8 @@ def put_project_retrieval_settings(
     body: UpdateProjectRetrievalSettingsRequest,
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     update_uc: Annotated[
-        UpdateProjectRetrievalSettingsUseCase, Depends(get_update_project_retrieval_settings_use_case)
+        UpdateProjectRetrievalSettingsUseCase,
+        Depends(get_update_project_retrieval_settings_use_case),
     ],
     get_uc: Annotated[
         GetEffectiveRetrievalSettingsUseCase, Depends(get_get_effective_retrieval_settings_use_case)
@@ -314,7 +317,8 @@ def get_retrieval_preset_label(
     project_id: str,
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
-        GetProjectRetrievalPresetLabelUseCase, Depends(get_get_project_retrieval_preset_label_use_case)
+        GetProjectRetrievalPresetLabelUseCase,
+        Depends(get_get_project_retrieval_preset_label_use_case),
     ],
 ) -> RetrievalPresetLabelResponse:
     label = use_case.execute(user_id=principal.user_id, project_id=project_id)
@@ -335,7 +339,9 @@ def get_project_document_details(
     ],
 ) -> ProjectDocumentDetailsResponse:
     doc_names = list_docs.execute(principal.user_id, project_id)
-    rows = details_uc.execute(user_id=principal.user_id, project_id=project_id, document_names=doc_names)
+    rows = details_uc.execute(
+        user_id=principal.user_id, project_id=project_id, document_names=doc_names
+    )
     return ProjectDocumentDetailsResponse(
         documents=[project_document_detail_row_to_item(r) for r in rows],
     )
@@ -354,7 +360,9 @@ def get_document_assets(
         ListDocumentAssetsForSourceUseCase, Depends(get_list_document_assets_for_source_use_case)
     ],
 ) -> DocumentAssetsResponse:
-    assets = use_case.execute(user_id=principal.user_id, project_id=project_id, source_file=source_file)
+    assets = use_case.execute(
+        user_id=principal.user_id, project_id=project_id, source_file=source_file
+    )
     return DocumentAssetsResponse(assets=[document_asset_row_from_store(a) for a in assets])
 
 

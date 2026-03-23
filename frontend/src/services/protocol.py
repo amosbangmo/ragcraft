@@ -13,20 +13,20 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
+from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
 from application.dto.settings import (
     EffectiveRetrievalSettingsView,
     UpdateProjectRetrievalSettingsCommand,
 )
+from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from domain.evaluation.benchmark_result import BenchmarkResult
 from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
-from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.projects.project import Project
 from domain.projects.project_settings import ProjectSettings
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
 from domain.rag.retrieval_filters import RetrievalFilters
-from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
 
 
 @runtime_checkable
@@ -102,7 +102,9 @@ class BackendClient(Protocol):
 
     def get_project_document_details(self, user_id: str, project_id: str) -> list[dict]: ...
 
-    def get_document_assets(self, user_id: str, project_id: str, source_file: str) -> list[dict]: ...
+    def get_document_assets(
+        self, user_id: str, project_id: str, source_file: str
+    ) -> list[dict]: ...
 
     def delete_project_document(
         self, user_id: str, project_id: str, source_file: str

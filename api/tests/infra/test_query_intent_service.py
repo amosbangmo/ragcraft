@@ -51,7 +51,10 @@ class TestQueryIntentService(unittest.TestCase):
         self.assertEqual(self.svc.classify("Describe the chart on page 2"), QueryIntent.IMAGE)
 
     def test_exploratory_length_and_phrases(self) -> None:
-        self.assertEqual(self.svc.classify("Give me an overview of the attached documents"), QueryIntent.EXPLORATORY)
+        self.assertEqual(
+            self.svc.classify("Give me an overview of the attached documents"),
+            QueryIntent.EXPLORATORY,
+        )
         long_q = " ".join(["word"] * 30)
         self.assertEqual(self.svc.classify(long_q), QueryIntent.EXPLORATORY)
 

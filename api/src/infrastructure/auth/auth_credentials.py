@@ -10,9 +10,13 @@ from __future__ import annotations
 from application.dto.auth import LoginUserCommand, RegisterUserCommand
 from application.use_cases.auth.login_user import LoginUserUseCase
 from application.use_cases.auth.register_user import RegisterUserUseCase
-from infrastructure.config.exceptions import AuthCredentialsInvalidError, AuthValidationError, UsernameTakenError
 from domain.common.ports.password_hasher_port import PasswordHasherPort
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import (
+    AuthCredentialsInvalidError,
+    AuthValidationError,
+    UsernameTakenError,
+)
 
 
 def try_login(

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from components.shared.metric_help import render_metric_with_help
 
@@ -31,8 +32,6 @@ def render_summary_metric_from_mapping(
         render_metric_with_help(label=label, value="—", metric_key=key)
         return
     if as_percent:
-        render_metric_with_help(
-            label=label, value=f"{num * 100:.1f}%", metric_key=key
-        )
+        render_metric_with_help(label=label, value=f"{num * 100:.1f}%", metric_key=key)
     else:
         render_metric_with_help(label=label, value=num, metric_key=key)

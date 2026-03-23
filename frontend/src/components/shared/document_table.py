@@ -123,7 +123,9 @@ def render_document_table(
                     st.markdown(f"### {icon}")
 
                 with body_col:
-                    st.markdown(f'<div class="rc-doc-title">{doc_name}</div>', unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div class="rc-doc-title">{doc_name}</div>', unsafe_allow_html=True
+                    )
                     st.markdown(
                         '<div class="rc-doc-subtitle">Indexed and available in the current workspace</div>',
                         unsafe_allow_html=True,

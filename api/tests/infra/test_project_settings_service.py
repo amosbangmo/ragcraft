@@ -3,10 +3,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from infrastructure.persistence.sqlite.project_settings_repository import SqliteProjectSettingsRepository
 from domain.projects.project_settings import ProjectSettings, ui_label_for_project_settings
 from domain.rag.retrieval_presets import RetrievalPreset
 from infrastructure.persistence.db import init_app_db
+from infrastructure.persistence.sqlite.project_settings_repository import (
+    SqliteProjectSettingsRepository,
+)
 
 
 class TestSqliteProjectSettingsRepository(unittest.TestCase):

@@ -9,7 +9,12 @@ class TestRerankingService(unittest.TestCase):
         svc = RerankingService()
         assets = [
             {"doc_id": "t1", "content_type": "text", "raw_content": "alpha beta", "metadata": {}},
-            {"doc_id": "tb1", "content_type": "table", "raw_content": "<table></table>", "metadata": {}},
+            {
+                "doc_id": "tb1",
+                "content_type": "table",
+                "raw_content": "<table></table>",
+                "metadata": {},
+            },
         ]
         with patch.object(svc, "_score_candidates", return_value=[1.0, 0.85]):
             out = svc.rerank(
@@ -26,7 +31,12 @@ class TestRerankingService(unittest.TestCase):
         svc = RerankingService()
         assets = [
             {"doc_id": "t1", "content_type": "text", "raw_content": "alpha beta", "metadata": {}},
-            {"doc_id": "tb1", "content_type": "table", "raw_content": "<table></table>", "metadata": {}},
+            {
+                "doc_id": "tb1",
+                "content_type": "table",
+                "raw_content": "<table></table>",
+                "metadata": {},
+            },
         ]
         with patch.object(svc, "_score_candidates", return_value=[1.0, 0.85]):
             out = svc.rerank("query", assets, 2, prefer_tables=False, table_boost=0.5)

@@ -21,13 +21,14 @@ from typing import Annotated
 
 from fastapi import Depends, Header
 
-from application.use_cases.chat.ask_question import AskQuestionUseCase
-from application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
-from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
-from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from application.orchestration.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
+from application.use_cases.auth.login_user import LoginUserUseCase
+from application.use_cases.auth.register_user import RegisterUserUseCase
+from application.use_cases.chat.ask_question import AskQuestionUseCase
+from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
 from application.use_cases.evaluation.create_qa_dataset_entry import CreateQaDatasetEntryUseCase
 from application.use_cases.evaluation.delete_qa_dataset_entry import DeleteQaDatasetEntryUseCase
 from application.use_cases.evaluation.generate_qa_dataset import GenerateQaDatasetUseCase
@@ -42,7 +43,9 @@ from application.use_cases.ingestion.delete_document import DeleteDocumentUseCas
 from application.use_cases.ingestion.ingest_uploaded_file import IngestUploadedFileUseCase
 from application.use_cases.ingestion.reindex_document import ReindexDocumentUseCase
 from application.use_cases.projects.create_project import CreateProjectUseCase
-from application.use_cases.projects.get_project_document_details import GetProjectDocumentDetailsUseCase
+from application.use_cases.projects.get_project_document_details import (
+    GetProjectDocumentDetailsUseCase,
+)
 from application.use_cases.projects.get_project_retrieval_preset_label import (
     GetProjectRetrievalPresetLabelUseCase,
 )
@@ -55,29 +58,28 @@ from application.use_cases.projects.list_document_assets_for_source import (
 from application.use_cases.projects.list_project_documents import ListProjectDocumentsUseCase
 from application.use_cases.projects.list_projects import ListProjectsUseCase
 from application.use_cases.projects.resolve_project import ResolveProjectUseCase
+from application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
 from application.use_cases.settings.get_effective_retrieval_settings import (
     GetEffectiveRetrievalSettingsUseCase,
 )
 from application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
-from domain.auth.authenticated_principal import AuthenticatedPrincipal
-from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
-from domain.common.ports.authentication_port import AuthenticationPort
-from infrastructure.config.exceptions import (
-    AuthenticationRequiredError,
-    MalformedAuthenticationHeaderError,
-)
-from application.use_cases.auth.login_user import LoginUserUseCase
-from application.use_cases.auth.register_user import RegisterUserUseCase
 from application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
 from application.use_cases.users.delete_user_account import DeleteUserAccountUseCase
 from application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
 from application.use_cases.users.remove_user_avatar import RemoveUserAvatarUseCase
 from application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
 from application.use_cases.users.upload_user_avatar import UploadUserAvatarUseCase
-from domain.common.ports.user_repository_port import UserRepositoryPort
 from composition.application_container import BackendApplicationContainer
+from domain.auth.authenticated_principal import AuthenticatedPrincipal
+from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
+from domain.common.ports.authentication_port import AuthenticationPort
+from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import (
+    AuthenticationRequiredError,
+    MalformedAuthenticationHeaderError,
+)
 
 
 @lru_cache(maxsize=1)
@@ -92,11 +94,15 @@ def get_backend_application_container() -> BackendApplicationContainer:
     )
 
 
-BackendContainerDep = Annotated[BackendApplicationContainer, Depends(get_backend_application_container)]
+BackendContainerDep = Annotated[
+    BackendApplicationContainer, Depends(get_backend_application_container)
+]
 
 
 def _bearer_token_credentials(
-    authorization: Annotated[str | None, Header(alias="Authorization", convert_underscores=False)] = None,
+    authorization: Annotated[
+        str | None, Header(alias="Authorization", convert_underscores=False)
+    ] = None,
 ) -> str:
     if authorization is None or not str(authorization).strip():
         raise AuthenticationRequiredError(
@@ -154,7 +160,9 @@ def get_update_project_retrieval_settings_use_case(
     return container.settings_update_project_retrieval_use_case
 
 
-def get_list_project_documents_use_case(container: BackendContainerDep) -> ListProjectDocumentsUseCase:
+def get_list_project_documents_use_case(
+    container: BackendContainerDep,
+) -> ListProjectDocumentsUseCase:
     return container.projects_list_project_documents_use_case
 
 
@@ -200,15 +208,21 @@ def get_inspect_pipeline_use_case(container: BackendContainerDep) -> InspectRagP
     return container.chat_inspect_pipeline_use_case
 
 
-def get_preview_summary_recall_use_case(container: BackendContainerDep) -> PreviewSummaryRecallUseCase:
+def get_preview_summary_recall_use_case(
+    container: BackendContainerDep,
+) -> PreviewSummaryRecallUseCase:
     return container.chat_preview_summary_recall_use_case
 
 
-def get_create_qa_dataset_entry_use_case(container: BackendContainerDep) -> CreateQaDatasetEntryUseCase:
+def get_create_qa_dataset_entry_use_case(
+    container: BackendContainerDep,
+) -> CreateQaDatasetEntryUseCase:
     return container.evaluation_create_qa_dataset_entry_use_case
 
 
-def get_list_qa_dataset_entries_use_case(container: BackendContainerDep) -> ListQaDatasetEntriesUseCase:
+def get_list_qa_dataset_entries_use_case(
+    container: BackendContainerDep,
+) -> ListQaDatasetEntriesUseCase:
     return container.evaluation_list_qa_dataset_entries_use_case
 
 
@@ -218,7 +232,9 @@ def get_build_benchmark_export_artifacts_use_case(
     return container.evaluation_build_benchmark_export_artifacts_use_case
 
 
-def get_run_manual_evaluation_use_case(container: BackendContainerDep) -> RunManualEvaluationUseCase:
+def get_run_manual_evaluation_use_case(
+    container: BackendContainerDep,
+) -> RunManualEvaluationUseCase:
     return container.evaluation_run_manual_evaluation_use_case
 
 
@@ -228,11 +244,15 @@ def get_run_gold_qa_dataset_evaluation_use_case(
     return container.evaluation_run_gold_qa_dataset_evaluation_use_case
 
 
-def get_update_qa_dataset_entry_use_case(container: BackendContainerDep) -> UpdateQaDatasetEntryUseCase:
+def get_update_qa_dataset_entry_use_case(
+    container: BackendContainerDep,
+) -> UpdateQaDatasetEntryUseCase:
     return container.evaluation_update_qa_dataset_entry_use_case
 
 
-def get_delete_qa_dataset_entry_use_case(container: BackendContainerDep) -> DeleteQaDatasetEntryUseCase:
+def get_delete_qa_dataset_entry_use_case(
+    container: BackendContainerDep,
+) -> DeleteQaDatasetEntryUseCase:
     return container.evaluation_delete_qa_dataset_entry_use_case
 
 

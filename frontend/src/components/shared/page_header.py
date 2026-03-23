@@ -4,8 +4,8 @@ Shared page chrome. Resolves :class:`~services.protocol.BackendClient` via the g
 
 import streamlit as st
 
-from services.streamlit_context import get_backend_client, get_user_id
 from components.shared.project_selector import render_project_selector
+from services.streamlit_context import get_backend_client, get_user_id
 
 
 def render_hero(title: str, subtitle: str, badge: str):
@@ -55,10 +55,11 @@ def render_page_header(
     )
 
     refresh_clicked = False
-    project_id = str(st.session_state.get("project_id")) if st.session_state.get("project_id") else None
+    project_id = (
+        str(st.session_state.get("project_id")) if st.session_state.get("project_id") else None
+    )
 
     if show_project_selector and show_refresh_button:
-
         # Show refresh button only if a project exists
         if project_id:
             col_left, col_right = st.columns([3, 1])
@@ -66,20 +67,18 @@ def render_page_header(
                 project_id = render_project_selector(
                     selector_label,
                     show_create_button=show_create_button_when_empty,
-                )            
+                )
             with col_right:
                 st.write("")
                 st.write("")
                 refresh_clicked = st.button(
-                    refresh_button_label,
-                    use_container_width=True,
-                    disabled=refresh_button_disabled
+                    refresh_button_label, use_container_width=True, disabled=refresh_button_disabled
                 )
         else:
             project_id = render_project_selector(
                 selector_label,
                 show_create_button=show_create_button_when_empty,
-            ) 
+            )
 
     elif show_project_selector:
         project_id = render_project_selector(

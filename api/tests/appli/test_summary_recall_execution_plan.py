@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from infrastructure.config.config import RETRIEVAL_CONFIG
 from domain.rag.query_intent import QueryIntent
 from domain.rag.retrieval.summary_recall_execution_plan import resolve_summary_recall_execution_plan
 from domain.rag.retrieval_settings import RetrievalSettings
+from infrastructure.config.config import RETRIEVAL_CONFIG
 
 
 def _settings() -> RetrievalSettings:

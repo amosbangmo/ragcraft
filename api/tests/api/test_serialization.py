@@ -4,6 +4,19 @@ from types import SimpleNamespace
 
 from langchain_core.documents import Document
 
+from application.common.summary_recall_preview import SummaryRecallPreviewDTO
+from application.dto.settings import EffectiveRetrievalSettingsView
+from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from domain.projects.project_settings import ProjectSettings
+from domain.rag.pipeline_latency import PipelineLatency
+from domain.rag.pipeline_payloads import PipelineBuildResult
+from domain.rag.query_intent import QueryIntent
+from domain.rag.rag_response import RAGResponse
+from domain.rag.retrieval_settings import RetrievalSettings
+from domain.rag.retrieval_strategy import RetrievalStrategy
+from domain.rag.summary_recall_document import SummaryRecallDocument
+from infrastructure.config.config import RETRIEVAL_CONFIG
 from interfaces.http.schemas.serialization import (
     benchmark_result_to_api_dict,
     effective_retrieval_settings_view_to_api_dict,
@@ -12,19 +25,6 @@ from interfaces.http.schemas.serialization import (
     preview_summary_recall_to_api_dict,
     rag_response_to_api_dict,
 )
-from application.common.summary_recall_preview import SummaryRecallPreviewDTO
-from application.dto.settings import EffectiveRetrievalSettingsView
-from infrastructure.config.config import RETRIEVAL_CONFIG
-from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.rag.pipeline_latency import PipelineLatency
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.projects.project_settings import ProjectSettings
-from domain.rag.query_intent import QueryIntent
-from domain.rag.rag_response import RAGResponse
-from domain.rag.retrieval_settings import RetrievalSettings
-from domain.rag.retrieval_strategy import RetrievalStrategy
-from domain.rag.summary_recall_document import SummaryRecallDocument
 
 
 def test_rag_response_to_api_dict_normalizes_documents() -> None:

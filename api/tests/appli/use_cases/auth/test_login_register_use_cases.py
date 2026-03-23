@@ -9,8 +9,12 @@ import pytest
 from application.dto.auth import LoginUserCommand, RegisterUserCommand
 from application.use_cases.auth.login_user import LoginUserUseCase
 from application.use_cases.auth.register_user import RegisterUserUseCase
-from infrastructure.config.exceptions import AuthCredentialsInvalidError, AuthValidationError, UsernameTakenError
 from infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
+from infrastructure.config.exceptions import (
+    AuthCredentialsInvalidError,
+    AuthValidationError,
+    UsernameTakenError,
+)
 
 
 def _row(

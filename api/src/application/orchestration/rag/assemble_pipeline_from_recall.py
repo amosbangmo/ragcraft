@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from time import perf_counter
 
+from application.orchestration.rag.ports import PostRecallStagePorts
 from application.orchestration.rag.post_recall_pipeline_steps import (
     step_confidence,
     step_contextual_compression,
@@ -18,10 +19,9 @@ from application.orchestration.rag.post_recall_pipeline_steps import (
     step_rerank_and_select_summaries,
     step_section_expansion,
 )
-from application.orchestration.rag.ports import PostRecallStagePorts
+from domain.projects.project import Project
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult, SummaryRecallResult
-from domain.projects.project import Project
 
 
 def assemble_pipeline_from_recall(
@@ -108,9 +108,7 @@ def assemble_pipeline_from_recall(
         adaptive_retrieval_enabled=use_adaptive_retrieval,
         retrieval_strategy=strategy,
         retrieval_filters=(
-            filters_for_retrieval.to_dict()
-            if filters_for_retrieval is not None
-            else None
+            filters_for_retrieval.to_dict() if filters_for_retrieval is not None else None
         ),
         vector_summary_docs=vector_summary_docs,
         bm25_summary_docs=bm25_summary_docs,

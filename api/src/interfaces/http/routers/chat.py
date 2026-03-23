@@ -10,13 +10,26 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
+from application.http.wire import (
+    PipelineSnapshotWirePayload,
+    PreviewSummaryRecallWirePayload,
+    RagAnswerWirePayload,
+    RetrievalComparisonWirePayload,
+)
+from application.use_cases.chat.ask_question import AskQuestionUseCase
+from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
+from application.use_cases.projects.resolve_project import ResolveProjectUseCase
+from application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
+from domain.auth.authenticated_principal import AuthenticatedPrincipal
+from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 from interfaces.http.dependencies import (
     get_ask_question_use_case,
+    get_authenticated_principal,
     get_compare_retrieval_modes_use_case,
     get_inspect_pipeline_use_case,
     get_preview_summary_recall_use_case,
     get_resolve_project_use_case,
-    get_authenticated_principal,
 )
 from interfaces.http.openapi_common import chat_route_responses
 from interfaces.http.schemas.chat import (
@@ -30,24 +43,13 @@ from interfaces.http.schemas.chat import (
     RetrievalCompareRequest,
     RetrievalCompareResponse,
 )
-from application.use_cases.chat.ask_question import AskQuestionUseCase
-from application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
-from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
-from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
-from application.http.wire import (
-    PipelineSnapshotWirePayload,
-    PreviewSummaryRecallWirePayload,
-    RagAnswerWirePayload,
-    RetrievalComparisonWirePayload,
-)
-from domain.auth.authenticated_principal import AuthenticatedPrincipal
-from application.use_cases.projects.resolve_project import ResolveProjectUseCase
-from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-def _retrieval_overrides_from_body(body: ChatPipelineRequestBase) -> RetrievalSettingsOverrideSpec | None:
+def _retrieval_overrides_from_body(
+    body: ChatPipelineRequestBase,
+) -> RetrievalSettingsOverrideSpec | None:
     return RetrievalSettingsOverrideSpec.from_optional_mapping(body.retrieval_settings)
 
 
@@ -184,7 +186,9 @@ def post_preview_summary_recall(
 def post_retrieval_compare(
     body: RetrievalCompareRequest,
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
-    use_case: Annotated[CompareRetrievalModesUseCase, Depends(get_compare_retrieval_modes_use_case)],
+    use_case: Annotated[
+        CompareRetrievalModesUseCase, Depends(get_compare_retrieval_modes_use_case)
+    ],
 ) -> RetrievalCompareResponse:
     raw = use_case.execute(
         user_id=principal.user_id,

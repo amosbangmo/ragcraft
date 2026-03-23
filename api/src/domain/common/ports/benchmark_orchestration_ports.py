@@ -10,7 +10,9 @@ from domain.evaluation.gold_qa_row_input import GoldQaPipelineRowInput
 
 @runtime_checkable
 class BenchmarkRowProcessingPort(Protocol):
-    def process_row(self, entry: Any, result: GoldQaPipelineRowInput, acc: BenchmarkAccumulator) -> None: ...
+    def process_row(
+        self, entry: Any, result: GoldQaPipelineRowInput, acc: BenchmarkAccumulator
+    ) -> None: ...
 
 
 @runtime_checkable

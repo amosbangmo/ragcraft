@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from application.dto.auth import GetUserProfileCommand, GetUserProfileResult, UserProfileSummary
-from infrastructure.config.exceptions import UserAccountNotFoundError
 from domain.common.ports.user_repository_port import UserRepositoryPort
+from infrastructure.config.exceptions import UserAccountNotFoundError
 
 
 class GetCurrentUserProfileUseCase:

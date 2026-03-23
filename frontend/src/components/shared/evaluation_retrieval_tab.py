@@ -4,13 +4,13 @@ Evaluation — retrieval analytics tab: query log filters and dashboard.
 
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import Any, cast
 
 import streamlit as st
 
-from services.protocol import BackendClient
 from components.shared.retrieval_dashboard import render_retrieval_dashboard
+from services.protocol import BackendClient
 
 
 def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
@@ -55,8 +55,8 @@ def render_evaluation_retrieval_tab(payload: dict[str, Any]) -> None:
                 since_d = st.date_input("From (UTC)", key=f"ret_dash_since_{wk}")
             with c2:
                 until_d = st.date_input("To (UTC)", key=f"ret_dash_until_{wk}")
-            since_utc = datetime.combine(since_d, time.min, tzinfo=timezone.utc)
-            until_utc = datetime.combine(until_d, time(23, 59, 59, 999999), tzinfo=timezone.utc)
+            since_utc = datetime.combine(since_d, time.min, tzinfo=UTC)
+            until_utc = datetime.combine(until_d, time(23, 59, 59, 999999), tzinfo=UTC)
             if since_utc > until_utc:
                 st.warning("Start date is after end date; swap or adjust the range.")
                 st.markdown("</div>", unsafe_allow_html=True)

@@ -8,9 +8,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from infrastructure.auth.password_utils import hash_password
 from interfaces.http.dependencies import get_user_repository
 from interfaces.http.main import create_app
-from infrastructure.auth.password_utils import hash_password
 
 
 def _row(

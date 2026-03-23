@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 from application.orchestration.rag.pipeline_query_log_emitter import PipelineQueryLogEmitter
 from application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
-from domain.rag.pipeline_latency import PipelineLatency
 from domain.projects.project import Project
+from domain.rag.pipeline_latency import PipelineLatency
 
 
 def test_build_invokes_emitter_when_payload_present() -> None:

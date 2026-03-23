@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.orchestration.rag.ports import SummaryRecallStagePort
 from application.orchestration.rag.summary_recall_from_request import (
     run_summary_recall_from_chat_request,
 )
-from application.common.summary_recall_preview import SummaryRecallPreviewDTO
-from domain.rag.pipeline_payloads import SummaryRecallResult
 from domain.projects.project import Project
+from domain.rag.pipeline_payloads import SummaryRecallResult
 from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
 

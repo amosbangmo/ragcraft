@@ -10,7 +10,9 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-RAG_SERVICE_PATH = REPO_ROOT / "api" / "src" / "infrastructure" / "adapters" / "rag" / "rag_service.py"
+RAG_SERVICE_PATH = (
+    REPO_ROOT / "api" / "src" / "infrastructure" / "adapters" / "rag" / "rag_service.py"
+)
 APPLICATION_CONTAINER = REPO_ROOT / "api" / "src" / "composition" / "application_container.py"
 RAG_ADAPTERS_ROOT = REPO_ROOT / "api" / "src" / "infrastructure" / "adapters" / "rag"
 
@@ -68,7 +70,9 @@ def test_rag_adapter_tree_does_not_import_chat_use_cases(forbidden: str) -> None
                 continue
             for alias in node.names:
                 if alias.name == forbidden or alias.name.split(".")[-1] == forbidden:
-                    offenders.append(f"{path.relative_to(REPO_ROOT)}: from {mod} import {alias.name}")
+                    offenders.append(
+                        f"{path.relative_to(REPO_ROOT)}: from {mod} import {alias.name}"
+                    )
     assert not offenders, (
         f"RAG adapters must not import {forbidden} (orchestration belongs in application/composition):\n"
         + "\n".join(offenders)

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from components.shared.section_card import inject_section_card_styles, section_card
 

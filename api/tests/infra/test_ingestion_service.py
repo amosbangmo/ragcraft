@@ -52,9 +52,13 @@ if "infrastructure.rag.ingestion.summarizer" not in sys.modules:
     summarizer_module.ElementSummarizer = ElementSummarizer
     sys.modules["infrastructure.rag.ingestion.summarizer"] = summarizer_module
 
-from infrastructure.config.exceptions import DocumentExtractionError, LLMServiceError, OCRDependencyError
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.projects.project import Project
+from infrastructure.config.exceptions import (
+    DocumentExtractionError,
+    LLMServiceError,
+    OCRDependencyError,
+)
 from infrastructure.rag.ingestion_service import IngestionService
 
 

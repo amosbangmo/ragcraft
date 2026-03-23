@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import streamlit as st
 
-from services.view_models import JUDGE_FAILURE_REASON, ManualEvaluationResult
 from components.shared.confidence_display import format_confidence_with_band
 from components.shared.metric_help import render_metric_with_help
-from components.shared.raw_assets import render_raw_assets
 from components.shared.prompt_sources import render_prompt_sources
+from components.shared.raw_assets import render_raw_assets
+from services.view_models import JUDGE_FAILURE_REASON, ManualEvaluationResult
 
 
 def _fmt_float(value: float | None) -> str:
@@ -25,9 +25,7 @@ def _metric_row(items: list[tuple[str, str, str | None]]) -> None:
     cols = st.columns(len(items))
     for col, (label, display, metric_key) in zip(cols, items):
         with col:
-            render_metric_with_help(
-                label=label, value=display, metric_key=metric_key
-            )
+            render_metric_with_help(label=label, value=display, metric_key=metric_key)
 
 
 def render_manual_evaluation_compact(result: ManualEvaluationResult) -> None:
@@ -390,9 +388,7 @@ def render_manual_evaluation_result(
 
     if raw_assets_collapsed:
         with st.expander("Raw evidence (advanced)", expanded=False):
-            st.caption(
-                "Raw text, tables, and images passed into the prompt after reranking."
-            )
+            st.caption("Raw text, tables, and images passed into the prompt after reranking.")
             render_raw_assets(result.raw_assets, mode="evaluation")
     else:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)

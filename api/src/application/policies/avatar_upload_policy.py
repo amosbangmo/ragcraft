@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from infrastructure.config.config import USER_PROFILE_UPLOAD_CONFIG
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from infrastructure.config.config import USER_PROFILE_UPLOAD_CONFIG
 
 
 def validate_buffered_avatar_upload(upload: BufferedDocumentUpload) -> BufferedDocumentUpload:

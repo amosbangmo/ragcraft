@@ -11,6 +11,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
+from application.dto.auth import LoginUserCommand, RegisterUserCommand
+from application.use_cases.auth.login_user import LoginUserUseCase
+from application.use_cases.auth.register_user import RegisterUserUseCase
+from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
 from interfaces.http.dependencies import (
     get_access_token_issuer,
     get_login_user_use_case,
@@ -18,10 +22,6 @@ from interfaces.http.dependencies import (
 )
 from interfaces.http.schemas.auth import AuthSuccessResponse, LoginRequest, RegisterRequest
 from interfaces.http.schemas.mappers import user_profile_summary_to_me
-from domain.common.ports.access_token_issuer_port import AccessTokenIssuerPort
-from application.dto.auth import LoginUserCommand, RegisterUserCommand
-from application.use_cases.auth.login_user import LoginUserUseCase
-from application.use_cases.auth.register_user import RegisterUserUseCase
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

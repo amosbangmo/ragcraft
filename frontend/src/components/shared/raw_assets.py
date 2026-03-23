@@ -3,7 +3,6 @@ from typing import Literal
 
 import streamlit as st
 
-
 TitleMode = Literal["chat", "evaluation"]
 
 

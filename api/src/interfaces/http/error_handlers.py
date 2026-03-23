@@ -9,8 +9,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from interfaces.http.error_payload import api_error_body
 from infrastructure.config.exceptions import RAGCraftError
+from interfaces.http.error_payload import api_error_body
 
 logger = logging.getLogger("ragcraft.api.exceptions")
 
