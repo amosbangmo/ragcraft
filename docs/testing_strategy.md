@@ -9,6 +9,7 @@ The suite is organized as a **pyramid**: fast **architecture** import and layout
 | Area | Examples |
 |------|-----------|
 | **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/`, composition/orchestration trees |
+| **Required skeleton** | `test_required_tree.py` — explicit **must-exist** directories and anchor files (backend composition + HTTP stack, frontend entry/pages/services/state, docs/scripts, test subtrees `application_tests` / `infrastructure_tests` / `apps_api` / `e2e`) without enumerating every future file |
 | **Layer imports** | `test_layer_import_rules.py` — domain, application, HTTP routers (AST top-level imports) |
 | **Infra + composition** | `test_layer_boundaries.py` — infrastructure vs application/Streamlit; composition vs Streamlit |
 | **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit or legacy `src.*` / `apps.*` namespaces under `interfaces/http` |

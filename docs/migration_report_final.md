@@ -29,6 +29,12 @@ The following **fail the test suite** (not advisory checks) when the repo drifts
 
 CI-oriented scripts: **`scripts/validate_architecture.sh`** (architecture tests only), **`scripts/validate.sh`** (Ruff + architecture), **`scripts/run_tests.sh`**, **`scripts/lint.sh`**.
 
+### Required repository skeleton (PROMPT 3)
+
+**`api/tests/architecture/test_required_tree.py`** adds **positive** guardrails: it fails if required folders or **architectural anchor files** disappear (e.g. `api/src/composition/backend_composition.py`, `api/src/interfaces/http/dependencies.py`, router/schema modules listed in the test module, `frontend/app.py`, `frontend/src/pages/settings.py`, `frontend/src/state/session_state.py`, `frontend/src/services/api_client.py`, and the documented doc/script paths). It intentionally does **not** freeze every new feature file.
+
+**Note on test directory names:** the suite expects **`api/tests/application_tests`**, **`api/tests/infrastructure_tests`**, and **`api/tests/apps_api`** (not `api/tests/application/` or `api/tests/api/`) so test package names do not shadow **`application`**, **`infrastructure`**, or **`api`** on **`PYTHONPATH`**.
+
 ---
 
 This report remains the **canonical end-state** summary for Clean Architecture guardrails; paths below that still mention `src/` or `apps/api/` should be read as **historical** unless cross-referenced with the layout section above.
