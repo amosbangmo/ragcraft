@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from src.ui import evaluation_dashboard as ed
+from components.shared import evaluation_dashboard as ed
 
 
 def _expander_cm():
@@ -23,13 +23,13 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
 
         mock_st.columns.side_effect = _cols
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_render_correlation_none_and_unavailable(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         ed._render_correlation_analysis(None, [])
         ed._render_correlation_analysis({"available": False, "reason": "too few"}, [])
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_render_correlation_full_matrix_and_scatter(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         correlations = {
@@ -53,7 +53,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
         ]
         ed._render_correlation_analysis(correlations, rows)
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_render_correlation_no_strong_pairs(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         correlations = {
@@ -66,7 +66,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
         }
         ed._render_correlation_analysis(correlations, [{"a": 1, "b": 2}])
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_render_failure_analysis_paths(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         ed._render_failure_analysis(None, [])
@@ -96,7 +96,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
         }
         ed._render_failure_analysis(payload, [{"entry_id": 1}])
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_render_failure_no_counts_success(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         ed._render_failure_analysis(
@@ -104,7 +104,7 @@ class TestEvaluationDashboardRenderHelpers(unittest.TestCase):
             [{"entry_id": 1}],
         )
 
-    @patch("src.ui.evaluation_dashboard.st")
+    @patch("components.shared.evaluation_dashboard.st")
     def test_histogram_and_overview_charts(self, mock_st) -> None:
         self._mock_streamlit(mock_st)
         ed._histogram_bar_chart("L", None)

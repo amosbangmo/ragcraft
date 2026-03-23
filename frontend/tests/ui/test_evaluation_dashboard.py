@@ -6,7 +6,7 @@ from infrastructure.evaluation.benchmark_comparison_service import (
     BenchmarkComparisonService,
     LOWER_IS_BETTER_METRICS,
 )
-from src.ui import evaluation_dashboard as ed
+from components.shared import evaluation_dashboard as ed
 
 
 class TestEvaluationDashboardCoercions(unittest.TestCase):

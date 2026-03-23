@@ -7,3 +7,10 @@ readme = "README.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Optional: from the api/ directory, run only blocking architecture tests:
+#   cd api && pytest
+# Paths are relative to this directory. Repo-root pytest config lives in ../pyproject.toml.
+[tool.pytest.ini_options]
+testpaths = ["tests/architecture"]
+pythonpath = ["tests", "src", "../frontend/src"]

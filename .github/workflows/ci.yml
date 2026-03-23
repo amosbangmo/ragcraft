@@ -8,6 +8,7 @@ jobs:
   lint-test-boot:
     runs-on: ubuntu-latest
 
+    env:
       OPENAI_API_KEY: ci-test-key
       RAGCRAFT_JWT_SECRET: ci-jwt-secret-at-least-32-characters-long!!
       PYTHONPATH: api/src:frontend/src:api/tests
@@ -32,11 +33,14 @@ jobs:
       - name: Lint (critical rules)
         run: ruff check . --select E9,F63,F7,F82
 
-      - name: Lint (project Ruff rules, api + frontend + architecture tests)
-        run: ruff check api/src frontend/src api/tests/architecture
+      - name: Lint (project rules — same as scripts/lint.sh)
+        run: bash scripts/lint.sh
 
-      - name: Architecture tests (pytest)
-        run: pytest api/tests/architecture -q --tb=short
+      - name: Architecture tests — same as scripts/validate_architecture.sh
+        run: bash scripts/validate_architecture.sh
+
+      - name: Pytest (remainder — same as step 2 of scripts/run_tests.sh)
+        run: python -m pytest api/tests --ignore=api/tests/architecture frontend/tests -q --tb=short
 
       - name: Run backend runtime tests
         run: python -m unittest discover -s api/tests/infrastructure_tests -p "test_*.py"

@@ -255,6 +255,28 @@ cd ragcraft
 pip install -r requirements.txt
 ```
 
+## Testing and architecture validation
+
+Run from the **repository root**. Layout and import-boundary tests live under **`api/tests/architecture/`** (see **`docs/testing_strategy.md`**).
+
+| Goal | Bash (Linux / macOS / Git Bash) | PowerShell |
+|------|----------------------------------|------------|
+| **Architecture only** (fast, blocking) | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
+| **Lint + architecture** (CI-style quick check) | `./scripts/validate.sh` | `.\scripts\validate.ps1` |
+| **Full pytest suite** (architecture first, then the rest) | `./scripts/run_tests.sh` | `.\scripts\run_tests.ps1` |
+| **Lint only** | `./scripts/lint.sh` | `.\scripts\lint.ps1` |
+
+Equivalent manual invocation for architecture tests:
+
+```bash
+export PYTHONPATH=api/src:frontend/src:api/tests   # Linux/macOS Git Bash
+python -m pytest api/tests/architecture -q
+```
+
+Optional: from **`api/`**, `pytest` runs only **`tests/architecture`** (see **`api/pyproject.toml`**).
+
+**Typing:** incremental **`mypy`** is documented in **`docs/testing_strategy.md`**; it is not part of the default lint script.
+
 ## Run
 
 ### Streamlit (default local UI)

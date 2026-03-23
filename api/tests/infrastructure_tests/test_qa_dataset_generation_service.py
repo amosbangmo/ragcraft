@@ -80,7 +80,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
             user_id="u", project_id="p", num_questions=50, source_files=None
         )
         self.assertEqual(len(out), 1)
-        self.assertEqual(out[0]["question"], "Q1")
+        self.assertEqual(out[0].question, "Q1")
 
     @patch("infrastructure.rag.llm.qa_dataset_llm_gateway.LLM")
     def test_parse_json_with_fence_and_skips_bad_items(self, mock_llm) -> None:
@@ -111,7 +111,7 @@ class TestQADatasetGenerationService(unittest.TestCase):
             user_id="u", project_id="p", num_questions=5, source_files=None
         )
         self.assertEqual(len(out), 1)
-        self.assertEqual(out[0]["question"], "ok")
+        self.assertEqual(out[0].question, "ok")
 
     @patch("infrastructure.rag.llm.qa_dataset_llm_gateway.LLM")
     def test_invalid_json_and_empty_entries_raise(self, mock_llm) -> None:

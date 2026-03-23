@@ -327,17 +327,37 @@ tests/
 
 ---
 
-## 14. Lock-in (Prompt 6 — CI and validation)
+## 14. Lock-in (CI and validation — first-class scripts)
 
-**Goal:** Make accidental architectural drift **noisy** without burdening every PR with the full pytest suite.
+**Goal:** Structural and import drift fails **immediately** in CI and is **trivial to run locally** with the same entrypoints.
 
-| Mechanism | Role |
-|-----------|------|
-| **`.github/workflows/ci.yml`** | Sets **`PYTHONPATH=api/src:frontend/src:api/tests`**; runs **Ruff** on **`api/src`**, **`frontend/src`**, **`api/tests/architecture`**; runs **`pytest api/tests/architecture`**; keeps **unittest** jobs under **`api/tests/...`**. |
-| **`scripts/validate.sh`** / **`scripts/validate_architecture.sh`** / **`scripts/validate.ps1`** | Local Ruff + architecture pytest targets (see script headers). |
-| **`pyproject.toml`** | **`[tool.pytest.ini_options]`** — **`testpaths`**, **`pythonpath`** for **`api/src`**, **`frontend/src`**, **`api/tests`**. |
+### How drift is prevented
 
-**Optional local commands** (full tree): **`pytest api/tests frontend/tests -q`**, **`ruff check api/src frontend/src`**, incremental **`mypy --config-file=pyproject.toml -p …`** as documented in **`docs/architecture.md`**.
+1. **`api/tests/architecture/`** — blocking pytest package (layout, required skeleton, import boundaries, FastAPI/Streamlit rules). This is the **authoritative** architecture gate.
+2. **`.github/workflows/ci.yml`** — calls the same shell scripts as developers (see below), then runs additional **unittest** discover jobs and a Streamlit boot smoke check.
+3. **Documentation** — **`README.md`**, **`docs/README.md`**, **`docs/testing_strategy.md`**, and **`docs/dependency_rules.md`** list the **exact** commands.
+
+### Commands (repository root)
+
+| Script | Behavior |
+|--------|----------|
+| **`scripts/validate_architecture.sh`** | **`pytest api/tests/architecture`** only; **`set -euo pipefail`**; **`PYTHONPATH=api/src:frontend/src:api/tests`**. |
+| **`scripts/lint.sh`** | **`ruff check`** on **`api/src`**, **`frontend/src`**, **`api/tests/architecture`**. |
+| **`scripts/validate.sh`** | **`lint.sh`** then **`validate_architecture.sh`** (quick CI-style check). |
+| **`scripts/run_tests.sh`** | **`validate_architecture.sh`**, then **`pytest api/tests --ignore=api/tests/architecture frontend/tests`** (architecture is **not** run twice). |
+
+**Windows:** **`scripts/validate_architecture.ps1`**, **`lint.ps1`**, **`validate.ps1`**, **`run_tests.ps1`** mirror the bash scripts.
+
+**CI mapping:** **`.github/workflows/ci.yml`** runs **`bash scripts/lint.sh`**, **`bash scripts/validate_architecture.sh`**, then the same non-architecture **pytest** line as step 2 of **`run_tests.sh`**, plus **unittest** jobs. You can reproduce the pytest portion locally with **`./scripts/run_tests.sh`**.
+
+**Optional `cd api` workflow:** **`api/pyproject.toml`** configures pytest to run only **`tests/architecture`** when pytest is invoked from the **`api/`** directory.
+
+| Config | Role |
+|--------|------|
+| **Root `pyproject.toml`** | **`[tool.pytest.ini_options]`** — default **`testpaths`**, **`pythonpath`** when running pytest from repo root. |
+| **`api/pyproject.toml`** | Narrow pytest defaults for backend-only architecture runs. |
+
+**Optional typing:** incremental **`mypy`** — not part of **`lint.sh`**; see **`docs/testing_strategy.md`**.
 
 ---
 

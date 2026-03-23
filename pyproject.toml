@@ -52,7 +52,7 @@ ignore_errors = true
 # Tests live under api/tests and frontend/tests; source roots are api/src and frontend/src.
 [tool.pytest.ini_options]
 testpaths = ["api/tests", "frontend/tests"]
-pythonpath = ["api/tests", "api/src", "frontend/src"]
+pythonpath = ["api/src", "frontend/src", "api/tests"]
 markers = [
-    "architecture: layering and import-boundary guards (tests/architecture/)",
+    "architecture: optional pytest filter for layering guards (primary CI gate is the path api/tests/architecture via scripts/validate_architecture.sh)",
 ]

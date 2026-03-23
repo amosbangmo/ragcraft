@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
-from src.ui import request_runner as rr
+from components.shared import request_runner as rr
 
 
 class _RerunStub(Exception):

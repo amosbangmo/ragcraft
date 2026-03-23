@@ -2,7 +2,43 @@
 
 The suite is organized as a **pyramid**: fast **architecture** import and layout guards at the base, **unit** use-case and domain tests, **HTTP/API** tests with dependency overrides, then heavier **integration** / optional-dependency flows.
 
-**CI lock-in:** `.github/workflows/ci.yml` sets **`PYTHONPATH=api/src:frontend/src:api/tests`**, runs **Ruff** on **`api/src`**, **`frontend/src`**, and **`api/tests/architecture`**, then **`pytest api/tests/architecture`**. Locally use **`scripts/validate.sh`**, **`scripts/validate_architecture.sh`**, or **`scripts/validate.ps1`** where available. **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`pythonpath = ["api/tests", "api/src", "frontend/src"]`** so pytest resolves first-party packages from the repo root.
+## Commands (repo root)
+
+Use these for **local** work and as the **reference for CI** (see **`.github/workflows/ci.yml`**).
+
+| What | Bash | PowerShell |
+|------|------|------------|
+| **Architecture validation only** (blocking layout + imports + required tree) | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
+| **Lint (Ruff) + architecture tests** | `./scripts/validate.sh` | `.\scripts\validate.ps1` |
+| **Full pytest workflow** (architecture first, then rest of `api/tests` + `frontend/tests`) | `./scripts/run_tests.sh` | `.\scripts\run_tests.ps1` |
+| **Lint only** | `./scripts/lint.sh` | `.\scripts\lint.ps1` |
+
+**Environment:** scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (Linux `:` / Windows `;` inside the respective script). **`api/src` is listed first** so application packages are never shadowed by anything under **`api/tests`**.
+
+**Strict subset:** architecture tests are exactly everything under **`api/tests/architecture/`** — no need for a pytest marker for day-to-day use. Optional marker **`architecture`** exists in root **`pyproject.toml`** for future filtering; the **canonical gate** is the path + **`validate_architecture`**.
+
+**From `api/` only:** **`api/pyproject.toml`** limits pytest to **`tests/architecture`** so `cd api && pytest` matches **`validate_architecture.sh`** without scanning the whole repo.
+
+**Full pytest in one shot (no script):**
+
+```bash
+export PYTHONPATH=api/src:frontend/src:api/tests
+python -m pytest api/tests frontend/tests -q
+```
+
+(Runs architecture tests twice if you already ran **`validate_architecture.sh`**; prefer **`run_tests.sh`** for a single ordered workflow.)
+
+**Typing (optional):** incremental **mypy** is not wired into **`lint.sh`**. Example:
+
+```bash
+mypy --config-file=pyproject.toml -p domain
+```
+
+(Adjust **`-p`** to the package under **`api/src`**; see **`pyproject.toml`** **`[tool.mypy]`**.)
+
+**CI lock-in:** **`.github/workflows/ci.yml`** runs **`bash scripts/lint.sh`**, **`bash scripts/validate_architecture.sh`**, then **`python -m pytest api/tests --ignore=api/tests/architecture frontend/tests`** (same split as **`run_tests.sh`** step 2), plus existing **unittest** jobs and boot check.
+
+Root **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`testpaths`** and **`pythonpath`** when you invoke pytest from the repo root without the scripts.
 
 ## Architecture tests (`api/tests/architecture/`)
 
@@ -46,10 +82,4 @@ Shared helper: **`api/tests/architecture/import_scanner.py`**. Index: **`api/tes
 - Full absence of logical coupling.
 - Runtime security of **JWT bearer** verification and secret configuration in real deployments.
 
-Run full suite (from repo root; `pyproject` supplies `pythonpath`):
-
-```bash
-pytest api/tests frontend/tests -q
-```
-
-**Lint (recommended on touched trees):** `ruff check api/src frontend/src` (see `pyproject.toml`).
+**Lint (paths match `lint.sh`):** `ruff check api/src frontend/src api/tests/architecture` (see **`pyproject.toml`**).

@@ -1,16 +1,20 @@
+# Full pytest workflow: architecture first, then remaining api + frontend tests.
+param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$RemainingArguments = @()
+)
+
 $ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent $PSScriptRoot
+Set-Location $Root
+$env:PYTHONPATH = "$Root/api/src;$Root/frontend/src;$Root/api/tests"
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
-$venvActivate = Join-Path $repoRoot ".venv\Scripts\Activate.ps1"
+Write-Host "==> Step 1/2: Architecture guardrails (blocking)"
+& "$PSScriptRoot\validate_architecture.ps1"
 
-if (Test-Path $venvActivate) {
-    . $venvActivate
-} else {
-    Write-Warning "Virtual environment activation script not found at $venvActivate. Running with current Python."
-}
+$apiTests = Join-Path $Root "api/tests"
+$archTests = Join-Path $Root "api/tests/architecture"
+$frontendTests = Join-Path $Root "frontend/tests"
 
-Set-Location $repoRoot
-python -m unittest discover -s tests/ui -p "test_*.py"
-python -m unittest discover -s tests/infrastructure_services -p "test_*.py"
-python -m unittest discover -s tests/integration -p "test_*.py"
-python -m unittest discover -s tests/quality -p "test_*.py"
+Write-Host "==> Step 2/2: Pytest (api/tests minus architecture + frontend/tests)"
+& python -m pytest $apiTests --ignore=$archTests $frontendTests -q @RemainingArguments

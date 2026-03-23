@@ -20,21 +20,31 @@ def test_primary_container_getter_is_cached() -> None:
 def test_dependencies_module_has_no_legacy_db_bootstrap() -> None:
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[3] / "apps" / "api" / "dependencies.py").read_text(
-        encoding="utf-8"
-    )
+    source = (
+        Path(__file__).resolve().parents[3]
+        / "api"
+        / "src"
+        / "interfaces"
+        / "http"
+        / "dependencies.py"
+    ).read_text(encoding="utf-8")
     assert "ensure_auth_database" not in source
     assert "get_user_repository" in source
     assert "BackendContainerDep" in source
 
 
 def test_dependencies_avoids_legacy_streamlit_facade_imports() -> None:
-    """Guards the FastAPI graph against the Streamlit façade (see apps.api.dependencies docstring)."""
+    """Guards the FastAPI graph against the Streamlit façade (see interfaces.http.dependencies)."""
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[3] / "apps" / "api" / "dependencies.py").read_text(
-        encoding="utf-8"
-    )
+    source = (
+        Path(__file__).resolve().parents[3]
+        / "api"
+        / "src"
+        / "interfaces"
+        / "http"
+        / "dependencies.py"
+    ).read_text(encoding="utf-8")
     assert "ragcraft_app" not in source
     assert "RAGCraftApp" not in source
 

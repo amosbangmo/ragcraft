@@ -6,7 +6,7 @@ from dataclasses import replace
 
 import pytest
 
-import application.users.avatar_upload_policy as avatar_upload_policy
+import application.policies.avatar_upload_policy as avatar_upload_policy
 import infrastructure.config.config as cfg
 from application.policies.avatar_upload_policy import validate_buffered_avatar_upload
 from domain.projects.buffered_document_upload import BufferedDocumentUpload

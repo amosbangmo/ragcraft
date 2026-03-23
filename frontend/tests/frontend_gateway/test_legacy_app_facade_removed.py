@@ -12,9 +12,9 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 @pytest.mark.parametrize(
     "relative_path",
     [
-        Path("src") / "core" / "app_state.py",
-        Path("src") / "frontend_gateway" / "in_process.py",
-        Path("src") / "frontend_gateway" / "streamlit_backend_factory.py",
+        Path("api") / "src" / "infrastructure" / "config" / "app_state.py",
+        Path("frontend") / "src" / "services" / "in_process.py",
+        Path("frontend") / "src" / "services" / "streamlit_backend_factory.py",
     ],
 )
 def test_streamlit_runtime_modules_do_not_reference_removed_app_facade(relative_path: Path) -> None:

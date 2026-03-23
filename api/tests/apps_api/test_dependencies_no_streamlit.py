@@ -2,7 +2,7 @@
 FastAPI dependency wiring must not import Streamlit for the chain-cache eviction path.
 
 The full service graph may still load UI-oriented modules elsewhere; this file guards the
-``apps.api.dependencies`` import surface and the cache-invalidate route contract.
+``interfaces.http.dependencies`` import surface and the cache-invalidate route contract.
 """
 
 from __future__ import annotations
@@ -29,7 +29,9 @@ def test_import_dependencies_module_does_not_load_streamlit() -> None:
 
 def test_dependencies_module_statically_avoids_streamlit_token() -> None:
     root = pathlib.Path(__file__).resolve().parents[3]
-    text = (root / "apps" / "api" / "dependencies.py").read_text(encoding="utf-8")
+    text = (root / "api" / "src" / "interfaces" / "http" / "dependencies.py").read_text(
+        encoding="utf-8"
+    )
     assert "streamlit" not in text.lower()
 
 

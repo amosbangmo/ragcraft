@@ -1,6 +1,16 @@
 # Dependency rules
 
-Import directions enforced in code and by **`api/tests/architecture/`** (AST scans). When in doubt, run **`./scripts/validate_architecture.sh`** or **`./scripts/validate.sh`** from the repo root (both run the architecture pytest package with **`PYTHONPATH`** including **`api/src`**, **`frontend/src`**, and **`api/tests`**).
+Import directions enforced in code and by **`api/tests/architecture/`** (AST scans).
+
+**Validate from repo root (exact commands):**
+
+| Intent | Command |
+|--------|---------|
+| Architecture tests only | **`./scripts/validate_architecture.sh`** or **`.\scripts\validate_architecture.ps1`** |
+| Ruff + architecture (CI-style) | **`./scripts/validate.sh`** or **`.\scripts\validate.ps1`** |
+| Full pytest (architecture first, then rest) | **`./scripts/run_tests.sh`** or **`.\scripts\run_tests.ps1`** |
+
+Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`**. See **`docs/testing_strategy.md`** and **`docs/README.md`**.
 
 **Required skeleton:** **`test_required_tree.py`** asserts that canonical directories (e.g. `api/src/domain/`, `frontend/src/pages/`, `api/tests/application_tests/`) and **anchor files** (composition wiring modules, core routers/schemas, `frontend/app.py`, key docs/scripts) still exist. It does not list every future module—only the architectural spine—so legitimate feature growth stays unblocked.
 

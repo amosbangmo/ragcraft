@@ -10,21 +10,31 @@ Concise, **code-aligned** documentation for the repository layout after the Clea
 | [api.md](api.md) | HTTP authentication (**Bearer JWT**), env vars, error envelope, OpenAPI pointers |
 | [rag_orchestration.md](rag_orchestration.md) | RAG flow: entrypoints, use cases, orchestration modules, ports, adapters, logging, evaluation path |
 | [dependency_rules.md](dependency_rules.md) | Allowed import directions, RAG-specific rules, anti-patterns |
-| [testing_strategy.md](testing_strategy.md) | Architecture tests (including orchestration purity and RAG layering), integration coverage |
+| [testing_strategy.md](testing_strategy.md) | How to run architecture validation, full tests, lint; architecture test index |
 | [migration_report_final.md](migration_report_final.md) | **End-state** migration report: what was strong, what each hardening pass fixed, **structural guardrails**, **remaining risks**, final maturity verdict |
-**Tooling:** `pyproject.toml` configures **Ruff**, **Black**, **mypy**, and **pytest** defaults (see **`docs/architecture.md`** § Tooling). Runtime packages are listed in **`requirements.txt`**.
+**Tooling:** root **`pyproject.toml`** configures **Ruff**, **Black**, **mypy**, and **pytest** defaults. Runtime packages are listed in **`requirements.txt`**.
 
-## Architecture validation (CI lock-in)
+## Architecture validation (first-class commands)
 
-From repo root (pytest `pythonpath` includes `api/tests`, `api/src`, `frontend/src` — see `pyproject.toml`):
+Structural and import drift is caught by **`api/tests/architecture/`**. Use the repo scripts from the **repository root** (same commands **CI** uses for lint + architecture + non-architecture pytest):
+
+| Command | What it runs |
+|---------|----------------|
+| **`./scripts/validate_architecture.sh`** | **Pytest** — `api/tests/architecture` only (blocking). |
+| **`./scripts/validate.sh`** | **`./scripts/lint.sh`** then **`./scripts/validate_architecture.sh`** (quick CI-style check). |
+| **`./scripts/run_tests.sh`** | Architecture tests, then **`pytest api/tests`** with **`--ignore=api/tests/architecture`** plus **`frontend/tests`** (no duplicate architecture run). |
+| **`./scripts/lint.sh`** | **Ruff** on **`api/src`**, **`frontend/src`**, **`api/tests/architecture`**. |
+
+**Windows (PowerShell):** `.\scripts\validate_architecture.ps1`, `.\scripts\validate.ps1`, `.\scripts\run_tests.ps1`, `.\scripts\lint.ps1`.
+
+**Manual equivalent** (any shell, repo root):
 
 ```bash
-./scripts/validate_architecture.sh
+export PYTHONPATH=api/src:frontend/src:api/tests
+python -m pytest api/tests/architecture -q
 ```
 
-Windows: use Git Bash for **`./scripts/validate_architecture.sh`** or run **`python -m pytest api/tests/architecture`** with the same `PYTHONPATH` as in `pyproject.toml`.
-
-**`scripts/lint.sh`** runs Ruff on **`api/src`** and **`frontend/src`**. **`.github/workflows/ci.yml`** should be updated to match these paths on push/PR.
+**Optional:** from **`api/`**, `pytest` runs only **`tests/architecture`** per **`api/pyproject.toml`**.
 
 ## Local development (Streamlit + FastAPI)
 

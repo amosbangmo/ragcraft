@@ -1,11 +1,11 @@
 import unittest
 
-from src.domain import benchmark_metric_taxonomy as bmt
+from components.shared import metric_help
+from domain.evaluation import benchmark_metric_taxonomy as bmt
 from infrastructure.evaluation.benchmark_comparison_service import (
     BenchmarkComparisonService,
     LOWER_IS_BETTER_METRICS,
 )
-from src.ui import metric_help
 
 
 class TestBenchmarkMetricTaxonomy(unittest.TestCase):

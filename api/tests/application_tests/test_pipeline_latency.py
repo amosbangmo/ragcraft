@@ -30,7 +30,7 @@ class TestPipelineLatency(unittest.TestCase):
             prompt_build_ms=4.0,
             answer_generation_ms=0.0,
             total_ms=10.0,
-        ).to_dict()
+        )
         merged = merge_with_answer_stage(
             partial,
             answer_generation_ms=7.0,

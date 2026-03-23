@@ -212,7 +212,10 @@ def test_document_ingest_too_large_returns_413(
     app.dependency_overrides[get_ingest_uploaded_file_use_case] = lambda: _CallableUseCase(
         lambda *_a, **_k: pytest.fail("use case must not run when upload exceeds cap")
     )
-    monkeypatch.setattr("apps.api.upload_adapter.INGESTION_CONFIG", type("C", (), {"max_upload_bytes": 4})())
+    monkeypatch.setattr(
+        "interfaces.http.upload_adapter.INGESTION_CONFIG",
+        type("C", (), {"max_upload_bytes": 4})(),
+    )
 
     r = tc.post(
         "/projects/demo/documents/ingest",
