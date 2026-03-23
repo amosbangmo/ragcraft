@@ -185,10 +185,30 @@ scripts/
 
 ---
 
-## 14. Verdict
+## 14. Canonical frontend–backend integration (wire client)
+
+**Single façade:** Streamlit (and future SPAs) should treat **`frontend/src/services/api_client.py`** as the primary entry for “talk to the API”: it documents and re-exports **`HttpBackendClient`**, **`get_backend_client`**, **`HttpTransport`**, and the wire dataclasses used across modes.
+
+**Contract guarantees:**
+
+- **`http_client.py`** parses HTTP JSON via **`http_payloads.py`** into **`api_contract_models`** / **`evaluation_wire_models`** — **no** **`domain`** or **`application.dto`** imports on the HTTP implementation path (except **`TYPE_CHECKING`** for in-process-only method signatures).
+- **`InProcessBackendClient`** returns the **same wire shapes** for shared methods (e.g. **`RAGAnswer`**, **`EffectiveRetrievalSettingsPayload`**, **`BenchmarkResult`**, **`QADatasetEntryPayload`**, ingestion payloads) via **`client_wire_mappers.py`**, so **`BackendClient`** stays mode-agnostic for UI code.
+- **`services/view_models.py`** re-exports **`RetrievalFilters`**, **`BenchmarkResult`**, **`coerce_benchmark_result`**, **`QADatasetEntry`** (alias of **`QADatasetEntryPayload`**) so **`pages/`** / **`components/`** avoid **`domain`** for API-shaped data.
+- **`settings_dtos.py`** exposes **`UpdateProjectRetrievalSettingsCommand`** and **`EffectiveRetrievalSettingsPayload`** from **`api_contract_models`**, not from **`application.dto`**.
+
+**Tests added / tightened:**
+
+- **`frontend/tests/streamlit/test_frontend_api_contract.py`** — ask-response parsing, retrieval settings deserialization, **`raise_for_api_response`** mapping, ingest success-message helpers, HTTP client error envelope (**`VectorStoreError`**), façade import smoke.
+- **`frontend/tests/streamlit/test_streamlit_context_refresh.py`** — HTTP refresh test patches **`infrastructure.config.app_state.get_backend_client`** so it stays stable when other tests import **`services.api_client`**.
+
+**Local dev:** documented under **`docs/api.md`** (Streamlit client section): **`RAGCRAFT_BACKEND_CLIENT`**, **`RAGCRAFT_API_BASE_URL`**, timeouts, bearer token behavior.
+
+---
+
+## 15. Verdict
 
 **The architecture migration and physical layout for this repository are complete** for the stated scope: layers, dependency direction, orchestration ownership, FastAPI vs Streamlit boundaries, and **`api/src` / `frontend/src`** as the only application code roots are **implemented and enforced**.
 
-Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**. Runtime and contract coverage are summarized in **§13**.
+Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**. Runtime and contract coverage are summarized in **§13**. Frontend–backend wire integration is summarized in **§14**.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), and **§13** (runtime confidence).
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), **§13** (runtime confidence), and **§14** (canonical HTTP client / wire types).

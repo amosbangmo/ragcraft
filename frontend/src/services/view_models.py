@@ -1,8 +1,9 @@
 """
 UI-facing types and helpers for Streamlit (API-client boundary).
 
-Re-exports domain contracts so ``frontend/src/pages`` and ``frontend/src/components`` avoid
-importing ``domain`` directly, matching how a separate SPA would consume shared wire/view types.
+Gold QA rows, benchmark results, manual evaluation, and retrieval filters use **frontend wire**
+types (:mod:`services.api_contract_models`, :mod:`services.evaluation_wire_models`) so pages stay
+off ``domain`` for API-shaped data. Pure presentation helpers may still live under ``domain``.
 """
 
 from __future__ import annotations
@@ -13,17 +14,9 @@ from domain.evaluation.benchmark_comparison import (
     compare_benchmark_summaries,
 )
 from domain.evaluation.benchmark_failure_analysis import FailureAnalysisService
-from domain.evaluation.benchmark_result import BenchmarkResult, coerce_benchmark_result
 from domain.evaluation.evaluation_display_text import format_bool_toggle_on_off
-from domain.evaluation.llm_judge_constants import JUDGE_FAILURE_REASON
-from domain.evaluation.manual_evaluation_result import (
-    ManualEvaluationResult,
-    is_manual_evaluation_result_like,
-)
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.query_log_timestamp import parse_query_log_timestamp
-from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_presets import (
     PRESET_DESCRIPTIONS,
     PRESET_SELECT_ORDER,
@@ -32,6 +25,16 @@ from domain.rag.retrieval_presets import (
     parse_retrieval_preset,
 )
 from domain.rag.retrieval_settings import RetrievalSettings
+from services.api_contract_models import QADatasetEntryPayload, RetrievalFilters
+from services.evaluation_wire_models import (
+    JUDGE_FAILURE_REASON,
+    BenchmarkResult,
+    ManualEvaluationResult,
+)
+from services.evaluation_wire_parse import coerce_benchmark_result, is_manual_evaluation_result_like
+
+# Backward-compatible alias for gold-QA entry rows (wire shape matches API / former domain row).
+QADatasetEntry = QADatasetEntryPayload
 
 __all__ = [
     "LOWER_IS_BETTER_METRICS",

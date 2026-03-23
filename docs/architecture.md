@@ -107,7 +107,9 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 ## Frontend integration (`frontend/src/`)
 
-**`services/`** — **`BackendClient`** protocol, HTTP and in-process clients, payloads, Streamlit auth/session helpers, **`streamlit_backend_factory`**. This is the only place that may combine **composition + use cases** for the Streamlit app.
+**`services/`** — **`BackendClient`** protocol (**`services/protocol.py`**), HTTP (**`http_client.py`**) and in-process (**`in_process.py`**) clients, **`api_client.py`** as the **documented canonical import surface** for the backend façade, **`http_payloads.py`** / **`api_contract_models.py`** / **`evaluation_wire_*`** as the **frontend-owned wire contract** matching FastAPI JSON, **`client_wire_mappers.py`** to align in-process return types with that wire contract, Streamlit auth/session helpers, **`streamlit_backend_factory`**. This is the only place that may combine **composition + use cases** for the Streamlit app.
+
+**HTTP client rule:** **`http_client.py`** must not import **`domain`** or **`application.dto`** for response parsing; **`TYPE_CHECKING`** may reference domain types only for signatures of **NotImplemented** in-process-only methods.
 
 **`pages/`**, **`components/`** — Streamlit UI; consume **`services`** only (plus **`infrastructure.auth`** for guards where allowed).
 

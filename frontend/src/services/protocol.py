@@ -5,6 +5,11 @@ Implementations: **HTTP** (:class:`~services.http_client.HttpBackendClient` → 
 or **in-process** (:class:`~services.in_process.InProcessBackendClient` →
 :class:`~composition.BackendApplicationContainer`). Pages should depend only on this protocol,
 :mod:`services.view_models`, and auth helpers — not on ``infrastructure.adapters`` or the composition root.
+
+Wire types (:mod:`services.api_contract_models`, :mod:`services.evaluation_wire_models`) are the
+cross-mode contract for HTTP and mapped at the in-process boundary. A few methods remain
+domain-typed where only the in-process stack constructs those objects (e.g. pipeline inspection
+return value, gold-QA runner).
 """
 
 from __future__ import annotations
@@ -13,20 +18,22 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
-from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
-from application.dto.settings import (
-    EffectiveRetrievalSettingsView,
-    UpdateProjectRetrievalSettingsCommand,
-)
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from domain.evaluation.benchmark_result import BenchmarkResult
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.projects.project import Project
-from domain.projects.project_settings import ProjectSettings
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-from domain.rag.retrieval_filters import RetrievalFilters
+from services.api_contract_models import (
+    DeleteDocumentPayload,
+    EffectiveRetrievalSettingsPayload,
+    IngestDocumentPayload,
+    ProjectSettingsPayload,
+    QADatasetEntryPayload,
+    RAGAnswer,
+    RetrievalFilters,
+    UpdateProjectRetrievalSettingsCommand,
+)
+from services.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
 
 
 @runtime_checkable
@@ -108,15 +115,15 @@ class BackendClient(Protocol):
 
     def delete_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> DeleteDocumentResult: ...
+    ) -> DeleteDocumentPayload: ...
 
     def ingest_uploaded_file(
         self, user_id: str, project_id: str, uploaded_file: Any
-    ) -> IngestDocumentResult: ...
+    ) -> IngestDocumentPayload: ...
 
     def reindex_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> IngestDocumentResult: ...
+    ) -> IngestDocumentPayload: ...
 
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None: ...
 
@@ -131,15 +138,15 @@ class BackendClient(Protocol):
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> Any: ...
+    ) -> RAGAnswer | None: ...
 
     def get_effective_retrieval_settings(
         self, user_id: str, project_id: str
-    ) -> EffectiveRetrievalSettingsView: ...
+    ) -> EffectiveRetrievalSettingsPayload: ...
 
     def update_project_retrieval_settings(
         self, command: UpdateProjectRetrievalSettingsCommand
-    ) -> ProjectSettings: ...
+    ) -> ProjectSettingsPayload: ...
 
     def search_project_summaries(
         self,
@@ -165,7 +172,7 @@ class BackendClient(Protocol):
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict | None = None,
-    ) -> PipelineBuildResult | None: ...
+    ) -> PipelineBuildResult | dict[str, Any] | None: ...
 
     def compare_retrieval_modes(
         self,
@@ -196,7 +203,7 @@ class BackendClient(Protocol):
         project_id: str,
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
-    ) -> Any: ...
+    ) -> BenchmarkResult: ...
 
     def build_benchmark_export_artifacts(
         self,
@@ -217,9 +224,9 @@ class BackendClient(Protocol):
         expected_answer: str | None = None,
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
-    ) -> Any: ...
+    ) -> QADatasetEntryPayload: ...
 
-    def list_qa_dataset_entries(self, *, user_id: str, project_id: str) -> Any: ...
+    def list_qa_dataset_entries(self, *, user_id: str, project_id: str) -> list[QADatasetEntryPayload]: ...
 
     def update_qa_dataset_entry(
         self,
@@ -231,7 +238,7 @@ class BackendClient(Protocol):
         expected_answer: str | None = None,
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
-    ) -> Any: ...
+    ) -> QADatasetEntryPayload: ...
 
     def delete_qa_dataset_entry(
         self,
@@ -249,7 +256,7 @@ class BackendClient(Protocol):
         num_questions: int,
         source_files: list[str] | None = None,
         generation_mode: str = "append",
-    ) -> dict: ...
+    ) -> dict[str, Any]: ...
 
     def list_retrieval_query_logs(
         self,

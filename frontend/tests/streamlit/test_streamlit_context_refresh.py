@@ -23,8 +23,10 @@ def test_refresh_streamlit_auth_session_pulls_http_profile_when_api_mode() -> No
         "created_at": None,
     }
     with patch("services.settings.use_http_backend_client", return_value=True):
+        # Patch app_state resolver so we do not depend on ``streamlit_context`` import identity
+        # surviving other tests that import ``services.api_client`` / reload-related side effects.
         with patch(
-            "services.streamlit_context.get_backend_client",
+            "infrastructure.config.app_state.get_backend_client",
             return_value=mock_client,
         ):
             with patch(

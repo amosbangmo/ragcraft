@@ -85,7 +85,7 @@ The demo allows you to:
 # 🏗️ Architecture Overview
 
 - **FastAPI** under **`api/src/interfaces/http/`** (ASGI entry **`api/main.py`**) is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
-- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`frontend/src/services/protocol.py`). Pages and components must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
+- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`frontend/src/services/protocol.py`); the **canonical import surface** for the HTTP façade and wire types is **`frontend/src/services/api_client.py`** (see **`docs/api.md`** — Streamlit client section). Pages and components must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
 - **Default Streamlit mode** is **`RAGCRAFT_BACKEND_CLIENT=http`**: the UI calls the API over HTTP like any other client. **`in_process`** builds a **`BackendApplicationContainer`** inside the Streamlit process (no uvicorn) for fast local work — same use cases, different transport.
 - **Angular or other SPAs** should use the **same HTTP API**: obtain a JWT from `POST /auth/login` or `/auth/register`, then send `Authorization: Bearer <access_token>` on scoped routes.
 

@@ -1,26 +1,30 @@
-"""Deserialize API JSON into domain/application types used by Streamlit."""
+"""Deserialize FastAPI JSON into frontend wire types (:mod:`services.api_contract_models`)."""
 
 from __future__ import annotations
 
 import base64
-from dataclasses import asdict
 from typing import Any
 
-from application.dto.benchmark_export import BenchmarkExportArtifacts
-from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
-from application.dto.settings import EffectiveRetrievalSettingsView
-from domain.common.ingestion_diagnostics import IngestionDiagnostics
-from domain.evaluation.benchmark_result import BenchmarkRunMetadata
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from domain.projects.project_settings import ProjectSettings
-from domain.rag.retrieval_settings import RetrievalSettings
-from infrastructure.config.config import RETRIEVAL_CONFIG
+from services.api_contract_models import (
+    BenchmarkExportArtifactsPayload,
+    BenchmarkExportMetadataPayload,
+    DeleteDocumentPayload,
+    EffectiveRetrievalSettingsPayload,
+    IngestDocumentPayload,
+    IngestionDiagnosticsPayload,
+    ProjectSettingsPayload,
+    QADatasetEntryPayload,
+    RAGAnswer,
+    RetrievalSettingsPayload,
+    default_retrieval_settings_template,
+    merge_retrieval_settings_payload,
+)
 
 
-def effective_retrieval_view_from_api_dict(data: dict[str, Any]) -> EffectiveRetrievalSettingsView:
+def effective_retrieval_view_from_api_dict(data: dict[str, Any]) -> EffectiveRetrievalSettingsPayload:
     prefs = data.get("preferences") or {}
     effective = data.get("effective_retrieval") or {}
-    preferences = ProjectSettings(
+    preferences = ProjectSettingsPayload(
         user_id=str(prefs["user_id"]),
         project_id=str(prefs["project_id"]),
         retrieval_preset=str(prefs.get("retrieval_preset") or "balanced"),
@@ -28,15 +32,20 @@ def effective_retrieval_view_from_api_dict(data: dict[str, Any]) -> EffectiveRet
         enable_query_rewrite=bool(prefs.get("enable_query_rewrite", True)),
         enable_hybrid_retrieval=bool(prefs.get("enable_hybrid_retrieval", True)),
     )
-    template = RetrievalSettings.from_retrieval_config(RETRIEVAL_CONFIG)
-    merged = {**asdict(template), **effective}
-    eff = RetrievalSettings(**merged)
-    return EffectiveRetrievalSettingsView(preferences=preferences, effective_retrieval=eff)
+    template = default_retrieval_settings_template()
+    eff = merge_retrieval_settings_template(template, effective)
+    return EffectiveRetrievalSettingsPayload(preferences=preferences, effective_retrieval=eff)
 
 
-def ingest_document_result_from_api_dict(data: dict[str, Any]) -> IngestDocumentResult:
+def merge_retrieval_settings_template(
+    template: RetrievalSettingsPayload, overrides: dict[str, Any]
+) -> RetrievalSettingsPayload:
+    return merge_retrieval_settings_payload(template, overrides)
+
+
+def ingest_document_result_from_api_dict(data: dict[str, Any]) -> IngestDocumentPayload:
     diag_raw = data.get("diagnostics") or {}
-    diagnostics = IngestionDiagnostics(
+    diagnostics = IngestionDiagnosticsPayload(
         extraction_ms=float(diag_raw.get("extraction_ms") or 0.0),
         summarization_ms=float(diag_raw.get("summarization_ms") or 0.0),
         indexing_ms=float(diag_raw.get("indexing_ms") or 0.0),
@@ -45,15 +54,15 @@ def ingest_document_result_from_api_dict(data: dict[str, Any]) -> IngestDocument
         generated_assets=int(diag_raw.get("generated_assets") or 0),
         errors=list(diag_raw.get("errors") or []),
     )
-    return IngestDocumentResult(
+    return IngestDocumentPayload(
         raw_assets=list(data.get("raw_assets") or []),
         replacement_info=dict(data.get("replacement_info") or {}),
         diagnostics=diagnostics,
     )
 
 
-def delete_document_result_from_api_dict(data: dict[str, Any]) -> DeleteDocumentResult:
-    return DeleteDocumentResult(
+def delete_document_result_from_api_dict(data: dict[str, Any]) -> DeleteDocumentPayload:
+    return DeleteDocumentPayload(
         source_file=str(data.get("source_file") or ""),
         file_deleted=bool(data.get("file_deleted")),
         deleted_vectors=int(data.get("deleted_vectors") or 0),
@@ -61,8 +70,8 @@ def delete_document_result_from_api_dict(data: dict[str, Any]) -> DeleteDocument
     )
 
 
-def qa_dataset_entry_from_api_dict(row: dict[str, Any]) -> QADatasetEntry:
-    return QADatasetEntry(
+def qa_dataset_entry_from_api_dict(row: dict[str, Any]) -> QADatasetEntryPayload:
+    return QADatasetEntryPayload(
         id=int(row["id"]),
         user_id=str(row["user_id"]),
         project_id=str(row["project_id"]),
@@ -75,15 +84,15 @@ def qa_dataset_entry_from_api_dict(row: dict[str, Any]) -> QADatasetEntry:
     )
 
 
-def benchmark_export_artifacts_from_api_dict(data: dict[str, Any]) -> BenchmarkExportArtifacts:
+def benchmark_export_artifacts_from_api_dict(data: dict[str, Any]) -> BenchmarkExportArtifactsPayload:
     meta_raw = data.get("metadata") or {}
-    metadata = BenchmarkRunMetadata(
+    metadata = BenchmarkExportMetadataPayload(
         project_id=str(meta_raw.get("project_id") or ""),
         generated_at_utc=str(meta_raw.get("generated_at_utc") or ""),
         enable_query_rewrite=bool(meta_raw.get("enable_query_rewrite", False)),
         enable_hybrid_retrieval=bool(meta_raw.get("enable_hybrid_retrieval", False)),
     )
-    return BenchmarkExportArtifacts(
+    return BenchmarkExportArtifactsPayload(
         metadata=metadata,
         json_bytes=base64.standard_b64decode(str(data.get("json_base64") or "")),
         json_filename=str(data.get("json_filename") or "benchmark.json"),
@@ -95,12 +104,31 @@ def benchmark_export_artifacts_from_api_dict(data: dict[str, Any]) -> BenchmarkE
     )
 
 
+def rag_answer_from_ask_api_dict(data: dict[str, Any]) -> RAGAnswer | None:
+    if data.get("status") == "no_pipeline":
+        return None
+    lat_raw = data.get("latency")
+    latency: dict[str, Any] | None = None
+    if isinstance(lat_raw, dict):
+        latency = dict(lat_raw)
+    return RAGAnswer(
+        question=str(data.get("question") or ""),
+        answer=str(data.get("answer") or ""),
+        source_documents=tuple(data.get("source_documents") or []),
+        raw_assets=tuple(data.get("raw_assets") or []),
+        prompt_sources=tuple(data.get("prompt_sources") or []),
+        confidence=float(data.get("confidence") or 0.0),
+        latency=latency,
+    )
+
+
 def qa_generate_result_from_api_dict(data: dict[str, Any]) -> dict[str, Any]:
-    """Shape expected by :func:`components.shared.evaluation_gold_qa_tab._render_dataset_generation_result`."""
     created = [qa_dataset_entry_from_api_dict(e) for e in (data.get("created_entries") or [])]
     return {
         "generation_mode": data.get("generation_mode") or "append",
         "deleted_existing_entries": int(data.get("deleted_existing_entries") or 0),
         "created_entries": created,
         "skipped_duplicates": list(data.get("skipped_duplicates") or []),
+        "requested_questions": int(data.get("requested_questions") or 0),
+        "raw_generated_count": int(data.get("raw_generated_count") or 0),
     }

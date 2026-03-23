@@ -1,8 +1,8 @@
-"""Application DTOs exposed to Streamlit; keeps pages off ``src.application`` imports."""
+"""Retrieval settings commands/views for Streamlit (frontend wire types, not ``application.dto``)."""
 
-from application.dto.settings import (  # noqa: F401
-    EffectiveRetrievalSettingsView,
+from services.api_contract_models import (  # noqa: F401
+    EffectiveRetrievalSettingsPayload,
     UpdateProjectRetrievalSettingsCommand,
 )
 
-__all__ = ["EffectiveRetrievalSettingsView", "UpdateProjectRetrievalSettingsCommand"]
+__all__ = ["EffectiveRetrievalSettingsPayload", "UpdateProjectRetrievalSettingsCommand"]

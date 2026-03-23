@@ -85,7 +85,7 @@ Shared helper: **`import_scanner.py`**.
 
 | Location | Role |
 |----------|------|
-| **`frontend/tests/streamlit/`** | **`frontend/src/services`**, HTTP vs in-process client, Streamlit wiring |
+| **`frontend/tests/streamlit/`** | **`frontend/src/services`**, HTTP vs in-process client, Streamlit wiring; **`test_http_client_route_contract.py`** (path literals); **`test_streamlit_http_client.py`** (mock transport + ask/inspect/benchmark); **`test_frontend_api_contract.py`** (wire parsing **`rag_answer_from_ask_api_dict`**, retrieval settings payload, **`http_error_map`**, ingest copy helpers, error envelope → **`VectorStoreError`**, **`api_client`** re-exports) |
 | **`frontend/tests/ui/`** | Streamlit/UI components where present |
 
 ---

@@ -4,25 +4,32 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 import httpx
 
-from application.dto.ingestion import DeleteDocumentResult, IngestDocumentResult
-from application.dto.settings import (
-    EffectiveRetrievalSettingsView,
+if TYPE_CHECKING:
+    from domain.evaluation.qa_dataset_entry import QADatasetEntry
+    from domain.projects.project import Project
+    from domain.rag.pipeline_payloads import PipelineBuildResult
+    from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
+
+from services.api_contract_models import (
+    DeleteDocumentPayload,
+    EffectiveRetrievalSettingsPayload,
+    IngestDocumentPayload,
+    ProjectSettingsPayload,
+    RAGAnswer,
+    RetrievalFilters,
     UpdateProjectRetrievalSettingsCommand,
+    WorkspaceProject,
 )
-from domain.evaluation.benchmark_result import BenchmarkResult, coerce_benchmark_result
-from domain.evaluation.manual_evaluation_result import manual_evaluation_result_from_plain_dict
-from domain.evaluation.qa_dataset_entry import QADatasetEntry
-from domain.projects.project import Project
-from domain.projects.project_settings import ProjectSettings
-from domain.rag.pipeline_latency import PipelineLatency
-from domain.rag.pipeline_payloads import PipelineBuildResult
-from domain.rag.rag_response import RAGResponse
-from domain.rag.retrieval_filters import RetrievalFilters
+from services.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
+from services.evaluation_wire_parse import (
+    coerce_benchmark_result,
+    manual_evaluation_result_from_plain_dict,
+)
 from services.http_payloads import (
     benchmark_export_artifacts_from_api_dict,
     delete_document_result_from_api_dict,
@@ -30,6 +37,7 @@ from services.http_payloads import (
     ingest_document_result_from_api_dict,
     qa_dataset_entry_from_api_dict,
     qa_generate_result_from_api_dict,
+    rag_answer_from_ask_api_dict,
 )
 from services.http_transport import HttpTransport
 from services.stubs import http_client_chat_service, http_client_project_settings_repository
@@ -143,7 +151,7 @@ class HttpBackendClient:
         self,
         *,
         entries: list[QADatasetEntry],
-        pipeline_runner: Any,
+        pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun],
     ) -> BenchmarkResult:
         raise NotImplementedError(
             "evaluate_gold_qa_dataset_with_runner is not exposed over HTTP; use POST /evaluation/dataset/run "
@@ -238,11 +246,11 @@ class HttpBackendClient:
         )
         return self.get_project(user_id, project_id)
 
-    def get_project(self, user_id: str, project_id: str) -> Any:
+    def get_project(self, user_id: str, project_id: str) -> WorkspaceProject:
         data = self._t.request_json(
             "GET", f"/projects/{quote(project_id)}", bearer_token=self._bearer()
         )
-        return Project(user_id=str(data["user_id"]), project_id=str(data["project_id"]))
+        return WorkspaceProject(user_id=str(data["user_id"]), project_id=str(data["project_id"]))
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
         data = self._t.request_json(
@@ -279,7 +287,7 @@ class HttpBackendClient:
 
     def delete_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> DeleteDocumentResult:
+    ) -> DeleteDocumentPayload:
         sf = quote(source_file, safe="")
         data = self._t.request_json(
             "DELETE",
@@ -290,7 +298,7 @@ class HttpBackendClient:
 
     def ingest_uploaded_file(
         self, user_id: str, project_id: str, uploaded_file: Any
-    ) -> IngestDocumentResult:
+    ) -> IngestDocumentPayload:
         name = getattr(uploaded_file, "name", "upload") or "upload"
         buf = uploaded_file.getbuffer()
         ctype = getattr(uploaded_file, "type", None) or "application/octet-stream"
@@ -304,7 +312,7 @@ class HttpBackendClient:
 
     def reindex_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> IngestDocumentResult:
+    ) -> IngestDocumentPayload:
         sf = quote(source_file, safe="")
         data = self._t.request_json(
             "POST",
@@ -332,7 +340,7 @@ class HttpBackendClient:
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> Any:
+    ) -> RAGAnswer | None:
         body = _chat_pipeline_body(
             project_id=project_id,
             question=question,
@@ -345,23 +353,11 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST", "/chat/ask", bearer_token=self._bearer(), json_body=body
         )
-        if data.get("status") == "no_pipeline":
-            return None
-        lat_raw = data.get("latency")
-        latency = PipelineLatency.from_dict(lat_raw) if isinstance(lat_raw, dict) else None
-        return RAGResponse(
-            question=str(data.get("question") or ""),
-            answer=str(data.get("answer") or ""),
-            source_documents=list(data.get("source_documents") or []),
-            raw_assets=list(data.get("raw_assets") or []),
-            prompt_sources=list(data.get("prompt_sources") or []),
-            confidence=float(data.get("confidence") or 0.0),
-            latency=latency,
-        )
+        return rag_answer_from_ask_api_dict(data)
 
     def get_effective_retrieval_settings(
         self, user_id: str, project_id: str
-    ) -> EffectiveRetrievalSettingsView:
+    ) -> EffectiveRetrievalSettingsPayload:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/retrieval-settings",
@@ -371,9 +367,8 @@ class HttpBackendClient:
 
     def update_project_retrieval_settings(
         self, command: UpdateProjectRetrievalSettingsCommand
-    ) -> ProjectSettings:
-        # Alias imported as _PutCmd is same class; accept either
-        cmd: UpdateProjectRetrievalSettingsCommand = command
+    ) -> ProjectSettingsPayload:
+        cmd = command
         body = {
             "retrieval_preset": cmd.retrieval_preset,
             "retrieval_advanced": cmd.retrieval_advanced,
@@ -483,7 +478,7 @@ class HttpBackendClient:
         expected_sources: list[str] | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> Any:
+    ) -> ManualEvaluationResult:
         data = self._t.request_json(
             "POST",
             "/evaluation/manual",
@@ -507,7 +502,7 @@ class HttpBackendClient:
         project_id: str,
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
-    ) -> Any:
+    ) -> BenchmarkResult:
         data = self._t.request_json(
             "POST",
             "/evaluation/dataset/run",

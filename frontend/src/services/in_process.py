@@ -19,15 +19,12 @@ from application.dto.evaluation import (
 )
 from application.dto.ingestion import (
     DeleteDocumentCommand,
-    DeleteDocumentResult,
-    IngestDocumentResult,
     IngestUploadedFileCommand,
     ReindexDocumentCommand,
 )
+from application.dto.settings import GetEffectiveRetrievalSettingsQuery
 from application.dto.settings import (
-    EffectiveRetrievalSettingsView,
-    GetEffectiveRetrievalSettingsQuery,
-    UpdateProjectRetrievalSettingsCommand,
+    UpdateProjectRetrievalSettingsCommand as AppUpdateProjectRetrievalSettingsCommand,
 )
 from application.http.wire import retrieval_comparison_to_wire_dict
 from components.shared.streamlit_project_chain_session_cache import (
@@ -35,16 +32,26 @@ from components.shared.streamlit_project_chain_session_cache import (
 )
 from composition import BackendApplicationContainer
 from domain.common.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
-from domain.evaluation.benchmark_result import BenchmarkResult
-from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
 from domain.projects.project import Project
-from domain.projects.project_settings import ProjectSettings
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_inspect_answer_run import RagInspectAnswerRun
-from domain.rag.retrieval_filters import RetrievalFilters
 from domain.rag.retrieval_settings_override_spec import RetrievalSettingsOverrideSpec
+from services.api_contract_models import UpdateProjectRetrievalSettingsCommand
+from services.client_wire_mappers import (
+    benchmark_result_to_wire,
+    delete_document_result_to_wire,
+    effective_retrieval_view_to_wire,
+    ingest_document_result_to_wire,
+    manual_evaluation_to_wire,
+    project_settings_to_payload,
+    qa_dataset_entry_to_wire,
+    rag_response_to_rag_answer,
+    retrieval_filters_to_domain,
+    wire_benchmark_to_domain,
+)
+from services.evaluation_wire_models import BenchmarkResult
 
 
 class InProcessBackendClient:
@@ -76,10 +83,11 @@ class InProcessBackendClient:
         entries: list[QADatasetEntry],
         pipeline_runner: Callable[[QADatasetEntry], RagInspectAnswerRun],
     ) -> BenchmarkResult:
-        return self._container.evaluation_service.evaluate_gold_qa_dataset(
+        raw = self._container.evaluation_service.evaluate_gold_qa_dataset(
             entries=entries,
             pipeline_runner=pipeline_runner,
         )
+        return benchmark_result_to_wire(raw)
 
     @property
     def project_settings_repository(self) -> ProjectSettingsRepositoryPort:
@@ -163,32 +171,35 @@ class InProcessBackendClient:
 
     def delete_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> DeleteDocumentResult:
+    ) -> Any:
         project = self.get_project(user_id, project_id)
-        return self._container.ingestion_delete_document_use_case.execute(
+        result = self._container.ingestion_delete_document_use_case.execute(
             DeleteDocumentCommand(project=project, source_file=source_file)
         )
+        return delete_document_result_to_wire(result)
 
     def ingest_uploaded_file(
         self, user_id: str, project_id: str, uploaded_file: Any
-    ) -> IngestDocumentResult:
+    ) -> Any:
         project = self.get_project(user_id, project_id)
         upload = (
             uploaded_file
             if isinstance(uploaded_file, BufferedDocumentUpload)
             else BufferedDocumentUpload.from_duck_typed(uploaded_file)
         )
-        return self._container.ingestion_ingest_uploaded_file_use_case.execute(
+        result = self._container.ingestion_ingest_uploaded_file_use_case.execute(
             IngestUploadedFileCommand(project=project, upload=upload)
         )
+        return ingest_document_result_to_wire(result)
 
     def reindex_project_document(
         self, user_id: str, project_id: str, source_file: str
-    ) -> IngestDocumentResult:
+    ) -> Any:
         project = self.get_project(user_id, project_id)
-        return self._container.ingestion_reindex_document_use_case.execute(
+        result = self._container.ingestion_reindex_document_use_case.execute(
             ReindexDocumentCommand(project=project, source_file=source_file)
         )
+        return ingest_document_result_to_wire(result)
 
     def invalidate_project_chain(self, user_id: str, project_id: str) -> None:
         self._container.invalidate_project_chain(user_id, project_id)
@@ -201,34 +212,46 @@ class InProcessBackendClient:
         question: str,
         chat_history: Any = None,
         *,
-        filters: RetrievalFilters | None = None,
+        filters: Any | None = None,
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
         overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
-        return self._container.chat_ask_question_use_case.execute(
+        domain_filters = retrieval_filters_to_domain(filters)
+        raw = self._container.chat_ask_question_use_case.execute(
             project,
             question,
             chat_history,
-            filters=filters,
+            filters=domain_filters,
             retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
+        return rag_response_to_rag_answer(raw)
 
     def get_effective_retrieval_settings(
         self, user_id: str, project_id: str
-    ) -> EffectiveRetrievalSettingsView:
-        return self._container.settings_get_effective_retrieval_use_case.execute(
+    ) -> Any:
+        view = self._container.settings_get_effective_retrieval_use_case.execute(
             GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
         )
+        return effective_retrieval_view_to_wire(view)
 
     def update_project_retrieval_settings(
         self, command: UpdateProjectRetrievalSettingsCommand
-    ) -> ProjectSettings:
-        return self._container.settings_update_project_retrieval_use_case.execute(command)
+    ) -> Any:
+        app_cmd = AppUpdateProjectRetrievalSettingsCommand(
+            user_id=command.user_id,
+            project_id=command.project_id,
+            retrieval_preset=command.retrieval_preset,
+            retrieval_advanced=command.retrieval_advanced,
+            enable_query_rewrite=command.enable_query_rewrite,
+            enable_hybrid_retrieval=command.enable_hybrid_retrieval,
+        )
+        ps = self._container.settings_update_project_retrieval_use_case.execute(app_cmd)
+        return project_settings_to_payload(ps)
 
     def search_project_summaries(
         self,
@@ -237,18 +260,19 @@ class InProcessBackendClient:
         query: str,
         chat_history: Any = None,
         *,
-        filters: RetrievalFilters | None = None,
+        filters: Any | None = None,
         retrieval_settings: dict | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
     ) -> Any:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
         overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
+        domain_filters = retrieval_filters_to_domain(filters)
         dto = self._container.chat_preview_summary_recall_use_case.execute(
             project,
             query,
             chat_history,
-            filters=filters,
+            filters=domain_filters,
             retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
@@ -264,16 +288,17 @@ class InProcessBackendClient:
         *,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-        filters: RetrievalFilters | None = None,
+        filters: Any | None = None,
         retrieval_settings: dict | None = None,
     ) -> PipelineBuildResult | None:
         project = self._container.projects_resolve_project_use_case.execute(user_id, project_id)
         overrides = RetrievalSettingsOverrideSpec.from_optional_mapping(retrieval_settings)
+        domain_filters = retrieval_filters_to_domain(filters)
         return self._container.chat_inspect_pipeline_use_case.execute(
             project,
             question,
             chat_history,
-            filters=filters,
+            filters=domain_filters,
             retrieval_overrides=overrides,
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
@@ -306,8 +331,8 @@ class InProcessBackendClient:
         expected_sources: list[str] | None = None,
         enable_query_rewrite_override: bool | None = None,
         enable_hybrid_retrieval_override: bool | None = None,
-    ) -> ManualEvaluationResult:
-        return self._container.evaluation_run_manual_evaluation_use_case.execute(
+    ) -> Any:
+        domain_result = self._container.evaluation_run_manual_evaluation_use_case.execute(
             RunManualEvaluationCommand(
                 user_id=user_id,
                 project_id=project_id,
@@ -319,6 +344,7 @@ class InProcessBackendClient:
                 enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
             )
         )
+        return manual_evaluation_to_wire(domain_result)
 
     def evaluate_gold_qa_dataset(
         self,
@@ -327,8 +353,8 @@ class InProcessBackendClient:
         project_id: str,
         enable_query_rewrite: bool,
         enable_hybrid_retrieval: bool,
-    ) -> Any:
-        return self._container.evaluation_run_gold_qa_dataset_evaluation_use_case.execute(
+    ) -> BenchmarkResult:
+        raw = self._container.evaluation_run_gold_qa_dataset_evaluation_use_case.execute(
             RunGoldQaDatasetEvaluationCommand(
                 user_id=user_id,
                 project_id=project_id,
@@ -336,6 +362,7 @@ class InProcessBackendClient:
                 enable_hybrid_retrieval=enable_hybrid_retrieval,
             )
         )
+        return benchmark_result_to_wire(raw)
 
     def build_benchmark_export_artifacts(
         self,
@@ -346,10 +373,11 @@ class InProcessBackendClient:
         enable_hybrid_retrieval: bool,
         generated_at: datetime | None = None,
     ) -> Any:
+        domain_result = wire_benchmark_to_domain(result)
         return self._container.evaluation_build_benchmark_export_artifacts_use_case.execute(
             BuildBenchmarkExportCommand(
                 project_id=project_id,
-                result=result,
+                result=domain_result,
                 enable_query_rewrite=enable_query_rewrite,
                 enable_hybrid_retrieval=enable_hybrid_retrieval,
                 generated_at=generated_at,
@@ -366,7 +394,7 @@ class InProcessBackendClient:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> Any:
-        return self._container.evaluation_create_qa_dataset_entry_use_case.execute(
+        row = self._container.evaluation_create_qa_dataset_entry_use_case.execute(
             CreateQaDatasetEntryCommand(
                 user_id=user_id,
                 project_id=project_id,
@@ -376,11 +404,13 @@ class InProcessBackendClient:
                 expected_sources=expected_sources,
             )
         )
+        return qa_dataset_entry_to_wire(row)
 
     def list_qa_dataset_entries(self, *, user_id: str, project_id: str) -> Any:
-        return self._container.evaluation_list_qa_dataset_entries_use_case.execute(
+        rows = self._container.evaluation_list_qa_dataset_entries_use_case.execute(
             ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id)
         )
+        return [qa_dataset_entry_to_wire(e) for e in rows]
 
     def update_qa_dataset_entry(
         self,
@@ -393,7 +423,7 @@ class InProcessBackendClient:
         expected_doc_ids: list[str] | None = None,
         expected_sources: list[str] | None = None,
     ) -> Any:
-        return self._container.evaluation_update_qa_dataset_entry_use_case.execute(
+        row = self._container.evaluation_update_qa_dataset_entry_use_case.execute(
             UpdateQaDatasetEntryCommand(
                 entry_id=entry_id,
                 user_id=user_id,
@@ -404,6 +434,7 @@ class InProcessBackendClient:
                 expected_sources=expected_sources,
             )
         )
+        return qa_dataset_entry_to_wire(row)
 
     def delete_qa_dataset_entry(
         self,
@@ -441,7 +472,7 @@ class InProcessBackendClient:
         return {
             "generation_mode": result.generation_mode,
             "deleted_existing_entries": result.deleted_existing_entries,
-            "created_entries": list(result.created_entries),
+            "created_entries": [qa_dataset_entry_to_wire(e) for e in result.created_entries],
             "skipped_duplicates": list(result.skipped_duplicates),
             "requested_questions": result.requested_questions,
             "raw_generated_count": result.raw_generated_count,
