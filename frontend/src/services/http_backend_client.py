@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 import importlib
-from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
 
 import httpx
 
-from application.services.http_backend_stubs import (
-    http_client_chat_service,
-    http_client_project_settings_repository,
-)
 from services.api_contract_models import (
     DeleteDocumentPayload,
     EffectiveRetrievalSettingsPayload,
@@ -39,6 +34,7 @@ from services.http_payloads import (
     rag_answer_from_ask_api_dict,
 )
 from services.http_transport import HttpTransport
+from services.memory_chat_transcript import MemoryChatTranscript
 
 
 def _streamlit_access_token_supplier() -> str:
@@ -96,7 +92,14 @@ def _chat_pipeline_body(
 
 
 class HttpBackendClient:
-    __slots__ = ("_access_token_supplier", "_t", "base_url", "connect_timeout", "read_timeout")
+    __slots__ = (
+        "_access_token_supplier",
+        "_chat_transcript",
+        "_t",
+        "base_url",
+        "connect_timeout",
+        "read_timeout",
+    )
 
     def __init__(
         self,
@@ -105,12 +108,13 @@ class HttpBackendClient:
         connect_timeout: float = 10.0,
         read_timeout: float = 300.0,
         transport: httpx.BaseTransport | None = None,
-        access_token_supplier: Callable[[], str] | None = None,
+        access_token_supplier: Any | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.connect_timeout = float(connect_timeout)
         self.read_timeout = float(read_timeout)
         self._access_token_supplier = access_token_supplier or _streamlit_access_token_supplier
+        self._chat_transcript = MemoryChatTranscript()
         self._t = HttpTransport(
             base_url=self.base_url,
             connect_timeout=self.connect_timeout,
@@ -125,39 +129,16 @@ class HttpBackendClient:
         self._t.close()
 
     def init_chat_session(self, project_id: str) -> None:
-        http_client_chat_service().init(project_id)
+        self._chat_transcript.init(project_id)
 
     def get_chat_messages(self) -> list[dict[str, Any]]:
-        return http_client_chat_service().get_messages()
+        return self._chat_transcript.get_messages()
 
     def add_chat_user_message(self, content: str) -> None:
-        http_client_chat_service().add_user_message(content)
+        self._chat_transcript.add_user_message(content)
 
     def add_chat_assistant_message(self, content: str) -> None:
-        http_client_chat_service().add_assistant_message(content)
-
-    def generate_answer_from_pipeline(
-        self, *, project: Any, pipeline: Any
-    ) -> str:
-        raise NotImplementedError(
-            "generate_answer_from_pipeline is not exposed over HTTP; use POST /evaluation/manual "
-            "or the in-process backend client."
-        )
-
-    def evaluate_gold_qa_dataset_with_runner(
-        self,
-        *,
-        entries: list[Any],
-        pipeline_runner: Callable[[Any], Any],
-    ) -> BenchmarkResult:
-        raise NotImplementedError(
-            "evaluate_gold_qa_dataset_with_runner is not exposed over HTTP; use POST /evaluation/dataset/run "
-            "or the in-process backend client."
-        )
-
-    @property
-    def project_settings_repository(self) -> Any:
-        return http_client_project_settings_repository()
+        self._chat_transcript.add_assistant_message(content)
 
     def get_current_user_record(self) -> Any:
         st = importlib.import_module("streamlit")
@@ -233,7 +214,7 @@ class HttpBackendClient:
         data = self._t.request_json("GET", "/projects", bearer_token=self._bearer())
         return list(data.get("projects") or [])
 
-    def create_project(self, user_id: str, project_id: str) -> Any:
+    def create_project(self, user_id: str, project_id: str) -> WorkspaceProject:
         self._t.request_json(
             "POST",
             "/projects",
@@ -422,7 +403,7 @@ class HttpBackendClient:
         enable_hybrid_retrieval_override: bool | None = None,
         filters: RetrievalFilters | None = None,
         retrieval_settings: dict | None = None,
-    ) -> Any:
+    ) -> dict[str, Any] | None:
         body = _chat_pipeline_body(
             project_id=project_id,
             question=question,

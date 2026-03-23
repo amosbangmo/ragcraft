@@ -3,12 +3,8 @@ from __future__ import annotations
 import sys
 
 
-def test_importing_streamlit_context_does_not_load_in_process_client() -> None:
-    """
-    ``services`` uses lazy exports so lightweight UI imports (e.g. ``streamlit_context``)
-    avoid pulling :mod:`application.frontend_support.in_process_backend_client` until something
-    requests an in-process symbol.
-    """
+def test_importing_streamlit_context_does_not_load_removed_in_process_client() -> None:
+    """Lightweight imports should not pull deleted ``in_process_backend_client``."""
     prefix = "services."
     for key in list(sys.modules):
         if key.startswith(prefix) and key != "services":

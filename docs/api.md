@@ -82,9 +82,8 @@ The UI must treat **HTTP JSON** as the contract, not **`application.dto`** / **`
 | Piece | Location | Role |
 |-------|----------|------|
 | **Public façade** | **`frontend/src/services/api_client.py`** | **Only** import for pages/components: **`BackendClient`**, **`get_backend_client`**, wire/view-model helpers, preset merge |
-| **HTTP client impl.** | **`api/src/application/frontend_support/http_backend_client.py`** | Requests + JSON → **`services.api_contract_models`** / **`evaluation_wire_models`** (no **`domain`** on hot path) |
+| **HTTP client impl.** | **`frontend/src/services/http_backend_client.py`** | Requests + JSON → **`services.api_contract_models`** / **`evaluation_wire_models`** (no **`domain`** on hot path) |
 | **Wire DTOs** | **`frontend/src/services/api_contract_models.py`**, **`evaluation_wire_*`**, **`http_payloads.py`** | Match FastAPI JSON |
-| **In-process mapping** | **`api/src/application/frontend_support/client_wire_mappers.py`** | Domain/application results → same wire shapes as HTTP |
 
 **Streamlit env:** **`RAGCRAFT_BACKEND_CLIENT`** = **`http`** (default), **`api`**, **`remote`**, or **`in_process`**. **`RAGCRAFT_API_BASE_URL`**, timeouts (**`RAGCRAFT_API_CONNECT_TIMEOUT_SECONDS`**, **`RAGCRAFT_API_READ_TIMEOUT_SECONDS`** / legacy **`RAGCRAFT_API_TIMEOUT_SECONDS`**). **`Authorization: Bearer`** from session — **`frontend/src/services/http_transport.py`**. Errors → **`BackendHttpError`** / **`RAGCraftError`** via **`services/http_error_map.py`**.
 

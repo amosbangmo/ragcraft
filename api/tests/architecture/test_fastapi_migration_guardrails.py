@@ -3,7 +3,7 @@ Regression tests for HTTP vs Streamlit transport boundaries.
 
 These complement :mod:`architecture.test_layer_boundaries` and
 :mod:`architecture.test_fastapi_delivery_boundaries`. Streamlit surfaces must stay behind
-:class:`~application.frontend_support.backend_client_protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
+:class:`~services.backend_client_protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
 directly.
 
 Checks are **import-level** (AST of ``import`` / ``from … import``).
@@ -11,13 +11,13 @@ Checks are **import-level** (AST of ``import`` / ``from … import``).
 
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 
 from architecture.import_scanner import collect_import_violations
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 _HTTP = REPO_ROOT / "api" / "src" / "interfaces" / "http"
+_FRONTEND_SERVICES = REPO_ROOT / "frontend" / "src" / "services"
 
 
 def test_interfaces_http_package_avoids_runtime_services_layer() -> None:
@@ -57,43 +57,21 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     assert not violations, msg + "\n".join(violations)
 
 
-def test_http_and_in_process_backend_clients_expose_same_gateway_operations() -> None:
-    """
-    :class:`~application.frontend_support.http_backend_client.HttpBackendClient` and
-    :class:`~application.frontend_support.in_process_backend_client.InProcessBackendClient` must stay aligned so switching
-    ``use_http_backend_client`` does not drop operations Streamlit pages rely on.
-
-    ``HttpBackendClient`` may add transport-only helpers (e.g. ``close``); in-process must implement
-    every other public callable or property the HTTP client exposes.
-    """
-    from application.frontend_support.http_backend_client import HttpBackendClient
-    from application.frontend_support.in_process_backend_client import InProcessBackendClient
-
-    def _surface(cls: type) -> set[str]:
-        names: set[str] = set()
-        for name, member in inspect.getmembers(cls):
-            if name.startswith("_"):
-                continue
-            if isinstance(member, property):
-                names.add(name)
-            elif callable(member):
-                names.add(name)
-        return names
-
-    http_api = _surface(HttpBackendClient)
-    proc_api = _surface(InProcessBackendClient)
-
-    http_only = http_api - proc_api
-    allowed_http_only = {"close"}
-    unexpected = http_only - allowed_http_only
-    assert not unexpected, (
-        f"InProcessBackendClient missing operations present on HTTP client: {sorted(unexpected)}"
+def test_frontend_services_avoid_domain_and_application_packages() -> None:
+    """``frontend/src/services`` must depend only on wire types, infra config, and stdlib/third-party."""
+    violations = collect_import_violations(
+        [_FRONTEND_SERVICES],
+        forbidden=(
+            "domain",
+            "application",
+            "composition",
+            "interfaces",
+        ),
+        repo_root=REPO_ROOT,
     )
-
-    missing_on_http = proc_api - http_api
-    assert not missing_on_http, (
-        "HttpBackendClient missing operations present on InProcessBackendClient "
-        f"(gateway drift): {sorted(missing_on_http)}"
+    assert not violations, (
+        "frontend services must not import domain, application, composition, or interfaces.\n"
+        + "\n".join(violations)
     )
 
 
@@ -101,8 +79,8 @@ def test_runtime_checkable_backend_client_accepts_http_client_instance() -> None
     """Structural check: HTTP implementation satisfies the protocol used by pages."""
     import httpx
 
-    from application.frontend_support.backend_client_protocol import BackendClient
-    from application.frontend_support.http_backend_client import HttpBackendClient
+    from services.backend_client_protocol import BackendClient
+    from services.http_backend_client import HttpBackendClient
 
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={}))
     client = HttpBackendClient(base_url="http://test.invalid", transport=transport)

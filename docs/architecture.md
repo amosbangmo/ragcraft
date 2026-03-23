@@ -57,7 +57,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 | Orchestration | **`application/orchestration/rag/`**, **`orchestration/evaluation/`** | Recall → assembly, evaluation pipelines, benchmarks |
 | DTOs / wire | **`application/dto/`**, **`application/http/wire/`** | Typed commands/results; JSON at transport edge |
 | RAG DTOs | **`application/rag/dtos/`** | Recall bundles, evaluation inputs |
-| Streamlit ↔ backend glue | **`application/frontend_support/`** | **`BackendClient`** protocol, **`HttpBackendClient`**, **`InProcessBackendClient`**, **`client_wire_mappers`**, **`view_models`**, **`streamlit_backend_factory`**, **`streamlit_backend_access`** |
+| Streamlit ↔ backend glue | **`frontend/src/services/`** | **`BackendClient`** protocol, **`HttpBackendClient`**, HTTP payloads, wire DTOs (**`services.api_client`** façade); **`application/frontend_support/`** keeps only **`backend_client_protocol` re-export** and **`streamlit_backend_factory`** for composition/tests |
 | API worker transcript | **`application/services/memory_chat_transcript.py`** | In-memory **`ChatTranscriptPort`** for HTTP (not Streamlit) |
 
 **Rule:** Post-recall **ordering** lives in **application**; **infrastructure/rag** exposes single-purpose steps behind ports.
@@ -74,7 +74,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 
 ## 6. Composition (`api/src/composition/`)
 
-**`build_backend_composition`**, **`BackendApplicationContainer`**, **`chat_rag_wiring`**, **`evaluation_wiring`**, lifecycle in **`wiring.py`**. Streamlit’s session transcript is wired via **`application.frontend_support.streamlit_backend_factory`** (**`StreamlitChatTranscript`** passed into **`build_backend_composition`**).
+**`build_backend_composition`**, **`BackendApplicationContainer`**, **`chat_rag_wiring`**, **`evaluation_wiring`**, lifecycle in **`wiring.py`**. **`streamlit_backend_factory`** still builds a container for tests/tooling; the Streamlit UI does **not** use an in-process **`BackendClient`** — it uses **HTTP** only (**`infrastructure.config.app_state`**).
 
 ---
 

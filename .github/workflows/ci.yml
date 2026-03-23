@@ -29,6 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install ruff
+          python -m playwright install --with-deps chromium
 
       - name: Lint (critical rules)
         run: ruff check . --select E9,F63,F7,F82
@@ -42,6 +43,13 @@ jobs:
       - name: Pytest (remainder — same as step 2 of scripts/run_tests.sh)
         run: python -m pytest api/tests --ignore=api/tests/architecture --ignore=api/tests/bootstrap frontend/tests -q --tb=short
 
+      - name: Playwright E2E (live API)
+        run: python -m pytest api/tests/e2e_browser -m e2e_browser -q --tb=short
+
+      - name: Coverage report (application + domain)
+        run: |
+          python -m pytest api/tests/appli api/tests/domain --cov=application --cov=domain --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml -q --tb=no
+
       - name: Run backend runtime tests
         run: python -m unittest discover -s api/tests/infra -p "test_*.py"
 
@@ -53,4 +61,4 @@ jobs:
 
       - name: Basic app boot check
         run: |
-          python -c "from services.streamlit_backend_factory import build_streamlit_backend_application_container; build_streamlit_backend_application_container(); print('boot-ok')"
+          python -c "from interfaces.http.main import create_app; create_app(); print('boot-ok')"

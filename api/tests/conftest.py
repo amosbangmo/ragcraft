@@ -43,6 +43,7 @@ def pytest_configure(config) -> None:
         "frontend: frontend tests (frontend/tests)",
         "integration: cross-boundary HTTP walk (e.g. test_http_pipeline_e2e)",
         "reliability: runtime boot + auth/chat/e2e flow confidence (api/tests/reliability)",
+        "e2e_browser: Playwright + live uvicorn (api/tests/e2e_browser)",
     ):
         config.addinivalue_line("markers", line)
 
@@ -64,6 +65,8 @@ def pytest_collection_modifyitems(config, items) -> None:
                 item.add_marker(pytest.mark.appli)
             elif top == "e2e":
                 item.add_marker(pytest.mark.e2e)
+            elif top == "e2e_browser":
+                item.add_marker(pytest.mark.e2e_browser)
             elif top == "infra":
                 item.add_marker(pytest.mark.infra)
             elif top == "bootstrap":

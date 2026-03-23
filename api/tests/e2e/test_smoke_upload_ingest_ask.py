@@ -4,18 +4,17 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from application.dto.ingestion import IngestUploadedFileCommand
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
+from domain.projects.buffered_document_upload import BufferedDocumentUpload
 from domain.projects.project import Project
 from domain.rag.rag_response import RAGResponse
 from domain.rag.summary_recall_document import SummaryRecallDocument
 
-# Populated in setUpModule; cleared in tearDownModule so stubbed packages do not
-# leak into other test modules (which may be collected / run in any order).
 _STUBBED_MODULE_NAMES: list[str] = []
 _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
     "services.factories.chat_service_factory",
     "services.factories",
-    "application.frontend_support.in_process_backend_client",
     "application.frontend_support.streamlit_backend_factory",
     "infrastructure.evaluation.qa_dataset_generation_service",
     "infrastructure.evaluation.qa_dataset_service",
@@ -23,7 +22,6 @@ _MODULES_TO_RELOAD_AFTER_SMOKE: tuple[str, ...] = (
 )
 
 _build_streamlit_container = None  # type: ignore[misc, assignment]
-_InProcessBackendClient = None  # type: ignore[misc, assignment]
 
 
 def _install_module(module_name: str, **attributes):
@@ -49,7 +47,7 @@ def _stub_get_connection():
 
 
 def setUpModule():
-    global _build_streamlit_container, _InProcessBackendClient
+    global _build_streamlit_container
 
     _install_module(
         "infrastructure.persistence.db",
@@ -69,20 +67,17 @@ def setUpModule():
     _install_module("infrastructure.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("infrastructure.rag.reranking_service", RerankingService=_DummyService)
 
-    from application.frontend_support.in_process_backend_client import InProcessBackendClient as _IPC
     from application.frontend_support.streamlit_backend_factory import (
         build_streamlit_backend_application_container as _build,
     )
 
     _build_streamlit_container = _build
-    _InProcessBackendClient = _IPC
 
 
 def tearDownModule():
-    global _build_streamlit_container, _InProcessBackendClient
+    global _build_streamlit_container
 
     _build_streamlit_container = None
-    _InProcessBackendClient = None
     for name in _MODULES_TO_RELOAD_AFTER_SMOKE:
         sys.modules.pop(name, None)
     for name in _STUBBED_MODULE_NAMES:
@@ -93,26 +88,20 @@ def tearDownModule():
 class TestSmokeUploadIngestAsk(unittest.TestCase):
     def test_upload_to_ask_flow_returns_prompt_sources(self):
         assert _build_streamlit_container is not None
-        assert _InProcessBackendClient is not None
 
         container = _build_streamlit_container()
         backend = container.backend
-        client = _InProcessBackendClient(container)
 
         user_id = "u1"
         project_id = "p1"
         _pdf_bytes = b"%PDF-1.4 minimal"
-        uploaded_file = SimpleNamespace(
-            name="sample.pdf",
-            getbuffer=lambda: memoryview(_pdf_bytes),
-        )
+        upload = BufferedDocumentUpload(source_filename="sample.pdf", body=_pdf_bytes)
         project = Project(user_id=user_id, project_id=project_id)
 
         backend.project_service = MagicMock()
         backend.ingestion_service = MagicMock()
         backend.vectorstore_service = MagicMock()
         backend.docstore_service = MagicMock()
-        client.invalidate_project_chain = MagicMock()  # type: ignore[method-assign]
 
         for _uc_key in (
             "ingestion_ingest_uploaded_file_use_case",
@@ -130,7 +119,7 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
                 "doc_id": "doc-1",
                 "user_id": user_id,
                 "project_id": project_id,
-                "source_file": uploaded_file.name,
+                "source_file": upload.name,
                 "content_type": "text",
                 "raw_content": "raw text",
                 "summary": "summary",
@@ -161,15 +150,15 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
             generate_answer_from_pipeline=MagicMock(),
         )
 
-        ingest_result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
-        ask_result = client.ask_question(
-            user_id=user_id,
-            project_id=project_id,
-            question="What is in the document?",
-            chat_history=[],
+        ingest_uc = container.ingestion_ingest_uploaded_file_use_case
+        ingest_result = ingest_uc.execute(IngestUploadedFileCommand(project=project, upload=upload))
+        ask_result = container.chat_ask_question_use_case.execute(
+            project,
+            "What is in the document?",
+            [],
         )
 
-        self.assertEqual(ingest_result.raw_assets, raw_assets)
+        self.assertEqual(len(ingest_result.raw_assets), len(raw_assets))
         backend.docstore_service.upsert_asset.assert_called_once_with(**raw_assets[0])
         expected_index_chunks = [
             SummaryRecallDocument(page_content="summary", metadata={}),

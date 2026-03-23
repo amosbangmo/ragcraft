@@ -16,7 +16,6 @@ _LEGACY_MONOLITH_STREAMLIT_APP = "src.app.ragcraft_app"
     "relative_path",
     [
         Path("api") / "src" / "infrastructure" / "config" / "app_state.py",
-        Path("api") / "src" / "application" / "frontend_support" / "in_process_backend_client.py",
         Path("api") / "src" / "application" / "frontend_support" / "streamlit_backend_factory.py",
     ],
 )

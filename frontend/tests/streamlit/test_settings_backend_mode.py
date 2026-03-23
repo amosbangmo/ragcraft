@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from services.settings import load_frontend_backend_settings, use_http_backend_client
+from services.settings import load_frontend_backend_settings
 
 
 @pytest.fixture(autouse=True)
@@ -12,22 +12,13 @@ def clear_settings_cache():
     load_frontend_backend_settings.cache_clear()
 
 
-def test_use_http_backend_client_true_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("RAGCRAFT_BACKEND_CLIENT", raising=False)
-    assert use_http_backend_client() is True
+def test_default_api_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RAGCRAFT_API_BASE_URL", raising=False)
+    s = load_frontend_backend_settings()
+    assert "127.0.0.1" in s.api_base_url
 
 
-def test_use_http_backend_client_false_when_in_process(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("RAGCRAFT_BACKEND_CLIENT", "in_process")
-    assert use_http_backend_client() is False
-
-
-@pytest.mark.parametrize(
-    "mode",
-    ("http", "HTTP", "api", "remote"),
-)
-def test_use_http_backend_client_true_for_remote_modes(
-    monkeypatch: pytest.MonkeyPatch, mode: str
-) -> None:
-    monkeypatch.setenv("RAGCRAFT_BACKEND_CLIENT", mode)
-    assert use_http_backend_client() is True
+def test_custom_api_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAGCRAFT_API_BASE_URL", "http://api.example:9000/")
+    s = load_frontend_backend_settings()
+    assert s.api_base_url == "http://api.example:9000"

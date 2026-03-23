@@ -35,7 +35,7 @@ How **RAG** is split across use cases, **application/orchestration**, **composit
 | Flow | Where |
 |------|--------|
 | HTTP ask | **`interfaces/http/routers/chat.py`** → **`AskQuestionUseCase`** (**`dependencies.py`**) — Bearer JWT → **`AuthenticatedPrincipal`**. |
-| Streamlit ask (in-process) | **`application/frontend_support/in_process_backend_client.py`** → container **`chat_ask_question_use_case`** — same use cases as HTTP. |
+| Streamlit ask | **`frontend/src/services/http_backend_client.py`** → **`POST /chat/ask`** — same use cases as any other HTTP client. |
 | Pipeline build | **`BuildRagPipelineUseCase`** — shared by inspect, comparison, evaluation. |
 | Inspect | **`InspectRagPipelineUseCase`** — same **`BuildRagPipelineUseCase`** instance, **`emit_query_log=False`**. |
 | Preview recall | **`PreviewSummaryRecallUseCase`** — **`SummaryRecallPreviewDTO`**, no full assembly. |
@@ -80,7 +80,7 @@ How **RAG** is split across use cases, **application/orchestration**, **composit
 
 ## 6. Typed boundaries
 
-- **`RetrievalSettingsOverrideSpec`** — chat, **`RetrievalPort`**, **`SummaryRecallStagePort`**, HTTP router JSON, **`InProcessBackendClient`**.  
+- **`RetrievalSettingsOverrideSpec`** — chat, **`RetrievalPort`**, **`SummaryRecallStagePort`**, HTTP router JSON, Streamlit **`HttpBackendClient`** (wire JSON only).  
 - **`VectorLexicalRecallBundle`**, **`RagEvaluationPipelineInput`**, **`PipelineLatency`** — see domain and **`application/rag/dtos`**.  
 - Wire payloads use **`as_json_dict()`** / **`RetrievalComparisonWirePayload`** at the HTTP edge only.
 

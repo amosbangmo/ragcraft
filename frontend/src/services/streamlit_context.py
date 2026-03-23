@@ -16,21 +16,14 @@ def get_user_id() -> str:
     return _get_user_id()
 
 
-def refresh_streamlit_auth_session_from_user_id(user_id: str) -> None:
+def refresh_streamlit_auth_session_from_user_id(_user_id: str) -> None:
     """
     Reload Streamlit session auth fields after profile mutations via ``BackendClient``.
 
-    In HTTP backend mode, pulls ``GET /users/me`` instead of reading SQLite in-process.
+    Pulls ``GET /users/me`` over HTTP.
     """
-    from services.settings import use_http_backend_client
     from services.streamlit_session import apply_auth_user_dict_to_streamlit_session
 
-    if use_http_backend_client():
-        record = get_backend_client().get_current_user_record()
-        if isinstance(record, dict):
-            apply_auth_user_dict_to_streamlit_session(record)
-        return
-
-    from infrastructure.auth.auth_service import AuthService
-
-    AuthService().refresh_session_from_user_id(user_id)
+    record = get_backend_client().get_current_user_record()
+    if isinstance(record, dict):
+        apply_auth_user_dict_to_streamlit_session(record)

@@ -19,9 +19,8 @@ from infrastructure.auth.guards import require_authentication
 from services.api_client import (
     BackendClient,
     PRESET_UI_LABELS,
-    PipelineBuildResult,
     RetrievalFilters,
-    RetrievalSettings,
+    RetrievalSettingsPayload,
     parse_retrieval_preset,
 )
 from services.ui_errors import (
@@ -52,7 +51,12 @@ def _render_summary_docs(docs: list):
     st.metric("Retrieved summaries", len(docs))
 
     for index, doc in enumerate(docs, start=1):
-        metadata = doc.metadata or {}
+        if isinstance(doc, dict):
+            metadata = doc.get("metadata") or {}
+            page_content = str(doc.get("page_content") or "")
+        else:
+            metadata = getattr(doc, "metadata", None) or {}
+            page_content = str(getattr(doc, "page_content", "") or "")
         source_file = metadata.get("source_file", metadata.get("file_name", "unknown"))
         content_type = metadata.get("content_type", "unknown")
         doc_id = metadata.get("doc_id", "?")
@@ -80,7 +84,7 @@ def _render_summary_docs(docs: list):
             f"""
             <div class="source-card">
                 <div class="source-title">#{index} — {source_file} — {content_type} — doc_id {doc_id}</div>
-                <div class="source-preview">{doc.page_content}</div>
+                <div class="source-preview">{page_content}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -252,7 +256,7 @@ if not project_id:
     st.stop()
 
 rs_panel = st.session_state.get("retrieval_settings")
-if isinstance(rs_panel, RetrievalSettings):
+if isinstance(rs_panel, RetrievalSettingsPayload):
     st.markdown("### Retrieval panel (session)")
     _pr = st.session_state.get("retrieval_preset")
     preset_label = PRESET_UI_LABELS[parse_retrieval_preset(_pr)] if _pr is not None else "—"
@@ -414,9 +418,6 @@ def _render_inspection_result(pipeline):
     if pipeline is None:
         st.warning("No retrieval result available for this query.")
         return
-
-    if isinstance(pipeline, PipelineBuildResult):
-        pipeline = pipeline.to_dict()
 
     rs = pipeline.get("retrieval_strategy") or {}
     strat_k = rs.get("k")

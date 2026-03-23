@@ -18,7 +18,7 @@ Paths below are **on-disk** under the repository root. Python imports use packag
 | **Frontend pages / components** | `frontend/src/pages/`, `frontend/src/components/` | `domain`, `application`, `composition`, `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** |
 | **Frontend services** | `frontend/src/services/` | **`infrastructure.*`** except **`infrastructure.config`** and **`infrastructure.auth`** (`test_frontend_services_infrastructure_imports_are_limited`) |
 
-Module `test_fastapi_migration_guardrails.py` adds **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
+Module `test_fastapi_migration_guardrails.py` checks that `frontend/src/services` avoids `domain`/`application` imports and that `HttpBackendClient` satisfies `BackendClient` at runtime (`isinstance`).
 
 ## Intentional exceptions / non-goals
 

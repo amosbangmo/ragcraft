@@ -10,14 +10,21 @@ import services.streamlit_auth as streamlit_auth
 from infrastructure.auth.auth_service import AuthService
 
 
-def test_login_delegates_to_auth_service_when_in_process() -> None:
-    mock_svc = MagicMock()
-    mock_svc.login.return_value = (True, "ok")
-    with patch.object(streamlit_auth, "use_http_backend_client", return_value=False):
-        with patch.object(streamlit_auth, "AuthService", return_value=mock_svc):
+def test_login_uses_http_transport(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_transport = MagicMock()
+    mock_transport.request_json.return_value = {
+        "success": True,
+        "message": "ok",
+        "user": {"username": "u", "user_id": "1", "display_name": "U"},
+        "access_token": "tok",
+    }
+    mock_transport.close = MagicMock()
+    with patch.object(streamlit_auth, "_http_transport", return_value=mock_transport):
+        with patch("services.streamlit_session.apply_auth_user_dict_to_streamlit_session"):
             ok, msg = streamlit_auth.login("u", "p")
     assert ok and msg == "ok"
-    mock_svc.login.assert_called_once_with("u", "p")
+    mock_transport.request_json.assert_called_once()
+    mock_transport.close.assert_called_once()
 
 
 def test_logout_clears_session_without_auth_service_instance(

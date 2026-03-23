@@ -19,6 +19,7 @@ Tests are **layered** for **structural confidence**: layout and imports, bootstr
 | **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
 | **Composition** | **`api/tests/composition/`** | Wiring smoke |
 | **E2E / regression** | **`api/tests/e2e/`** | Heavier / env-sensitive gates |
+| **Browser E2E** | **`api/tests/e2e_browser/`** | Playwright against **live uvicorn** (`@pytest.mark.e2e_browser`) |
 | **Frontend** | **`frontend/tests/`** | **`test_api_client.py`**, Streamlit, wire parsing, route literal contract |
 
 **Product matrix:** **`docs/product_features.md`**.
@@ -55,7 +56,7 @@ CI uses **path-based** runs; markers are for **local** narrowing.
 
 **Gate:** **`validate_architecture.*`** = **`api/tests/architecture`** + **`api/tests/bootstrap`**. **`run_tests.*`** repeats the gate then **`api/tests`** (skipping duplicate arch/bootstrap in step 2 where scripted) + **`frontend/tests`**.
 
-**HTTP path literals (Streamlit):** **`frontend/tests/streamlit/test_http_client_route_contract.py`** scans **`api/src/application/frontend_support/http_backend_client.py`** and **`frontend/src/services/streamlit_auth.py`**.
+**HTTP path literals (Streamlit):** **`frontend/tests/streamlit/test_http_client_route_contract.py`** scans **`frontend/src/services/http_backend_client.py`** and **`frontend/src/services/streamlit_auth.py`**.
 
 **`cd api && pytest`:** **`api/pyproject.toml`** limits to **`tests/architecture`** by default.
 

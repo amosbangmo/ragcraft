@@ -1,12 +1,7 @@
 """
 Streamlit-facing auth entrypoints (login/register/session reads).
 
-Default **API-first** wiring uses FastAPI ``/auth/login`` and ``/auth/register`` plus the same
-Streamlit ``session_state`` keys as legacy SQLite login. Session reads and logout use those keys
-only (no :class:`~infrastructure.auth.auth_service.AuthService` instance), so HTTP mode does not open a second
-SQLite path through the auth service.
-
-Set ``RAGCRAFT_BACKEND_CLIENT=in_process`` only for fully offline Streamlit without uvicorn.
+Uses FastAPI ``/auth/login`` and ``/auth/register`` plus Streamlit ``session_state`` keys.
 """
 
 from __future__ import annotations
@@ -14,7 +9,7 @@ from __future__ import annotations
 from infrastructure.auth.auth_service import AuthService
 from services.errors import BackendHttpError
 from services.http_transport import HttpTransport
-from services.settings import load_frontend_backend_settings, use_http_backend_client
+from services.settings import load_frontend_backend_settings
 from services.streamlit_session import apply_auth_user_dict_to_streamlit_session
 
 
@@ -38,8 +33,6 @@ def _http_transport() -> HttpTransport:
 
 
 def login(username: str, password: str) -> tuple[bool, str]:
-    if not use_http_backend_client():
-        return AuthService().login(username, password)
     transport = _http_transport()
     try:
         data = transport.request_json(
@@ -71,13 +64,6 @@ def register(
     confirm_password: str,
     display_name: str,
 ) -> tuple[bool, str]:
-    if not use_http_backend_client():
-        return AuthService().register(
-            username=username,
-            password=password,
-            confirm_password=confirm_password,
-            display_name=display_name,
-        )
     transport = _http_transport()
     try:
         data = transport.request_json(

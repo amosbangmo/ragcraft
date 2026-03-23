@@ -56,6 +56,8 @@ ignore_missing_imports = true
 warn_unused_configs = true
 show_error_codes = true
 namespace_packages = true
+warn_return_any = true
+no_implicit_optional = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -77,4 +79,5 @@ markers = [
     "frontend: Streamlit/UI and HTTP client tests under frontend/tests",
     "integration: cross-boundary HTTP walk (e.g. api/tests/api/test_http_pipeline_e2e.py)",
     "reliability: runtime boot + auth/chat/e2e flow tests under api/tests/reliability",
+    "e2e_browser: Playwright tests against a live uvicorn server (api/tests/e2e_browser)",
 ]

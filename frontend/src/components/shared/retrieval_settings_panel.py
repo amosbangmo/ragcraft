@@ -12,7 +12,7 @@ from services.api_client import (
     PRESET_UI_LABELS,
     RetrievalPreset,
     RetrievalPresetMergePort,
-    RetrievalSettings,
+    RetrievalSettingsPayload,
     default_retrieval_preset_merge_port,
     parse_retrieval_preset,
 )
@@ -45,7 +45,7 @@ def build_ui_retrieval_settings(
     enable_query_rewrite: bool | None = None,
     enable_hybrid_retrieval: bool | None = None,
     service: RetrievalPresetMergePort | None = None,
-) -> RetrievalSettings:
+) -> RetrievalSettingsPayload:
     """
     Preset-backed settings, optionally merged with advanced toggle overrides.
 
@@ -63,7 +63,7 @@ def build_ui_retrieval_settings(
     return settings
 
 
-def retrieval_settings_to_request_dict(settings: RetrievalSettings) -> dict:
+def retrieval_settings_to_request_dict(settings: RetrievalSettingsPayload) -> dict:
     """Flat dict for chat/search ask endpoints (retrieval override payload)."""
     return dict(asdict(settings))
 
@@ -154,7 +154,7 @@ def render_retrieval_settings_panel(
     user_id: str | None = None,
     project_id: str | None = None,
     backend_client: BackendClient | None = None,
-) -> RetrievalSettings:
+) -> RetrievalSettingsPayload:
     """
     Render retrieval preset (and optional advanced overrides) and persist merged settings.
 
