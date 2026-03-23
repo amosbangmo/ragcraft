@@ -77,7 +77,7 @@ The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendA
 - **Retrieval overrides:** **`RetrievalSettingsOverrideSpec`** (**`api/src/domain/rag/retrieval_settings_override_spec.py`**) on **`RetrievalPort`**, **`SummaryRecallStagePort`**, **`RAGPipelineQueryContext`**, and chat use cases. FastAPI maps JSON in **`routers/chat.py`**; **`InProcessBackendClient`** maps before calling use cases.  
 - **Recall fusion output:** **`VectorLexicalRecallBundle`** (**`api/src/application/rag/dtos/recall_stages.py`**).  
 - **Evaluation orchestration input:** **`RagEvaluationPipelineInput`**.  
-- **Latency:** **`PipelineLatency`** on **`RagInspectAnswerRun`** and related DTOs; HTTP serialization maps to dict at the wire edge where needed.
+- **Latency:** **`PipelineLatency`** on **`RagInspectAnswerRun`**, **`RAGResponse`**, and **`RagAnswerWirePayload`** (wire holds the domain type until **`as_json_dict()`** serializes for JSON).
 
 ---
 
@@ -97,6 +97,7 @@ The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendA
 ## Retrieval comparison
 
 - **`CompareRetrievalModesUseCase`** — uses **`InspectRagPipelinePort`**; no direct **`infrastructure.rag`** imports from routers or **`frontend/src/services`** (enforced by **`test_orchestration_boundaries.py`** among others).
+- **Typed result:** **`RetrievalModeComparisonResult`** (**`application/dto/retrieval_comparison.py`**) with **`RetrievalModeComparisonRow`** / **`RetrievalModeComparisonSummary`**. Pure comparison logic lives in **`application/use_cases/retrieval/retrieval_mode_comparison.py`**. HTTP and in-process clients serialize via **`RetrievalComparisonWirePayload`** / **`retrieval_comparison_to_wire_dict`** (dict shape only at the transport edge).
 
 ---
 

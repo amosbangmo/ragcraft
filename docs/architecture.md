@@ -62,7 +62,7 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 - **RAG orchestration** — **`application/orchestration/rag/`** (summary recall workflow, post-recall assembly, pipeline steps) and **`application/orchestration/evaluation/`** (e.g. **`rag_pipeline_orchestration.py`**, **`gold_qa_benchmark_adapter.py`**, benchmark execution helpers).
 - **RAG DTOs** — **`application/rag/dtos/`** (recall bundles, evaluation pipeline input, etc.).
 - **Policies and chat helpers** — **`application/chat/`** (e.g. **`multimodal_prompt_hints`**).
-- **DTOs and HTTP wire helpers** — **`application/dto/**`**, **`application/http/wire/`**.
+- **DTOs and HTTP wire helpers** — **`application/dto/**`** (including retrieval comparison results in **`application/dto/retrieval_comparison.py`**) and **`application/http/wire/`** (map typed application/domain objects to JSON-serializable dicts in **`as_json_dict()`**, not ad hoc dicts through the use-case core).
 - **Frontend-facing stubs for HTTP mode** — **`application/frontend_support/`** (**`MemoryChatTranscript`**, etc.) so the FastAPI worker does not depend on infrastructure adapters for transcript behavior.
 
 **Does not own:** wiring the live graph (that is **composition**) or low-level I/O (that is **infrastructure**).

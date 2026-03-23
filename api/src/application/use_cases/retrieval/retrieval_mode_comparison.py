@@ -6,6 +6,11 @@ from collections.abc import Callable
 from time import perf_counter
 from typing import Any
 
+from application.dto.retrieval_comparison import (
+    RetrievalModeComparisonResult,
+    RetrievalModeComparisonRow,
+    RetrievalModeComparisonSummary,
+)
 from domain.projects.project import Project
 from domain.rag.pipeline_payloads import PipelineBuildResult
 
@@ -18,9 +23,9 @@ def compare_retrieval_modes_for_project(
     project: Project,
     questions: list[str],
     enable_query_rewrite: bool,
-) -> dict[str, Any]:
+) -> RetrievalModeComparisonResult:
     normalized_questions = [q.strip() for q in questions if q and q.strip()]
-    rows: list[dict] = []
+    rows: list[RetrievalModeComparisonRow] = []
 
     for question in normalized_questions:
         faiss_pipeline, faiss_latency_ms = _run_pipeline(
@@ -44,35 +49,36 @@ def compare_retrieval_modes_for_project(
         shared_doc_ids = sorted(set(faiss_doc_ids).intersection(hybrid_doc_ids))
         hybrid_only_doc_ids = sorted(set(hybrid_doc_ids) - set(faiss_doc_ids))
 
-        row = {
-            "question": question,
-            "rewritten_query": _get_rewritten_query(faiss_pipeline, hybrid_pipeline),
-            "faiss_recall_docs": len(_safe_get(faiss_pipeline, "recalled_summary_docs", [])),
-            "hybrid_recall_docs": len(_safe_get(hybrid_pipeline, "recalled_summary_docs", [])),
-            "faiss_recall_doc_ids": len(faiss_doc_ids),
-            "hybrid_recall_doc_ids": len(hybrid_doc_ids),
-            "faiss_prompt_assets": len(_safe_get(faiss_pipeline, "reranked_raw_assets", [])),
-            "hybrid_prompt_assets": len(_safe_get(hybrid_pipeline, "reranked_raw_assets", [])),
-            "faiss_confidence": float(_safe_get(faiss_pipeline, "confidence", 0.0)),
-            "hybrid_confidence": float(_safe_get(hybrid_pipeline, "confidence", 0.0)),
-            "faiss_latency_ms": round(faiss_latency_ms, 1),
-            "hybrid_latency_ms": round(hybrid_latency_ms, 1),
-            "shared_doc_ids": len(shared_doc_ids),
-            "hybrid_only_doc_ids": len(hybrid_only_doc_ids),
-            "faiss_selected_doc_ids": len(_safe_get(faiss_pipeline, "selected_doc_ids", [])),
-            "hybrid_selected_doc_ids": len(_safe_get(hybrid_pipeline, "selected_doc_ids", [])),
-            "faiss_has_pipeline": faiss_pipeline is not None,
-            "hybrid_has_pipeline": hybrid_pipeline is not None,
-        }
-        rows.append(row)
+        rows.append(
+            RetrievalModeComparisonRow(
+                question=question,
+                rewritten_query=_get_rewritten_query(faiss_pipeline, hybrid_pipeline),
+                faiss_recall_docs=len(_safe_get(faiss_pipeline, "recalled_summary_docs", [])),
+                hybrid_recall_docs=len(_safe_get(hybrid_pipeline, "recalled_summary_docs", [])),
+                faiss_recall_doc_ids=len(faiss_doc_ids),
+                hybrid_recall_doc_ids=len(hybrid_doc_ids),
+                faiss_prompt_assets=len(_safe_get(faiss_pipeline, "reranked_raw_assets", [])),
+                hybrid_prompt_assets=len(_safe_get(hybrid_pipeline, "reranked_raw_assets", [])),
+                faiss_confidence=float(_safe_get(faiss_pipeline, "confidence", 0.0)),
+                hybrid_confidence=float(_safe_get(hybrid_pipeline, "confidence", 0.0)),
+                faiss_latency_ms=round(faiss_latency_ms, 1),
+                hybrid_latency_ms=round(hybrid_latency_ms, 1),
+                shared_doc_ids=len(shared_doc_ids),
+                hybrid_only_doc_ids=len(hybrid_only_doc_ids),
+                faiss_selected_doc_ids=len(_safe_get(faiss_pipeline, "selected_doc_ids", [])),
+                hybrid_selected_doc_ids=len(_safe_get(hybrid_pipeline, "selected_doc_ids", [])),
+                faiss_has_pipeline=faiss_pipeline is not None,
+                hybrid_has_pipeline=hybrid_pipeline is not None,
+            )
+        )
 
     summary = _build_summary(rows, enable_query_rewrite=enable_query_rewrite)
 
-    return {
-        "questions": normalized_questions,
-        "summary": summary,
-        "rows": rows,
-    }
+    return RetrievalModeComparisonResult(
+        questions=tuple(normalized_questions),
+        summary=summary,
+        rows=tuple(rows),
+    )
 
 
 def _run_pipeline(
@@ -125,51 +131,51 @@ def _safe_get(payload: PipelineBuildResult | None, key: str, default: Any) -> An
     return getattr(payload, key, default)
 
 
-def _build_summary(rows: list[dict], *, enable_query_rewrite: bool) -> dict:
+def _build_summary(
+    rows: list[RetrievalModeComparisonRow], *, enable_query_rewrite: bool
+) -> RetrievalModeComparisonSummary:
     if not rows:
-        return {
-            "total_questions": 0,
-            "query_rewrite_enabled": enable_query_rewrite,
-            "avg_faiss_recall_doc_ids": 0.0,
-            "avg_hybrid_recall_doc_ids": 0.0,
-            "avg_faiss_prompt_assets": 0.0,
-            "avg_hybrid_prompt_assets": 0.0,
-            "avg_faiss_confidence": 0.0,
-            "avg_hybrid_confidence": 0.0,
-            "avg_faiss_latency_ms": 0.0,
-            "avg_hybrid_latency_ms": 0.0,
-            "hybrid_wins_on_recall_doc_ids": 0,
-            "hybrid_wins_on_confidence": 0,
-            "hybrid_wins_on_prompt_assets": 0,
-        }
+        return RetrievalModeComparisonSummary(
+            total_questions=0,
+            query_rewrite_enabled=enable_query_rewrite,
+            avg_faiss_recall_doc_ids=0.0,
+            avg_hybrid_recall_doc_ids=0.0,
+            avg_faiss_prompt_assets=0.0,
+            avg_hybrid_prompt_assets=0.0,
+            avg_faiss_confidence=0.0,
+            avg_hybrid_confidence=0.0,
+            avg_faiss_latency_ms=0.0,
+            avg_hybrid_latency_ms=0.0,
+            hybrid_wins_on_recall_doc_ids=0,
+            hybrid_wins_on_confidence=0,
+            hybrid_wins_on_prompt_assets=0,
+        )
 
     total = len(rows)
 
-    def avg(key: str) -> float:
-        return round(sum(float(row[key]) for row in rows) / total, 2)
+    def avg(getter: Callable[[RetrievalModeComparisonRow], float]) -> float:
+        return round(sum(getter(r) for r in rows) / total, 2)
 
     hybrid_wins_on_recall_doc_ids = sum(
-        1 for row in rows if row["hybrid_recall_doc_ids"] > row["faiss_recall_doc_ids"]
+        1 for r in rows if r.hybrid_recall_doc_ids > r.faiss_recall_doc_ids
     )
-    hybrid_wins_on_confidence = sum(
-        1 for row in rows if row["hybrid_confidence"] > row["faiss_confidence"]
-    )
+    hybrid_wins_on_confidence = sum(1 for r in rows if r.hybrid_confidence > r.faiss_confidence)
     hybrid_wins_on_prompt_assets = sum(
-        1 for row in rows if row["hybrid_prompt_assets"] > row["faiss_prompt_assets"]
+        1 for r in rows if r.hybrid_prompt_assets > r.faiss_prompt_assets
     )
 
-    return {
-        "total_questions": total,
-        "query_rewrite_enabled": enable_query_rewrite,
-        "avg_faiss_recall_doc_ids": avg("faiss_recall_doc_ids"),
-        "avg_hybrid_recall_doc_ids": avg("hybrid_recall_doc_ids"),
-        "avg_faiss_prompt_assets": avg("faiss_prompt_assets"),
-        "avg_hybrid_prompt_assets": avg("hybrid_prompt_assets"),
-        "avg_faiss_confidence": avg("faiss_confidence"),
-        "avg_hybrid_confidence": avg("hybrid_confidence"),
-        "avg_faiss_latency_ms": avg("faiss_latency_ms"),
-        "avg_hybrid_latency_ms": avg("hybrid_latency_ms"),
-        "hybrid_wins_on_recall_doc_ids": hybrid_wins_on_recall_doc_ids,
-        "hybrid_wins_on_confidence": hybrid_wins_on_confidence,
-        "hybrid_wins_on_prompt_assets": hybrid_wins_on_prompt_assets,
-    }
+    return RetrievalModeComparisonSummary(
+        total_questions=total,
+        query_rewrite_enabled=enable_query_rewrite,
+        avg_faiss_recall_doc_ids=avg(lambda r: float(r.faiss_recall_doc_ids)),
+        avg_hybrid_recall_doc_ids=avg(lambda r: float(r.hybrid_recall_doc_ids)),
+        avg_faiss_prompt_assets=avg(lambda r: float(r.faiss_prompt_assets)),
+        avg_hybrid_prompt_assets=avg(lambda r: float(r.hybrid_prompt_assets)),
+        avg_faiss_confidence=avg(lambda r: r.faiss_confidence),
+        avg_hybrid_confidence=avg(lambda r: r.hybrid_confidence),
+        avg_faiss_latency_ms=avg(lambda r: r.faiss_latency_ms),
+        avg_hybrid_latency_ms=avg(lambda r: r.hybrid_latency_ms),
+        hybrid_wins_on_recall_doc_ids=hybrid_wins_on_recall_doc_ids,
+        hybrid_wins_on_confidence=hybrid_wins_on_confidence,
+        hybrid_wins_on_prompt_assets=hybrid_wins_on_prompt_assets,
+    )

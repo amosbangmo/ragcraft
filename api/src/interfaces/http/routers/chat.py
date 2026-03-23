@@ -190,13 +190,13 @@ def post_retrieval_compare(
         CompareRetrievalModesUseCase, Depends(get_compare_retrieval_modes_use_case)
     ],
 ) -> RetrievalCompareResponse:
-    raw = use_case.execute(
+    comparison = use_case.execute(
         user_id=principal.user_id,
         project_id=body.project_id,
         questions=list(body.questions),
         enable_query_rewrite=bool(body.enable_query_rewrite),
     )
-    cmp_payload = RetrievalComparisonWirePayload.from_service_dict(raw)
+    cmp_payload = RetrievalComparisonWirePayload.from_comparison_result(comparison)
     rd = cmp_payload.as_json_dict()
     return RetrievalCompareResponse(
         questions=rd["questions"],

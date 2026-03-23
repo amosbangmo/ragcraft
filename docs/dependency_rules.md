@@ -62,6 +62,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 - **`QueryLogIngressPayload`** — **`api/src/domain/rag/query_log_ingress_payload.py`**.  
 - **`EvaluationJudgeMetricsRow`** — **`api/src/domain/evaluation/judge_metrics_row.py`**.  
 - **`GoldQaPipelineRowInput`** — **`api/src/domain/evaluation/gold_qa_row_input.py`**.  
+- **`RetrievalModeComparisonResult`** / **`RetrievalModeComparisonRow`** — **`api/src/application/dto/retrieval_comparison.py`** (FAISS vs hybrid comparison; wire serialization via **`application/http/wire`**).  
 - **`MemoryChatTranscript`** — only **`api/src/application/frontend_support/memory_chat_transcript.py`** (HTTP worker + tests); no duplicate under **`infrastructure`**.
 
 ---

@@ -8,8 +8,7 @@ and delegates aggregation to :mod:`application.use_cases.retrieval.retrieval_mod
 
 from __future__ import annotations
 
-from typing import Any
-
+from application.dto.retrieval_comparison import RetrievalModeComparisonResult
 from application.use_cases.chat.pipeline_use_case_ports import InspectRagPipelinePort
 from application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from application.use_cases.retrieval.retrieval_mode_comparison import (
@@ -35,7 +34,7 @@ class CompareRetrievalModesUseCase:
         project_id: str,
         questions: list[str],
         enable_query_rewrite: bool,
-    ) -> dict[str, Any]:
+    ) -> RetrievalModeComparisonResult:
         project = self._resolve_project.execute(user_id, project_id)
 
         def _inspect(

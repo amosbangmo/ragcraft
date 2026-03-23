@@ -15,10 +15,12 @@ from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.dto.benchmark_export import BenchmarkExportArtifacts
 from application.dto.evaluation import GenerateQaDatasetResult
 from application.dto.ingestion import IngestDocumentResult
+from application.dto.retrieval_comparison import RetrievalModeComparisonResult
 from application.dto.settings import EffectiveRetrievalSettingsView
 from application.http.wire.json_wire import jsonify_value
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.evaluation.benchmark_result import BenchmarkResult
+from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_response import RAGResponse
 
@@ -33,7 +35,7 @@ class RagAnswerWirePayload:
     raw_assets: list[dict[str, Any]]
     prompt_sources: list[dict[str, Any]]
     confidence: float
-    latency: dict[str, Any] | None
+    latency: PipelineLatency | None
 
     @classmethod
     def from_rag_response(cls, response: RAGResponse) -> RagAnswerWirePayload:
@@ -44,13 +46,15 @@ class RagAnswerWirePayload:
             raw_assets=cast(list[dict[str, Any]], jsonify_value(response.raw_assets)),
             prompt_sources=cast(list[dict[str, Any]], jsonify_value(response.prompt_sources)),
             confidence=float(response.confidence),
-            latency=cast(
-                dict[str, Any] | None,
-                jsonify_value(response.latency.to_dict()) if response.latency is not None else None,
-            ),
+            latency=response.latency,
         )
 
     def as_json_dict(self) -> dict[str, Any]:
+        latency_out: dict[str, Any] | None
+        if self.latency is None:
+            latency_out = None
+        else:
+            latency_out = cast(dict[str, Any], jsonify_value(self.latency.to_dict()))
         return {
             "question": self.question,
             "answer": self.answer,
@@ -58,7 +62,7 @@ class RagAnswerWirePayload:
             "raw_assets": list(self.raw_assets),
             "prompt_sources": list(self.prompt_sources),
             "confidence": self.confidence,
-            "latency": self.latency,
+            "latency": latency_out,
         }
 
 
@@ -205,24 +209,19 @@ class BenchmarkRunWirePayload:
 class RetrievalComparisonWirePayload:
     """Normalized retrieval A/B comparison table (FAISS vs hybrid)."""
 
-    questions: list[str]
-    summary: dict[str, Any]
-    rows: list[dict[str, Any]]
+    result: RetrievalModeComparisonResult
 
     @classmethod
-    def from_service_dict(cls, raw: dict[str, Any]) -> RetrievalComparisonWirePayload:
-        normalized = cast(dict[str, Any], jsonify_value(dict(raw)))
-        return cls(
-            questions=list(normalized.get("questions") or []),
-            summary=cast(dict[str, Any], normalized.get("summary") or {}),
-            rows=cast(list[dict[str, Any]], normalized.get("rows") or []),
-        )
+    def from_comparison_result(
+        cls, result: RetrievalModeComparisonResult
+    ) -> RetrievalComparisonWirePayload:
+        return cls(result=result)
 
     def as_json_dict(self) -> dict[str, Any]:
         return {
-            "questions": list(self.questions),
-            "summary": dict(self.summary),
-            "rows": list(self.rows),
+            "questions": list(self.result.questions),
+            "summary": self.result.summary.to_json_summary(),
+            "rows": [row.to_json_row() for row in self.result.rows],
         }
 
 
@@ -308,8 +307,8 @@ def benchmark_result_to_wire_dict(result: BenchmarkResult) -> dict[str, Any]:
     return BenchmarkRunWirePayload.from_benchmark_result(result).as_json_dict()
 
 
-def retrieval_comparison_to_wire_dict(raw: dict[str, Any]) -> dict[str, Any]:
-    return RetrievalComparisonWirePayload.from_service_dict(raw).as_json_dict()
+def retrieval_comparison_to_wire_dict(result: RetrievalModeComparisonResult) -> dict[str, Any]:
+    return RetrievalComparisonWirePayload.from_comparison_result(result).as_json_dict()
 
 
 def generate_qa_dataset_result_to_wire_dict(result: GenerateQaDatasetResult) -> dict[str, Any]:

@@ -132,10 +132,30 @@ scripts/
 
 ---
 
-## 11. Verdict
+## 11. Critical-flow typing (application vs terminal dicts)
+
+**Removed weak contracts (application layer):**
+
+- **`CompareRetrievalModesUseCase.execute`** no longer returns **`dict[str, Any]`** with ad hoc row dicts. It returns **`RetrievalModeComparisonResult`** (**`application/dto/retrieval_comparison.py`**) composed of **`RetrievalModeComparisonRow`** and **`RetrievalModeComparisonSummary`**.
+- **`compare_retrieval_modes_for_project`** builds only those dataclasses; summary aggregation reads row attributes, not string-keyed dicts.
+- **`RetrievalComparisonWirePayload.from_service_dict`** was removed. The wire type holds **`RetrievalModeComparisonResult`** and **`from_comparison_result`** maps to HTTP JSON in **`as_json_dict()`** (rows via **`to_json_row()`**, summary via **`to_json_summary()`**).
+
+**Latency on the wire boundary:**
+
+- **`RagAnswerWirePayload`** stores **`PipelineLatency | None`** (domain type) until serialization; **`as_json_dict()`** produces the JSON latency object (still passed through **`jsonify_value`** for stable numeric/document normalization).
+
+**Where dicts remain (intentionally terminal):**
+
+- **`retrieval_comparison_to_wire_dict`** and **`RetrievalComparisonWirePayload.as_json_dict()`** — transport JSON for FastAPI / Streamlit.
+- **`frontend/src/services/in_process.py`** calls **`retrieval_comparison_to_wire_dict`** after the use case so Streamlit pages keep a plain **`dict`** contract without leaking dataclasses into **`BackendClient`** typing.
+- **Benchmark run wire** (**`BenchmarkRunWirePayload.from_benchmark_result`**) still normalizes from **`BenchmarkResult.to_dict()`** — a separate backlog item if benchmark rows become first-class typed DTOs end-to-end.
+
+---
+
+## 12. Verdict
 
 **The architecture migration and physical layout for this repository are complete** for the stated scope: layers, dependency direction, orchestration ownership, FastAPI vs Streamlit boundaries, and **`api/src` / `frontend/src`** as the only application code roots are **implemented and enforced**.
 
-Further work is **product quality and operational hardening** (**§10**), not structural migration.
+Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**.
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, and **§11** above for typed vs dict boundaries.

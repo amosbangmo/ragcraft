@@ -101,22 +101,22 @@ class TestRetrievalQualityGate(unittest.TestCase):
             questions=questions,
             enable_query_rewrite=False,
         )
-        summary = report["summary"]
+        summary = report.summary
 
         # Baseline quality gates: if retrieval behavior regresses,
         # this test should fail and block the pipeline.
-        self.assertEqual(summary["total_questions"], 2)
-        self.assertGreaterEqual(summary["avg_hybrid_recall_doc_ids"], 2.0)
+        self.assertEqual(summary.total_questions, 2)
+        self.assertGreaterEqual(summary.avg_hybrid_recall_doc_ids, 2.0)
         self.assertGreaterEqual(
-            summary["avg_hybrid_recall_doc_ids"],
-            summary["avg_faiss_recall_doc_ids"],
+            summary.avg_hybrid_recall_doc_ids,
+            summary.avg_faiss_recall_doc_ids,
         )
         self.assertGreaterEqual(
-            summary["avg_hybrid_confidence"],
-            summary["avg_faiss_confidence"],
+            summary.avg_hybrid_confidence,
+            summary.avg_faiss_confidence,
         )
-        self.assertGreaterEqual(summary["hybrid_wins_on_recall_doc_ids"], 2)
-        self.assertGreaterEqual(summary["hybrid_wins_on_confidence"], 2)
+        self.assertGreaterEqual(summary.hybrid_wins_on_recall_doc_ids, 2)
+        self.assertGreaterEqual(summary.hybrid_wins_on_confidence, 2)
 
 
 if __name__ == "__main__":

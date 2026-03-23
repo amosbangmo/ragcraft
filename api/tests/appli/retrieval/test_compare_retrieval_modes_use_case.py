@@ -92,17 +92,17 @@ class TestCompareRetrievalModesUseCase(unittest.TestCase):
             enable_query_rewrite=False,
         )
 
-        self.assertEqual(report["questions"], ["q1"])
-        self.assertEqual(len(report["rows"]), 1)
-        row = report["rows"][0]
-        self.assertEqual(row["faiss_recall_doc_ids"], 1)
-        self.assertEqual(row["hybrid_recall_doc_ids"], 2)
-        self.assertEqual(row["hybrid_only_doc_ids"], 1)
+        self.assertEqual(list(report.questions), ["q1"])
+        self.assertEqual(len(report.rows), 1)
+        row = report.rows[0]
+        self.assertEqual(row.faiss_recall_doc_ids, 1)
+        self.assertEqual(row.hybrid_recall_doc_ids, 2)
+        self.assertEqual(row.hybrid_only_doc_ids, 1)
 
-        summary = report["summary"]
-        self.assertEqual(summary["total_questions"], 1)
-        self.assertEqual(summary["hybrid_wins_on_recall_doc_ids"], 1)
-        self.assertEqual(summary["hybrid_wins_on_confidence"], 1)
+        summary = report.summary
+        self.assertEqual(summary.total_questions, 1)
+        self.assertEqual(summary.hybrid_wins_on_recall_doc_ids, 1)
+        self.assertEqual(summary.hybrid_wins_on_confidence, 1)
 
     def test_compare_handles_missing_pipelines(self):
         use_case = CompareRetrievalModesUseCase(
@@ -117,19 +117,19 @@ class TestCompareRetrievalModesUseCase(unittest.TestCase):
             enable_query_rewrite=False,
         )
 
-        self.assertEqual(len(report["rows"]), 1)
-        row = report["rows"][0]
-        self.assertFalse(row["faiss_has_pipeline"])
-        self.assertFalse(row["hybrid_has_pipeline"])
-        self.assertEqual(row["faiss_recall_doc_ids"], 0)
-        self.assertEqual(row["hybrid_recall_doc_ids"], 0)
-        self.assertEqual(row["faiss_confidence"], 0.0)
-        self.assertEqual(row["hybrid_confidence"], 0.0)
+        self.assertEqual(len(report.rows), 1)
+        row = report.rows[0]
+        self.assertFalse(row.faiss_has_pipeline)
+        self.assertFalse(row.hybrid_has_pipeline)
+        self.assertEqual(row.faiss_recall_doc_ids, 0)
+        self.assertEqual(row.hybrid_recall_doc_ids, 0)
+        self.assertEqual(row.faiss_confidence, 0.0)
+        self.assertEqual(row.hybrid_confidence, 0.0)
 
-        summary = report["summary"]
-        self.assertEqual(summary["total_questions"], 1)
-        self.assertEqual(summary["hybrid_wins_on_recall_doc_ids"], 0)
-        self.assertEqual(summary["hybrid_wins_on_confidence"], 0)
+        summary = report.summary
+        self.assertEqual(summary.total_questions, 1)
+        self.assertEqual(summary.hybrid_wins_on_recall_doc_ids, 0)
+        self.assertEqual(summary.hybrid_wins_on_confidence, 0)
 
 
 if __name__ == "__main__":

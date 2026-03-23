@@ -29,6 +29,7 @@ from application.dto.settings import (
     GetEffectiveRetrievalSettingsQuery,
     UpdateProjectRetrievalSettingsCommand,
 )
+from application.http.wire import retrieval_comparison_to_wire_dict
 from components.shared.streamlit_project_chain_session_cache import (
     invalidate_project_chain as _invalidate_streamlit_session_chain,
 )
@@ -286,12 +287,13 @@ class InProcessBackendClient:
         questions: list[str],
         enable_query_rewrite: bool,
     ) -> dict:
-        return self._container.chat_compare_retrieval_modes_use_case.execute(
+        result = self._container.chat_compare_retrieval_modes_use_case.execute(
             user_id=user_id,
             project_id=project_id,
             questions=questions,
             enable_query_rewrite=enable_query_rewrite,
         )
+        return retrieval_comparison_to_wire_dict(result)
 
     def evaluate_manual_question(
         self,
