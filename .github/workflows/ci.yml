@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/validate_architecture.sh
 
       - name: Pytest (remainder — same as step 2 of scripts/run_tests.sh)
-        run: python -m pytest api/tests --ignore=api/tests/architecture frontend/tests -q --tb=short
+        run: python -m pytest api/tests --ignore=api/tests/architecture --ignore=api/tests/bootstrap frontend/tests -q --tb=short
 
       - name: Run backend runtime tests
         run: python -m unittest discover -s api/tests/infra -p "test_*.py"

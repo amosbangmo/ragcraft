@@ -2,6 +2,8 @@
 
 The HTTP API is implemented under **`api/src/interfaces/http/`** (routers, schemas, dependencies, upload helpers). The ASGI application object is built by **`create_app()`** in that package and exposed as **`app`** from **`api/main.py`** for Uvicorn.
 
+**Regression tests:** **`api/tests/bootstrap/test_asgi_entrypoint.py`** asserts **`api/main.py`** still wires **`interfaces.http.main:create_app`**, that **`create_app()`** serves **`/health`** and **`/openapi.json`**, and that the **`api/main.py`** file can be executed like Uvicorn (without conflicting with the **`api`** test package on **`PYTHONPATH`**). HTTP contracts live under **`api/tests/api/`** (e.g. **`test_core_routes.py`**, **`test_http_pipeline_e2e.py`**).
+
 **Run locally (repository root on `PYTHONPATH` so the `api` package resolves):**
 
 ```bash

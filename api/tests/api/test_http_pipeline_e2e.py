@@ -18,27 +18,42 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.bearer_auth import bearer_headers
+from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.dto.ingestion import IngestDocumentResult
+from application.dto.settings import (
+    EffectiveRetrievalSettingsView,
+    GetEffectiveRetrievalSettingsQuery,
+)
 from application.orchestration.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from domain.projects.project import Project
+from domain.projects.project_settings import ProjectSettings
+from domain.rag.retrieval_settings import RetrievalSettings
+from domain.rag.summary_recall_document import SummaryRecallDocument
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_response import RAGResponse
+from infrastructure.config.config import RETRIEVAL_CONFIG
 from interfaces.http.dependencies import (
     get_ask_question_use_case,
     get_build_benchmark_export_artifacts_use_case,
     get_create_project_use_case,
+    get_get_effective_retrieval_settings_use_case,
     get_ingest_uploaded_file_use_case,
     get_inspect_pipeline_use_case,
+    get_preview_summary_recall_use_case,
     get_resolve_project_use_case,
     get_run_gold_qa_dataset_evaluation_use_case,
 )
 from interfaces.http.main import create_app
-from interfaces.http.schemas.chat import ChatAskResponse, PipelineInspectResponse
+from interfaces.http.schemas.chat import (
+    ChatAskResponse,
+    PipelineInspectResponse,
+    PreviewSummaryRecallResponse,
+)
 from interfaces.http.schemas.evaluation import BenchmarkResultResponse
 from interfaces.http.schemas.projects import CreateProjectResponse, IngestDocumentResponse
 
@@ -110,6 +125,34 @@ def pipeline_client() -> Iterator[tuple[TestClient, FastAPI]]:
     app.dependency_overrides[get_build_benchmark_export_artifacts_use_case] = lambda: (
         BuildBenchmarkExportArtifactsUseCase()
     )
+    sdoc = SummaryRecallDocument(page_content="e2e-preview", metadata={"doc_id": "pv1"})
+    app.dependency_overrides[get_preview_summary_recall_use_case] = lambda: _CallableUseCase(
+        lambda project, question, *a, **k: SummaryRecallPreviewDTO(
+            rewritten_question=question,
+            recalled_summary_docs=[sdoc],
+            vector_summary_docs=[sdoc],
+            bm25_summary_docs=[],
+            retrieval_mode="faiss",
+            query_rewrite_enabled=True,
+            hybrid_retrieval_enabled=False,
+            use_adaptive_retrieval=False,
+        )
+    )
+
+    def _eff(q: GetEffectiveRetrievalSettingsQuery) -> EffectiveRetrievalSettingsView:
+        return EffectiveRetrievalSettingsView(
+            preferences=ProjectSettings(
+                user_id=q.user_id,
+                project_id=q.project_id,
+                retrieval_preset="balanced",
+                retrieval_advanced=False,
+            ),
+            effective_retrieval=RetrievalSettings.from_retrieval_config(RETRIEVAL_CONFIG),
+        )
+
+    app.dependency_overrides[get_get_effective_retrieval_settings_use_case] = lambda: (
+        _CallableUseCase(_eff)
+    )
 
     with TestClient(app) as tc:
         yield tc, app
@@ -159,6 +202,22 @@ def test_http_pipeline_project_ingest_chat_inspect_benchmark_export(
     insp = PipelineInspectResponse.model_validate(r3.json())
     assert insp.status in ("ok", "no_pipeline")
 
+    r_prev = tc.post(
+        "/chat/pipeline/preview-summary-recall",
+        headers=h,
+        json={"project_id": project_id, "question": "Preview recall"},
+    )
+    assert r_prev.status_code == 200
+    prev = PreviewSummaryRecallResponse.model_validate(r_prev.json())
+    assert prev.status == "ok"
+    assert prev.preview is not None
+
+    r_rs = tc.get(f"/projects/{project_id}/retrieval-settings", headers=h)
+    assert r_rs.status_code == 200
+    rs_body = r_rs.json()
+    assert rs_body["preferences"]["project_id"] == project_id
+    assert "similarity_search_k" in rs_body["effective_retrieval"]
+
     r4 = tc.post(
         "/evaluation/dataset/run",
         headers=h,
@@ -205,6 +264,12 @@ def test_http_pipeline_project_ingest_chat_inspect_benchmark_export(
         ),
         ("POST", "/chat/ask", {"json": {"project_id": "x", "question": "q"}}),
         ("POST", "/chat/pipeline/inspect", {"json": {"project_id": "x", "question": "q"}}),
+        (
+            "POST",
+            "/chat/pipeline/preview-summary-recall",
+            {"json": {"project_id": "x", "question": "q"}},
+        ),
+        ("GET", "/projects/x/retrieval-settings", {}),
         (
             "POST",
             "/evaluation/dataset/run",

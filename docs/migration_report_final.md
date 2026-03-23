@@ -80,7 +80,8 @@ The remaining work was **consistency** (paths, docs, tests naming), **guardrail 
 | Mechanism | Role |
 |-----------|------|
 | **`api/tests/architecture/`** | Authoritative gate: layout, skeleton, imports, FastAPI/Streamlit boundaries, orchestration purity |
-| **`scripts/validate_architecture.sh`** | Runs that package with correct **`PYTHONPATH`** |
+| **`api/tests/bootstrap/`** | ASGI entry + **`create_app()`** smoke (**`/health`**, **`/openapi.json`**, **`api/main.py`** wiring) — run together with architecture via **`scripts/validate_architecture.sh`** |
+| **`scripts/validate_architecture.sh`** | Runs **`architecture/`** + **`bootstrap/`** with correct **`PYTHONPATH`** |
 | **`.github/workflows/ci.yml`** | Lint + architecture + pytest slice mirroring **`run_tests.sh`** |
 | **Root `pyproject.toml`** | Ruff paths, pytest defaults |
 
@@ -169,10 +170,25 @@ scripts/
 
 ---
 
-## 13. Verdict
+## 13. Runtime and contract-test confidence
+
+**Added coverage:**
+
+- **`api/tests/bootstrap/`** — run with **`scripts/validate_architecture.sh`** / **`.ps1`**: **`api/main.py`** still references **`interfaces.http.main`** / **`create_app`**; **`create_app()`** returns a working FastAPI app (**`/health`**, **`/openapi.json`**); loading **`api/main.py`** by file path validates the Uvicorn entry without relying on ambiguous **`import api.main`** when **`api/tests`** is on **`PYTHONPATH`**.
+- **`api/tests/api/test_core_routes.py`** — preview summary recall (**`POST /chat/pipeline/preview-summary-recall`**), project retrieval settings (**`GET .../retrieval-settings`**), plus existing ask/inspect/evaluation/ingest/auth envelopes.
+- **`api/tests/api/test_http_pipeline_e2e.py`** — extended HTTP chain includes preview and retrieval-settings steps; parametrized bearer checks cover those routes.
+- **`frontend/tests/streamlit/test_http_client_route_contract.py`** — static contract on path strings for RAG routes and auth endpoints used by the Streamlit HTTP client layer.
+
+**Failure classes partially covered:** broken ASGI/bootstrap imports, stale **`api/main.py`** wiring, missing public routes on app factory, regressed auth-required behavior on new routes, oversized ingest (**413**), frontend/backend path typos for critical URLs.
+
+**Outside automated confidence:** full LLM/vector production stacks, real JWT issuance against external IdPs, browser E2E, and performance/load behavior. CI still runs optional folders (**`api/tests/infra`**, integration/quality unclassified) separately from the main pytest slice.
+
+---
+
+## 14. Verdict
 
 **The architecture migration and physical layout for this repository are complete** for the stated scope: layers, dependency direction, orchestration ownership, FastAPI vs Streamlit boundaries, and **`api/src` / `frontend/src`** as the only application code roots are **implemented and enforced**.
 
-Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**.
+Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**. Runtime and contract coverage are summarized in **§13**.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), and **§12** (orchestration modes and logging).
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), and **§13** (runtime confidence).

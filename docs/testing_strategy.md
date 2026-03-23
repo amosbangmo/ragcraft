@@ -10,14 +10,16 @@ These match **CI** (see **`.github/workflows/ci.yml`**) and the **`scripts/`** e
 
 | What | Bash | PowerShell |
 |------|------|------------|
-| Architecture tests only | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
+| Architecture + bootstrap (layout + ASGI smoke) | `./scripts/validate_architecture.sh` | `.\scripts\validate_architecture.ps1` |
 | Lint + architecture | `./scripts/validate.sh` | `.\scripts\validate.ps1` |
 | Full workflow (architecture, then rest) | `./scripts/run_tests.sh` | `.\scripts\run_tests.ps1` |
 | Lint only | `./scripts/lint.sh` | `.\scripts\lint.ps1` |
 
 **`PYTHONPATH`:** **`api/src:frontend/src:api/tests`** (order matters: **`api/src`** first so test packages do not shadow application code).
 
-**Architecture package:** everything under **`api/tests/architecture/`** — the primary structural gate. Optional pytest marker **`architecture`** exists in root **`pyproject.toml`**; day-to-day, use the path or **`validate_architecture`**.
+**Blocking gate (`validate_architecture.*`):** **`api/tests/architecture/`** (layout, imports) **and** **`api/tests/bootstrap/`** (FastAPI **`create_app`**, **`api/main.py`** wiring, OpenAPI/health). Step 2 of **`run_tests.sh`** skips **`bootstrap/`** so those tests are not duplicated after the gate.
+
+**Frontend ↔ HTTP path literals:** **`frontend/tests/streamlit/test_http_client_route_contract.py`** fails if core route strings drift in **`http_client.py`** / **`streamlit_auth.py`**.
 
 **From `api/`:** **`api/pyproject.toml`** limits pytest to **`tests/architecture`** so **`cd api && pytest`** matches the architecture script without scanning the whole repo.
 
@@ -28,7 +30,7 @@ export PYTHONPATH=api/src:frontend/src:api/tests
 python -m pytest api/tests frontend/tests -q
 ```
 
-Prefer **`run_tests.sh`** for the ordered workflow (architecture once, then **`api/tests`** minus architecture + **`frontend/tests`**).
+Prefer **`run_tests.sh`** for the ordered workflow (architecture + bootstrap once, then **`api/tests`** minus **`architecture/`** and **`bootstrap/`** + **`frontend/tests`**).
 
 **Typing (optional):** not in **`lint.sh`**. Example:
 
@@ -70,7 +72,7 @@ Shared helper: **`import_scanner.py`**.
 
 | Location | Role |
 |----------|------|
-| **`api/tests/api/`** | FastAPI routes, OpenAPI, **`dependencies`** overrides — import as package **`api`** with **`api/tests`** on **`PYTHONPATH`** |
+| **`api/tests/api/`** | FastAPI routes, OpenAPI, **`dependencies`** overrides, auth envelope, ingest caps, RAG + evaluation + retrieval-settings JSON contracts; **`test_http_pipeline_e2e.py`** — HTTP-only walk (project → ingest → ask → inspect → preview → retrieval settings → benchmark → export) |
 | **`api/tests/appli/`** | Use-case behavior, mocks; HTTP wire DTOs (**`appli/http/test_wire_payloads.py`**) assert typed payloads; **`appli/orchestration/test_rag_mode_contracts.py`** asserts RAG **mode separation** (ask vs inspect vs preview vs evaluation) and **query-log** flags on **`BuildRagPipelineUseCase`** / **`InspectRagPipelineUseCase`** |
 | **`api/tests/domain/`** | Domain policy |
 | **`api/tests/infra/`** | Infrastructure services and adapters |

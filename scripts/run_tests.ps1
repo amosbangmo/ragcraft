@@ -16,5 +16,7 @@ $apiTests = Join-Path $Root "api/tests"
 $archTests = Join-Path $Root "api/tests/architecture"
 $frontendTests = Join-Path $Root "frontend/tests"
 
-Write-Host "==> Step 2/2: Pytest (api/tests minus architecture + frontend/tests)"
-& python -m pytest $apiTests --ignore=$archTests $frontendTests -q @RemainingArguments
+$bootstrapTests = Join-Path $Root "api/tests/bootstrap"
+
+Write-Host "==> Step 2/2: Pytest (api/tests minus architecture/bootstrap + frontend/tests)"
+& python -m pytest $apiTests --ignore=$archTests --ignore=$bootstrapTests $frontendTests -q @RemainingArguments

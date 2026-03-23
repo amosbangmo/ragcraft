@@ -71,6 +71,8 @@ Delivery (interfaces/http, frontend/services, Streamlit UI)
 
 **RAG modes:** **ask** (**`AskQuestionUseCase`**) vs **inspect** (**`InspectRagPipelineUseCase`**, no query log) vs **preview** (recall-only) vs **evaluation** (**`execute_rag_inspect_then_answer_for_evaluation`**) are separate use-case surfaces; see **`docs/rag_orchestration.md`** and **`api/tests/appli/orchestration/test_rag_mode_contracts.py`**.
 
+**Runtime smoke:** **`api/tests/bootstrap/`** (invoked from **`scripts/validate_architecture.*`**) complements layout tests by loading **`create_app()`** and the **`api/main.py`** entry file; see **`docs/testing_strategy.md`** and **`docs/migration_report_final.md`** §13.
+
 ---
 
 ## Infrastructure (`api/src/infrastructure/`)

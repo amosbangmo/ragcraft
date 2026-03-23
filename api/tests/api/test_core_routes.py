@@ -17,7 +17,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.bearer_auth import bearer_headers
+from application.common.summary_recall_preview import SummaryRecallPreviewDTO
 from application.dto.ingestion import IngestDocumentResult
+from application.dto.settings import (
+    EffectiveRetrievalSettingsView,
+    GetEffectiveRetrievalSettingsQuery,
+)
 from application.orchestration.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
 )
@@ -25,18 +30,24 @@ from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.evaluation.benchmark_result import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.projects.project import Project
+from domain.projects.project_settings import ProjectSettings
+from domain.rag.retrieval_settings import RetrievalSettings
 from domain.rag.pipeline_latency import PipelineLatency
 from domain.rag.pipeline_payloads import PipelineBuildResult
 from domain.rag.rag_response import RAGResponse
+from domain.rag.summary_recall_document import SummaryRecallDocument
 from infrastructure.config.exceptions import DomainError, LLMServiceError, VectorStoreError
+from infrastructure.config.config import RETRIEVAL_CONFIG
 from interfaces.http.dependencies import (
     get_ask_question_use_case,
     get_build_benchmark_export_artifacts_use_case,
     get_create_project_use_case,
+    get_get_effective_retrieval_settings_use_case,
     get_ingest_uploaded_file_use_case,
     get_inspect_pipeline_use_case,
     get_list_project_documents_use_case,
     get_list_projects_use_case,
+    get_preview_summary_recall_use_case,
     get_resolve_project_use_case,
     get_run_gold_qa_dataset_evaluation_use_case,
     get_run_manual_evaluation_use_case,
@@ -591,6 +602,103 @@ def test_evaluation_export_benchmark_smoke(override_app: tuple[TestClient, FastA
     bundle = r.json()
     raw = base64.standard_b64decode(bundle["json_base64"])
     assert json.loads(raw.decode("utf-8"))["metadata"]["project_id"] == "demo"
+
+
+def test_preview_summary_recall_happy_path(override_app: tuple[TestClient, FastAPI]) -> None:
+    tc, app = override_app
+    doc = SummaryRecallDocument(page_content="chunk", metadata={"doc_id": "d1"})
+
+    def _preview(project: Any, question: str, *args: Any, **kwargs: Any) -> SummaryRecallPreviewDTO:
+        assert question == "Preview?"
+        return SummaryRecallPreviewDTO(
+            rewritten_question="rw",
+            recalled_summary_docs=[doc],
+            vector_summary_docs=[doc],
+            bm25_summary_docs=[],
+            retrieval_mode="faiss",
+            query_rewrite_enabled=True,
+            hybrid_retrieval_enabled=False,
+            use_adaptive_retrieval=False,
+        )
+
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
+    app.dependency_overrides[get_preview_summary_recall_use_case] = lambda: _CallableUseCase(_preview)
+
+    r = tc.post(
+        "/chat/pipeline/preview-summary-recall",
+        headers=_uid_header(),
+        json={"project_id": "demo", "question": "Preview?"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "ok"
+    assert data["question"] == "Preview?"
+    assert data["preview"] is not None
+    assert data["preview"]["rewritten_question"] == "rw"
+
+
+def test_preview_summary_recall_no_recall(override_app: tuple[TestClient, FastAPI]) -> None:
+    tc, app = override_app
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
+    app.dependency_overrides[get_preview_summary_recall_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
+    r = tc.post(
+        "/chat/pipeline/preview-summary-recall",
+        headers=_uid_header(),
+        json={"project_id": "demo", "question": "Nothing"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "no_recall"
+    assert data["preview"] is None
+
+
+def test_get_project_retrieval_settings_happy_path(override_app: tuple[TestClient, FastAPI]) -> None:
+    tc, app = override_app
+
+    def _get_eff(q: GetEffectiveRetrievalSettingsQuery) -> EffectiveRetrievalSettingsView:
+        assert q.user_id == "u-rs"
+        assert q.project_id == "demo"
+        return EffectiveRetrievalSettingsView(
+            preferences=ProjectSettings(
+                user_id=q.user_id,
+                project_id=q.project_id,
+                retrieval_preset="balanced",
+                retrieval_advanced=False,
+            ),
+            effective_retrieval=RetrievalSettings.from_retrieval_config(RETRIEVAL_CONFIG),
+        )
+
+    app.dependency_overrides[get_get_effective_retrieval_settings_use_case] = lambda: (
+        _CallableUseCase(_get_eff)
+    )
+
+    r = tc.get(
+        "/projects/demo/retrieval-settings",
+        headers=_uid_header("u-rs"),
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["preferences"]["project_id"] == "demo"
+    assert body["preferences"]["retrieval_preset"] == "balanced"
+    assert "similarity_search_k" in body["effective_retrieval"]
+
+
+def test_get_project_retrieval_settings_missing_bearer_401(
+    override_app: tuple[TestClient, FastAPI],
+) -> None:
+    tc, app = override_app
+    app.dependency_overrides[get_get_effective_retrieval_settings_use_case] = lambda: (
+        _CallableUseCase(lambda q: pytest.fail("must not run without auth"))
+    )
+    r = tc.get("/projects/demo/retrieval-settings")
+    assert r.status_code == 401
+    assert r.json().get("code") == "authentication_required"
 
 
 def test_value_error_not_found_maps_to_404(override_app: tuple[TestClient, FastAPI]) -> None:

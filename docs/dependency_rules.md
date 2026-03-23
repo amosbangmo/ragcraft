@@ -8,7 +8,7 @@ This document is the **authoritative description** of allowed dependencies and p
 
 | Intent | Command |
 |--------|---------|
-| Architecture tests only | **`./scripts/validate_architecture.sh`** or **`.\scripts\validate_architecture.ps1`** |
+| Architecture + bootstrap (layout + ASGI entry smoke) | **`./scripts/validate_architecture.sh`** or **`.\scripts\validate_architecture.ps1`** |
 | Lint + architecture | **`./scripts/validate.sh`** or **`.\scripts\validate.ps1`** |
 | Full pytest (architecture first, then rest) | **`./scripts/run_tests.sh`** or **`.\scripts\run_tests.ps1`** |
 | Lint only | **`./scripts/lint.sh`** or **`.\scripts\lint.ps1`** |

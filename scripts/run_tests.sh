@@ -14,5 +14,6 @@ echo "==> Step 2/2: Pytest — api/tests (except architecture/) + frontend/tests
 python -m pytest \
   "${ROOT}/api/tests" \
   --ignore="${ROOT}/api/tests/architecture" \
+  --ignore="${ROOT}/api/tests/bootstrap" \
   "${ROOT}/frontend/tests" \
   -q "$@"
