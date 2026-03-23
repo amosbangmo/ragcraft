@@ -102,7 +102,7 @@ How **RAG** is split across use cases, **application/orchestration**, **composit
 
 ## 9. Retrieval comparison
 
-**`CompareRetrievalModesUseCase`** — **`InspectRagPipelinePort`**; typed **`RetrievalModeComparisonResult`** (**`application/dto/retrieval_comparison.py`**). HTTP and in-process serialize at the edge (**`RetrievalComparisonWirePayload`**, **`retrieval_comparison_to_wire_dict`**). Delivery layers must not import **`infrastructure.rag`** directly (**`test_orchestration_boundaries.py`**).
+**`CompareRetrievalModesUseCase`** — **`InspectRagPipelinePort`**; typed **`RetrievalModeComparisonResult`** (**`application/dto/retrieval_comparison.py`**). Serialization at the HTTP edge only (**`RetrievalComparisonWirePayload`**, **`retrieval_comparison_to_wire_dict`**). Delivery layers must not import **`infrastructure.rag`** directly (**`test_orchestration_boundaries.py`**).
 
 ---
 
