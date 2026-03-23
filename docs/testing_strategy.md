@@ -96,6 +96,7 @@ mypy --config-file=pyproject.toml -p domain
 | **`test_application_orchestration_purity.py`** | Application avoids FastAPI, Streamlit, FAISS, LangChain, etc.; use cases avoid **`services`** |
 | **`test_deprecated_backend_shim_guardrails.py`** | Forbidden directories under **`api/src`**, forbidden monolith **`import`** patterns, **`frontend/src/services`** infra limits |
 | **`test_no_legacy_paths.py`** | Text scan: banned pre-migration path tokens and no **`frontend_`**+**`gateway`** directory segments |
+| **`test_no_dict_in_usecases.py`** | Use-case modules must not annotate or call **`to_dict`** / **`jsonify_value`**; contracts use DTOs / domain records |
 | **`test_composition_import_boundaries.py`** | Composition must not import frontend **`services`** |
 | **`test_adapter_application_imports.py`** | **`api/src/infrastructure`** must not import **`application`** (narrow exception documented) |
 | **`test_no_rag_service_facade.py`** | No **`RAGService`** / **`rag_service.py`** façade |

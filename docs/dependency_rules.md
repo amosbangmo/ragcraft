@@ -82,6 +82,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 | Concern | Test module(s) |
 |---------|----------------|
 | Layout + code roots | **`test_repository_structure.py`**, **`test_required_tree.py`**, **`test_no_legacy_paths.py`** |
+| Use-case typing (no dict contracts) | **`test_no_dict_in_usecases.py`** |
 | Domain / application / router imports | **`test_layer_import_rules.py`** |
 | Infrastructure / composition | **`test_layer_boundaries.py`**, **`test_adapter_application_imports.py`** |
 | FastAPI package purity | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |

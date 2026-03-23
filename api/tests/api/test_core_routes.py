@@ -18,7 +18,8 @@ from fastapi.testclient import TestClient
 
 from api.bearer_auth import bearer_headers
 from application.common.summary_recall_preview import SummaryRecallPreviewDTO
-from application.dto.ingestion import IngestDocumentResult
+from application.dto.ingestion import DocumentReplacementSummary, IngestDocumentResult
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from application.dto.settings import (
     EffectiveRetrievalSettingsView,
     GetEffectiveRetrievalSettingsQuery,
@@ -249,8 +250,23 @@ def test_document_ingest_happy_path(override_app: tuple[TestClient, FastAPI]) ->
 
     def _ingest(_cmd: Any) -> IngestDocumentResult:
         return IngestDocumentResult(
-            raw_assets=[{"id": "1", "content_type": "text"}],
-            replacement_info={"deleted_vectors": 0},
+            raw_assets=[
+                StoredMultimodalAsset.from_mapping(
+                    {
+                        "doc_id": "1",
+                        "user_id": "u",
+                        "project_id": "demo",
+                        "source_file": "hello.txt",
+                        "content_type": "text",
+                        "raw_content": "",
+                        "summary": "",
+                        "metadata": {},
+                    }
+                )
+            ],
+            replacement_info=DocumentReplacementSummary(
+                existing_doc_ids=[], deleted_vectors=0, deleted_assets=0
+            ),
             diagnostics=IngestionDiagnostics(total_ms=12.0, generated_assets=1),
         )
 

@@ -9,6 +9,10 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from domain.common.retrieval_query_log_record import (
+    RetrievalQueryLogRecord,
+    retrieval_query_log_record_from_plain_mapping,
+)
 from infrastructure.persistence.db import get_connection
 
 
@@ -165,7 +169,7 @@ class SQLiteQueryLogRepositoryAdapter:
         since_created_at: str | None = None,
         until_created_at: str | None = None,
         limit: int | None = None,
-    ) -> list[dict]:
+    ) -> list[RetrievalQueryLogRecord]:
         try:
             clauses: list[str] = []
             params: list[object] = []
@@ -197,7 +201,10 @@ class SQLiteQueryLogRepositoryAdapter:
             finally:
                 conn.close()
 
-            return [SQLiteQueryLogRepositoryAdapter._row_to_dict(r) for r in rows]
+            return [
+                retrieval_query_log_record_from_plain_mapping(SQLiteQueryLogRepositoryAdapter._row_to_dict(r))
+                for r in rows
+            ]
         except Exception:
             return []
 

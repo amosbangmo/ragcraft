@@ -74,7 +74,7 @@ from interfaces.http.schemas.evaluation import (
 from interfaces.http.schemas.mappers import (
     manual_evaluation_result_to_response,
     qa_dataset_entry_to_response,
-    retrieval_query_log_rows_to_entries,
+    retrieval_query_log_record_to_entry,
 )
 
 router = APIRouter(prefix="/evaluation", tags=["evaluation"])
@@ -285,7 +285,9 @@ def get_retrieval_logs(
             last_n=limit,
         )
     )
-    return RetrievalLogsResponse(entries=retrieval_query_log_rows_to_entries(entries))
+    return RetrievalLogsResponse(
+        entries=[retrieval_query_log_record_to_entry(e) for e in entries],
+    )
 
 
 @router.get(

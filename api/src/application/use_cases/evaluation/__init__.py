@@ -23,7 +23,7 @@ __all__ = [
     "UpdateQaDatasetEntryUseCase",
 ]
 
-_LAZY_ATTRS: dict[str, tuple[str, str]] = {
+_LAZY_ATTRS = {
     "BenchmarkExecutionUseCase": ("benchmark_execution", "BenchmarkExecutionUseCase"),
     "BuildBenchmarkExportArtifactsUseCase": (
         "build_benchmark_export_artifacts",

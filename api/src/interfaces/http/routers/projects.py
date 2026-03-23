@@ -67,7 +67,7 @@ from interfaces.http.dependencies import (
     get_update_project_retrieval_settings_use_case,
 )
 from interfaces.http.schemas.mappers import (
-    document_asset_row_from_store,
+    document_asset_row_from_stored,
     project_document_detail_row_to_item,
 )
 from interfaces.http.schemas.projects import (
@@ -363,7 +363,7 @@ def get_document_assets(
     assets = use_case.execute(
         user_id=principal.user_id, project_id=project_id, source_file=source_file
     )
-    return DocumentAssetsResponse(assets=[document_asset_row_from_store(a) for a in assets])
+    return DocumentAssetsResponse(assets=[document_asset_row_from_stored(a) for a in assets])
 
 
 @router.post(

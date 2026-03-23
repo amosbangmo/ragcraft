@@ -11,8 +11,10 @@ from typing import Any
 
 from application.dto.auth import UserProfileSummary
 from application.dto.projects import ProjectDocumentDetailRow
+from domain.common.retrieval_query_log_record import RetrievalQueryLogRecord
 from domain.evaluation.manual_evaluation_result import ManualEvaluationResult
 from domain.evaluation.qa_dataset_entry import QADatasetEntry
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from interfaces.http.schemas.evaluation import (
     ManualEvaluationResponse,
     QaDatasetEntryResponse,
@@ -79,19 +81,65 @@ def retrieval_query_log_rows_to_entries(rows: list[dict[str, Any]]) -> list[Retr
     return [RetrievalQueryLogEntry.model_validate(row) for row in rows]
 
 
-def document_asset_row_from_store(raw: dict[str, Any]) -> DocumentAssetRow:
-    md = raw.get("metadata")
-    return DocumentAssetRow(
-        doc_id=str(raw.get("doc_id") or ""),
-        user_id=str(raw.get("user_id") or ""),
-        project_id=str(raw.get("project_id") or ""),
-        source_file=str(raw.get("source_file") or ""),
-        content_type=str(raw.get("content_type") or "unknown"),
-        raw_content="" if raw.get("raw_content") is None else str(raw.get("raw_content")),
-        summary="" if raw.get("summary") is None else str(raw.get("summary")),
-        metadata=dict(md) if isinstance(md, dict) else {},
-        created_at=None if raw.get("created_at") is None else str(raw.get("created_at")),
+def retrieval_query_log_record_to_entry(record: RetrievalQueryLogRecord) -> RetrievalQueryLogEntry:
+    rs = record.retrieval_strategy
+    rs_out: dict[str, Any] | None = None
+    if rs is not None:
+        rs_out = {}
+        if rs.k is not None:
+            rs_out["k"] = rs.k
+        if rs.use_hybrid is not None:
+            rs_out["use_hybrid"] = rs.use_hybrid
+        if rs.apply_filters is not None:
+            rs_out["apply_filters"] = rs.apply_filters
+        if not rs_out:
+            rs_out = None
+    return RetrievalQueryLogEntry(
+        question=record.question,
+        rewritten_query=record.rewritten_query,
+        project_id=record.project_id,
+        user_id=record.user_id,
+        retrieval_mode=record.retrieval_mode,
+        confidence=record.confidence,
+        timestamp=record.timestamp,
+        selected_doc_ids=record.selected_doc_ids,
+        retrieved_doc_ids=record.retrieved_doc_ids,
+        answer=record.answer,
+        hybrid_retrieval_enabled=record.hybrid_retrieval_enabled,
+        query_intent=record.query_intent,
+        retrieval_strategy=rs_out,
+        latency_ms=record.latency_ms,
+        query_rewrite_ms=record.query_rewrite_ms,
+        retrieval_ms=record.retrieval_ms,
+        reranking_ms=record.reranking_ms,
+        prompt_build_ms=record.prompt_build_ms,
+        answer_generation_ms=record.answer_generation_ms,
+        total_latency_ms=record.total_latency_ms,
+        context_compression_chars_before=record.context_compression_chars_before,
+        context_compression_chars_after=record.context_compression_chars_after,
+        context_compression_ratio=record.context_compression_ratio,
+        section_expansion_count=record.section_expansion_count,
+        expanded_assets_count=record.expanded_assets_count,
+        table_aware_qa_enabled=record.table_aware_qa_enabled,
     )
+
+
+def document_asset_row_from_stored(asset: StoredMultimodalAsset) -> DocumentAssetRow:
+    return DocumentAssetRow(
+        doc_id=asset.doc_id,
+        user_id=asset.user_id,
+        project_id=asset.project_id,
+        source_file=asset.source_file,
+        content_type=asset.content_type,
+        raw_content=asset.raw_content,
+        summary=asset.summary,
+        metadata=dict(asset.metadata),
+        created_at=asset.created_at,
+    )
+
+
+def document_asset_row_from_store(raw: dict[str, Any]) -> DocumentAssetRow:
+    return document_asset_row_from_stored(StoredMultimodalAsset.from_mapping(raw))
 
 
 def project_document_detail_item(

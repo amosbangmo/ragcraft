@@ -19,7 +19,8 @@ from fastapi.testclient import TestClient
 
 from api.bearer_auth import bearer_headers
 from application.common.summary_recall_preview import SummaryRecallPreviewDTO
-from application.dto.ingestion import IngestDocumentResult
+from application.dto.ingestion import DocumentReplacementSummary, IngestDocumentResult
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from application.dto.settings import (
     EffectiveRetrievalSettingsView,
     GetEffectiveRetrievalSettingsQuery,
@@ -97,8 +98,23 @@ def pipeline_client() -> Iterator[tuple[TestClient, FastAPI]]:
     )
     app.dependency_overrides[get_ingest_uploaded_file_use_case] = lambda: _CallableUseCase(
         lambda cmd: IngestDocumentResult(
-            raw_assets=[{"id": "a1", "content_type": "text"}],
-            replacement_info={"deleted_vectors": 0},
+            raw_assets=[
+                StoredMultimodalAsset.from_mapping(
+                    {
+                        "doc_id": "a1",
+                        "user_id": "u",
+                        "project_id": "p",
+                        "source_file": "s",
+                        "content_type": "text",
+                        "raw_content": "",
+                        "summary": "",
+                        "metadata": {},
+                    }
+                )
+            ],
+            replacement_info=DocumentReplacementSummary(
+                existing_doc_ids=[], deleted_vectors=0, deleted_assets=0
+            ),
             diagnostics=IngestionDiagnostics(total_ms=5.0, generated_assets=1),
         )
     )

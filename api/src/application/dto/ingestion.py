@@ -2,10 +2,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from domain.projects.project import Project
+
+
+@dataclass(frozen=True)
+class DocumentReplacementSummary:
+    """Counts from clearing prior vectors/assets before a re-ingest."""
+
+    existing_doc_ids: list[str]
+    deleted_vectors: int
+    deleted_assets: int
+
+    def to_wire_dict(self) -> dict[str, Any]:
+        return {
+            "existing_doc_ids": list(self.existing_doc_ids),
+            "deleted_vectors": self.deleted_vectors,
+            "deleted_assets": self.deleted_assets,
+        }
 
 
 @dataclass(frozen=True)
@@ -15,7 +33,7 @@ class IngestFilePathCommand:
     project: Project
     file_path: str | Path
     source_file: str
-    replacement_info: dict | None = None
+    replacement_info: DocumentReplacementSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -44,22 +62,22 @@ class IngestUploadedFileCommand:
 
 @dataclass
 class IngestDocumentResult:
-    raw_assets: list[dict]
-    replacement_info: dict
+    raw_assets: list[StoredMultimodalAsset]
+    replacement_info: DocumentReplacementSummary
     diagnostics: IngestionDiagnostics
 
     def content_type_counts(self) -> dict[str, int]:
         counts: dict[str, int] = {}
         for asset in self.raw_assets:
-            ct = asset.get("content_type") or "unknown"
+            ct = asset.content_type or "unknown"
             counts[ct] = counts.get(ct, 0) + 1
         return counts
 
     def _replacement_deleted_assets(self) -> int:
-        return int((self.replacement_info or {}).get("deleted_assets", 0) or 0)
+        return int(self.replacement_info.deleted_assets)
 
     def _replacement_deleted_vectors(self) -> int:
-        return int((self.replacement_info or {}).get("deleted_vectors", 0) or 0)
+        return int(self.replacement_info.deleted_vectors)
 
     def format_ingestion_success_message(self, file_name: str) -> str:
         """User-facing summary after upload ingest (matches prior Streamlit copy)."""
@@ -86,10 +104,10 @@ class IngestDocumentResult:
             f"generated {len(self.raw_assets)} multimodal asset(s) {type_counts}."
         )
 
-    def as_payload(self) -> dict:
+    def as_payload(self) -> dict[str, Any]:
         return {
-            "raw_assets": self.raw_assets,
-            "replacement_info": self.replacement_info,
+            "raw_assets": [a.upsert_kwargs() for a in self.raw_assets],
+            "replacement_info": self.replacement_info.to_wire_dict(),
             "diagnostics": self.diagnostics,
         }
 
@@ -109,7 +127,7 @@ class DeleteDocumentResult:
             f"FAISS vectors removed={self.deleted_vectors}."
         )
 
-    def as_payload(self) -> dict:
+    def as_payload(self) -> dict[str, Any]:
         return {
             "source_file": self.source_file,
             "file_deleted": self.file_deleted,

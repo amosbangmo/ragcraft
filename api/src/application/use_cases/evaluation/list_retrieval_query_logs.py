@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from application.dto.evaluation import ListRetrievalQueryLogsQuery
 from domain.common.ports import QueryLogPort
+from domain.common.retrieval_query_log_record import RetrievalQueryLogRecord
 
 
 def _parse_iso_utc(value: str | None) -> datetime | None:
@@ -27,7 +28,7 @@ class ListRetrievalQueryLogsUseCase:
     def __init__(self, *, query_log: QueryLogPort) -> None:
         self._logs = query_log
 
-    def execute(self, query: ListRetrievalQueryLogsQuery) -> list[dict]:
+    def execute(self, query: ListRetrievalQueryLogsQuery) -> list[RetrievalQueryLogRecord]:
         since_utc = _parse_iso_utc(query.since_iso)
         until_utc = _parse_iso_utc(query.until_iso)
         return self._logs.load_logs(

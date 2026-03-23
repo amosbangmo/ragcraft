@@ -345,6 +345,11 @@ The **remaining ~1/10** is **intentional** and **non-blocking** for using this r
 
 **`test_no_legacy_paths.py`** blocks reintroduction of pre-migration path spellings (alternate **`apps`** + **`/api`** tree, monolith **`src`** + **`.ui`** / **`/ui`**, **`frontend_`**+**`gateway`** identifiers, and **`frontend_`**+**`gateway`** directory segments). The monolith-import shim module was renamed to **`test_deprecated_backend_shim_guardrails.py`** (no “gateway” in the filename). The obsolete root **`source_bundle.txt`** aggregate (stale full-tree copy) was removed in favor of the live repository tree.
 
-### 18.8 Final verdict
+### 18.8 Typed use-case contracts (dict ban)
+
+- **Use cases** under **`api/src/application/use_cases/`** return and accept **DTOs / domain records**, not **`dict[str, …]`** surfaces; serialization stays in **`application.http.wire`** and **`interfaces.http.schemas`** (**`test_no_dict_in_usecases.py`**).
+- **Examples:** **`RetrievalQueryLogRecord`** / **`RetrievalStrategySnapshot`** for persisted query logs; **`StoredMultimodalAsset`** for SQLite multimodal rows; **`DocumentReplacementSummary`** for re-ingest purge stats; **`IngestDocumentResult`** holds **`list[StoredMultimodalAsset]`** plus typed replacement summary. **`EvaluationRow`** is a **typed alias** of **`BenchmarkRow`** (**`domain.evaluation.benchmark_result`**). **`PipelineLatency`** remains the structured latency type (**`domain.rag.pipeline_latency`**); wire payloads still use **`dict`** only where the HTTP/JSON contract requires it.
+
+### 18.9 Final verdict
 
 **The repository has reached the target 9/10+ closure state** for: physical layout, Clean Architecture, RAG orchestration ownership, HTTP + Streamlit integration, automated guardrails, and documented feature coherence. **Do not** reintroduce legacy roots or a second RAG façade; **do** extend via ports, use cases, and thin delivery layers. Further work is **product and operations** (**§10**), not **structural** migration.

@@ -5,6 +5,10 @@ import threading
 from datetime import UTC, datetime
 from pathlib import Path
 
+from domain.common.retrieval_query_log_record import (
+    RetrievalQueryLogRecord,
+    retrieval_query_log_record_from_plain_mapping,
+)
 from domain.common.shared.query_log_port import QueryLogPersistencePort
 from infrastructure.config.paths import get_data_root
 
@@ -63,7 +67,7 @@ class QueryLogRepository:
         since_created_at: str | None = None,
         until_created_at: str | None = None,
         limit: int | None = None,
-    ) -> list[dict]:
+    ) -> list[RetrievalQueryLogRecord]:
         try:
             with self._lock:
                 if not self._path.is_file():
@@ -72,7 +76,7 @@ class QueryLogRepository:
         except Exception:
             return []
 
-        rows: list[dict] = []
+        rows: list[RetrievalQueryLogRecord] = []
         for line in text.splitlines():
             line = line.strip()
             if not line:
@@ -96,10 +100,10 @@ class QueryLogRepository:
                 until_dt = _parse_entry_timestamp({"timestamp": until_created_at})
                 if until_dt is not None and (ts is None or ts > until_dt):
                     continue
-            rows.append(row)
+            rows.append(retrieval_query_log_record_from_plain_mapping(row))
 
         rows.sort(
-            key=lambda r: _parse_entry_timestamp(r) or datetime.min.replace(tzinfo=UTC),
+            key=lambda r: _parse_entry_timestamp(r.to_log_entry_dict()) or datetime.min.replace(tzinfo=UTC),
             reverse=True,
         )
         if limit is not None and limit >= 0:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from application.dto.ingestion import DocumentReplacementSummary
 from domain.common.ports import AssetRepositoryPort, VectorStorePort
 from domain.projects.project import Project
 
@@ -15,7 +16,7 @@ def replace_document_assets_for_reingest(
     asset_repository: AssetRepositoryPort,
     vector_index: VectorStorePort,
     invalidate_project_chain: Callable[[str, str], None],
-) -> dict:
+) -> DocumentReplacementSummary:
     """
     Remove existing vectors and SQLite assets for ``source_file``, then invalidate the
     retrieval cache when anything was removed.
@@ -41,8 +42,8 @@ def replace_document_assets_for_reingest(
 
         invalidate_project_chain(user_id, project_id)
 
-    return {
-        "existing_doc_ids": existing_doc_ids,
-        "deleted_vectors": deleted_vectors,
-        "deleted_assets": deleted_assets,
-    }
+    return DocumentReplacementSummary(
+        existing_doc_ids=list(existing_doc_ids),
+        deleted_vectors=deleted_vectors,
+        deleted_assets=deleted_assets,
+    )

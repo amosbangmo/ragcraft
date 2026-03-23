@@ -194,6 +194,9 @@ class BenchmarkResult:
         )
 
 
+EvaluationRow = BenchmarkRow  # Typed alias for per-row benchmark / evaluation payloads.
+
+
 def coerce_benchmark_result(value: Any) -> BenchmarkResult | None:
     """
     Accept a canonical instance, a plain dict (session round-trip), or another

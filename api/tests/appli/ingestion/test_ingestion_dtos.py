@@ -4,12 +4,29 @@ from __future__ import annotations
 
 from application.dto.ingestion import (
     DeleteDocumentResult,
+    DocumentReplacementSummary,
     IngestDocumentResult,
     IngestUploadedFileCommand,
 )
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.projects.buffered_document_upload import BufferedDocumentUpload
 from domain.projects.project import Project
+
+
+def _asset(content_type: str) -> StoredMultimodalAsset:
+    return StoredMultimodalAsset.from_mapping(
+        {
+            "doc_id": "d",
+            "user_id": "u",
+            "project_id": "p",
+            "source_file": "f",
+            "content_type": content_type,
+            "raw_content": "",
+            "summary": "",
+            "metadata": {},
+        }
+    )
 
 
 def test_ingest_upload_file_command_holds_handles() -> None:
@@ -22,8 +39,8 @@ def test_ingest_upload_file_command_holds_handles() -> None:
 
 def test_ingest_result_format_first_upload_message() -> None:
     result = IngestDocumentResult(
-        raw_assets=[{"content_type": "text"}, {"content_type": "text"}],
-        replacement_info={"deleted_assets": 0, "deleted_vectors": 0},
+        raw_assets=[_asset("text"), _asset("text")],
+        replacement_info=DocumentReplacementSummary([], 0, 0),
         diagnostics=IngestionDiagnostics(),
     )
     msg = result.format_ingestion_success_message("a.pdf")
@@ -34,8 +51,8 @@ def test_ingest_result_format_first_upload_message() -> None:
 
 def test_ingest_result_format_after_replace_message() -> None:
     result = IngestDocumentResult(
-        raw_assets=[{"content_type": "table"}],
-        replacement_info={"deleted_assets": 3, "deleted_vectors": 2},
+        raw_assets=[_asset("table")],
+        replacement_info=DocumentReplacementSummary([], 2, 3),
         diagnostics=IngestionDiagnostics(),
     )
     msg = result.format_ingestion_success_message("b.docx")
@@ -46,8 +63,8 @@ def test_ingest_result_format_after_replace_message() -> None:
 
 def test_ingest_result_format_reindex_message() -> None:
     result = IngestDocumentResult(
-        raw_assets=[{"content_type": "image"}, {"content_type": "image"}],
-        replacement_info={"deleted_assets": 1, "deleted_vectors": 1},
+        raw_assets=[_asset("image"), _asset("image")],
+        replacement_info=DocumentReplacementSummary([], 1, 1),
         diagnostics=IngestionDiagnostics(),
     )
     msg = result.format_reindex_success_message("c.pptx")

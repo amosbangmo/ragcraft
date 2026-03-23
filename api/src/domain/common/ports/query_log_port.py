@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
+from domain.common.retrieval_query_log_record import RetrievalQueryLogRecord
+
 
 @runtime_checkable
 class QueryLogPort(Protocol):
@@ -25,4 +27,4 @@ class QueryLogPort(Protocol):
         since_utc: datetime | None = None,
         until_utc: datetime | None = None,
         last_n: int | None = None,
-    ) -> list[dict]: ...
+    ) -> list[RetrievalQueryLogRecord]: ...

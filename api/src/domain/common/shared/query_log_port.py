@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
+from domain.common.retrieval_query_log_record import RetrievalQueryLogRecord
+
 
 @runtime_checkable
 class QueryLogPersistencePort(Protocol):
@@ -17,4 +19,4 @@ class QueryLogPersistencePort(Protocol):
         since_created_at: str | None = None,
         until_created_at: str | None = None,
         limit: int | None = None,
-    ) -> list[dict]: ...
+    ) -> list[RetrievalQueryLogRecord]: ...

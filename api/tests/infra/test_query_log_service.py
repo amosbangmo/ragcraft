@@ -43,10 +43,10 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         )
         rows = repo.list_logs(project_id="p1")
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["selected_doc_ids"], ["d1", "d2"])
-        self.assertEqual(rows[0]["retrieved_doc_ids"], ["r1"])
-        self.assertEqual(rows[0]["timestamp"], "2025-01-01T12:00:00+00:00")
-        self.assertEqual(rows[0].get("query_intent"), "factual")
+        self.assertEqual(rows[0].selected_doc_ids, ["d1", "d2"])
+        self.assertEqual(rows[0].retrieved_doc_ids, ["r1"])
+        self.assertEqual(rows[0].timestamp, "2025-01-01T12:00:00+00:00")
+        self.assertEqual(rows[0].query_intent, "factual")
 
     def test_insert_retrieval_strategy_roundtrip(self) -> None:
         repo = SQLiteQueryLogRepository()
@@ -65,12 +65,12 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         )
         rows = repo.list_logs(project_id="p2")
         self.assertEqual(len(rows), 1)
-        rs = rows[0].get("retrieval_strategy")
-        self.assertIsInstance(rs, dict)
-        assert isinstance(rs, dict)
-        self.assertEqual(rs.get("k"), 8)
-        self.assertTrue(rs.get("use_hybrid"))
-        self.assertFalse(rs.get("apply_filters"))
+        rs = rows[0].retrieval_strategy
+        self.assertIsNotNone(rs)
+        assert rs is not None
+        self.assertEqual(rs.k, 8)
+        self.assertTrue(rs.use_hybrid)
+        self.assertFalse(rs.apply_filters)
 
     def test_insert_table_aware_flag_roundtrip(self) -> None:
         repo = SQLiteQueryLogRepository()
@@ -85,7 +85,7 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         )
         rows = repo.list_logs(project_id="p_ta")
         self.assertEqual(len(rows), 1)
-        self.assertTrue(rows[0].get("table_aware_qa_enabled"))
+        self.assertTrue(rows[0].table_aware_qa_enabled)
 
     def test_insert_context_compression_roundtrip(self) -> None:
         repo = SQLiteQueryLogRepository()
@@ -102,9 +102,9 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
         )
         rows = repo.list_logs(project_id="p_cc")
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].get("context_compression_chars_before"), 1200)
-        self.assertEqual(rows[0].get("context_compression_chars_after"), 400)
-        self.assertAlmostEqual(float(rows[0].get("context_compression_ratio", 0)), 0.3333, places=3)
+        self.assertEqual(rows[0].context_compression_chars_before, 1200)
+        self.assertEqual(rows[0].context_compression_chars_after, 400)
+        self.assertAlmostEqual(float(rows[0].context_compression_ratio or 0), 0.3333, places=3)
 
     def test_list_logs_user_and_limit(self) -> None:
         repo = SQLiteQueryLogRepository()
@@ -119,7 +119,7 @@ class TestSQLiteQueryLogRepository(unittest.TestCase):
             )
         rows = repo.list_logs(project_id="px", user_id="u1", limit=1)
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["user_id"], "u1")
+        self.assertEqual(rows[0].user_id, "u1")
 
 
 class TestQueryLogServiceSqlite(unittest.TestCase):
@@ -151,8 +151,8 @@ class TestQueryLogServiceSqlite(unittest.TestCase):
         )
         rows = svc.load_logs(project_id="p9")
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["question"], "hello")
-        self.assertEqual(rows[0]["latency_ms"], 5)
+        self.assertEqual(rows[0].question, "hello")
+        self.assertEqual(rows[0].latency_ms, 5)
 
     def test_import_legacy_file_logs(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -171,7 +171,7 @@ class TestQueryLogServiceSqlite(unittest.TestCase):
             self.assertEqual(n, 1)
             rows = svc.load_logs(project_id="pimp")
             self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["question"], "fromfile")
+            self.assertEqual(rows[0].question, "fromfile")
 
 
 class TestQueryLogRepository(unittest.TestCase):
@@ -185,7 +185,7 @@ class TestQueryLogRepository(unittest.TestCase):
             self.assertEqual(len(all_rows), 2)
             p1 = repo.list_logs(project_id="p1")
             self.assertEqual(len(p1), 1)
-            self.assertEqual(p1[0]["question"], "a")
+            self.assertEqual(p1[0].question, "a")
 
 
 class TestQueryLogService(unittest.TestCase):
@@ -210,11 +210,12 @@ class TestQueryLogService(unittest.TestCase):
             )
             rows = repo.list_logs()
             self.assertEqual(len(rows), 1)
-            self.assertTrue(rows[0]["question"].endswith("…"))
-            self.assertLessEqual(len(rows[0]["question"]), 2000)
-            self.assertEqual(rows[0]["latency_ms"], 13)
-            self.assertEqual(rows[0]["confidence"], 0.5)
-            self.assertIn("timestamp", rows[0])
+            assert rows[0].question is not None
+            self.assertTrue(rows[0].question.endswith("…"))
+            self.assertLessEqual(len(rows[0].question), 2000)
+            self.assertEqual(rows[0].latency_ms, 13)
+            self.assertEqual(rows[0].confidence, 0.5)
+            self.assertIsNotNone(rows[0].timestamp)
 
     def test_build_entry_includes_stage_latencies_when_present(self):
         with TemporaryDirectory() as tmp:
@@ -237,9 +238,9 @@ class TestQueryLogService(unittest.TestCase):
             )
             rows = repo.list_logs()
             self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["query_rewrite_ms"], 1)
-            self.assertEqual(rows[0]["retrieval_ms"], 2)
-            self.assertEqual(rows[0]["total_latency_ms"], 100)
+            self.assertEqual(rows[0].query_rewrite_ms, 1)
+            self.assertEqual(rows[0].retrieval_ms, 2)
+            self.assertEqual(rows[0].total_latency_ms, 100)
 
     def test_log_query_swallows_repository_errors(self):
         repo = MagicMock()
@@ -266,12 +267,12 @@ class TestQueryLogService(unittest.TestCase):
                     }
                 )
             rows = service.load_logs(project_id="p1", last_n=2)
-            self.assertEqual([r["question"] for r in rows], ["c", "b"])
+            self.assertEqual([r.question for r in rows], ["c", "b"])
             since = datetime(2024, 3, 1, tzinfo=UTC)
             until = datetime(2024, 9, 1, tzinfo=UTC)
             mid = service.load_logs(project_id="p1", since_utc=since, until_utc=until)
             self.assertEqual(len(mid), 1)
-            self.assertEqual(mid[0]["question"], "b")
+            self.assertEqual(mid[0].question, "b")
 
     def test_parse_query_log_timestamp_z_suffix(self):
         dt = parse_query_log_timestamp({"timestamp": "2020-05-05T10:00:00Z"})
@@ -295,8 +296,8 @@ class TestQueryLogService(unittest.TestCase):
                 }
             )
             rows = repo.list_logs()
-            self.assertTrue(rows[0]["hybrid_retrieval_enabled"])
-            self.assertEqual(rows[0]["retrieval_mode"], "faiss+bm25")
+            self.assertTrue(rows[0].hybrid_retrieval_enabled)
+            self.assertEqual(rows[0].retrieval_mode, "faiss+bm25")
 
     def test_build_entry_stores_query_intent_when_valid(self):
         with TemporaryDirectory() as tmp:
@@ -312,7 +313,7 @@ class TestQueryLogService(unittest.TestCase):
                 }
             )
             rows = repo.list_logs()
-            self.assertEqual(rows[0]["query_intent"], "comparison")
+            self.assertEqual(rows[0].query_intent, "comparison")
 
     def test_build_entry_omits_invalid_query_intent(self):
         with TemporaryDirectory() as tmp:
@@ -328,7 +329,7 @@ class TestQueryLogService(unittest.TestCase):
                 }
             )
             rows = repo.list_logs()
-            self.assertNotIn("query_intent", rows[0])
+            self.assertIsNone(rows[0].query_intent)
 
     def test_build_entry_stores_retrieval_strategy(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -348,10 +349,12 @@ class TestQueryLogService(unittest.TestCase):
                 }
             )
             rows = repo.list_logs()
-            self.assertEqual(
-                rows[0].get("retrieval_strategy"),
-                {"k": 5, "use_hybrid": False, "apply_filters": True},
-            )
+            rs = rows[0].retrieval_strategy
+            self.assertIsNotNone(rs)
+            assert rs is not None
+            self.assertEqual(rs.k, 5)
+            self.assertFalse(rs.use_hybrid)
+            self.assertTrue(rs.apply_filters)
 
 
 if __name__ == "__main__":

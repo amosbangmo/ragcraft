@@ -114,22 +114,35 @@ class IngestDocumentWirePayload:
     @classmethod
     def from_ingest_result(cls, result: IngestDocumentResult) -> IngestDocumentWirePayload:
         return cls(
-            raw_assets=cast(list[dict[str, Any]], jsonify_value(result.raw_assets)),
-            replacement_info=cast(dict[str, Any], jsonify_value(result.replacement_info or {})),
+            raw_assets=cast(
+                list[dict[str, Any]],
+                jsonify_value([a.upsert_kwargs() for a in result.raw_assets]),
+            ),
+            replacement_info=cast(
+                dict[str, Any], jsonify_value(result.replacement_info.to_wire_dict())
+            ),
             diagnostics=result.diagnostics.to_dict(),
         )
 
     @classmethod
     def from_duck_typed_ingest_result(cls, result: Any) -> IngestDocumentWirePayload:
-        """For tests or adapters that mimic :class:`~application.ingestion.dtos.IngestDocumentResult`."""
+        """For tests or adapters that mimic :class:`~application.dto.ingestion.IngestDocumentResult`."""
         raw_assets = getattr(result, "raw_assets", [])
-        replacement_info = getattr(result, "replacement_info", {}) or {}
+        replacement_info = getattr(result, "replacement_info", None)
         diagnostics = getattr(result, "diagnostics", None)
         if not isinstance(diagnostics, IngestionDiagnostics):
             raise TypeError("result.diagnostics must be IngestionDiagnostics")
+        if hasattr(replacement_info, "to_wire_dict"):
+            repl_wire = replacement_info.to_wire_dict()
+        else:
+            repl_wire = replacement_info or {}
+        if raw_assets and hasattr(raw_assets[0], "upsert_kwargs"):
+            raw_wire = [a.upsert_kwargs() for a in raw_assets]  # type: ignore[union-attr]
+        else:
+            raw_wire = list(raw_assets)
         return cls(
-            raw_assets=cast(list[dict[str, Any]], jsonify_value(raw_assets)),
-            replacement_info=cast(dict[str, Any], jsonify_value(replacement_info)),
+            raw_assets=cast(list[dict[str, Any]], jsonify_value(raw_wire)),
+            replacement_info=cast(dict[str, Any], jsonify_value(repl_wire)),
             diagnostics=diagnostics.to_dict(),
         )
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from domain.common.retrieval_query_log_record import RetrievalQueryLogRecord
 from domain.rag.query_intent import QueryIntent
 from domain.rag.query_log_ingress_payload import QueryLogIngressPayload
 from infrastructure.observability.logging.query_log_repository import (
@@ -202,7 +203,7 @@ class QueryLogService:
         since_utc: datetime | None = None,
         until_utc: datetime | None = None,
         last_n: int | None = None,
-    ) -> list[dict]:
+    ) -> list[RetrievalQueryLogRecord]:
         since_s = since_utc.isoformat() if since_utc is not None else None
         until_s = until_utc.isoformat() if until_utc is not None else None
         return self._repository.list_logs(
@@ -225,7 +226,7 @@ class QueryLogService:
                 return 0
             sink = SQLiteQueryLogRepository()
             for entry in records:
-                sink.log(entry)
+                sink.log(entry.to_log_entry_dict())
             return len(records)
         except Exception:
             return 0

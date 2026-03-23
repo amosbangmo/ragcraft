@@ -12,6 +12,7 @@ from typing import Any
 from application.dto.ingestion import (
     DeleteDocumentCommand,
     DeleteDocumentResult,
+    DocumentReplacementSummary,
     IngestDocumentResult,
     IngestFilePathCommand,
     IngestUploadedFileCommand,
@@ -21,6 +22,7 @@ from application.dto.ingestion import (
 __all__ = [
     "DeleteDocumentCommand",
     "DeleteDocumentResult",
+    "DocumentReplacementSummary",
     "DeleteDocumentUseCase",
     "IngestDocumentResult",
     "IngestFilePathCommand",
@@ -32,7 +34,7 @@ __all__ = [
     "replace_document_assets_for_reingest",
 ]
 
-_LAZY_ATTRS: dict[str, tuple[str, str]] = {
+_LAZY_ATTRS = {
     "DeleteDocumentUseCase": ("delete_document", "DeleteDocumentUseCase"),
     "IngestFilePathUseCase": ("ingest_file_path", "IngestFilePathUseCase"),
     "IngestUploadedFileUseCase": ("ingest_uploaded_file", "IngestUploadedFileUseCase"),

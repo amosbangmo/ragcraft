@@ -5,7 +5,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from application.dto.ingestion import IngestDocumentResult
+from application.dto.ingestion import DocumentReplacementSummary, IngestDocumentResult
+from domain.projects.documents.stored_multimodal_asset import StoredMultimodalAsset
 from application.ingestion.ingestion_diagnostics_log import log_ingestion_diagnostics
 from domain.common.ingestion_diagnostics import IngestionDiagnostics
 from domain.common.ports import AssetRepositoryPort, VectorStorePort
@@ -20,9 +21,9 @@ def finalize_ingestion_pipeline(
     project_id: str,
     source_file: str,
     summary_documents: Sequence[Any],
-    raw_assets: list[dict],
+    raw_assets: Sequence[Any],
     diagnostics: IngestionDiagnostics,
-    replacement_info: dict,
+    replacement_info: DocumentReplacementSummary,
     asset_repository: AssetRepositoryPort,
     vector_index: VectorStorePort,
     invalidate_project_chain: Callable[[str, str], None],
@@ -30,8 +31,15 @@ def finalize_ingestion_pipeline(
     if not raw_assets:
         raise ValueError(f"No raw assets generated for file: {source_file}")
 
+    stored_assets: list[StoredMultimodalAsset] = []
     for asset in raw_assets:
-        asset_repository.upsert_asset(**asset)
+        row = (
+            asset
+            if isinstance(asset, StoredMultimodalAsset)
+            else StoredMultimodalAsset.from_mapping(asset)
+        )
+        stored_assets.append(row)
+        asset_repository.upsert_asset(**row.upsert_kwargs())
 
     indexing_ms = 0.0
     if summary_documents:
@@ -60,18 +68,14 @@ def finalize_ingestion_pipeline(
     )
 
     return IngestDocumentResult(
-        raw_assets=raw_assets,
+        raw_assets=stored_assets,
         replacement_info=replacement_info,
         diagnostics=diagnostics,
     )
 
 
-def default_empty_replacement_info() -> dict:
-    return {
-        "existing_doc_ids": [],
-        "deleted_vectors": 0,
-        "deleted_assets": 0,
-    }
+def default_empty_replacement_info() -> DocumentReplacementSummary:
+    return DocumentReplacementSummary(existing_doc_ids=[], deleted_vectors=0, deleted_assets=0)
 
 
 def resolve_project_file_path(project: Project, source_file: str) -> Path:
