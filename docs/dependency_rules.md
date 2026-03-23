@@ -1,6 +1,6 @@
 # Dependency rules
 
-This document is the **authoritative description** of allowed dependencies and physical structure, aligned with **`api/tests/architecture/`**. If code and this file disagree, **fix the code** or **update this file** together with the tests.
+This document is the **authoritative description** of allowed dependencies and physical structure, aligned with **`api/tests/architecture/`**. If code and this file disagree, **fix the code** or **update this file** together with the tests. **`ARCHITECTURE_TARGET.md`** is a short summary of the same enforced tree (**five** packages under **`api/src/`** only).
 
 ---
 

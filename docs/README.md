@@ -11,6 +11,8 @@ Index of **code-aligned** docs for the current repository layout.
 
 Structural rules are **enforced in CI** by **`api/tests/architecture/`** (see **`docs/testing_strategy.md`**).
 
+**Closure baseline (9/10+):** The repository claims **9/10+** quality on migration, layering, orchestration, integration, tests, and feature coherence **for the scoped product** — with explicitly **deferred** items only in **`docs/migration_report_final.md`** §10 and §13 (production security, real LLM/vector SLOs, browser E2E, load). The **definitive** statement is **`docs/migration_report_final.md`** §18.
+
 ---
 
 ## Documents

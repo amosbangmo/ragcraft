@@ -120,3 +120,11 @@ The object graph is built in **`chat_rag_wiring.py`** and exposed on **`BackendA
 - **HTTP:** **`POST /projects/{project_id}/documents/ingest`** → **`upload_adapter.read_buffered_document_upload`** → **`IngestUploadedFileUseCase`** with domain **`BufferedDocumentUpload`**.  
 - **Application:** validation and commands under **`application/use_cases/ingestion`** and **`application/ingestion`**.  
 - **Infrastructure:** **`IngestionService`** and related modules persist and run on-disk extraction (see **`docs/api.md`** for upload caps).
+
+---
+
+## Baseline verification (orchestration)
+
+**Locked by tests:** mode separation and query-log rules — **`api/tests/appli/orchestration/test_rag_mode_contracts.py`**. **HTTP walk** across ask / inspect / preview / retrieval settings / benchmark-style steps — **`api/tests/api/test_http_pipeline_e2e.py`**. **Manual-eval single orchestrator** — **`api/tests/architecture/test_manual_evaluation_single_orchestrator.py`**.
+
+**Documentation alignment:** this file, **`docs/architecture.md`**, and **`docs/migration_report_final.md`** §5, §12, and **§18** describe the same ownership model. Stale references to a separate **`api/src/auth`** or **`api/src/core`** package are **incorrect**; auth code lives under **`domain`**, **`application/use_cases/auth`**, and **`infrastructure/auth`**.

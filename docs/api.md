@@ -4,6 +4,8 @@ The HTTP API is implemented under **`api/src/interfaces/http/`** (routers, schem
 
 **Regression tests:** **`api/tests/bootstrap/test_asgi_entrypoint.py`** asserts **`api/main.py`** still wires **`interfaces.http.main:create_app`**, that **`create_app()`** serves **`/health`** and **`/openapi.json`**, and that the **`api/main.py`** file can be executed like Uvicorn (without conflicting with the **`api`** test package on **`PYTHONPATH`**). HTTP contracts live under **`api/tests/api/`** (e.g. **`test_core_routes.py`**, **`test_http_pipeline_e2e.py`**).
 
+**CI-style checks:** **`scripts/validate_architecture.*`** runs architecture + bootstrap tests; **`scripts/run_tests.*`** runs that gate then the rest of **`api/tests`** (except duplicates) plus **`frontend/tests`** — see **`docs/testing_strategy.md`**.
+
 **Run locally (repository root on `PYTHONPATH` so the `api` package resolves):**
 
 ```bash

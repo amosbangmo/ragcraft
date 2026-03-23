@@ -120,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** **`docs/README.md`** (index) · **`docs/architecture.md`** (layers) · **`docs/product_features.md`** (supported features vs routes and tests) · **`docs/dependency_rules.md`** (imports + tests) · **`docs/migration_report_final.md`** (closure) · **`ARCHITECTURE_TARGET.md`** (short target summary) · **`api/tests/architecture/README.md`** (test matrix).
+**Architecture reference:** **`docs/README.md`** (index) · **`docs/architecture.md`** (layers) · **`docs/product_features.md`** (supported features vs routes and tests) · **`docs/dependency_rules.md`** (imports + tests) · **`docs/migration_report_final.md`** (definitive closure, **§18** 9/10+ baseline) · **`ARCHITECTURE_TARGET.md`** (short layout summary — five packages under **`api/src/`**) · **`api/tests/architecture/README.md`** (test matrix).
 
 ### Migration status (short)
 

@@ -24,7 +24,7 @@ See **`docs/README.md`** (local development) for env vars.
 
 ## Layering (summary)
 
-On disk under **`api/src/`**, Python packages are **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`**, **`auth`**, **`core`** (no `src.` prefix in imports when **`PYTHONPATH`** includes **`api/src`**).
+On disk under **`api/src/`**, the **only** top-level Python packages are **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, and **`interfaces`** (no `src.` prefix in imports when **`PYTHONPATH`** includes **`api/src`**). There is **no** **`api/src/auth/`** or **`api/src/core/`** package — auth lives under **`domain`** (identity ports), **`application/use_cases/auth`**, and **`infrastructure/auth`** (JWT adapter, credentials).
 
 | Location | Role |
 |----------|------|
@@ -32,8 +32,8 @@ On disk under **`api/src/`**, Python packages are **`domain`**, **`application`*
 | **`api/src/application/`** | Use cases, RAG orchestration, policies, DTOs, `frontend_support` stubs. No `infrastructure` except the documented **`infrastructure.config`** narrow exception. |
 | **`api/src/infrastructure/`** | Adapters, persistence, vector stores, caching. RAG adapters do not own post-recall pipeline order or query logging. |
 | **`api/src/composition/`** | **`build_backend_composition`**, **`evaluation_wiring`**, **`build_backend`**, **`chat_rag_wiring`**. No imports of the frontend **`services`** package. |
+| **`api/src/interfaces/http/`** | FastAPI app factory, routers, Pydantic schemas, upload adapters; thin handlers → use cases. |
 | **`frontend/src/services/`** | `BackendClient`, HTTP/in-process clients, Streamlit factories, **`StreamlitChatTranscript`**. Only **`infrastructure.config`** and **`infrastructure.auth`** from backend infra (not adapters). |
-| **`api/src/auth/`** | Shared auth helpers used from the backend tree. |
 
 **Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`infrastructure/adapters`**).
 
@@ -46,4 +46,4 @@ On disk under **`api/src/`**, Python packages are **`domain`**, **`application`*
 - **`docs/README.md`** — doc index + local dev notes.
 - **`docs/dependency_rules.md`** — import rules.
 - **`api/tests/architecture/README.md`** — what pytest enforces.
-- **`scripts/validate.sh`** / **`scripts/validate.ps1`** — local **Ruff** + **`pytest api/tests/architecture`** (mirrors CI).
+- **`scripts/validate.sh`** / **`scripts/validate.ps1`** — local **Ruff** + **`scripts/validate_architecture.*`** (**`api/tests/architecture`** + **`api/tests/bootstrap`**, same **`PYTHONPATH`** as CI).

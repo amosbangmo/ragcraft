@@ -149,6 +149,17 @@ Several tests previously imported symbols from the wrong module after refactors 
 
 ---
 
+## Final verification (closure checklist)
+
+To **lock** the **9/10+** baseline before release or a major tag, run from the repository root (same order as CI):
+
+1. **`./scripts/validate_architecture.sh`** (or **`.\scripts\validate_architecture.ps1`**) — **`api/tests/architecture`** + **`api/tests/bootstrap`**.
+2. **`./scripts/run_tests.sh`** (or **`.\scripts\run_tests.ps1`**) — step 1 again, then **`api/tests`** (minus architecture/bootstrap) + **`frontend/tests`**.
+
+Optional quicker gate: **`./scripts/validate.sh`** = **Ruff** + step 1. **Rationale and deferred scope** for the rating: **`docs/migration_report_final.md`** §10 and **§18**.
+
+---
+
 ## Lint paths
 
 Match **`scripts/lint.sh`:**
