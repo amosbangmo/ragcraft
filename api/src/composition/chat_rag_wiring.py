@@ -7,15 +7,15 @@ Orchestration lives in application use cases; this module only constructs the ob
 
 **Orchestration inventory (adjacent wiring):**
 
-- Summary recall sequencing: :class:`~application.use_cases.chat.orchestration.summary_recall_workflow.ApplicationSummaryRecallStage`
+- Summary recall sequencing: :class:`~application.orchestration.rag.summary_recall_workflow.ApplicationSummaryRecallStage`
   with technical ports from :mod:`infrastructure.rag.summary_recall_technical_adapters`.
-- Post-recall assembly: :class:`~application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
+- Post-recall assembly: :class:`~application.orchestration.rag.application_pipeline_assembly.ApplicationPipelineAssembly`
   (application) with technical stage adapters in
   :mod:`infrastructure.rag.post_recall_stage_adapters` and multimodal hints from
   :mod:`application.chat.multimodal_prompt_hints`.
 
 **Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
-``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.
+``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``application/orchestration/rag/*``.
 ``InspectRagPipelineUseCase`` shares the same :class:`~domain.common.ports.RetrievalPort` as ask but always calls
 ``execute(..., emit_query_log=False)``.
 """

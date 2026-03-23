@@ -96,7 +96,7 @@ def benchmark_export_artifacts_from_api_dict(data: dict[str, Any]) -> BenchmarkE
 
 
 def qa_generate_result_from_api_dict(data: dict[str, Any]) -> dict[str, Any]:
-    """Shape expected by :func:`src.ui.evaluation_gold_qa_tab._render_dataset_generation_result`."""
+    """Shape expected by :func:`components.shared.evaluation_gold_qa_tab._render_dataset_generation_result`."""
     created = [qa_dataset_entry_from_api_dict(e) for e in (data.get("created_entries") or [])]
     return {
         "generation_mode": data.get("generation_mode") or "append",

@@ -1,6 +1,6 @@
 # RAGCraft documentation
 
-**Layout:** backend code lives under **`api/src/`**; Streamlit UI under **`frontend/src/`**; tests under **`api/tests/`** and **`frontend/tests/`**. See **`docs/migration_report_final.md`** for the authoritative physical layout and how CI blocks structural drift.
+**Layout:** backend code lives under **`api/src/`** (plus **`api/main.py`**); Streamlit UI under **`frontend/src/`** (plus **`frontend/app.py`**); tests under **`api/tests/`** and **`frontend/tests/`** (e.g. **`frontend/tests/streamlit/`** for services wiring). **`api/tests/architecture/test_repository_structure.py`** fails if application Python appears outside those trees. See **`docs/migration_report_final.md`** for the full layout and guardrails.
 
 Concise, **code-aligned** documentation for the repository layout after the Clean Architecture and RAG orchestration migration.
 

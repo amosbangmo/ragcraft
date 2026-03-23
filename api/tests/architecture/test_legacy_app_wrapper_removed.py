@@ -1,4 +1,4 @@
-"""The legacy Streamlit shell module under ``src.app`` must not return to the repository."""
+"""The removed monolithic Streamlit shell (historical ``api/src/app/ragcraft_app.py``) must not return."""
 
 from __future__ import annotations
 

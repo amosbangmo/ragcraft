@@ -1,13 +1,12 @@
 """
-Regression tests for the Streamlit → FastAPI migration boundaries.
+Regression tests for HTTP vs Streamlit transport boundaries.
 
-These checks complement :mod:`tests.architecture.test_layer_boundaries` by targeting the **slices**
-that regressed historically: API packages importing UI/Streamlit, and Streamlit surfaces reaching
-past the :class:`~services.protocol.BackendClient` façade into services or the
-monolithic app / composition root.
+These complement :mod:`architecture.test_layer_boundaries` and
+:mod:`architecture.test_fastapi_delivery_boundaries`. Streamlit surfaces must stay behind
+:class:`~services.protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
+directly.
 
-They are **import-level** (AST of ``import`` / ``from … import``) and avoid brittle string matching
-on unrelated formatting.
+Checks are **import-level** (AST of ``import`` / ``from … import``).
 """
 
 from __future__ import annotations
@@ -21,32 +20,15 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 _HTTP = REPO_ROOT / "api" / "src" / "interfaces" / "http"
 
 
-def test_interfaces_http_package_avoids_streamlit_and_ui_layers() -> None:
-    """HTTP stack must stay independent of Streamlit and legacy ``src.ui`` widgets."""
-    violations = collect_import_violations(
-        [_HTTP],
-        forbidden=("streamlit", "src.ui"),
-        repo_root=REPO_ROOT,
-    )
-    msg = (
-        "The FastAPI package must stay free of Streamlit and ``src.ui`` "
-        "(those belong to the Streamlit process only).\n"
-    )
-    assert not violations, msg + "\n".join(violations)
-
-
 def test_interfaces_http_package_avoids_runtime_services_layer() -> None:
     """
-    FastAPI wires use cases from the composition root; it must not import the legacy ``src.services``
-    namespace, removed ``src.backend`` / ``src.adapters`` / ``infrastructure.services`` packages, or the
-    concrete runtime service package (``infrastructure.adapters``) directly.
+    FastAPI wires use cases from the composition root; it must not import removed monolith ``src.*``
+    shims, ``infrastructure.services``, or ``infrastructure.adapters`` directly.
     """
     violations = collect_import_violations(
         [_HTTP],
         forbidden=(
-            "src.services",
-            "src.backend",
-            "src.adapters",
+            "src",
             "infrastructure.services",
             "infrastructure.adapters",
         ),
@@ -55,33 +37,23 @@ def test_interfaces_http_package_avoids_runtime_services_layer() -> None:
     msg = (
         "FastAPI should depend on use cases from ``interfaces.http.dependencies`` / the composition root, "
         "not on ``infrastructure.adapters``, ``infrastructure.services`` (removed), "
-        "``src.adapters`` (removed), ``src.backend`` (removed), or ``src.services`` directly.\n"
+        "or monolith ``src.*`` imports.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
 
 def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     """
-    ``frontend/src/pages`` and ``frontend/src/components`` should use gateway services and auth guards,
-    not legacy ``src.*`` monolith imports or ``apps.api``.
+    ``frontend/src/pages`` and ``frontend/src/components`` should use ``services`` and auth guards,
+    not monolith ``src.*`` or ``apps.*`` import roots.
     """
     roots = [
         REPO_ROOT / "frontend" / "src" / "pages",
         REPO_ROOT / "frontend" / "src" / "components",
     ]
-    forbidden = (
-        "src.backend",
-        "src.adapters",
-        "src.domain",
-        "src.services",
-        "src.composition",
-        "src.infrastructure",
-        "src.app",
-        "apps.api",
-        "apps.",
-    )
+    forbidden = ("src", "apps")
     violations = collect_import_violations(roots, forbidden=forbidden, repo_root=REPO_ROOT)
-    msg = "Streamlit pages/components must not use removed ``src.*`` monolith imports or ``apps.api``.\n"
+    msg = "Streamlit pages/components must not import monolith ``src.*`` or ``apps.*`` roots.\n"
     assert not violations, msg + "\n".join(violations)
 
 

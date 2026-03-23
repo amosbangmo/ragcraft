@@ -21,19 +21,23 @@ def test_interfaces_http_package_avoids_streamlit() -> None:
     assert not violations, "interfaces/http must not import Streamlit.\n" + "\n".join(violations)
 
 
-def test_interfaces_http_avoids_legacy_monolith_namespaces() -> None:
+def test_interfaces_http_avoids_frontend_packages_and_legacy_roots() -> None:
+    """HTTP delivery must not import top-level frontend packages or monolith ``src`` / ``apps`` roots (Streamlit: sibling test)."""
     violations = collect_import_violations(
         [HTTP_ROOT],
         forbidden=(
-            "src.services",
-            "src.backend",
-            "src.adapters",
-            "src.ui",
-            "apps.api",
-            "apps.",
+            "pages",
+            "components",
+            "viewmodels",
+            "state",
+            "services",
+            "utils",
+            "src",
+            "apps",
         ),
         repo_root=REPO_ROOT,
     )
     assert not violations, (
-        "interfaces/http must not depend on removed monolith namespaces.\n" + "\n".join(violations)
+        "interfaces/http must not import frontend tree packages or legacy ``src.*`` / ``apps.*`` roots.\n"
+        + "\n".join(violations)
     )

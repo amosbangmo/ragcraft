@@ -13,7 +13,7 @@
 
 Composition builds the graph in `api/src/composition/chat_rag_wiring.py` and exposes it through `BackendApplicationContainer.chat_rag_use_cases` and the `chat_*_use_case` properties.
 
-**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure `use_cases/chat/orchestration`, `use_cases/evaluation`, and **`api/src/application/rag/`** do not import infrastructure adapters or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
+**Guardrails:** Folder-scoped import tests (**`test_orchestration_package_import_boundaries.py`**) ensure **`api/src/application/orchestration/{rag,evaluation}`**, **`application/use_cases/evaluation`**, and **`api/src/application/rag/`** do not import **`infrastructure`** or HTTP/Streamlit/LangChain stacks — keeping orchestration **port-driven**.
 
 ### Typed orchestration contracts (boundaries)
 
@@ -33,14 +33,14 @@ Composition builds the graph in `api/src/composition/chat_rag_wiring.py` and exp
 
 ### Summary-recall stage
 
-1. **`ApplicationSummaryRecallStage.summary_recall_stage(...)`** — **`api/src/application/use_cases/chat/orchestration/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**. Sequences: settings merge (**`RetrievalSettingsTuner`** via injected tuner), optional rewrite (**`QueryRewritePort`**), domain intent/table policy, domain **`resolve_summary_recall_execution_plan`**, then **`fuse_vector_and_lexical_recalls`** (vector + optional lexical ports + domain RRF merge).
-2. **Technical adapters:** **`api/src/infrastructure/adapters/rag/summary_recall_technical_adapters.py`** — **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`** (FAISS, BM25/docstore). Wired as **`SummaryRecallTechnicalPorts`** in **`chat_rag_wiring.py`**.
+1. **`ApplicationSummaryRecallStage.summary_recall_stage(...)`** — **`api/src/application/orchestration/rag/summary_recall_workflow.py`**. Implements **`SummaryRecallStagePort`**. Sequences: settings merge (**`RetrievalSettingsTuner`** via injected tuner), optional rewrite (**`QueryRewritePort`**), domain intent/table policy, domain **`resolve_summary_recall_execution_plan`**, then **`fuse_vector_and_lexical_recalls`** (vector + optional lexical ports + domain RRF merge).
+2. **Technical adapters:** **`api/src/infrastructure/rag/summary_recall_technical_adapters.py`** — **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`** (FAISS, BM25/docstore). Wired as **`SummaryRecallTechnicalPorts`** in **`chat_rag_wiring.py`**.
 
 ### Post-recall assembly
 
 **`ApplicationPipelineAssembly`** (bound into **`BuildRagPipelineUseCase`** as its assembly collaborator) implements **`PipelineAssemblyPort`**: **`build(...)`** delegates to **`assemble_pipeline_from_recall`**, which sequences **`post_recall_pipeline_steps`** (`step_docstore_hydration`, `step_section_expansion`, …).
 
-**Technical implementations:** `src/infrastructure/adapters/rag/post_recall_stage_adapters.py` — one thin adapter class per port, delegating to existing services.
+**Technical implementations:** **`api/src/infrastructure/rag/post_recall_stage_adapters.py`** — one thin adapter class per port, delegating to existing services.
 
 ## Ports involved (representative)
 
@@ -57,16 +57,16 @@ Composition builds the graph in `api/src/composition/chat_rag_wiring.py` and exp
 
 ## Manual and gold-QA evaluation (inspect + answer, no production query log)
 
-**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (`api/src/application/use_cases/evaluation/rag_pipeline_orchestration.py`). There is **no** parallel “service” entry point that re-implements that sequence.
+**Single orchestration path:** Inspect + answer + latency merge for evaluation is always **`execute_rag_inspect_then_answer_for_evaluation`** (**`api/src/application/orchestration/evaluation/rag_pipeline_orchestration.py`**). There is **no** parallel “service” entry point that re-implements that sequence.
 
 - **`execute_rag_inspect_then_answer_for_evaluation`** — takes **`RagEvaluationPipelineInput`**, coordinates **`InspectRagPipelinePort`** + **`GenerateAnswerFromPipelinePort`**, merges per-stage latency into **`PipelineBuildResult.latency`** as **`PipelineLatency`** (same type as inspect/ask paths).
-- **`RagInspectAnswerRun`** — `api/src/domain/rag_inspect_answer_run.py`; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
+- **`RagInspectAnswerRun`** — **`api/src/domain/rag/rag_inspect_answer_run.py`**; **`as_row_evaluation_input()`** yields **`GoldQaPipelineRowInput`** for **`BenchmarkRowProcessingPort` / `RowEvaluationService`**.
 - **`RunManualEvaluationUseCase`** — `POST /evaluation/manual`, **`InProcessBackendClient.evaluate_manual_question`**, and composition **`evaluation_run_manual_evaluation_use_case`** all delegate here → canonical orchestration above → **`ManualEvaluationFromRagPort.build_manual_evaluation_result`** (implemented by **`EvaluationService`**). **`RunGoldQaDatasetEvaluationUseCase`** shares the same inspect/answer ports and gold-QA benchmark wiring. **`GoldQaBenchmarkPort`** is implemented by **`GoldQaBenchmarkAdapter`** (application), wired from **`api/src/composition/evaluation_wiring.py`**. **`BenchmarkExecutionUseCase.execute`** requires each **`pipeline_runner(entry)`** return value to be a **`RagInspectAnswerRun`** (otherwise **`TypeError`**).
-- **`api/src/infrastructure/adapters/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
+- **`api/src/infrastructure/evaluation/manual_evaluation_service.py`** — **result assembly helpers only** (e.g. **`manual_evaluation_result_from_eval_row`**, **`manual_evaluation_result_from_rag_outputs`**); it does **not** orchestrate inspect/answer.
 
 ## Where answer generation happens
 
-- **`src/infrastructure/adapters/rag/answer_generation_service.py`** — LLM invoke, used by **`AskQuestionUseCase`** and **`GenerateAnswerFromPipelineUseCase`**.
+- **`api/src/infrastructure/rag/answer_generation_service.py`** — LLM invoke, used by **`AskQuestionUseCase`** and **`GenerateAnswerFromPipelineUseCase`**.
 
 ## Retrieval comparison
 

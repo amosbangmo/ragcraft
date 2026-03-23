@@ -24,11 +24,13 @@ def test_refresh_streamlit_auth_session_pulls_http_profile_when_api_mode() -> No
     }
     with patch("services.settings.use_http_backend_client", return_value=True):
         with patch(
-            "services.streamlit_api_client.get_backend_client",
+            "services.streamlit_context.get_backend_client",
             return_value=mock_client,
         ):
             with patch(
                 "services.streamlit_session.apply_auth_user_dict_to_streamlit_session"
             ) as apply:
                 refresh_streamlit_auth_session_from_user_id("u1")
-    apply.assert_called_once_with(mock_client.get_current_user_record.return_value)
+                apply.assert_called_once_with(
+                    mock_client.get_current_user_record.return_value
+                )

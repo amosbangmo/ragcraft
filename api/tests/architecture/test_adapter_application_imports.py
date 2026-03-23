@@ -1,8 +1,8 @@
 """
-Infrastructure adapters must not import ``src.application``.
+Modules under ``api/src/infrastructure`` must not import ``application``.
 
-Composition (:mod:`src.composition`) and tests may import application use cases to wire the graph.
-Domain policies live in ``src.domain``; application orchestration is not a dependency of adapters.
+Composition and tests may import application use cases to wire the graph.
+Domain policies live under ``domain``; application orchestration is not a dependency of infrastructure.
 """
 
 from __future__ import annotations

@@ -25,7 +25,19 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["src", "apps"]
+known-first-party = [
+    "domain",
+    "application",
+    "infrastructure",
+    "composition",
+    "interfaces",
+    "pages",
+    "components",
+    "services",
+    "state",
+    "viewmodels",
+    "utils",
+]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -35,7 +47,7 @@ line-length = 100
 target-version = ["py311"]
 
 # Incremental typing: full strict mode is not enforced repo-wide yet (legacy dict shapes in places).
-# Use:  python -m mypy --config-file=pyproject.toml -p src.domain
+# Use:  PYTHONPATH=api/src python -m mypy --config-file=pyproject.toml -p domain
 # Prefer tightening ports/DTOs/use-case signatures over blanket ignores.
 [tool.mypy]
 python_version = "3.11"

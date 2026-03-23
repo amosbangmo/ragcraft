@@ -64,11 +64,7 @@ def test_domain_imports_stay_inner_layer(domain_files: list[Path]) -> None:
         "langchain",
         "interfaces",
         "composition",
-        "src.infrastructure",
-        "src.application",
-        "src.backend",
-        "src.services",
-        "src.ui",
+        "src",
         "apps",
     )
     v = _violations_for_forbidden(domain_files, forbidden=forbidden)

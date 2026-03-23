@@ -59,6 +59,46 @@ def test_legacy_root_packages_absent() -> None:
     _must_not_exist(REPO_ROOT / "streamlit_app.py")
 
 
+def test_backend_python_sources_live_only_under_api_src() -> None:
+    """Backend application code must not accumulate under ``api/`` outside ``api/src/`` (plus entry + tests)."""
+    api_dir = REPO_ROOT / "api"
+    for path in api_dir.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        rel = path.relative_to(api_dir)
+        parts = rel.parts
+        if parts in (("main.py",), ("__init__.py",)):
+            continue
+        if parts and parts[0] == "src":
+            continue
+        if parts and parts[0] == "tests":
+            continue
+        pytest.fail(
+            f"Unexpected Python file under api/ (use api/src/ or api/tests/): "
+            f"{path.relative_to(REPO_ROOT)}"
+        )
+
+
+def test_frontend_python_sources_live_only_under_frontend_src() -> None:
+    """Frontend application code must not live under ``frontend/`` outside ``frontend/src/`` (plus entry + tests)."""
+    fe = REPO_ROOT / "frontend"
+    for path in fe.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        rel = path.relative_to(fe)
+        parts = rel.parts
+        if parts == ("app.py",):
+            continue
+        if parts and parts[0] == "src":
+            continue
+        if parts and parts[0] == "tests":
+            continue
+        pytest.fail(
+            f"Unexpected Python file under frontend/ (use frontend/src/ or frontend/tests/): "
+            f"{path.relative_to(REPO_ROOT)}"
+        )
+
+
 def test_obsolete_infrastructure_adapters_package_absent() -> None:
     _must_not_exist(API_SRC / "infrastructure" / "adapters")
 

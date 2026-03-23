@@ -1,7 +1,7 @@
 [project]
 name = "ragcraft-api"
 version = "0.1.0"
-description = "RAGCraft FastAPI backend (src layout)"
+description = "RAGCraft FastAPI backend (api/src layout)"
 requires-python = ">=3.11"
 readme = "README.md"
 

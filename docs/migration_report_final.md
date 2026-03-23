@@ -5,13 +5,13 @@
 As of the **api/frontend split** refactor, the canonical layout is:
 
 - **Backend:** `api/src/` — top-level packages `domain`, `application`, `infrastructure`, `composition`, `interfaces` (FastAPI under `interfaces/http/`). Entry: `api/main.py`.
-- **Frontend:** `frontend/src/` — Streamlit pages, components, services (former `frontend_gateway`), utils. Entry: `frontend/app.py`.
-- **Tests:** `api/tests/` (architecture, appli, infra, `api/` HTTP contract tests, e2e, …) and `frontend/tests/`.
+- **Frontend:** `frontend/src/` — Streamlit pages, components, services, viewmodels, state, utils. Entry: `frontend/app.py`.
+- **Tests:** `api/tests/` (architecture, appli, infra, `api/` HTTP contract tests, e2e, …) and `frontend/tests/` (including `frontend/tests/streamlit/` for **`frontend/src/services`** and Streamlit wiring).
 - **Removed:** root `src/`, root `apps/`, root `pages/`, root `streamlit_app.py` (replaced by the tree above).
 
 ### Structure cleanup closure (final)
 
-The **api/frontend** split is the **only** supported physical layout. A final cleanup pass removed stale documentation references to `apps/api/`, monolithic root `src/`, `streamlit_app.py`, and legacy Streamlit paths. **Legacy roots and duplicate trees are not present** in the repository. **Structural and import drift is blocked** by **`api/tests/architecture/`** (required tree, forbidden roots, layer rules) — that suite is the **source of truth** for what the repository is allowed to look like; **`scripts/validate_architecture.sh`** / CI run the same tests.
+The **api/frontend** split is the **only** supported physical layout. **Application Python** lives **only** under **`api/src/`** (plus **`api/main.py`**, **`api/__init__.py`**, and **`api/tests/`**). **Frontend application Python** lives **only** under **`frontend/src/`** (plus **`frontend/app.py`** and **`frontend/tests/`**). Root **`src/`**, **`apps/`**, **`pages/`**, and obsolete one-shot migration scripts under **`scripts/`** are gone. **Legacy roots and duplicate trees are not present.** **Structural and import drift is blocked** by **`api/tests/architecture/`** (required tree, forbidden roots, code-root isolation, layer rules); **`scripts/validate_architecture.sh`** / CI run the same tests.
 
 ### Blocking architecture guardrails (PROMPT 2)
 
@@ -19,7 +19,7 @@ The following **fail the test suite** (not advisory checks) when the repo drifts
 
 | Concern | Test module |
 |---------|-------------|
-| Required roots (`api/`, `frontend/`, `docs/`, `scripts/`, `api/src/`, `frontend/src/`), forbidden legacy roots (`src/`, `apps/` at repo root), FastAPI routers only under `api/src/interfaces/http/routers/`, Pydantic `BaseModel` HTTP types under `schemas/`, composition under `api/src/composition/`, orchestration under `api/src/application/orchestration/`, no UI trees under `api/src/` | **`api/tests/architecture/test_repository_structure.py`** |
+| Required roots (`api/`, `frontend/`, `docs/`, `scripts/`, `api/src/`, `frontend/src/`), forbidden legacy roots (`src/`, `apps/` at repo root), **all backend `.py` under `api/src/`** (except `api/main.py` / `api/__init__.py` and `api/tests/`), **all frontend app `.py` under `frontend/src/`** (except `frontend/app.py` and `frontend/tests/`), FastAPI routers only under `api/src/interfaces/http/routers/`, Pydantic `BaseModel` HTTP types under `schemas/`, composition under `api/src/composition/`, orchestration under `api/src/application/orchestration/`, no UI trees under `api/src/` | **`api/tests/architecture/test_repository_structure.py`** |
 | Domain / application / HTTP-router import boundaries | **`test_layer_import_rules.py`** |
 | `interfaces/http` delivery (no Streamlit; no legacy monolith import paths) | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
 | Frontend pages/components stay off domain/application/composition; infrastructure limited to `infrastructure.auth.*` | **`test_frontend_structure.py`** |
@@ -52,7 +52,7 @@ Sections below describe **behavior and history** using **filesystem paths** unde
 | Layer | Role |
 |-------|------|
 | **`api/src/domain/`** | Entities, value objects, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, **`AccessTokenIssuerPort`**, shared DTOs such as **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, retrieval fusion helpers. |
-| **`api/src/application/`** | **Use cases**, RAG orchestration under **`use_cases/chat/orchestration/`**, evaluation helpers (**`rag_pipeline_orchestration`**, **`GoldQaBenchmarkAdapter`**), **`frontend_support`** (HTTP-safe stubs, **`MemoryChatTranscript`**), policies, DTOs. **No** concrete `infrastructure` adapter imports (narrow **`infrastructure.config`** exception only). |
+| **`api/src/application/`** | **Use cases**, RAG orchestration under **`orchestration/rag/`** and **`orchestration/evaluation/`**, evaluation helpers (**`rag_pipeline_orchestration`**, **`GoldQaBenchmarkAdapter`**), **`frontend_support`** (HTTP-safe stubs, **`MemoryChatTranscript`**), policies, DTOs. **No** concrete `infrastructure` adapter imports (narrow **`infrastructure.config`** exception only). |
 | **`api/src/infrastructure/`** | Adapters (RAG, evaluation, SQLite, query logging, ingestion, …), persistence, vector stores. Implements domain ports; **post-recall and summary-recall sequencing stay in application**. |
 | **`api/src/composition/`** | **`build_backend_composition`**, **`build_backend`**, **`chat_rag_wiring`**, **`evaluation_wiring`** (**`EvaluationWiringParts`** + **`build_evaluation_service`**), **`BackendApplicationContainer`**. **No** frontend **`services`** imports. |
 | **`api/src/interfaces/http/`** | FastAPI routers, schemas, **`dependencies.py`** → container / use cases; identity types from **`domain`**. Routers **must not** import **`infrastructure.*`**. |
@@ -109,7 +109,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 - **Multimodal hints** — orchestration-adjacent logic in **`api/src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
 - **API layer purity** — **`api/src/interfaces/http/dependencies.py`** uses **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the HTTP delivery package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
-- **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `application` imports under **`api/src/infrastructure/adapters`** (the old **`rag/retrieval_settings_service.py`** allowlist is gone). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`api/src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`api/src/domain/`** so the JWT adapter does not depend on **`application`** use-case modules.
+- **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `application` imports under **`api/src/infrastructure/`** (with the documented **`auth_credentials`** exception). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`api/src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`api/src/domain/`** so the JWT adapter does not depend on **`application`** use-case modules.
 
 ---
 
@@ -178,7 +178,7 @@ These do **not** invalidate the migration but are worth tracking:
 - **Security:** Add refresh tokens, asymmetric signing (JWKS), or an external IdP; rate-limit **`/auth/login`**.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
 - **DX:** Keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
-- **Typing:** Tighten **mypy** beyond incremental packages when convenient; **`src.domain`** is not yet error-free under strict checking.
+- **Typing:** Tighten **mypy** beyond incremental packages when convenient; the **`domain`** package is not yet error-free under strict checking.
 
 ---
 
@@ -210,7 +210,7 @@ pytest api/tests/architecture/ -q
 | Composition | **`test_composition_import_boundaries.py`** |
 | RAG façade absent; adapters vs chat use case classes | **`test_no_rag_service_facade.py`** |
 | Post-recall / transport RAG imports | **`test_orchestration_boundaries.py`** |
-| **All adapters** → **no** `src.application` imports | **`test_adapter_application_imports.py`** |
+| **All infrastructure** → **no** `application` imports | **`test_adapter_application_imports.py`** |
 | Chat RAG port names / boundaries | **`test_application_chat_rag_boundary_ports.py`** |
 | UI surface | **`test_frontend_structure.py`**, **`test_fastapi_migration_guardrails.py`** |
 | Smoke `build_backend` | **`test_migration_regression_flows.py`** |
@@ -380,7 +380,7 @@ data/
 
 This repository **meets the completion standard** for the **Clean Architecture migration** as defined in this report and **`ARCHITECTURE_TARGET.md`**:
 
-- **Enforced boundaries:** Layering, adapter purity (no **`src.application`** inside **`src/infrastructure/adapters`**), FastAPI isolation from infrastructure, gateway/UI isolation from domain and composition, and RAG orchestration folder purity are **checked by automated tests** (**§10**, **§14**).
+- **Enforced boundaries:** Layering, infrastructure purity (no **`application`** imports under **`api/src/infrastructure/`**), FastAPI isolation from concrete infrastructure graphs, Streamlit/UI isolation from domain and composition, and RAG orchestration folder purity are **checked by automated tests** (**§10**, **§14**).
 - **Documented end state:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/testing_strategy.md`**, **`docs/api.md`**, **`docs/rag_orchestration.md`**, and this file are **aligned with the current code** after the lock-in pass.
 - **Honest scope:** Remaining items are **product or incremental-quality** work (**§6**, **§7**, **§9**), not missing migration steps.
 

@@ -44,17 +44,17 @@ Root **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`testpaths`** a
 
 | Area | Examples |
 |------|-----------|
-| **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/`, composition/orchestration trees |
+| **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, **Python only under `api/src` + `api/main.py` (+ `api/tests`)** and **`frontend/src` + `frontend/app.py` (+ `frontend/tests`)**, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/` |
 | **Required skeleton** | `test_required_tree.py` — explicit **must-exist** directories and anchor files (backend composition + HTTP stack, frontend entry/pages/services/state, docs/scripts, test subtrees `appli` / `infra` / `api` / `e2e`) without enumerating every future file |
 | **Layer imports** | `test_layer_import_rules.py` — domain, application, HTTP routers (AST top-level imports) |
 | **Infra + composition** | `test_layer_boundaries.py` — infrastructure vs application/Streamlit; composition vs Streamlit |
-| **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit or legacy `src.*` / `apps.*` namespaces under `interfaces/http` |
+| **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit under `interfaces/http`; no frontend top-level packages or monolith `src` / `apps` import roots |
 | **Frontend thin UI** | `test_frontend_structure.py` — pages/components vs `services` gateway import policy |
-| **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `use_cases/chat/orchestration`, `use_cases/evaluation`, and `application/rag` must not import `infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
+| **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `application/orchestration/{rag,evaluation}`, `use_cases/evaluation`, and `application/rag` must not import `infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
 | **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Starlette/Streamlit/FAISS/LangChain in `application` |
-| **Legacy packages** | `test_deprecated_backend_and_gateway_guardrails.py` — no `src.backend`, `src.adapters`, `infrastructure.services` |
-| **FastAPI migration** | `test_fastapi_migration_guardrails.py` — HTTP stack + Streamlit surface regression checks |
-| **Composition** | `test_composition_import_boundaries.py` — no `frontend_gateway` imports in `composition/*.py` |
+| **Legacy packages / stray trees** | `test_deprecated_backend_and_gateway_guardrails.py` — no monolith `src.*` shims, `infrastructure.services`, stray dirs under `api/src` |
+| **FastAPI migration** | `test_fastapi_migration_guardrails.py` — HTTP vs infra-graph imports; Streamlit client alignment |
+| **Composition** | `test_composition_import_boundaries.py` — no `services` imports in `composition/*.py` |
 | **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `infrastructure.rag`; post-recall adapter rules |
 | **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class |
 | **Adapters → no application imports** | `test_adapter_application_imports.py` — infrastructure adapter modules must not import `application` |
@@ -75,7 +75,7 @@ Shared helper: **`api/tests/architecture/import_scanner.py`**. Index: **`api/tes
 - **`api/tests/appli/`** — use case behavior with mocks.
 - **`api/tests/domain/`** — pure domain policy.
 - **`api/tests/infra/`** — adapter behavior.
-- **`frontend/tests/`** — Streamlit/UI and gateway client tests.
+- **`frontend/tests/`** — Streamlit/UI and **`frontend/src/services`** client tests (e.g. **`frontend/tests/streamlit/`**).
 
 ## What architecture tests do *not* prove
 

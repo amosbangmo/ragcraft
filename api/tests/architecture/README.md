@@ -10,13 +10,13 @@ Paths below are **on-disk** under the repository root. Python imports use packag
 |--------|-----------|----------------------------------|
 | **Domain** | `api/src/domain/` | `infrastructure` (except narrow **`infrastructure.config`** per tests), `application`, `streamlit`, `fastapi`, `starlette`, `sqlite3`, any `langchain*`, `interfaces`, `composition` |
 | **Application** | `api/src/application/` | `streamlit`, **`interfaces`**, **any** `infrastructure` except **`infrastructure.config`** where allowed. Use cases must not import frontend **`services`** (see `test_application_orchestration_purity`) |
-| **Orchestration subtrees** | `api/src/application/use_cases/chat/orchestration/`, `…/evaluation/`, `api/src/application/rag/` | `infrastructure`, `fastapi`, `starlette`, `streamlit`, `uvicorn`, `langchain*`, `langgraph`, `faiss`, `sqlite3` — see **`test_orchestration_package_import_boundaries.py`** |
+| **Orchestration subtrees** | `api/src/application/orchestration/{rag,evaluation}/`, `application/use_cases/evaluation/`, `api/src/application/rag/` | `infrastructure`, `fastapi`, `starlette`, `streamlit`, `uvicorn`, `langchain*`, `langgraph`, `faiss`, `sqlite3` — see **`test_orchestration_package_import_boundaries.py`** |
 | **Infrastructure** | `api/src/infrastructure/` | **`application`**, `streamlit`, `interfaces` — adapters additionally scanned by **`test_adapter_application_imports.py`** (no `application` imports) |
 | **API routers** | `api/src/interfaces/http/routers/` | `infrastructure` |
 | **Composition root** | `api/src/composition/` | `streamlit`, `interfaces` |
-| **FastAPI / HTTP package** | `api/src/interfaces/http/` (all modules) | `streamlit`, **`infrastructure.adapters`**, removed legacy **`src.backend`**, **`src.adapters`**, **`src.services`** |
+| **FastAPI / HTTP package** | `api/src/interfaces/http/` (all modules) | `streamlit`, top-level frontend packages (`pages`, `components`, …), monolith roots **`src`**, **`apps`**, **`infrastructure.services`**, **`infrastructure.adapters`** |
 | **Frontend pages / components** | `frontend/src/pages/`, `frontend/src/components/` | `domain`, `application`, `composition`, `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** |
-| **Frontend services (gateway)** | `frontend/src/services/` | **`infrastructure.*`** except **`infrastructure.config`** and **`infrastructure.auth`** (`test_frontend_services_infrastructure_imports_are_limited`) |
+| **Frontend services** | `frontend/src/services/` | **`infrastructure.*`** except **`infrastructure.config`** and **`infrastructure.auth`** (`test_frontend_services_infrastructure_imports_are_limited`) |
 
 Module `test_fastapi_migration_guardrails.py` adds **behavioral** checks that `HttpBackendClient` and `InProcessBackendClient` stay aligned and that the HTTP client satisfies `BackendClient` at runtime (`isinstance`).
 
@@ -24,10 +24,10 @@ Module `test_fastapi_migration_guardrails.py` adds **behavioral** checks that `H
 
 - **Domain** may import **`infrastructure.config`** and **`core`** (paths, config, shared exceptions) per **`test_layer_import_rules.py`**.
 - **Application** may import **`domain`** and **`core`**; it must not import concrete **`infrastructure`** adapters (implementations are composed in **`composition`**). **Use cases** must not import **`services`** from the frontend tree; **`application.frontend_support`** supplies HTTP-mode stubs.
-- **Routers** wire use cases via **`Depends`** and must not import **`infrastructure.adapters`** or other **`infrastructure`** modules directly.
+- **Routers** wire use cases via **`Depends`** and must not import **`infrastructure.*`** directly.
 - **Streamlit pages and components** use **`services`** and **`streamlit`**; they must not import **`domain`** or **`application`** directly.
-- **`frontend/src/services`** must not import **`infrastructure.adapters`**, persistence, RAG, or vector stores — only **`infrastructure.config`** and **`infrastructure.auth`** for shared errors and session auth.
-- **Codebase Python** under **`api/src`**, **`frontend/src`**, tests, and **`frontend/app.py`** must not import removed shims such as **`src.backend`** or **`src.adapters`**; legacy directories under **`api/src`** must stay absent (`test_deprecated_backend_and_gateway_guardrails.py`).
+- **`frontend/src/services`** must not import **`infrastructure`** beyond **`infrastructure.config`** / **`infrastructure.auth`** (no persistence, RAG, or vector stores).
+- **Codebase Python** under **`api/src`**, **`frontend/src`**, tests, and **`frontend/app.py`** must not import monolith **`src.*`** / **`apps.*`** shims or removed package names checked in **`test_deprecated_backend_and_gateway_guardrails.py`**; stray **`api/src/adapters`**, **`api/src/backend`**, **`api/src/services`**, **`api/src/infrastructure/services`** must stay absent.
 - **`api/src/infrastructure/services/`** must not exist, and nothing may import **`infrastructure.services`**.
 - We do **not** assert a clean `sys.modules` after `import interfaces.http.main`: third-party transitive imports can load unrelated packages; the **AST scan** of **`interfaces/http`** is the stable guard for “HTTP delivery code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.

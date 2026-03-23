@@ -28,7 +28,7 @@ def _forbidden_transport_import_line(line: str) -> bool:
     COMPOSITION_PY,
     ids=[p.name for p in COMPOSITION_PY],
 )
-def test_composition_modules_do_not_import_frontend_gateway(path: Path) -> None:
+def test_composition_modules_do_not_import_services_package(path: Path) -> None:
     text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
     hits = [ln for ln in text.splitlines() if _forbidden_transport_import_line(ln)]
     assert not hits, (

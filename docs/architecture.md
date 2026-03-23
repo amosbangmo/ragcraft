@@ -21,7 +21,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 **Belongs here:**
 
 - **Use cases** under `api/src/application/use_cases/` — one primary workflow per class (e.g. `AskQuestionUseCase`, `BuildRagPipelineUseCase`, `RunManualEvaluationUseCase`). Shared RAG orchestration **DTOs** live under **`api/src/application/rag/`** (imported by chat/eval paths; guarded by **`test_orchestration_package_import_boundaries`**).
-- **RAG orchestration helpers** under `api/src/application/use_cases/chat/orchestration/` — e.g. **`summary_recall_workflow.py`** (**`ApplicationSummaryRecallStage`** implements **`SummaryRecallStagePort`**), **`summary_recall_ports.py`** (technical ports for rewrite / vector / lexical recall), **`recall_then_assemble_pipeline`**, **`summary_recall_from_request`**, **`assemble_pipeline_from_recall`**, **`post_recall_pipeline_steps`**, **`ApplicationPipelineAssembly`**, **`PipelineQueryLogEmitter`**, port definitions (**`ports.py`**, **`PostRecallStagePorts`**, **`PipelineBuildQueryLogEmitterPort`**).
+- **RAG orchestration helpers** under **`api/src/application/orchestration/rag/`** — e.g. **`summary_recall_workflow.py`** (**`ApplicationSummaryRecallStage`** implements **`SummaryRecallStagePort`**), **`summary_recall_ports.py`** (technical ports for rewrite / vector / lexical recall), **`recall_then_assemble_pipeline`**, **`summary_recall_from_request`**, **`assemble_pipeline_from_recall`**, **`post_recall_pipeline_steps`**, **`ApplicationPipelineAssembly`**, **`PipelineQueryLogEmitter`**, port definitions (**`ports.py`**, **`PostRecallStagePorts`**, **`PipelineBuildQueryLogEmitterPort`**).
 - **Evaluation RAG helper** — `execute_rag_inspect_then_answer_for_evaluation` in **`use_cases/evaluation/rag_pipeline_orchestration.py`** (inspect + answer + latency for eval; no production query log). **`RunManualEvaluationUseCase`** is the **only** application entry point for one-off manual evaluation; infrastructure **`manual_evaluation_service`** supplies assembly from benchmark rows, not a second orchestrator.
 - **`GoldQaBenchmarkAdapter`** — **`use_cases/evaluation/gold_qa_benchmark_adapter.py`**; implements **`GoldQaBenchmarkPort`** by delegating to **`BenchmarkExecutionUseCase`** (wired from composition, not from **`EvaluationService`** internals).
 - **Pipeline use-case ports** — `use_cases/chat/pipeline_use_case_ports.py` (`InspectRagPipelinePort`, `GenerateAnswerFromPipelinePort`) so evaluation does not depend on concrete chat use case classes.
@@ -35,16 +35,15 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:**
 
-- **`adapters/`** — concrete implementations: RAG stack (`docstore_service`, **`summary_recall_technical_adapters.py`** — thin **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`**), `post_recall_stage_adapters`, evaluation (**`EvaluationService`** consumes **`GoldQaBenchmarkPort`** only; no **`BenchmarkExecutionUseCase`** import), workspace, SQLite repositories, query logging, vector store helpers, ingestion loaders, etc. In-memory HTTP transcript lives in **`api/src/application/frontend_support/memory_chat_transcript.py`**, not under adapters.
-- **`persistence/`**, **`vectorstores/`**, **`caching/`**, **`logging/`** — technical subsystems.
+- **`rag/`**, **`evaluation/`**, **`persistence/`**, **`auth/`**, **`storage/`**, **`observability/`**, **`config/`** — concrete services and repositories (e.g. **`docstore_service`**, **`summary_recall_technical_adapters.py`** with **`QueryRewriteAdapter`**, **`SummaryVectorRecallAdapter`**, **`SummaryLexicalRecallAdapter`**, **`post_recall_stage_adapters`**, **`EvaluationService`** consuming **`GoldQaBenchmarkPort`** only). In-memory HTTP transcript lives in **`api/src/application/frontend_support/memory_chat_transcript.py`**, not here.
 
 **Rules:**
 
 - **Summary-recall sequencing** is **application-owned** (**`ApplicationSummaryRecallStage`**); infrastructure provides single-purpose technical steps behind **`SummaryRecallTechnicalPorts`**.
-- Post–summary-recall **sequencing** for assembly lives in **application** (`assemble_pipeline_from_recall` + `post_recall_pipeline_steps`); adapters behind **`PostRecallStagePorts`** perform single technical steps.
-- **All** of `api/src/infrastructure/adapters/**/*.py` must **not** import `application` (**`api/tests/architecture/test_adapter_application_imports.py`**). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed into RAG wiring.
+- Post–summary-recall **sequencing** for assembly lives in **application** (`assemble_pipeline_from_recall` + `post_recall_pipeline_steps`); modules behind **`PostRecallStagePorts`** perform single technical steps.
+- **All** Python under **`api/src/infrastructure/`** must **not** import **`application`** (**`api/tests/architecture/test_adapter_application_imports.py`**, with the documented **`auth_credentials`** exception). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed into RAG wiring.
 - **Query logging** is **not** implemented inside vectorstore/docstore/rerank modules; **`QueryLogService`** accepts dict or domain **`QueryLogIngressPayload`**.
-- Non-adapter infrastructure must not depend on application (see layer tests).
+- Infrastructure must not depend on application (see layer tests), except narrow Streamlit shims whitelisted in **`test_layer_boundaries`**.
 
 ## Composition (`api/src/composition/`)
 
@@ -60,7 +59,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Does not belong:** business flow sequencing (beyond one administrative `execute` for chain invalidation), Streamlit imports.
 
-**Streamlit transcript:** `frontend/src/services/streamlit_backend_factory.build_streamlit_backend_application_container()` passes `backend=build_backend_composition(chat_transcript=StreamlitChatTranscript())` so session transcript wiring stays in the frontend gateway layer.
+**Streamlit transcript:** `frontend/src/services/streamlit_backend_factory.build_streamlit_backend_application_container()` passes `backend=build_backend_composition(chat_transcript=StreamlitChatTranscript())` so session transcript wiring stays in **`frontend/src/services`**.
 
 ## HTTP delivery (`api/src/interfaces/http/`)
 
@@ -68,11 +67,11 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Identity:** Routes that require a logged-in workspace user depend on **`get_authenticated_principal`**, which parses **`Authorization: Bearer`** in **`dependencies.py`**, delegates verification to **`AuthenticationPort`** (implemented by **`JwtAuthenticationAdapter`** in infrastructure), and returns a framework-agnostic **`AuthenticatedPrincipal`**. Handlers pass **`principal.user_id`** into use cases only; they never interpret raw tokens.
 
-**Auth and profile:** **`/auth/login`** and **`/auth/register`** call **`LoginUserUseCase`** / **`RegisterUserUseCase`** and issue a signed JWT via **`AccessTokenIssuerPort`** (same adapter). **`/users/*`** routes call dedicated user/account use cases. Password hashing and avatar filesystem I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**, implemented by **`BcryptPasswordHasher`** and **`FileAvatarStorage`** (under **`api/src/infrastructure/adapters/auth/`** and **`…/filesystem/`**) and wired in **`build_backend_composition`**. JWT signing uses **`RAGCRAFT_JWT_SECRET`** (and optional **`RAGCRAFT_JWT_ISSUER`** / **`RAGCRAFT_JWT_AUDIENCE`**) — never hardcoded in source.
+**Auth and profile:** **`/auth/login`** and **`/auth/register`** call **`LoginUserUseCase`** / **`RegisterUserUseCase`** and issue a signed JWT via **`AccessTokenIssuerPort`** (same adapter). **`/users/*`** routes call dedicated user/account use cases. Password hashing and avatar filesystem I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**, implemented by **`BcryptPasswordHasher`** and **`FileAvatarStorage`** (under **`api/src/infrastructure/auth/`** and **`api/src/infrastructure/storage/`**) and wired in **`build_backend_composition`**. JWT signing uses **`RAGCRAFT_JWT_SECRET`** (and optional **`RAGCRAFT_JWT_ISSUER`** / **`RAGCRAFT_JWT_AUDIENCE`**) — never hardcoded in source.
 
 **Rule:** Routers must not import **`infrastructure.*`**; other HTTP modules follow **`test_fastapi_delivery_boundaries`**. Use cases resolve via **`Depends`** → **`BackendApplicationContainer`**. **`MemoryChatTranscript`** for the HTTP worker comes from **`application.frontend_support.memory_chat_transcript`**.
 
-## Frontend gateway (`frontend/src/services/`)
+## Frontend services (`frontend/src/services/`)
 
 **Belongs here:** `BackendClient` protocol, `HttpBackendClient`, `InProcessBackendClient`, HTTP transport/payloads, Streamlit auth glue, `StreamlitChatTranscript` (session-backed transcript), `streamlit_backend_factory`, factories under **`factories/`** (e.g. chat service wiring for Streamlit).
 

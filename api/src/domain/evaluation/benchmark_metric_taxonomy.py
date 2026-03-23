@@ -8,8 +8,8 @@ This module is the **single source of truth** for:
 - **Scoring kind** — deterministic overlap, LLM judge, pipeline instrumentation, etc.
 - **Judge-failed handling** — how rows with ``judge_failed`` interact with the metric
 
-Human-readable tooltips live in :mod:`src.ui.metric_help` (``METRIC_HELP``).
-Dashboard section order is documented in :func:`src.ui.evaluation_dashboard.render_evaluation_dashboard`.
+Human-readable tooltips live in :mod:`components.shared.metric_help` (``METRIC_HELP``).
+Dashboard section order is documented in :func:`components.shared.evaluation_dashboard.render_evaluation_dashboard`.
 
 Row keys included in Pearson correlation are listed in ``CORRELATION_METRIC_KEYS``.
 """

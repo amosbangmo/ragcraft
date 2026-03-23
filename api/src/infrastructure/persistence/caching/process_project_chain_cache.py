@@ -4,7 +4,7 @@ Thread-safe, process-wide cache for loaded vector-store handles (keyed by ``proj
 FastAPI and headless workers share this default instance so
 ``POST .../retrieval-cache/invalidate`` evicts stale FAISS objects after on-disk index updates.
 Streamlit UIs that run in the same process should call :func:`drop` as part of their own
-invalidation path (see :mod:`src.ui.streamlit_project_chain_session_cache`).
+invalidation path (see :mod:`components.shared.streamlit_project_chain_session_cache`).
 """
 
 from __future__ import annotations

@@ -2,7 +2,7 @@
 JSON-serializable normalization for HTTP wire payloads (application layer).
 
 Mirrors :mod:`infrastructure.rag.web.json_normalization` output shape so API responses stay stable.
-The application layer must not import ``src.infrastructure`` (see architecture tests).
+The application layer must not import concrete ``infrastructure`` adapters (see architecture tests).
 """
 
 from __future__ import annotations

@@ -126,7 +126,7 @@ LLM
 
 | Done | Transitional / deprecated |
 |------|---------------------------|
-| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Legacy **`src/backend/`**, **`src/adapters/`** removed — use **`infrastructure.adapters`** |
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Monolith trees under **`api/src/backend/`**, **`api/src/adapters/`** stay removed — implementations live under **`api/src/infrastructure/`** |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
 | Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **Bearer JWT** for HTTP API; rotate secrets and tune expiry for production |
 
@@ -134,12 +134,12 @@ LLM
 
 | Kind of change | Place |
 |----------------|--------|
-| Business rules, entities, ports | `src/domain/` |
-| Orchestration, commands, HTTP wire DTOs | `src/application/use_cases/**` (and `application/http/wire.py` for JSON shapes) |
-| RAG, FAISS, SQLite, LLM, extraction | `src/infrastructure/` (`adapters/`, `persistence/`, `vectorstores/`, …) |
-| SQLite port implementations | `src/infrastructure/adapters/sqlite/` |
-| Wiring the graph | `src/composition/` |
-| Streamlit/HTTP client seam | `src/frontend_gateway/` (`BackendClient`, Streamlit chat transcript); HTTP placeholders → `src/application/frontend_support/` |
+| Business rules, entities, ports | `api/src/domain/` |
+| Orchestration, commands, HTTP wire DTOs | `api/src/application/use_cases/**` (and `api/src/application/http/wire/` for JSON shapes) |
+| RAG, FAISS, SQLite, LLM, extraction | `api/src/infrastructure/` (`rag/`, `persistence/`, `evaluation/`, …) |
+| SQLite port implementations | `api/src/infrastructure/persistence/sqlite/` |
+| Wiring the graph | `api/src/composition/` |
+| Streamlit/HTTP client seam | `frontend/src/services/` (`BackendClient`, Streamlit transcript); HTTP stubs → `api/src/application/frontend_support/` |
 
 ---
 

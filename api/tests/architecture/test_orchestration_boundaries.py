@@ -40,7 +40,7 @@ _MAX_POST_RECALL_PIPELINE_STEPS_LINES = 320
 _MAX_POST_RECALL_ADAPTER_LINES = 280
 
 _TRANSPORT_RAG_ADAPTER_MARKERS = (
-    "from infrastructure.adapters.rag",
+    "from infrastructure.rag",
     "import infrastructure.rag",
 )
 
@@ -107,7 +107,7 @@ def _assert_no_application_use_case_imports(path: Path) -> None:
     ids=["interfaces_http", "frontend_services"],
 )
 def test_transport_does_not_import_rag_orchestration_adapters(transport_root: Path) -> None:
-    """Routers and gateway must use application use cases, not RAG adapter modules."""
+    """Routers and ``frontend/src/services`` must use application use cases, not RAG infra modules."""
     assert transport_root.is_dir(), f"missing {transport_root}"
     violations: list[str] = []
     for path in _iter_python_files(transport_root):

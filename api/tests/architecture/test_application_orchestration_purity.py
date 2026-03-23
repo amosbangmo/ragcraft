@@ -1,7 +1,7 @@
 """
 Application layer must stay free of delivery frameworks, storage drivers, and vector-store libs.
 
-Complements :mod:`tests.architecture.test_layer_boundaries` with explicit forbidden technology imports.
+Complements :mod:`architecture.test_layer_boundaries` with explicit forbidden technology imports.
 """
 
 from __future__ import annotations
@@ -56,8 +56,8 @@ def test_application_avoids_delivery_and_storage_tech_imports(
     assert not violations, msg + "\n".join(violations)
 
 
-def test_use_cases_do_not_import_frontend_gateway(use_case_files: list[Path]) -> None:
-    """Orchestration lives in application; UI gateway is a delivery concern."""
+def test_use_cases_do_not_import_streamlit_services_package(use_case_files: list[Path]) -> None:
+    """Orchestration lives in application; ``frontend/src/services`` is a delivery concern."""
     if not use_case_files:
         pytest.skip("no use_cases package")
     violations: list[str] = []

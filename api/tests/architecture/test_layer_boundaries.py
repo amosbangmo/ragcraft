@@ -34,11 +34,10 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
     infrastructure_files: list[Path],
 ) -> None:
     """
-    Core infrastructure (persistence, vector stores outside ``adapters/``) must not call into
-    ``src.application`` or Streamlit.
+    Infrastructure under ``api/src/infrastructure`` must not import ``application`` or Streamlit
+    (Streamlit shims and ``auth_credentials`` are allowlisted).
 
-    Adapter modules under ``src/infrastructure/adapters`` are checked separately for ``apps`` only here;
-    they must not import ``src.application`` at all (see ``test_adapter_application_imports.py``).
+    Full ``application`` import ban on every infra module is in ``test_adapter_application_imports.py``.
     """
     violations: list[str] = []
     infra_root = REPO_ROOT / "api" / "src" / "infrastructure"
@@ -71,9 +70,8 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
         for m in bad:
             violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
     msg = (
-        "Non-adapter infrastructure must not import application use cases or Streamlit. "
-        "Adapter modules under ``src/infrastructure/adapters`` must not import ``src.application`` "
-        "(see ``test_adapter_application_imports.py``).\n"
+        "Infrastructure must not import application or Streamlit (except allowlisted shims). "
+        "See ``test_adapter_application_imports.py`` for the full ``application`` import ban.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

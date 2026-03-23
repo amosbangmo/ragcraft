@@ -1,6 +1,6 @@
 """
-Extra import-level guardrails: removed legacy packages (``src.backend``, ``src.adapters``,
-``infrastructure.services``) and the frontend gateway package (``services`` under ``frontend/src``).
+Import-level guardrails: forbidden monolith Python roots (``src.*``, ``apps.*`` shims), removed
+``api/src/infrastructure/services``, and stray packages under ``api/src`` (``adapters``, ``backend``, ``services``).
 
 See ``api/tests/architecture/README.md`` for the full boundary matrix.
 """
@@ -34,47 +34,43 @@ def _repo_python_paths_for_legacy_shim_import_guards() -> list[Path]:
 
 
 def test_legacy_src_adapters_package_directory_is_absent() -> None:
-    """The old ``src/adapters`` tree was folded into ``src/infrastructure/adapters`` (e.g. sqlite)."""
+    """``api/src/adapters`` must not exist (implementations live under ``api/src/infrastructure/``)."""
     adapters_dir = REPO_ROOT / "api" / "src" / "adapters"
     assert not adapters_dir.exists(), (
-        "``src/adapters`` was removed; SQLite and other port implementations live under "
-        f"``src/infrastructure/adapters``. Remove leftover directory: {adapters_dir}"
+        "Remove stray api/src/adapters/; port implementations belong under api/src/infrastructure/. "
+        f"Found: {adapters_dir}"
     )
 
 
 def test_legacy_backend_package_directory_is_absent() -> None:
-    """The removed shim tree ``src/backend`` must not exist (canonical code lives under ``infrastructure.adapters``)."""
+    """``api/src/backend`` shim directory must not return."""
     backend_dir = REPO_ROOT / "api" / "src" / "backend"
     assert not backend_dir.exists(), (
-        "``src/backend`` was removed; use ``infrastructure.adapters`` and application use cases. "
-        f"Delete leftover directory: {backend_dir}"
+        "Remove api/src/backend/; use api/src/application and api/src/infrastructure with composition. "
+        f"Found: {backend_dir}"
     )
 
 
 def test_legacy_src_services_package_directory_is_absent() -> None:
-    """The legacy ``src/services`` layer was removed; use ``src.application`` and ``infrastructure.adapters``."""
+    """``api/src/services`` must not exist (orchestration is ``application``; IO is ``infrastructure``)."""
     services_dir = REPO_ROOT / "api" / "src" / "services"
     assert not services_dir.exists(), (
-        "``src/services`` was removed; put orchestration in ``src.application`` and technical code in "
-        f"``src/infrastructure/adapters``. Delete leftover directory: {services_dir}"
+        "Remove api/src/services/; use api/src/application and api/src/infrastructure/. "
+        f"Found: {services_dir}"
     )
 
 
 def test_legacy_infrastructure_services_package_directory_is_absent() -> None:
-    """
-    The old ``src/infrastructure/services`` package was removed; runtime code lives in
-    ``src/infrastructure/adapters/`` (and use cases in ``src/application/``).
-    """
+    """``api/src/infrastructure/services`` package must not return."""
     services_dir = REPO_ROOT / "api" / "src" / "infrastructure" / "services"
     assert not services_dir.exists(), (
-        "``src/infrastructure/services`` was removed; put concrete code in "
-        "``src/infrastructure/adapters`` and orchestration in ``src/application``. "
-        f"Delete leftover directory: {services_dir}"
+        "Remove api/src/infrastructure/services/; use concrete modules under api/src/infrastructure/. "
+        f"Found: {services_dir}"
     )
 
 
 def test_src_tree_does_not_import_legacy_adapters_package() -> None:
-    """No module under ``api/src`` may import ``src.adapters`` (package removed; use ``infrastructure.adapters``)."""
+    """No module under ``api/src`` may import the removed monolith package ``src.adapters``."""
     src_root = REPO_ROOT / "api" / "src"
     violations: list[str] = []
     for path in iter_python_files(src_root):
@@ -82,32 +78,24 @@ def test_src_tree_does_not_import_legacy_adapters_package() -> None:
             if mod == "src.adapters" or mod.startswith("src.adapters."):
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
-    msg = (
-        "``src.adapters`` was removed. Import concrete adapters from ``infrastructure.adapters``.\n"
-    )
+    msg = "Monolith import ``src.adapters`` is forbidden; use ``infrastructure`` modules under api/src/.\n"
     assert not violations, msg + "\n".join(violations)
 
 
 def test_codebase_python_does_not_import_removed_backend_package() -> None:
-    """
-    No Python under ``api/src``, ``frontend/src``, test trees, or the Streamlit entry may import
-    ``src.backend`` (shim package removed — use application use cases, ``infrastructure.adapters``,
-    and ``composition``).
-    """
+    """No code may import the removed monolith package ``src.backend``."""
     violations: list[str] = []
     for path in _repo_python_paths_for_legacy_shim_import_guards():
         for mod in imported_top_level_modules(path):
             if mod == "src.backend" or mod.startswith("src.backend."):
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
-    msg = (
-        "``src.backend`` was removed. Use ``infrastructure.adapters`` (or the composition root).\n"
-    )
+    msg = "Monolith import ``src.backend`` is forbidden; use ``application``, ``infrastructure``, ``composition``.\n"
     assert not violations, msg + "\n".join(violations)
 
 
 def test_codebase_python_does_not_import_removed_infrastructure_services_package() -> None:
-    """No imports of ``infrastructure.services`` (removed — use ``infrastructure.adapters`` / application)."""
+    """No imports of ``infrastructure.services`` (removed package name)."""
     violations: list[str] = []
     for path in _repo_python_paths_for_legacy_shim_import_guards():
         for mod in imported_top_level_modules(path):
@@ -115,14 +103,14 @@ def test_codebase_python_does_not_import_removed_infrastructure_services_package
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
     msg = (
-        "``infrastructure.services`` was removed. Use ``infrastructure.adapters`` "
-        "for concrete adapters and ``src.application`` for orchestration.\n"
+        "``infrastructure.services`` was removed; use modules under api/src/infrastructure/ and "
+        "``application`` for orchestration.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
 
 def test_codebase_python_does_not_import_removed_src_services_package() -> None:
-    """No imports of ``src.services`` (removed — use ``src.application`` / ``infrastructure.adapters``)."""
+    """No imports of ``src.services`` (removed monolith package)."""
     violations: list[str] = []
     for path in _repo_python_paths_for_legacy_shim_import_guards():
         for mod in imported_top_level_modules(path):
@@ -130,8 +118,7 @@ def test_codebase_python_does_not_import_removed_src_services_package() -> None:
                 rel = path.relative_to(REPO_ROOT)
                 violations.append(f"{rel}: imports {mod}")
     msg = (
-        "``src.services`` was removed. Use ``src.application`` for orchestration and "
-        "``infrastructure.adapters`` for concrete adapters.\n"
+        "Monolith import ``src.services`` is forbidden; use ``application`` and ``infrastructure`` under api/src/.\n"
     )
     assert not violations, msg + "\n".join(violations)
 
