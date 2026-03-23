@@ -42,7 +42,7 @@ class ChatPipelineRequestBase(BaseModel):
     """
     Shared JSON body for chat and pipeline calls.
 
-    The authenticated user is taken from the ``X-User-Id`` header (see
+    The authenticated user comes from ``Authorization: Bearer`` (see
     :func:`apps.api.dependencies.get_authenticated_principal`); do not send ``user_id`` in the body.
     """
 
@@ -62,7 +62,7 @@ class ChatPipelineRequestBase(BaseModel):
     project_id: str = Field(
         ...,
         min_length=1,
-        description="Project directory name under the user from ``X-User-Id``.",
+        description="Project directory name under the authenticated workspace user.",
         examples=["demo"],
     )
     question: str = Field(..., min_length=1, description="User question for this turn.")
@@ -139,7 +139,7 @@ class PipelineInspectResponse(BaseModel):
 
 
 class RetrievalCompareRequest(BaseModel):
-    """Compare FAISS-only vs hybrid retrieval; identity comes from ``X-User-Id``."""
+    """Compare FAISS-only vs hybrid retrieval; identity comes from the bearer token."""
 
     model_config = ConfigDict(
         extra="forbid",

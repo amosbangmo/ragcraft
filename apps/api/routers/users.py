@@ -1,8 +1,8 @@
 """
 Authenticated user profile API (SQLite).
 
-``X-User-Id`` must match the stored ``user_id`` row. Used by HTTP ``BackendClient`` and future
-SPA clients; interactive login/register may remain hosted outside this API until auth is unified.
+The JWT ``user_id`` claim must match the stored ``user_id`` row. Used by HTTP ``HttpBackendClient``
+and SPA clients after ``/auth/login`` or ``/auth/register``.
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ RemoveAvatarUCDep = Annotated[RemoveUserAvatarUseCase, Depends(get_remove_user_a
 DeleteAccountUCDep = Annotated[DeleteUserAccountUseCase, Depends(get_delete_user_account_use_case)]
 
 
-@router.get("/me", response_model=UserMeResponse, summary="Current user profile (by X-User-Id)")
+@router.get("/me", response_model=UserMeResponse, summary="Current user profile (from bearer JWT)")
 def get_me(principal: PrincipalDep, use_case: GetProfileUCDep) -> UserMeResponse:
     result = use_case.execute(GetUserProfileCommand(user_id=principal.user_id))
     return user_profile_summary_to_me(result.user)

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from apps.api.dependencies import get_invalidate_project_chain_cache_use_case
 from apps.api.main import create_app
+from tests.apps_api.bearer_auth import bearer_headers
 
 
 def test_import_dependencies_module_does_not_load_streamlit() -> None:
@@ -47,7 +48,7 @@ def test_post_invalidate_retrieval_cache_invokes_use_case() -> None:
         with TestClient(app) as client:
             r = client.post(
                 "/projects/demo/retrieval-cache/invalidate",
-                headers={"X-User-Id": "alice"},
+                headers=bearer_headers(user_id="alice"),
             )
     finally:
         app.dependency_overrides.clear()

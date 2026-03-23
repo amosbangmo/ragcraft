@@ -84,6 +84,8 @@ def test_login_success(auth_app: tuple[TestClient, FastAPI]) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["success"] is True
+    assert body["token_type"] == "bearer"
+    assert isinstance(body.get("access_token"), str) and len(body["access_token"]) > 20
     assert body["user"]["user_id"] == "u1"
     assert body["user"]["username"] == "alice"
 
@@ -110,6 +112,8 @@ def test_register_success(auth_app: tuple[TestClient, FastAPI]) -> None:
     assert r.status_code == 201
     body = r.json()
     assert body["success"] is True
+    assert body["token_type"] == "bearer"
+    assert isinstance(body.get("access_token"), str) and len(body["access_token"]) > 20
     assert body["user"]["username"] == "bob"
 
 

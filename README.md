@@ -87,7 +87,7 @@ The demo allows you to:
 - **FastAPI (`apps/api/`)** is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
 - **Streamlit** (`streamlit_app.py`, `pages/`, `src/ui/`) is a **reference UI client**. It talks to capabilities only through **`BackendClient`** (`src/frontend_gateway/protocol.py`). It must **not** import `src.domain`, `src.infrastructure`, `src.composition`, or `apps.api` directly (enforced by architecture tests).
 - **Default Streamlit mode** is **`RAGCRAFT_BACKEND_CLIENT=http`**: the UI calls the API over HTTP like any other client. **`in_process`** builds a **`BackendApplicationContainer`** inside the Streamlit process (no uvicorn) for fast local work — same use cases, different transport.
-- **Angular or other SPAs** should use the **same HTTP API** (today: `X-User-Id` for workspace identity on scoped routes).
+- **Angular or other SPAs** should use the **same HTTP API**: obtain a JWT from `POST /auth/login` or `/auth/register`, then send `Authorization: Bearer <access_token>` on scoped routes.
 
 ```text
 User (Browser)
@@ -96,7 +96,7 @@ User (Browser)
       ▼                              ▼
 Streamlit UI                  Angular / API clients
       │                              │
-      │  BackendClient               │  HTTP (+ X-User-Id)
+      │  BackendClient               │  HTTP (+ Bearer JWT)
       │  (in-process OR HTTP)        │
       ▼                              ▼
 BackendApplicationContainer (use cases + infrastructure services)
@@ -128,7 +128,7 @@ LLM
 |------|---------------------------|
 | FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Legacy **`src/backend/`**, **`src/adapters/`** removed — use **`src.infrastructure.adapters`** |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
-| Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **`X-User-Id`** trust model — replace with real auth for production browsers |
+| Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **Bearer JWT** for HTTP API; rotate secrets and tune expiry for production |
 
 ### Where new logic should live
 

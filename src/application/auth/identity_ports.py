@@ -1,8 +1,8 @@
 """
-Future identity resolution (JWT, OAuth) can implement this port.
+Legacy bridge: map an already-trusted opaque user id into a principal.
 
-Today FastAPI builds :class:`~src.application.auth.authenticated_principal.AuthenticatedPrincipal`
-directly from the trusted ``X-User-Id`` header after syntactic validation.
+Production HTTP uses :class:`~src.application.auth.authentication_port.AuthenticationPort` with
+signed bearer tokens instead of trusting client-supplied user ids.
 """
 
 from __future__ import annotations

@@ -65,7 +65,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 - **Evaluation wiring** — **`EvaluationWiringParts`**, **`default_evaluation_wiring_parts()`**, **`build_evaluation_service(parts)`**; **`RagInspectAnswerRun`**-only **`pipeline_runner`** contract in **`BenchmarkExecutionUseCase`**.
 - **Composition root** — explicit **`chat_transcript`** and **`backend`** parameters; RAG subgraph construction centralized (**`build_rag_retrieval_subgraph`** always builds **`AnswerGenerationService`** internally).
 - **Multimodal hints** — orchestration-adjacent logic in **`src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
-- **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
+- **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
 
 ---
@@ -85,6 +85,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 | **`src/application/common/query_log_payload.py`**, **`evaluation_judge_metrics.py`** | Obsolete re-exports; domain types are canonical |
 | **`tests/architecture/test_rag_adapter_application_imports.py`** | Superseded by **`test_adapter_application_imports.py`** |
 | **`BenchmarkExecutionUseCase._coerce_gold_qa_runner_result`** | **Removed** — runner must return **`RagInspectAnswerRun`** |
+| **Trusted `X-User-Id` header** | **Removed** — replaced by **`Authorization: Bearer`** + **`JwtAuthenticationAdapter`** implementing **`AuthenticationPort`** / **`AccessTokenIssuerPort`** |
 
 ---
 
@@ -96,7 +97,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 | **Two `MemoryChatTranscript` modules** | Application copy satisfies **`apps/api`** layer scans; infra copy remains for adapter-adjacent tests and optional wiring |
 | **`ManualEvaluationService.evaluate_question`** | Overlaps eval orchestration with **`rag_pipeline_orchestration`**; **product/DX** consolidation optional |
 | **`import_legacy_file_logs`** on **`QueryLogService`** | One-off migration utility |
-| **`X-User-Id` trust header** | **Security / product** concern — transport still trusts the header, but the API boundary is now an **`AuthenticatedPrincipal`**, not a bare string |
+| **JWT operational model** | Single access token (HS256), no refresh-token rotation or OAuth2 provider in-repo — product choice for a later pass |
 | Architecture **line-count ratchets** in `test_orchestration_boundaries.py` | Prevents silent growth of coordinator modules |
 
 ---
@@ -105,7 +106,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 
 These do **not** invalidate the migration but are worth tracking:
 
-- **AuthN/AuthZ:** Header-based **`X-User-Id`** is not a verified identity for hostile networks; replace with JWT/OAuth where needed. The application layer now has **`TrustedTransportIdentityPort`** as an extension point and typed **`AuthenticatedPrincipal`** at the HTTP boundary.
+- **AuthN/AuthZ:** Symmetric JWTs require **`RAGCRAFT_JWT_SECRET`** rotation discipline, HTTPS in production, and optional issuer/audience tightening. **`TrustedTransportIdentityPort`** remains for non-JWT bridges if needed.
 - **Operational drift:** Contributors may reintroduce **`src.infrastructure`** imports under **`apps/api`**; **`pytest tests/architecture/`** in CI on touched trees reduces regression risk.
 - **Duplicate eval paths:** Manual eval service vs use-case orchestration may diverge behavior over time unless consolidated.
 - **Third-party weight:** Heavy optional stacks (e.g. ingestion) can still complicate test envs; architecture tests are **import-level**, not full integration proof.
@@ -116,7 +117,7 @@ These do **not** invalidate the migration but are worth tracking:
 
 **For Clean Architecture boundaries and RAG orchestration ownership: yes.** Layers, guardrail tests, and docs describe the same dependency rules and flows.
 
-**Auth / users (corrected):** The API boundary uses **`get_authenticated_principal` → `AuthenticatedPrincipal`** instead of passing raw header strings through handlers. Login and registration are **`LoginUserUseCase`** / **`RegisterUserUseCase`**; **`/users/*`** uses account use cases. Password and avatar I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**. Streamlit reuses the same use cases via **`auth_credentials`**.
+**Auth / users (final):** The API boundary uses **`get_authenticated_principal` → `AuthenticationPort.authenticate_bearer_token` → `AuthenticatedPrincipal`**. Transport parses **`Authorization: Bearer`** only in **`apps/api/dependencies.py`**; **`JwtAuthenticationAdapter`** (infrastructure) validates signatures and claims. Login and registration return a JWT plus profile (**`AccessTokenIssuerPort`**). **`/users/*`** uses account use cases. Password and avatar I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**. Streamlit HTTP mode stores **`access_token`** in session and **`HttpBackendClient`** sends it on every scoped call; in-process mode still uses **`auth_credentials`** without HTTP tokens.
 
 **RAG orchestration (corrected):** Typed overrides (**`RetrievalSettingsOverrideSpec`**), recall/assembly DTOs, explicit eval input (**`RagEvaluationPipelineInput`**), and **`RagInspectAnswerRun`** with **`PipelineLatency`**. Ask vs inspect vs preview vs evaluation modes are documented in **`docs/rag_orchestration.md`**.
 
@@ -130,7 +131,7 @@ These do **not** invalidate the migration but are worth tracking:
 
 ## 9. Post-migration improvements (optional backlog)
 
-- **Security:** Implement **`TrustedTransportIdentityPort`** with JWT/OAuth and stop treating **`X-User-Id`** as trusted on public networks.
+- **Security:** Add refresh tokens, asymmetric signing (JWKS), or an external IdP; rate-limit **`/auth/login`**.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
 - **DX:** Deduplicate **`ManualEvaluationService.evaluate_question`** vs **`RunManualEvaluationUseCase`**; keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
 - **CI:** Run **`pytest tests/architecture/`** when `src/`, `apps/api`, `pages/`, or `src/ui/` change.
@@ -252,6 +253,6 @@ The repository is an **excellent long-term base** for feature work **within** th
 - **Delivery** (FastAPI, gateway, UI) stays **thin** relative to use cases; **composition** is the only place that should know about concrete adapters.
 - **Tooling** (**`pyproject.toml`**) gives contributors a **shared Ruff/Black/mypy baseline**; **mypy strict** for the entire tree remains **deferred** (incremental adoption is intentional).
 
-**Intentionally deferred:** verified identity on public networks (**JWT/OAuth**), **mypy strict** everywhere, optional consolidation of duplicate evaluation helpers, and typed rows for every SQLite-backed list endpoint.
+**Intentionally deferred:** OAuth2 / social login, refresh-token flows, **mypy strict** everywhere, optional consolidation of duplicate evaluation helpers, and typed rows for every SQLite-backed list endpoint.
 
 Treat **§7** (risks) and **§6** (acceptable residual) as the living registers for product and operations follow-up.

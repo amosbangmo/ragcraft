@@ -39,10 +39,11 @@ from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
+from tests.apps_api.bearer_auth import bearer_headers
 
 
 def _hdr(uid: str = "e2e-http-user") -> dict[str, str]:
-    return {"X-User-Id": uid}
+    return bearer_headers(user_id=uid)
 
 
 class _CallableUseCase:
@@ -204,7 +205,7 @@ def test_http_pipeline_project_ingest_chat_inspect_benchmark_export(
         ),
     ],
 )
-def test_http_scoped_routes_require_x_user_id(
+def test_http_scoped_routes_require_bearer_token(
     pipeline_client: tuple[TestClient, FastAPI],
     method: str,
     path: str,
@@ -212,10 +213,10 @@ def test_http_scoped_routes_require_x_user_id(
 ) -> None:
     tc, _ = pipeline_client
     r = tc.request(method, path, **kwargs)
-    assert r.status_code == 400
+    assert r.status_code == 401
     err = r.json()
-    assert err.get("code") == "http_400"
-    assert "X-User-Id" in (err.get("message") or "")
+    assert err.get("code") == "authentication_required"
+    assert "Bearer" in (err.get("message") or "")
 
 
 def test_http_chat_ask_validation_error_returns_422(pipeline_client: tuple[TestClient, FastAPI]) -> None:

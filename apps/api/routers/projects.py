@@ -1,7 +1,7 @@
 """
 Project and document management HTTP API.
 
-All handlers depend on application use cases (or header-derived identity + use cases only).
+All handlers depend on application use cases and :func:`~apps.api.dependencies.get_authenticated_principal`.
 File ingest uses multipart form field ``file``; see each route's OpenAPI description.
 """
 
@@ -101,7 +101,7 @@ def get_projects(
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[ListProjectsUseCase, Depends(get_list_projects_use_case)],
 ) -> ProjectListResponse:
-    """Returns sorted project ids under ``users/{X-User-Id}/projects``."""
+    """Returns sorted project ids under ``users/{user_id}/projects`` for the JWT subject."""
     return ProjectListResponse(projects=use_case.execute(principal.user_id))
 
 
@@ -119,7 +119,7 @@ def post_project(
     """
     Creates the project directory if needed (idempotent).
 
-    Example: ``POST /projects`` with header ``X-User-Id: alice`` and body
+    Example: ``POST /projects`` with ``Authorization: Bearer <token>`` and body
     ``{"project_id": "demo"}``.
     """
     use_case.execute(principal.user_id, body.project_id)

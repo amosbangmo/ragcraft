@@ -5,6 +5,7 @@ Concise, **code-aligned** documentation for the repository layout after the Clea
 | Document | Purpose |
 |----------|---------|
 | [architecture.md](architecture.md) | Layer responsibilities: domain, application, infrastructure, composition, API, gateway; RAG adapter import rules; **mermaid** dependency diagram |
+| [api.md](api.md) | HTTP authentication (**Bearer JWT**), env vars, error envelope, OpenAPI pointers |
 | [rag_orchestration.md](rag_orchestration.md) | RAG flow: entrypoints, use cases, orchestration modules, ports, adapters, logging, evaluation path |
 | [dependency_rules.md](dependency_rules.md) | Allowed import directions, RAG-specific rules, anti-patterns |
 | [testing_strategy.md](testing_strategy.md) | Architecture tests (including orchestration purity and RAG layering), integration coverage |
@@ -17,7 +18,7 @@ Concise, **code-aligned** documentation for the repository layout after the Clea
 
 ## Local development (Streamlit + FastAPI)
 
-- Run API: `python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000` with `PYTHONPATH` set to the repo root.
+- Run API: `python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000` with `PYTHONPATH` set to the repo root and **`RAGCRAFT_JWT_SECRET`** set (see **`docs/api.md`**).
 - Point Streamlit at the API: set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (e.g. `http://127.0.0.1:8000`).
 - In-process Streamlit (no uvicorn): `RAGCRAFT_BACKEND_CLIENT=in_process` uses `build_streamlit_backend_application_container()` (same use cases, `StreamlitChatTranscript` for session state).
 - Optional: **`RAG_MAX_UPLOAD_BYTES`** caps multipart document upload size on the API (see `docs/migration_report_final.md` §11).

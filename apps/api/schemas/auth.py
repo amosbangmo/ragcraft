@@ -1,4 +1,4 @@
-"""Login/register request and response models (no ``X-User-Id``; used before session exists)."""
+"""Login/register request and response models (returns bearer token + profile)."""
 
 from __future__ import annotations
 
@@ -28,4 +28,6 @@ class AuthSuccessResponse(BaseModel):
 
     success: bool = True
     message: str
+    access_token: str = Field(..., description="JWT for Authorization: Bearer on scoped routes.")
+    token_type: str = Field(default="bearer", description="Always ``bearer`` for this API.")
     user: UserMeResponse

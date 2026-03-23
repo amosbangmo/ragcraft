@@ -46,7 +46,7 @@ def login(username: str, password: str) -> tuple[bool, str]:
             "POST",
             "/auth/login",
             json_body={"username": username, "password": password},
-            send_user_header=False,
+            send_authorization=False,
         )
     except BackendHttpError as exc:
         return False, _message_from_backend_error(exc)
@@ -57,7 +57,10 @@ def login(username: str, password: str) -> tuple[bool, str]:
     user = data.get("user")
     if not isinstance(user, dict):
         return False, "Invalid response from server."
-    apply_auth_user_dict_to_streamlit_session(user)
+    apply_auth_user_dict_to_streamlit_session(
+        user,
+        access_token=str(data.get("access_token") or "") or None,
+    )
     return True, str(data.get("message") or "Login successful.")
 
 
@@ -86,7 +89,7 @@ def register(
                 "confirm_password": confirm_password,
                 "display_name": display_name,
             },
-            send_user_header=False,
+            send_authorization=False,
         )
     except BackendHttpError as exc:
         return False, _message_from_backend_error(exc)
@@ -97,7 +100,10 @@ def register(
     user = data.get("user")
     if not isinstance(user, dict):
         return False, "Invalid response from server."
-    apply_auth_user_dict_to_streamlit_session(user)
+    apply_auth_user_dict_to_streamlit_session(
+        user,
+        access_token=str(data.get("access_token") or "") or None,
+    )
     return True, str(data.get("message") or "Account created successfully.")
 
 
@@ -109,6 +115,7 @@ def logout() -> None:
     st.session_state.pop(AuthService.SESSION_USER_ID_KEY, None)
     st.session_state.pop(AuthService.SESSION_DISPLAY_NAME_KEY, None)
     st.session_state.pop(AuthService.SESSION_AVATAR_KEY, None)
+    st.session_state.pop(AuthService.SESSION_ACCESS_TOKEN_KEY, None)
     st.session_state.pop("project_id", None)
 
 

@@ -7,8 +7,9 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class AuthenticatedPrincipal:
-    """Trusted workspace user identity (today: derived from ``X-User-Id``)."""
+    """Workspace identity produced by the authentication port after verified bearer credentials."""
 
     user_id: str
-    auth_method: str = "x_user_id_header"
+    subject: str | None = None
+    auth_method: str = "jwt_bearer"
     is_authenticated: bool = True

@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import TYPE_CHECKING
 
+from src.application.auth.access_token_issuer_port import AccessTokenIssuerPort
+from src.application.auth.authentication_port import AuthenticationPort
 from src.auth.auth_service import AuthService
 from src.composition.backend_composition import BackendComposition
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
@@ -97,6 +99,14 @@ class BackendApplicationContainer:
     @property
     def auth_service(self) -> AuthService:
         return self.backend.auth_service
+
+    @property
+    def authentication(self) -> AuthenticationPort:
+        return self.backend.bearer_token_auth
+
+    @property
+    def access_token_issuer(self) -> AccessTokenIssuerPort:
+        return self.backend.bearer_token_auth
 
     @property
     def project_service(self) -> ProjectService:

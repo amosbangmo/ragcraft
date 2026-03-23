@@ -21,14 +21,17 @@ def _resolved_schema(spec: dict, schema_obj: dict) -> dict:
     return schema_obj
 
 
-def test_openapi_includes_x_user_id_scheme_and_canonical_error_model(api_client: TestClient) -> None:
+def test_openapi_includes_bearer_scheme_and_canonical_error_model(api_client: TestClient) -> None:
     r = api_client.get("/openapi.json")
     assert r.status_code == 200
     spec = r.json()
-    x_user = spec["components"]["securitySchemes"]["XUserId"]
-    assert x_user["type"] == "apiKey"
-    assert x_user["in"] == "header"
-    assert x_user["name"] == "X-User-Id"
+    schemes = spec["components"]["securitySchemes"]
+    bearer = schemes["BearerAuth"]
+    assert bearer["type"] == "http"
+    assert bearer["scheme"] == "bearer"
+    if "HTTPBearer" in schemes:
+        assert schemes["HTTPBearer"]["type"] == "http"
+        assert schemes["HTTPBearer"]["scheme"] == "bearer"
     canon = spec["components"]["schemas"]["CanonicalApiError"]
     assert "required" in canon
     assert set(canon["required"]) >= {"detail", "message", "error_type", "code", "category"}
@@ -62,12 +65,12 @@ def test_openapi_tags_cover_surface_areas(api_client: TestClient) -> None:
     assert names >= {"chat", "projects", "evaluation", "users", "auth", "system"}
 
 
-def test_missing_x_user_id_returns_canonical_error(api_client: TestClient) -> None:
+def test_missing_bearer_returns_canonical_error(api_client: TestClient) -> None:
     resp = api_client.post("/projects", json={"project_id": "demo"})
-    assert resp.status_code == 400
+    assert resp.status_code == 401
     data = resp.json()
-    assert data["code"] == "http_400"
-    assert data["category"] == "transport"
+    assert data["code"] == "authentication_required"
+    assert data["category"] == "application"
     assert data["message"] == data["detail"]
 
 

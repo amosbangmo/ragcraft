@@ -117,6 +117,34 @@ class AuthValidationError(ApplicationError):
     error_code = "auth_validation_failed"
 
 
+class AuthenticationRequiredError(ApplicationError):
+    """No usable bearer credentials on a route that requires authentication."""
+
+    default_status = 401
+    error_code = "authentication_required"
+
+
+class MalformedAuthenticationHeaderError(ApplicationError):
+    """Authorization header present but not a non-empty ``Bearer`` token."""
+
+    default_status = 400
+    error_code = "malformed_authorization_header"
+
+
+class InvalidTokenError(ApplicationError):
+    """Bearer token failed signature or claim checks (other than expiry)."""
+
+    default_status = 401
+    error_code = "invalid_token"
+
+
+class ExpiredTokenError(ApplicationError):
+    """Bearer token ``exp`` is in the past."""
+
+    default_status = 401
+    error_code = "expired_token"
+
+
 # --- Infrastructure: ingestion & multimodal ---
 
 

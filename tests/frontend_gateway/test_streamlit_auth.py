@@ -27,6 +27,7 @@ def test_logout_clears_session_without_auth_service_instance(monkeypatch: pytest
         AuthService.SESSION_USER_ID_KEY: "uid-1",
         AuthService.SESSION_DISPLAY_NAME_KEY: "Alice",
         AuthService.SESSION_AVATAR_KEY: "/a.png",
+        AuthService.SESSION_ACCESS_TOKEN_KEY: "tok",
         "project_id": "p1",
     }
     fake_st = types.ModuleType("streamlit")
@@ -38,4 +39,5 @@ def test_logout_clears_session_without_auth_service_instance(monkeypatch: pytest
     assert state.get(AuthService.SESSION_AUTH_KEY) is False
     assert AuthService.SESSION_USER_KEY not in state
     assert AuthService.SESSION_USER_ID_KEY not in state
+    assert AuthService.SESSION_ACCESS_TOKEN_KEY not in state
     assert "project_id" not in state

@@ -1,4 +1,4 @@
-"""User profile HTTP models (SQLite-backed, ``X-User-Id`` scoped)."""
+"""User profile HTTP models (SQLite-backed; routes require a verified bearer JWT)."""
 
 from __future__ import annotations
 

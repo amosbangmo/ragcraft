@@ -11,10 +11,11 @@ from fastapi.testclient import TestClient
 from apps.api.dependencies import get_user_repository
 from apps.api.main import create_app
 from src.auth.password_utils import hash_password
+from tests.apps_api.bearer_auth import bearer_headers
 
 
 def _hdr(uid: str = "u1") -> dict[str, str]:
-    return {"X-User-Id": uid}
+    return bearer_headers(user_id=uid)
 
 
 def _sample_row(
@@ -86,10 +87,11 @@ def users_app() -> tuple[TestClient, FastAPI]:
     app.dependency_overrides.clear()
 
 
-def test_get_me_missing_header_returns_400(users_app: tuple[TestClient, FastAPI]) -> None:
+def test_get_me_missing_bearer_returns_401(users_app: tuple[TestClient, FastAPI]) -> None:
     tc, _ = users_app
     r = tc.get("/users/me")
-    assert r.status_code == 400
+    assert r.status_code == 401
+    assert r.json().get("code") == "authentication_required"
 
 
 def test_get_me_not_found(users_app: tuple[TestClient, FastAPI]) -> None:

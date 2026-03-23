@@ -16,11 +16,11 @@ _CANONICAL_ERROR_FIELDS: dict[str, Any] = {
 }
 
 CANONICAL_ERROR_EXAMPLE: dict[str, Any] = {
-    "detail": "Missing or empty X-User-Id header.",
-    "message": "Missing or empty X-User-Id header.",
-    "error_type": "HTTPException",
-    "code": "http_400",
-    "category": "transport",
+    "detail": "Request could not be processed.",
+    "message": "Request could not be processed.",
+    "error_type": "ApplicationError",
+    "code": "application_error",
+    "category": "application",
 }
 
 VALIDATION_ERROR_EXAMPLE: dict[str, Any] = {
@@ -57,7 +57,17 @@ def openapi_error_response(
 # Responses merged into route `responses=` for predictable client stubs.
 COMMON_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     400: openapi_error_response(
-        description="Missing or invalid ``X-User-Id``, bad arguments, or explicit HTTP 400.",
+        description="Malformed ``Authorization`` header, invalid arguments, or explicit HTTP 400.",
+    ),
+    401: openapi_error_response(
+        description="Missing bearer token, invalid or expired JWT, or invalid credentials.",
+        example={
+            "detail": "Authentication required. Send Authorization: Bearer <token>.",
+            "message": "Authentication required. Send Authorization: Bearer <token>.",
+            "error_type": "AuthenticationRequiredError",
+            "code": "authentication_required",
+            "category": "application",
+        },
     ),
     404: openapi_error_response(
         description="Resource not found or domain not-found mapped to HTTP 404.",
@@ -117,19 +127,23 @@ def chat_route_responses() -> dict[int | str, dict[str, Any]]:
 
 
 def enrich_openapi_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Register ``X-User-Id`` for generators; routes opt in via dependencies, not global security."""
+    """
+    Enrich OpenAPI with shared documentation.
+
+    Bearer JWT security is declared per-route via :class:`fastapi.security.HTTPBearer` dependencies
+    (``HTTPBearer`` appears under ``components.securitySchemes`` automatically).
+    """
     components = schema.setdefault("components", {})
     sec = components.setdefault("securitySchemes", {})
     sec.setdefault(
-        "XUserId",
+        "BearerAuth",
         {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-User-Id",
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
             "description": (
-                "Workspace user id. Send on every request that scopes data to a user "
-                "(projects, chat, evaluation, ``/users/me``). Public: ``GET /health``, "
-                "``GET /version``."
+                "Workspace access token from ``POST /auth/login`` or ``POST /auth/register``. "
+                "Send on user-scoped routes (projects, chat, evaluation, ``/users/me``)."
             ),
         },
     )

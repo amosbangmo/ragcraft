@@ -1,7 +1,8 @@
-"""Backend client that calls the FastAPI app over HTTP (``X-User-Id`` on every request)."""
+"""Backend client that calls the FastAPI app over HTTP with ``Authorization: Bearer``."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 from urllib.parse import quote
@@ -29,6 +30,17 @@ from src.frontend_gateway.http_payloads import (
 )
 from src.frontend_gateway.http_transport import HttpTransport
 from src.frontend_gateway.stubs import http_client_chat_service, http_client_project_settings_repository
+
+
+def _streamlit_access_token_supplier() -> str:
+    try:
+        import streamlit as st
+
+        from src.auth.auth_service import AuthService
+
+        return str(st.session_state.get(AuthService.SESSION_ACCESS_TOKEN_KEY, "") or "").strip()
+    except Exception:
+        return ""
 
 
 def _format_created_at(created_at: str | None) -> str:
@@ -76,7 +88,7 @@ def _chat_pipeline_body(
 
 
 class HttpBackendClient:
-    __slots__ = ("_t", "base_url", "connect_timeout", "read_timeout")
+    __slots__ = ("_access_token_supplier", "_t", "base_url", "connect_timeout", "read_timeout")
 
     def __init__(
         self,
@@ -85,16 +97,21 @@ class HttpBackendClient:
         connect_timeout: float = 10.0,
         read_timeout: float = 300.0,
         transport: httpx.BaseTransport | None = None,
+        access_token_supplier: Callable[[], str] | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.connect_timeout = float(connect_timeout)
         self.read_timeout = float(read_timeout)
+        self._access_token_supplier = access_token_supplier or _streamlit_access_token_supplier
         self._t = HttpTransport(
             base_url=self.base_url,
             connect_timeout=self.connect_timeout,
             read_timeout=self.read_timeout,
             transport=transport,
         )
+
+    def _bearer(self) -> str:
+        return self._access_token_supplier().strip()
 
     def close(self) -> None:
         self._t.close()
@@ -140,7 +157,7 @@ class HttpBackendClient:
         uid = st.session_state.get("user_id")
         if not uid:
             return None
-        return self._t.request_json("GET", "/users/me", user_id=str(uid))
+        return self._t.request_json("GET", "/users/me", bearer_token=self._bearer())
 
     def format_created_at(self, created_at: str | None) -> str:
         return _format_created_at(created_at)
@@ -155,7 +172,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "PATCH",
             "/users/me",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={"username": new_username, "display_name": new_display_name},
         )
         return bool(data.get("success")), str(data.get("message") or "")
@@ -171,7 +188,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/users/me/password",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "current_password": current_password,
                 "new_password": new_password,
@@ -187,46 +204,46 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/users/me/avatar",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             files={"file": (name, buf, ctype)},
         )
         return bool(data.get("success")), str(data.get("message") or "")
 
     def remove_avatar(self, user_id: str) -> tuple[bool, str]:
-        data = self._t.request_json("DELETE", "/users/me/avatar", user_id=user_id)
+        data = self._t.request_json("DELETE", "/users/me/avatar", bearer_token=self._bearer())
         return bool(data.get("success")), str(data.get("message") or "")
 
     def delete_account(self, *, user_id: str, current_password: str) -> tuple[bool, str]:
         data = self._t.request_json(
             "DELETE",
             "/users/me",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={"current_password": current_password},
         )
         return bool(data.get("success")), str(data.get("message") or "")
 
     def list_projects(self, user_id: str) -> list[str]:
-        data = self._t.request_json("GET", "/projects", user_id=user_id)
+        data = self._t.request_json("GET", "/projects", bearer_token=self._bearer())
         return list(data.get("projects") or [])
 
     def create_project(self, user_id: str, project_id: str) -> Any:
         self._t.request_json(
             "POST",
             "/projects",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={"project_id": project_id},
         )
         return self.get_project(user_id, project_id)
 
     def get_project(self, user_id: str, project_id: str) -> Any:
-        data = self._t.request_json("GET", f"/projects/{quote(project_id)}", user_id=user_id)
+        data = self._t.request_json("GET", f"/projects/{quote(project_id)}", bearer_token=self._bearer())
         return Project(user_id=str(data["user_id"]), project_id=str(data["project_id"]))
 
     def retrieval_preset_label_for_project(self, user_id: str, project_id: str) -> str:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/retrieval-preset-label",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return str(data.get("label") or "")
 
@@ -234,7 +251,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/documents",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return list(data.get("documents") or [])
 
@@ -242,7 +259,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/documents/details",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return list(data.get("documents") or [])
 
@@ -251,7 +268,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/documents/{sf}/assets",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return list(data.get("assets") or [])
 
@@ -262,7 +279,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "DELETE",
             f"/projects/{quote(project_id)}/documents/{sf}",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return delete_document_result_from_api_dict(data)
 
@@ -275,7 +292,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             f"/projects/{quote(project_id)}/documents/ingest",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             files={"file": (name, buf, ctype)},
         )
         return ingest_document_result_from_api_dict(data)
@@ -287,7 +304,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             f"/projects/{quote(project_id)}/documents/{sf}/reindex",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return ingest_document_result_from_api_dict(data)
 
@@ -295,7 +312,7 @@ class HttpBackendClient:
         self._t.request_json(
             "POST",
             f"/projects/{quote(project_id)}/retrieval-cache/invalidate",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={},
         )
 
@@ -320,7 +337,7 @@ class HttpBackendClient:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        data = self._t.request_json("POST", "/chat/ask", user_id=user_id, json_body=body)
+        data = self._t.request_json("POST", "/chat/ask", bearer_token=self._bearer(), json_body=body)
         if data.get("status") == "no_pipeline":
             return None
         return RAGResponse(
@@ -339,7 +356,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             f"/projects/{quote(project_id)}/retrieval-settings",
-            user_id=user_id,
+            bearer_token=self._bearer(),
         )
         return effective_retrieval_view_from_api_dict(data)
 
@@ -357,7 +374,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "PUT",
             f"/projects/{quote(cmd.project_id)}/retrieval-settings",
-            user_id=cmd.user_id,
+            bearer_token=self._bearer(),
             json_body=body,
         )
         view = effective_retrieval_view_from_api_dict(data)
@@ -387,7 +404,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/chat/pipeline/preview-summary-recall",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body=body,
         )
         if data.get("status") != "ok":
@@ -415,7 +432,7 @@ class HttpBackendClient:
             enable_query_rewrite_override=enable_query_rewrite_override,
             enable_hybrid_retrieval_override=enable_hybrid_retrieval_override,
         )
-        data = self._t.request_json("POST", "/chat/pipeline/inspect", user_id=user_id, json_body=body)
+        data = self._t.request_json("POST", "/chat/pipeline/inspect", bearer_token=self._bearer(), json_body=body)
         if data.get("status") != "ok":
             return None
         pl = data.get("pipeline")
@@ -432,7 +449,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/chat/retrieval/compare",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "questions": questions,
@@ -459,7 +476,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/evaluation/manual",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "question": question,
@@ -483,7 +500,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/evaluation/dataset/run",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "enable_query_rewrite": enable_query_rewrite,
@@ -517,7 +534,7 @@ class HttpBackendClient:
                 "result": result.to_dict(),
                 "generated_at": ga,
             },
-            send_user_header=False,
+            send_authorization=False,
         )
         return benchmark_export_artifacts_from_api_dict(data)
 
@@ -534,7 +551,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/evaluation/dataset/entries",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "question": question,
@@ -549,7 +566,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             "/evaluation/dataset/entries",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             params={"project_id": project_id},
         )
         return [qa_dataset_entry_from_api_dict(e) for e in (data.get("entries") or [])]
@@ -568,7 +585,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "PUT",
             f"/evaluation/dataset/entries/{entry_id}",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "question": question,
@@ -589,7 +606,7 @@ class HttpBackendClient:
         self._t.request_json(
             "DELETE",
             f"/evaluation/dataset/entries/{entry_id}",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             params={"project_id": project_id},
         )
         return True
@@ -606,7 +623,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "POST",
             "/evaluation/dataset/generate",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             json_body={
                 "project_id": project_id,
                 "num_questions": num_questions,
@@ -635,7 +652,7 @@ class HttpBackendClient:
         data = self._t.request_json(
             "GET",
             "/evaluation/retrieval/logs",
-            user_id=user_id,
+            bearer_token=self._bearer(),
             params=params,
         )
         return list(data.get("entries") or [])

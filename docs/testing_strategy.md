@@ -39,7 +39,7 @@ Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/archi
 ## What architecture tests do *not* prove
 
 - Full absence of logical coupling.
-- Runtime security of **`X-User-Id`** (trust header model).
+- Runtime security of **JWT bearer** verification (`AuthenticationPort` / `JwtAuthenticationAdapter`) and **`RAGCRAFT_JWT_SECRET`** configuration in real deployments.
 
 Run full suite (from repo root, `PYTHONPATH` set):
 

@@ -1,4 +1,4 @@
-"""Low-level HTTP calls with explicit ``X-User-Id`` on every request."""
+"""Low-level HTTP calls with ``Authorization: Bearer`` for authenticated routes."""
 
 from __future__ import annotations
 
@@ -13,8 +13,9 @@ from src.frontend_gateway.http_error_map import raise_for_api_response
 
 class HttpTransport:
     """
-    ``user_id`` is sent as ``X-User-Id`` on **every** request (including routes that also embed
-    ``user_id`` in the JSON body) so the API sees a single explicit workspace identity header.
+    Authenticated calls send ``Authorization: Bearer <access_token>`` (JWT from ``/auth/login`` or
+    ``/auth/register``). The token carries the workspace ``user_id``; callers must not spoof identity
+    via separate headers.
     """
 
     __slots__ = ("_client", "_base")
@@ -47,24 +48,24 @@ class HttpTransport:
         method: str,
         path: str,
         *,
-        user_id: str = "",
+        bearer_token: str = "",
         json_body: Any | None = None,
         params: dict[str, Any] | None = None,
         files: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
-        send_user_header: bool = True,
+        send_authorization: bool = True,
     ) -> Any:
         path = path if path.startswith("/") else f"/{path}"
         headers: dict[str, str] = {}
-        if send_user_header:
-            uid = str(user_id).strip()
-            if not uid:
+        if send_authorization:
+            tok = str(bearer_token).strip()
+            if not tok:
                 raise BackendHttpError(
-                    "X-User-Id is required for this call but user_id was empty.",
+                    "Bearer access token is required for this call but none was provided.",
                     status_code=None,
                     payload=None,
                 )
-            headers["X-User-Id"] = uid
+            headers["Authorization"] = f"Bearer {tok}"
         try:
             req_kw: dict[str, Any] = {
                 "headers": headers,

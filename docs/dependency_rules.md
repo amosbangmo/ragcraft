@@ -15,7 +15,7 @@ pytest tests/architecture -q
 | **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
 | **Infrastructure adapters** | **Domain** always; **`src.application`** only where the codebase explicitly allows (see below) |
 | **Composition** | Domain ports, infrastructure adapters, application use cases for typing/wiring; **not** `src.frontend_gateway` |
-| **`apps/api`** | FastAPI, `src.composition`, `src.application` (types + e.g. **`frontend_support`** transcript, **`AuthenticatedPrincipal`**, auth/user use-case commands), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
+| **`apps/api`** | FastAPI, `src.composition`, `src.application` (types + e.g. **`frontend_support`** transcript, **`AuthenticatedPrincipal`**, **`AuthenticationPort`** resolved from the container, auth/user use-case commands), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
 | **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
 | **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
 

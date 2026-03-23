@@ -4,7 +4,7 @@
 
 | Entry | Mechanism |
 |-------|-----------|
-| **HTTP chat** | `apps/api/routers/chat.py` → `AskQuestionUseCase` via `apps/api/dependencies.py` |
+| **HTTP chat** | `apps/api/routers/chat.py` → `AskQuestionUseCase` via `apps/api/dependencies.py` (scoped routes require **`Authorization: Bearer`** → **`AuthenticatedPrincipal`**) |
 | **In-process UI** | `src/frontend_gateway/in_process.py` → `container.chat_ask_question_use_case.execute(...)` |
 | **Pipeline build only** | `BuildRagPipelineUseCase` (inspect/compare/eval paths) |
 | **Inspect pipeline** | `InspectRagPipelineUseCase` — depends on **`RetrievalPort`**; composition injects the same **`BuildRagPipelineUseCase`** instance and inspect calls **`execute(..., emit_query_log=False)`** |

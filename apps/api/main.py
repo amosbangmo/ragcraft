@@ -23,8 +23,9 @@ from apps.api.routers import auth, chat, evaluation, projects, system, users
 _API_DESCRIPTION = """\
 RAGCraft HTTP API for workspaces, RAG chat, evaluation flows, and user profile data.
 
-**Identity:** send header ``X-User-Id`` on requests that touch user-scoped data (projects, chat,
-evaluation, ``/users/me``). ``GET /health`` and ``GET /version`` do not require it.
+**Identity:** obtain a JWT from ``POST /auth/login`` or ``/auth/register``, then send
+``Authorization: Bearer <access_token>`` on user-scoped routes (projects, chat, evaluation,
+``/users/me``). ``GET /health`` and ``GET /version`` are public.
 
 **Errors:** JSON error bodies use a stable envelope — ``detail``, ``message``, ``error_type``,
 ``code``, ``category`` — see ``CanonicalApiError`` in this schema and ``apps.api.error_payload``.
@@ -54,11 +55,11 @@ def create_app() -> FastAPI:
             },
             {
                 "name": "users",
-                "description": "Profile and account APIs keyed by ``X-User-Id`` (SQLite-backed).",
+                "description": "Profile and account APIs (SQLite-backed); require Bearer JWT.",
             },
             {
                 "name": "auth",
-                "description": "Login and registration (no ``X-User-Id``; client stores returned user id).",
+                "description": "Login and registration; returns JWT ``access_token`` plus profile.",
             },
             {"name": "system", "description": "Liveness and version metadata (no auth header)."},
         ],

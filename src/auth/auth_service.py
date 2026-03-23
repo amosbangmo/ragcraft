@@ -25,6 +25,7 @@ class AuthService:
     SESSION_USER_ID_KEY = "user_id"
     SESSION_DISPLAY_NAME_KEY = "display_name"
     SESSION_AVATAR_KEY = "avatar_path"
+    SESSION_ACCESS_TOKEN_KEY = "access_token"
 
     def __init__(
         self,

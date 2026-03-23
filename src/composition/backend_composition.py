@@ -39,6 +39,8 @@ from src.infrastructure.adapters.qa_dataset.qa_dataset_service import QADatasetS
 from src.infrastructure.adapters.query_logging.query_log_service import QueryLogService
 from src.infrastructure.adapters.rag.reranking_service import RerankingService
 from src.infrastructure.adapters.rag.retrieval_settings_service import RetrievalSettingsService
+from src.infrastructure.adapters.auth.jwt_auth_settings import JwtAuthSettings
+from src.infrastructure.adapters.auth.jwt_authentication_adapter import JwtAuthenticationAdapter
 
 if TYPE_CHECKING:
     from src.infrastructure.adapters.document.ingestion_service import IngestionService
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
 class BackendComposition:
     """Immutable graph of technical dependencies for one process (API or Streamlit)."""
 
+    bearer_token_auth: JwtAuthenticationAdapter
     query_log_service: QueryLogService
     password_hasher: PasswordHasherPort
     avatar_storage: AvatarStoragePort
@@ -83,6 +86,9 @@ def build_backend_composition(
 
     init_app_db()
 
+    jwt_settings = JwtAuthSettings.from_env()
+    bearer_token_auth = JwtAuthenticationAdapter(jwt_settings)
+
     password_hasher = BcryptPasswordHasher()
     avatar_storage = FileAvatarStorage()
     user_repository = SqliteUserRepository()
@@ -95,6 +101,7 @@ def build_backend_composition(
     )
 
     return BackendComposition(
+        bearer_token_auth=bearer_token_auth,
         query_log_service=query_log_service,
         password_hasher=password_hasher,
         avatar_storage=avatar_storage,

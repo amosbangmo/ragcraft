@@ -1,7 +1,7 @@
 """
 FastAPI route coverage with dependency overrides (no full ``build_backend`` / unstructured).
 
-Exercises happy paths and representative failures: missing identity header, validation,
+Exercises happy paths and representative failures: missing bearer token, validation,
 :class:`~src.core.exceptions.RAGCraftError` mapping, and :class:`ValueError` / :class:`FileNotFoundError`.
 """
 
@@ -40,10 +40,11 @@ from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
 from src.domain.project import Project
 from src.domain.rag_response import RAGResponse
+from tests.apps_api.bearer_auth import bearer_headers
 
 
 def _uid_header(user_id: str = "test-user-api") -> dict[str, str]:
-    return {"X-User-Id": user_id}
+    return bearer_headers(user_id=user_id)
 
 
 class _FakeProjectService:
@@ -113,12 +114,12 @@ def test_version_returns_service_and_version_strings(client: TestClient) -> None
     assert isinstance(body.get("version"), str) and body["version"]
 
 
-def test_projects_missing_x_user_id_returns_canonical_400(client: TestClient) -> None:
+def test_projects_missing_bearer_returns_canonical_401(client: TestClient) -> None:
     r = client.get("/projects")
-    assert r.status_code == 400
+    assert r.status_code == 401
     err = r.json()
-    assert err.get("code") == "http_400"
-    assert err.get("category") == "transport"
+    assert err.get("code") == "authentication_required"
+    assert err.get("category") == "application"
 
 
 def test_projects_list_and_create_happy_path(override_app: tuple[TestClient, FastAPI]) -> None:
@@ -192,11 +193,11 @@ def test_project_documents_happy_path(override_app: tuple[TestClient, FastAPI]) 
     assert r.json() == {"documents": ["a.pdf", "b.pdf"]}
 
 
-def test_project_documents_missing_header_400(override_app: tuple[TestClient, FastAPI]) -> None:
+def test_project_documents_missing_bearer_401(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
     app.dependency_overrides[get_list_project_documents_use_case] = lambda: _CallableUseCase(lambda *a, **k: [])
     r = tc.get("/projects/demo/documents")
-    assert r.status_code == 400
+    assert r.status_code == 401
 
 
 def test_document_ingest_too_large_returns_413(
@@ -470,13 +471,13 @@ def test_evaluation_manual_happy_path(override_app: tuple[TestClient, FastAPI]) 
     assert data["confidence"] == 0.9
 
 
-def test_evaluation_manual_missing_header_400(override_app: tuple[TestClient, FastAPI]) -> None:
+def test_evaluation_manual_missing_bearer_401(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
     app.dependency_overrides[get_run_manual_evaluation_use_case] = lambda: _CallableUseCase(
         lambda *a, **k: ManualEvaluationResult(question="q", answer="a", expected_answer=None, confidence=0.0)
     )
     r = tc.post("/evaluation/manual", json={"project_id": "demo", "question": "Q"})
-    assert r.status_code == 400
+    assert r.status_code == 401
 
 
 def test_evaluation_manual_llm_failure_502(override_app: tuple[TestClient, FastAPI]) -> None:

@@ -19,7 +19,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header
 
 from src.application.use_cases.chat.ask_question import AskQuestionUseCase
 from src.application.use_cases.retrieval.compare_retrieval_modes import CompareRetrievalModesUseCase
@@ -61,7 +61,13 @@ from src.application.use_cases.settings.get_effective_retrieval_settings import 
 from src.application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
+from src.application.auth.access_token_issuer_port import AccessTokenIssuerPort
 from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.application.auth.authentication_port import AuthenticationPort
+from src.core.exceptions import (
+    AuthenticationRequiredError,
+    MalformedAuthenticationHeaderError,
+)
 from src.application.use_cases.auth.login_user import LoginUserUseCase
 from src.application.use_cases.auth.register_user import RegisterUserUseCase
 from src.application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
@@ -89,30 +95,43 @@ def get_backend_application_container() -> BackendApplicationContainer:
 BackendContainerDep = Annotated[BackendApplicationContainer, Depends(get_backend_application_container)]
 
 
-def _raw_x_user_id_header(
-    x_user_id: Annotated[
-        str | None,
-        Header(
-            alias="X-User-Id",
-            description=(
-                "Required workspace user id. Extension point: resolve a verified "
-                ":class:`~src.application.auth.authenticated_principal.AuthenticatedPrincipal` "
-                "from OAuth/JWT without changing route paths."
-            ),
-        ),
-    ] = None,
+def _bearer_token_credentials(
+    authorization: Annotated[str | None, Header(alias="Authorization", convert_underscores=False)] = None,
 ) -> str:
-    if x_user_id is None or not str(x_user_id).strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Missing or empty X-User-Id header.",
+    if authorization is None or not str(authorization).strip():
+        raise AuthenticationRequiredError(
+            "missing authorization bearer",
+            user_message="Authentication required. Send Authorization: Bearer <token>.",
         )
-    return str(x_user_id).strip()
+    parts = str(authorization).strip().split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise MalformedAuthenticationHeaderError(
+            "authorization scheme is not bearer",
+            user_message="Authorization must use the Bearer scheme.",
+        )
+    token = parts[1].strip()
+    if not token:
+        raise MalformedAuthenticationHeaderError(
+            "empty bearer token",
+            user_message="Bearer token is missing or empty.",
+        )
+    return token
 
 
-def get_authenticated_principal(raw_user_id: Annotated[str, Depends(_raw_x_user_id_header)]) -> AuthenticatedPrincipal:
-    """Trusted application identity for routes that require ``X-User-Id``."""
-    return AuthenticatedPrincipal(user_id=raw_user_id.strip(), auth_method="x_user_id_header", is_authenticated=True)
+def get_authentication_port(container: BackendContainerDep) -> AuthenticationPort:
+    return container.authentication
+
+
+def get_authenticated_principal(
+    raw_token: Annotated[str, Depends(_bearer_token_credentials)],
+    authentication: Annotated[AuthenticationPort, Depends(get_authentication_port)],
+) -> AuthenticatedPrincipal:
+    """Verified workspace identity from ``Authorization: Bearer`` (validated via :class:`AuthenticationPort`)."""
+    return authentication.authenticate_bearer_token(raw_token)
+
+
+def get_access_token_issuer(container: BackendContainerDep) -> AccessTokenIssuerPort:
+    return container.access_token_issuer
 
 
 def get_list_projects_use_case(container: BackendContainerDep) -> ListProjectsUseCase:

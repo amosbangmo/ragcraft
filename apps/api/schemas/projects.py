@@ -1,7 +1,7 @@
 """
 Request and response models for project and document management.
 
-Identity is supplied via the ``X-User-Id`` header (see router dependencies); request bodies stay minimal.
+Identity is supplied via ``Authorization: Bearer`` (see router dependencies); request bodies stay minimal.
 """
 
 from __future__ import annotations

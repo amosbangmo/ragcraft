@@ -70,6 +70,19 @@ def router_files() -> list[Path]:
     return iter_python_files(REPO_ROOT / "apps" / "api" / "routers")
 
 
+def test_application_layer_imports_no_jwt_libraries(application_files: list[Path]) -> None:
+    violations: list[str] = []
+    for path in application_files:
+        text = path.read_text(encoding="utf-8")
+        for token in ("import jwt", "from jwt", "PyJWT"):
+            if token in text:
+                violations.append(f"{path.relative_to(REPO_ROOT)}: contains {token!r}")
+    assert not violations, (
+        "Application layer must not import JWT libraries; keep token crypto in infrastructure adapters.\n"
+        + "\n".join(violations)
+    )
+
+
 def test_api_routers_avoid_persistence_and_vector_internals(router_files: list[Path]) -> None:
     forbidden = (
         "src.infrastructure.persistence",

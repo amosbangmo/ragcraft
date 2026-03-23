@@ -10,6 +10,7 @@ jobs:
 
     env:
       OPENAI_API_KEY: ci-test-key
+      RAGCRAFT_JWT_SECRET: ci-jwt-secret-at-least-32-characters-long!!
 
     steps:
       - name: Checkout

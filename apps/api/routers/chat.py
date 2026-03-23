@@ -66,7 +66,7 @@ def post_chat_ask(
     """
     Run end-to-end RAG for one turn.
 
-    Send ``X-User-Id`` and a body with ``project_id`` and ``question`` (see schema example).
+    Send ``Authorization: Bearer`` and a body with ``project_id`` and ``question`` (see schema example).
     """
     project = resolve_project.execute(principal.user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None

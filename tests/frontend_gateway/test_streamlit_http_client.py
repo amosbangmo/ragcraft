@@ -71,6 +71,7 @@ def test_http_backend_client_projects_list_and_create() -> None:
         connect_timeout=1.0,
         read_timeout=5.0,
         transport=_make_mock_transport(),
+        access_token_supplier=lambda: "test-bearer-token",
     )
     try:
         assert client.list_projects("u1") == ["demo", "other"]
@@ -83,6 +84,7 @@ def test_http_backend_client_chat_ask_returns_rag_response() -> None:
     client = HttpBackendClient(
         base_url="http://test.local",
         transport=_make_mock_transport(),
+        access_token_supplier=lambda: "test-bearer-token",
     )
     try:
         r = client.ask_question("u1", "demo", "hi")
@@ -97,6 +99,7 @@ def test_http_backend_client_inspect_retrieval_returns_dict() -> None:
     client = HttpBackendClient(
         base_url="http://test.local",
         transport=_make_mock_transport(),
+        access_token_supplier=lambda: "test-bearer-token",
     )
     try:
         pl = client.inspect_retrieval("u1", "demo", "q")
@@ -110,6 +113,7 @@ def test_http_backend_client_evaluate_gold_qa_dataset() -> None:
     client = HttpBackendClient(
         base_url="http://test.local",
         transport=_make_mock_transport(),
+        access_token_supplier=lambda: "test-bearer-token",
     )
     try:
         out = client.evaluate_gold_qa_dataset(

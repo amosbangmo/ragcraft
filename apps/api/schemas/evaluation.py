@@ -1,7 +1,7 @@
 """
 Evaluation and QA dataset API models.
 
-``X-User-Id`` supplies workspace identity (see :func:`apps.api.dependencies.get_authenticated_principal`).
+Bearer JWT supplies workspace identity (see :func:`apps.api.dependencies.get_authenticated_principal`).
 ``project_id`` is passed in the body or as a query parameter per route.
 """
 
