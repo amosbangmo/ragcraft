@@ -7,7 +7,7 @@ Implements :class:`domain.projects.documents.asset_repository_port.AssetReposito
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from infrastructure.persistence.db import get_connection
 
@@ -58,7 +58,7 @@ class SQLiteAssetRepository:
                 raw_content,
                 summary,
                 json.dumps(metadata or {}),
-                datetime.utcnow().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
             ),
         )
         conn.commit()

@@ -300,11 +300,38 @@ def step_cypress() -> None:
             ======================================
 
             Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
-            Spec: cypress/e2e/robustness_failure.cy.js (422/401, rapport failures benchmark vide)
+            Spec: cypress/e2e/robustness_failure.cy.js
+            Classes d’échec couvertes (API + assertions navigateur où applicable):
+            - 401 / session ou token manquant
+            - 422 validation (corps de requête invalide)
+            - Réponses d’erreur structurées (champ detail/message)
+            - Benchmark / export vide ou état « no rows »
+            - Récupération: enchaînement après erreur (requêtes suivantes valides)
             JUnit dédié: robustness_failure_handling_junit.xml (extrait de cypress_junit.xml)
             Suite complète: cypress_junit.xml
-            Tests unitaires historiques: api/tests/api/test_ingestion_robustness.py,
+            Tests unitaires: api/tests/api/test_ingestion_robustness.py,
             api/tests/infra/test_failure_analysis_service.py
+            """
+        ),
+    )
+    write_text(
+        "E2E_UI_JOURNEY_MAP.txt",
+        textwrap.dedent(
+            f"""\
+            Cypress — mapping specs → parcours utilisateur
+            ===============================================
+
+            Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
+
+            - cypress/e2e/public_surface.cy.js — Page FastAPI /docs dans le navigateur ; GET /health (JSON).
+            - cypress/e2e/workspace_journey.cy.js — Parcours HTTP (même routes que le client Streamlit) : register, login, projet, ingest multipart, ask + sources, réglages retrieval, évaluation manuelle, erreurs structurées.
+            - cypress/e2e/rag_invariants.cy.js — Invariants RAG côté API (inspect/ask, latences, modes).
+            - cypress/e2e/robustness_failure.cy.js — 401/422, benchmark vide, chemins d’erreur API.
+            - cypress/e2e/streamlit/login_shell.cy.js — UI Streamlit réelle : /login dans le navigateur, iframe + data-testid ragcraft-login-shell.
+            - cypress/e2e/streamlit/authenticated_landing.cy.js — Saisie login dans les widgets Streamlit, puis shell authentifié (data-testid ragcraft-app-shell ou navigation).
+
+            Artefacts: cypress_junit.xml, artifacts/cypress_screenshots/, artifacts/cypress_videos/
+            Détails périmètre: docs/cypress_scope.md
             """
         ),
     )
@@ -316,10 +343,11 @@ def step_cypress() -> None:
             =================================
 
             Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
-            Specs: cypress/e2e/*.cy.js (public_surface, workspace_journey, rag_invariants, robustness_failure)
+            Specs: cypress/e2e/**/*.cy.js (voir E2E_UI_JOURNEY_MAP.txt)
             Logs: cypress_run.log
             JUnit agrégé: cypress_junit.xml
             Extraits: rag_invariants_junit.xml, robustness_failure_handling_junit.xml
+            Vidéos (succès/échec selon config): artifacts/cypress_videos/
             """
         ),
     )
@@ -360,8 +388,19 @@ print(f"mini_benchmark_ask_question_mocked: {runs} runs, total_ms={elapsed_ms:.3
 
             {line}
 
-            Le test pytest api/tests/appli/test_performance_smoke.py borne un seul appel
-            mocké à < 500 ms (smoke).
+            Ce que mesure ce script
+            -----------------------
+            - Boucle Python pure: AskQuestionUseCase avec retrieval/generation mockés (MagicMock).
+            - Aucun réseau, pas de SQLite/FAISS, pas d’appel LLM réel.
+
+            Ce que ce n’est pas
+            --------------------
+            - Ce n’est pas un benchmark de production ni un SLO utilisateur.
+
+            Seuil / usage
+            -------------
+            - Smoke pytest: api/tests/appli/test_performance_smoke.py (< 500 ms par appel mocké).
+            - Les chiffres ci-dessus servent de référence locale uniquement; pas de gate CI sur ce fichier seul.
 
             Les durées de suite complète dépendent de la machine; voir sortie pytest
             pour les étapes ci-dessous.

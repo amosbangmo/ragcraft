@@ -7,7 +7,7 @@ Implements :class:`domain.evaluation.qa_dataset_repository_port.QADatasetReposit
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from infrastructure.persistence.db import get_connection
 
@@ -45,7 +45,7 @@ class SQLiteQADatasetRepository:
                 expected_answer,
                 json.dumps(expected_doc_ids or []),
                 json.dumps(expected_sources or []),
-                datetime.utcnow().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 None,
             ),
         )
@@ -171,7 +171,7 @@ class SQLiteQADatasetRepository:
                 expected_answer,
                 json.dumps(expected_doc_ids or []),
                 json.dumps(expected_sources or []),
-                datetime.utcnow().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 entry_id,
                 user_id,
                 project_id,

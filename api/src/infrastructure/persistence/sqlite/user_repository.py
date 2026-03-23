@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from infrastructure.persistence.db import get_connection
 
@@ -37,7 +37,7 @@ class SqliteUserRepository:
 
     def create_user(self, username: str, password_hash: str, display_name: str):
         user_id = str(uuid.uuid4())[:8]
-        created_at = datetime.utcnow().isoformat()
+        created_at = datetime.now(timezone.utc).isoformat()
 
         conn = get_connection()
         conn.execute(
