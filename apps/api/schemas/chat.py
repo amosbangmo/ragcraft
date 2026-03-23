@@ -43,7 +43,7 @@ class ChatPipelineRequestBase(BaseModel):
     Shared JSON body for chat and pipeline calls.
 
     The authenticated user is taken from the ``X-User-Id`` header (see
-    :func:`apps.api.dependencies.get_request_user_id`); do not send ``user_id`` in the body.
+    :func:`apps.api.dependencies.get_authenticated_principal`); do not send ``user_id`` in the body.
     """
 
     model_config = ConfigDict(

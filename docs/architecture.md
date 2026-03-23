@@ -60,7 +60,11 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`.
 
-**Rule:** The whole **`apps/api`** package must not import **`src.infrastructure.*`** (including **`dependencies.py`**); routers resolve **use cases** via **`Depends`** → **`BackendApplicationContainer`**. **`MemoryChatTranscript`** for the HTTP worker comes from **`src.application.frontend_support.memory_chat_transcript`**.
+**Identity:** Routes that require a logged-in workspace user depend on **`get_authenticated_principal`**, which returns a framework-agnostic **`AuthenticatedPrincipal`** (today from the trusted **`X-User-Id`** header). Handlers pass **`principal.user_id`** into use cases; they do not treat a raw header string as the application boundary.
+
+**Auth and profile:** **`/auth/login`** and **`/auth/register`** call **`LoginUserUseCase`** / **`RegisterUserUseCase`**. **`/users/*`** routes call dedicated user/account use cases. Password hashing and avatar filesystem I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**, implemented by **`BcryptPasswordHasher`** and **`FileAvatarStorage`** (under **`src/infrastructure/adapters/auth/`** and **`…/filesystem/`**) and wired in **`build_backend_composition`**.
+
+**Rule:** The whole **`apps/api`** package must not import **`src.infrastructure.*`** (including **`dependencies.py`**); routers resolve **use cases** via **`Depends`** → **`BackendApplicationContainer`** (and per-request use-case factories that take **`get_user_repository`** overrides for tests). **`MemoryChatTranscript`** for the HTTP worker comes from **`src.application.frontend_support.memory_chat_transcript`**.
 
 ## `src/frontend_gateway/`
 
@@ -70,7 +74,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 ## Other roots
 
-- **`src/auth/`** — authentication helpers shared by API and Streamlit.
+- **`src/auth/`** — password utilities and **`AuthService`** (Streamlit session); **`auth_credentials`** delegates to application login/register use cases so credential rules stay in one place.
 - **`src/core/`** — config, paths, shared errors.
 - **`src/ui/`**, **`pages/`**, **`streamlit_app.py`** — Streamlit UI; must use `BackendClient`, not domain/infrastructure/composition directly (enforced by tests).
 

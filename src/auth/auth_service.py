@@ -9,6 +9,7 @@ from src.infrastructure.adapters.sqlite.user_repository import SqliteUserReposit
 from src.auth.auth_credentials import try_login, try_register
 from src.auth.password_utils import hash_password, verify_password
 from src.core.paths import get_data_root
+from src.domain.ports.password_hasher_port import PasswordHasherPort
 from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.infrastructure.persistence.db import init_app_db
 
@@ -25,9 +26,19 @@ class AuthService:
     SESSION_DISPLAY_NAME_KEY = "display_name"
     SESSION_AVATAR_KEY = "avatar_path"
 
-    def __init__(self, user_repository: UserRepositoryPort | None = None):
+    def __init__(
+        self,
+        user_repository: UserRepositoryPort | None = None,
+        *,
+        password_hasher: PasswordHasherPort | None = None,
+    ):
         init_app_db()
         self.user_repository: UserRepositoryPort = user_repository or SqliteUserRepository()
+        if password_hasher is None:
+            from src.infrastructure.adapters.auth.bcrypt_password_hasher import BcryptPasswordHasher
+
+            password_hasher = BcryptPasswordHasher()
+        self._password_hasher: PasswordHasherPort = password_hasher
 
     def _set_session(
         self,
@@ -77,6 +88,7 @@ class AuthService:
             password=password,
             confirm_password=confirm_password,
             display_name=display_name,
+            password_hasher=self._password_hasher,
         )
         if ok and user:
             self._set_session(
@@ -88,7 +100,12 @@ class AuthService:
         return ok, message
 
     def login(self, username: str, password: str) -> tuple[bool, str]:
-        ok, message, user = try_login(self.user_repository, username, password)
+        ok, message, user = try_login(
+            self.user_repository,
+            username,
+            password,
+            password_hasher=self._password_hasher,
+        )
         if ok and user:
             self._set_session(
                 username=user["username"],

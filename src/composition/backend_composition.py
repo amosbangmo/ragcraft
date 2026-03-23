@@ -22,8 +22,12 @@ from typing import TYPE_CHECKING
 
 from src.infrastructure.adapters.sqlite.project_settings_repository import SqliteProjectSettingsRepository
 from src.infrastructure.adapters.sqlite.user_repository import SqliteUserRepository
+from src.infrastructure.adapters.auth.bcrypt_password_hasher import BcryptPasswordHasher
+from src.infrastructure.adapters.filesystem.file_avatar_storage import FileAvatarStorage
 from src.auth.auth_service import AuthService
+from src.domain.ports.avatar_storage_port import AvatarStoragePort
 from src.domain.ports.chat_transcript_port import ChatTranscriptPort
+from src.domain.ports.password_hasher_port import PasswordHasherPort
 from src.domain.shared.project_settings_repository_port import ProjectSettingsRepositoryPort
 from src.infrastructure.persistence.db import init_app_db
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
@@ -46,6 +50,8 @@ class BackendComposition:
     """Immutable graph of technical dependencies for one process (API or Streamlit)."""
 
     query_log_service: QueryLogService
+    password_hasher: PasswordHasherPort
+    avatar_storage: AvatarStoragePort
     auth_service: AuthService
     project_service: ProjectService
     ingestion_service: IngestionService
@@ -77,6 +83,9 @@ def build_backend_composition(
 
     init_app_db()
 
+    password_hasher = BcryptPasswordHasher()
+    avatar_storage = FileAvatarStorage()
+    user_repository = SqliteUserRepository()
     query_log_service = QueryLogService()
     project_service = ProjectService()
     docstore_service = DocStoreService()
@@ -87,7 +96,9 @@ def build_backend_composition(
 
     return BackendComposition(
         query_log_service=query_log_service,
-        auth_service=AuthService(user_repository=SqliteUserRepository()),
+        password_hasher=password_hasher,
+        avatar_storage=avatar_storage,
+        auth_service=AuthService(user_repository=user_repository, password_hasher=password_hasher),
         project_service=project_service,
         ingestion_service=IngestionService(),
         vectorstore_service=VectorStoreService(),

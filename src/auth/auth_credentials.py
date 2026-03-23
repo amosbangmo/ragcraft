@@ -1,44 +1,40 @@
 """
-SQLite-backed login/register logic shared by :class:`~src.auth.auth_service.AuthService` and the HTTP API.
+SQLite-backed login/register logic shared by :class:`~src.auth.auth_service.AuthService` and tests.
 
-No Streamlit imports — safe for FastAPI routers and tests.
+HTTP routes use :class:`~src.application.use_cases.auth.login_user.LoginUserUseCase` instead of calling
+this module directly.
 """
 
 from __future__ import annotations
 
-import re
-
-from src.auth.password_utils import hash_password, verify_password
+from src.application.auth.dtos import LoginUserCommand, RegisterUserCommand
+from src.application.use_cases.auth.login_user import LoginUserUseCase
+from src.application.use_cases.auth.register_user import RegisterUserUseCase
+from src.core.exceptions import AuthCredentialsInvalidError, AuthValidationError, UsernameTakenError
+from src.domain.ports.password_hasher_port import PasswordHasherPort
 from src.domain.ports.user_repository_port import UserRepositoryPort
-
-
-def _session_payload_from_row(row) -> dict:
-    created = row["created_at"]
-    return {
-        "username": str(row["username"]),
-        "user_id": str(row["user_id"]),
-        "display_name": str(row["display_name"]),
-        "avatar_path": row["avatar_path"],
-        "created_at": str(created) if created is not None else None,
-    }
 
 
 def try_login(
     repo: UserRepositoryPort,
     username: str,
     password: str,
+    *,
+    password_hasher: PasswordHasherPort,
 ) -> tuple[bool, str, dict | None]:
-    username = username.strip().lower()
-    if not username or not password:
-        return False, "Please enter both username and password.", None
-
-    user = repo.get_by_username(username)
-    if not user:
-        return False, "Invalid username or password.", None
-    if not verify_password(password, user["password_hash"]):
-        return False, "Invalid username or password.", None
-
-    return True, "Login successful.", _session_payload_from_row(user)
+    uc = LoginUserUseCase(users=repo, password_hasher=password_hasher)
+    try:
+        result = uc.execute(LoginUserCommand(username=username, password=password))
+    except AuthCredentialsInvalidError as exc:
+        return False, exc.user_message, None
+    payload = {
+        "username": result.user.username,
+        "user_id": result.user.user_id,
+        "display_name": result.user.display_name,
+        "avatar_path": result.user.avatar_path,
+        "created_at": result.user.created_at,
+    }
+    return True, result.message, payload
 
 
 def try_register(
@@ -48,36 +44,27 @@ def try_register(
     password: str,
     confirm_password: str,
     display_name: str,
+    password_hasher: PasswordHasherPort,
 ) -> tuple[bool, str, dict | None]:
-    username = username.strip().lower()
-    display_name = display_name.strip()
-
-    if not username or not password or not confirm_password or not display_name:
-        return False, "All fields are required.", None
-
-    if not re.fullmatch(r"[a-z0-9._-]{3,30}", username):
-        return (
-            False,
-            "Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens.",
-            None,
+    uc = RegisterUserUseCase(users=repo, password_hasher=password_hasher)
+    try:
+        result = uc.execute(
+            RegisterUserCommand(
+                username=username,
+                password=password,
+                confirm_password=confirm_password,
+                display_name=display_name,
+            )
         )
-
-    if len(password) < 8:
-        return False, "Password must contain at least 8 characters.", None
-
-    if password != confirm_password:
-        return False, "Passwords do not match.", None
-
-    if repo.username_exists(username):
-        return False, "This username is already taken.", None
-
-    password_hash = hash_password(password)
-    repo.create_user(
-        username=username,
-        password_hash=password_hash,
-        display_name=display_name,
-    )
-    row = repo.get_by_username(username)
-    if not row:
-        return False, "Account could not be created.", None
-    return True, "Account created successfully.", _session_payload_from_row(row)
+    except UsernameTakenError as exc:
+        return False, exc.user_message, None
+    except AuthValidationError as exc:
+        return False, exc.user_message, None
+    payload = {
+        "username": result.user.username,
+        "user_id": result.user.user_id,
+        "display_name": result.user.display_name,
+        "avatar_path": result.user.avatar_path,
+        "created_at": result.user.created_at,
+    }
+    return True, result.message, payload

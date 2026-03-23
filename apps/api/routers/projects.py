@@ -23,7 +23,7 @@ from apps.api.dependencies import (
     get_list_project_documents_use_case,
     get_list_projects_use_case,
     get_reindex_document_use_case,
-    get_request_user_id,
+    get_authenticated_principal,
     get_resolve_project_use_case,
     get_update_project_retrieval_settings_use_case,
 )
@@ -79,6 +79,7 @@ from src.application.use_cases.projects.invalidate_project_chain_cache import (
 from src.application.use_cases.projects.list_document_assets_for_source import (
     ListDocumentAssetsForSourceUseCase,
 )
+from src.application.auth.authenticated_principal import AuthenticatedPrincipal
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -90,11 +91,11 @@ router = APIRouter(prefix="/projects", tags=["projects"])
     summary="List projects for a user",
 )
 def get_projects(
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[ListProjectsUseCase, Depends(get_list_projects_use_case)],
 ) -> ProjectListResponse:
     """Returns sorted project ids under ``users/{X-User-Id}/projects``."""
-    return ProjectListResponse(projects=use_case.execute(user_id))
+    return ProjectListResponse(projects=use_case.execute(principal.user_id))
 
 
 @router.post(
@@ -105,7 +106,7 @@ def get_projects(
 )
 def post_project(
     body: CreateProjectRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[CreateProjectUseCase, Depends(get_create_project_use_case)],
 ) -> CreateProjectResponse:
     """
@@ -114,7 +115,7 @@ def post_project(
     Example: ``POST /projects`` with header ``X-User-Id: alice`` and body
     ``{"project_id": "demo"}``.
     """
-    use_case.execute(user_id, body.project_id)
+    use_case.execute(principal.user_id, body.project_id)
     return CreateProjectResponse(project_id=body.project_id)
 
 
@@ -125,11 +126,11 @@ def post_project(
 )
 def get_project_documents(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[ListProjectDocumentsUseCase, Depends(get_list_project_documents_use_case)],
 ) -> ProjectDocumentsResponse:
     """Sorted filenames at the project root (not including ``faiss_index`` or ``logs.json``)."""
-    return ProjectDocumentsResponse(documents=use_case.execute(user_id, project_id))
+    return ProjectDocumentsResponse(documents=use_case.execute(principal.user_id, project_id))
 
 
 @router.get(
@@ -139,14 +140,14 @@ def get_project_documents(
 )
 def get_project_retrieval_settings(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
         GetEffectiveRetrievalSettingsUseCase, Depends(get_get_effective_retrieval_settings_use_case)
     ],
 ) -> ProjectRetrievalSettingsResponse:
     """Returns persisted preferences and merged :class:`~src.domain.retrieval_settings.RetrievalSettings` (as dict)."""
     view = use_case.execute(
-        GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+        GetEffectiveRetrievalSettingsQuery(user_id=principal.user_id, project_id=project_id)
     )
     wire = EffectiveRetrievalSettingsWirePayload.from_view(view)
     return ProjectRetrievalSettingsResponse.model_validate(wire.as_json_dict())
@@ -160,7 +161,7 @@ def get_project_retrieval_settings(
 def put_project_retrieval_settings(
     project_id: str,
     body: UpdateProjectRetrievalSettingsRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     update_uc: Annotated[
         UpdateProjectRetrievalSettingsUseCase, Depends(get_update_project_retrieval_settings_use_case)
     ],
@@ -171,7 +172,7 @@ def put_project_retrieval_settings(
     """Saves preset / advanced toggles then returns the same shape as GET."""
     update_uc.execute(
         UpdateProjectRetrievalSettingsCommand(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=project_id,
             retrieval_preset=body.retrieval_preset,
             retrieval_advanced=body.retrieval_advanced,
@@ -180,7 +181,7 @@ def put_project_retrieval_settings(
         )
     )
     view = get_uc.execute(
-        GetEffectiveRetrievalSettingsQuery(user_id=user_id, project_id=project_id)
+        GetEffectiveRetrievalSettingsQuery(user_id=principal.user_id, project_id=project_id)
     )
     wire = EffectiveRetrievalSettingsWirePayload.from_view(view)
     return ProjectRetrievalSettingsResponse.model_validate(wire.as_json_dict())
@@ -197,7 +198,7 @@ def put_project_retrieval_settings(
 )
 async def post_document_ingest(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[IngestUploadedFileUseCase, Depends(get_ingest_uploaded_file_use_case)],
     file: UploadFile = File(
@@ -215,7 +216,7 @@ async def post_document_ingest(
     The server reads the entire body into memory before calling the ingest use case.
     """
     buffered = await read_upload_for_ingestion(file)
-    project = resolve_project.execute(user_id, project_id)
+    project = resolve_project.execute(principal.user_id, project_id)
     result = use_case.execute(
         IngestUploadedFileCommand(project=project, uploaded_file=buffered)
     )
@@ -236,12 +237,12 @@ async def post_document_ingest(
 def post_document_reindex(
     project_id: str,
     source_file: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[ReindexDocumentUseCase, Depends(get_reindex_document_use_case)],
 ) -> IngestDocumentResponse:
     """Rebuild vectors and assets from the file already stored for this project (URL-encode ``source_file`` if needed)."""
-    project = resolve_project.execute(user_id, project_id)
+    project = resolve_project.execute(principal.user_id, project_id)
     result = use_case.execute(ReindexDocumentCommand(project=project, source_file=source_file))
     wire = IngestDocumentWirePayload.from_ingest_result(result)
     return IngestDocumentResponse.model_validate(wire.as_json_dict())
@@ -258,12 +259,12 @@ def post_document_reindex(
 def delete_project_document(
     project_id: str,
     source_file: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[DeleteDocumentUseCase, Depends(get_delete_document_use_case)],
 ) -> DeleteDocumentResponse:
     """Removes the project file, SQLite assets, FAISS vectors, and invalidates the chain cache."""
-    project = resolve_project.execute(user_id, project_id)
+    project = resolve_project.execute(principal.user_id, project_id)
     out = use_case.execute(DeleteDocumentCommand(project=project, source_file=source_file))
     return DeleteDocumentResponse(
         source_file=out.source_file,
@@ -280,10 +281,10 @@ def delete_project_document(
 )
 def get_project_summary(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
 ) -> ProjectSummaryResponse:
-    project = resolve_project.execute(user_id, project_id)
+    project = resolve_project.execute(principal.user_id, project_id)
     return ProjectSummaryResponse(
         user_id=project.user_id,
         project_id=project.project_id,
@@ -298,12 +299,12 @@ def get_project_summary(
 )
 def get_retrieval_preset_label(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
         GetProjectRetrievalPresetLabelUseCase, Depends(get_get_project_retrieval_preset_label_use_case)
     ],
 ) -> RetrievalPresetLabelResponse:
-    label = use_case.execute(user_id=user_id, project_id=project_id)
+    label = use_case.execute(user_id=principal.user_id, project_id=project_id)
     return RetrievalPresetLabelResponse(label=label)
 
 
@@ -314,14 +315,14 @@ def get_retrieval_preset_label(
 )
 def get_project_document_details(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     list_docs: Annotated[ListProjectDocumentsUseCase, Depends(get_list_project_documents_use_case)],
     details_uc: Annotated[
         GetProjectDocumentDetailsUseCase, Depends(get_get_project_document_details_use_case)
     ],
 ) -> ProjectDocumentDetailsResponse:
-    doc_names = list_docs.execute(user_id, project_id)
-    rows = details_uc.execute(user_id=user_id, project_id=project_id, document_names=doc_names)
+    doc_names = list_docs.execute(principal.user_id, project_id)
+    rows = details_uc.execute(user_id=principal.user_id, project_id=project_id, document_names=doc_names)
     details = []
     for row in rows:
         latest = row.get("latest_ingested_at")
@@ -349,12 +350,12 @@ def get_project_document_details(
 def get_document_assets(
     project_id: str,
     source_file: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
         ListDocumentAssetsForSourceUseCase, Depends(get_list_document_assets_for_source_use_case)
     ],
 ) -> DocumentAssetsResponse:
-    assets = use_case.execute(user_id=user_id, project_id=project_id, source_file=source_file)
+    assets = use_case.execute(user_id=principal.user_id, project_id=project_id, source_file=source_file)
     return DocumentAssetsResponse(assets=[document_asset_row_from_store(a) for a in assets])
 
 
@@ -365,10 +366,10 @@ def get_document_assets(
 )
 def post_invalidate_retrieval_cache(
     project_id: str,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
         InvalidateProjectChainCacheUseCase, Depends(get_invalidate_project_chain_cache_use_case)
     ],
 ) -> InvalidateCacheResponse:
-    use_case.execute(user_id=user_id, project_id=project_id)
+    use_case.execute(user_id=principal.user_id, project_id=project_id)
     return InvalidateCacheResponse(ok=True)

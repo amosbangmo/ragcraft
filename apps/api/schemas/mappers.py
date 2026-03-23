@@ -18,6 +18,19 @@ from apps.api.schemas.evaluation import (
     RetrievalQueryLogEntry,
 )
 from apps.api.schemas.projects import DocumentAssetRow, ProjectDocumentDetailItem
+from apps.api.schemas.users import UserMeResponse
+
+from src.application.auth.dtos import UserProfileSummary
+
+
+def user_profile_summary_to_me(user: UserProfileSummary) -> UserMeResponse:
+    return UserMeResponse(
+        username=user.username,
+        user_id=user.user_id,
+        display_name=user.display_name,
+        avatar_path=user.avatar_path,
+        created_at=user.created_at,
+    )
 
 
 def qa_dataset_entry_to_response(entry: QADatasetEntry) -> QaDatasetEntryResponse:

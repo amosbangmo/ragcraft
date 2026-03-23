@@ -86,6 +86,37 @@ class InfrastructureError(RAGCraftError):
     layer = "infrastructure"
 
 
+# --- Application: accounts & authentication ---
+
+
+class AuthCredentialsInvalidError(ApplicationError):
+    """Wrong password, unknown user, or missing credential fields at sign-in."""
+
+    default_status = 401
+    error_code = "auth_credentials_invalid"
+
+
+class UsernameTakenError(ApplicationError):
+    """Registration or profile update conflicts with an existing username."""
+
+    default_status = 409
+    error_code = "username_taken"
+
+
+class UserAccountNotFoundError(ApplicationError):
+    """No persisted user for the given id (stale session or bad header)."""
+
+    default_status = 404
+    error_code = "user_not_found"
+
+
+class AuthValidationError(ApplicationError):
+    """Recoverable client mistakes: empty fields, password mismatch, weak password, bad avatar input."""
+
+    default_status = 400
+    error_code = "auth_validation_failed"
+
+
 # --- Infrastructure: ingestion & multimodal ---
 
 

@@ -268,10 +268,11 @@ def test_post_avatar_rejects_bad_extension(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     r = tc.post(
         "/users/me/avatar",
         headers=_hdr(),
@@ -286,10 +287,11 @@ def test_post_avatar_rejects_mime_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     png = b"\x89PNG\r\n\x1a\n"
     r = tc.post(
         "/users/me/avatar",
@@ -305,10 +307,11 @@ def test_post_avatar_rejects_invalid_image_bytes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     r = tc.post(
         "/users/me/avatar",
         headers=_hdr(),
@@ -323,10 +326,11 @@ def test_post_avatar_rejects_oversize(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     app.dependency_overrides[get_user_repository] = lambda: FakeUserRepository(_sample_row())
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     prefix = b"\x89PNG\r\n\x1a\n"
     over = 2 * 1024 * 1024 - len(prefix) + 1
     raw = prefix + b"0" * over
@@ -344,11 +348,12 @@ def test_post_avatar_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     repo = FakeUserRepository(_sample_row())
     app.dependency_overrides[get_user_repository] = lambda: repo
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     r = tc.post(
         "/users/me/avatar",
         headers=_hdr(),
@@ -373,8 +378,6 @@ def test_delete_avatar_clears_db_and_file(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     profile = tmp_path / "users" / "u1" / "profile"
     profile.mkdir(parents=True)
     img = profile / "avatar.png"
@@ -382,7 +385,10 @@ def test_delete_avatar_clears_db_and_file(
     row = _sample_row(avatar_path=str(img.resolve()))
     repo = FakeUserRepository(row)
     app.dependency_overrides[get_user_repository] = lambda: repo
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     r = tc.delete("/users/me/avatar", headers=_hdr())
     assert r.status_code == 200
     assert repo.last_avatar_path is None
@@ -407,11 +413,12 @@ def test_delete_me_success(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     tc, app = users_app
-    import apps.api.routers.users as users_mod
-
     repo = FakeUserRepository(_sample_row())
     app.dependency_overrides[get_user_repository] = lambda: repo
-    monkeypatch.setattr(users_mod, "DATA_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "src.infrastructure.adapters.filesystem.file_avatar_storage.get_data_root",
+        lambda: tmp_path,
+    )
     root = tmp_path / "users" / "u1"
     root.mkdir(parents=True)
     (root / "marker.txt").write_text("x")

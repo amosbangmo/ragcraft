@@ -61,6 +61,15 @@ from src.application.use_cases.settings.get_effective_retrieval_settings import 
 from src.application.use_cases.settings.update_project_retrieval_settings import (
     UpdateProjectRetrievalSettingsUseCase,
 )
+from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.application.use_cases.auth.login_user import LoginUserUseCase
+from src.application.use_cases.auth.register_user import RegisterUserUseCase
+from src.application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
+from src.application.use_cases.users.delete_user_account import DeleteUserAccountUseCase
+from src.application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
+from src.application.use_cases.users.remove_user_avatar import RemoveUserAvatarUseCase
+from src.application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
+from src.application.use_cases.users.upload_user_avatar import UploadUserAvatarUseCase
 from src.domain.ports.user_repository_port import UserRepositoryPort
 from src.composition.application_container import BackendApplicationContainer
 
@@ -80,13 +89,14 @@ def get_backend_application_container() -> BackendApplicationContainer:
 BackendContainerDep = Annotated[BackendApplicationContainer, Depends(get_backend_application_container)]
 
 
-def get_request_user_id(
+def _raw_x_user_id_header(
     x_user_id: Annotated[
         str | None,
         Header(
             alias="X-User-Id",
             description=(
-                "Required workspace user id. Extension point: replace with a verified principal "
+                "Required workspace user id. Extension point: resolve a verified "
+                ":class:`~src.application.auth.authenticated_principal.AuthenticatedPrincipal` "
                 "from OAuth/JWT without changing route paths."
             ),
         ),
@@ -98,6 +108,11 @@ def get_request_user_id(
             detail="Missing or empty X-User-Id header.",
         )
     return str(x_user_id).strip()
+
+
+def get_authenticated_principal(raw_user_id: Annotated[str, Depends(_raw_x_user_id_header)]) -> AuthenticatedPrincipal:
+    """Trusted application identity for routes that require ``X-User-Id``."""
+    return AuthenticatedPrincipal(user_id=raw_user_id.strip(), auth_method="x_user_id_header", is_authenticated=True)
 
 
 def get_list_projects_use_case(container: BackendContainerDep) -> ListProjectsUseCase:
@@ -226,8 +241,66 @@ def get_delete_document_use_case(container: BackendContainerDep) -> DeleteDocume
 
 def get_user_repository(container: BackendContainerDep) -> UserRepositoryPort:
     """
-    User persistence for auth routes (same instance as :class:`~src.auth.auth_service.AuthService`).
+    User persistence for auth and profile routes (same instance as
+    :class:`~src.auth.auth_service.AuthService` on the default graph).
 
     Resolved from the composition root so FastAPI does not import concrete SQLite adapters.
     """
     return container.backend.auth_service.user_repository
+
+
+UserRepositoryDep = Annotated[UserRepositoryPort, Depends(get_user_repository)]
+
+
+def get_login_user_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> LoginUserUseCase:
+    return LoginUserUseCase(users=repo, password_hasher=container.backend.password_hasher)
+
+
+def get_register_user_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> RegisterUserUseCase:
+    return RegisterUserUseCase(users=repo, password_hasher=container.backend.password_hasher)
+
+
+def get_get_current_user_profile_use_case(repo: UserRepositoryDep) -> GetCurrentUserProfileUseCase:
+    return GetCurrentUserProfileUseCase(users=repo)
+
+
+def get_update_user_profile_use_case(repo: UserRepositoryDep) -> UpdateUserProfileUseCase:
+    return UpdateUserProfileUseCase(users=repo)
+
+
+def get_change_user_password_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> ChangeUserPasswordUseCase:
+    return ChangeUserPasswordUseCase(users=repo, password_hasher=container.backend.password_hasher)
+
+
+def get_upload_user_avatar_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> UploadUserAvatarUseCase:
+    return UploadUserAvatarUseCase(users=repo, avatar_storage=container.backend.avatar_storage)
+
+
+def get_remove_user_avatar_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> RemoveUserAvatarUseCase:
+    return RemoveUserAvatarUseCase(users=repo, avatar_storage=container.backend.avatar_storage)
+
+
+def get_delete_user_account_use_case(
+    repo: UserRepositoryDep,
+    container: BackendContainerDep,
+) -> DeleteUserAccountUseCase:
+    return DeleteUserAccountUseCase(
+        users=repo,
+        password_hasher=container.backend.password_hasher,
+        avatar_storage=container.backend.avatar_storage,
+    )

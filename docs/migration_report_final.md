@@ -50,7 +50,7 @@ This report is the **canonical end-state** summary after the migration hardening
 - **Evaluation wiring** — **`EvaluationWiringParts`**, **`default_evaluation_wiring_parts()`**, **`build_evaluation_service(parts)`**; **`RagInspectAnswerRun`**-only **`pipeline_runner`** contract in **`BenchmarkExecutionUseCase`**.
 - **Composition root** — explicit **`chat_transcript`** and **`backend`** parameters; RAG subgraph construction centralized (**`build_rag_retrieval_subgraph`** always builds **`AnswerGenerationService`** internally).
 - **Multimodal hints** — orchestration-adjacent logic in **`src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
-- **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters.
+- **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
 
 ---
@@ -81,7 +81,7 @@ This report is the **canonical end-state** summary after the migration hardening
 | **Two `MemoryChatTranscript` modules** | Application copy satisfies **`apps/api`** layer scans; infra copy remains for adapter-adjacent tests and optional wiring |
 | **`ManualEvaluationService.evaluate_question`** | Overlaps eval orchestration with **`rag_pipeline_orchestration`**; **product/DX** consolidation optional |
 | **`import_legacy_file_logs`** on **`QueryLogService`** | One-off migration utility |
-| **`X-User-Id` trust header** | **Security / product** concern, not layer completeness |
+| **`X-User-Id` trust header** | **Security / product** concern — transport still trusts the header, but the API boundary is now an **`AuthenticatedPrincipal`**, not a bare string |
 | Architecture **line-count ratchets** in `test_orchestration_boundaries.py` | Prevents silent growth of coordinator modules |
 
 ---
@@ -90,7 +90,7 @@ This report is the **canonical end-state** summary after the migration hardening
 
 These do **not** invalidate the migration but are worth tracking:
 
-- **AuthN/AuthZ:** Header-based **`X-User-Id`** is not a verified identity for hostile networks; replace with JWT/OAuth where needed.
+- **AuthN/AuthZ:** Header-based **`X-User-Id`** is not a verified identity for hostile networks; replace with JWT/OAuth where needed. The application layer now has **`TrustedTransportIdentityPort`** as an extension point and typed **`AuthenticatedPrincipal`** at the HTTP boundary.
 - **Operational drift:** Contributors may reintroduce **`src.infrastructure`** imports under **`apps/api`**; **`pytest tests/architecture/`** in CI on touched trees reduces regression risk.
 - **Duplicate eval paths:** Manual eval service vs use-case orchestration may diverge behavior over time unless consolidated.
 - **Third-party weight:** Heavy optional stacks (e.g. ingestion) can still complicate test envs; architecture tests are **import-level**, not full integration proof.
@@ -101,13 +101,15 @@ These do **not** invalidate the migration but are worth tracking:
 
 **For Clean Architecture boundaries and RAG orchestration ownership: yes.** Layers, guardrail tests, and docs describe the same dependency rules and flows.
 
+**Auth / users transport (closure):** The raw **`X-User-Id` → `str`** dependency has been replaced by **`get_authenticated_principal` → `AuthenticatedPrincipal`**. Login and registration are **`LoginUserUseCase`** and **`RegisterUserUseCase`** with explicit DTOs; **`/users/*`** routes delegate to user/account use cases only. Password hashing and avatar storage use **`PasswordHasherPort`** and **`AvatarStoragePort`** with bcrypt and **`FileAvatarStorage`** under **`src/infrastructure/adapters/filesystem/`**. Streamlit **`try_login` / `try_register`** delegate to the same use cases via **`auth_credentials`** so rules are not duplicated in routers.
+
 **Not claimed:** production security hardening, performance tuning, or elimination of every duplicate convenience API in evaluation — see **§6**.
 
 ---
 
 ## 8. Post-migration improvements (optional backlog)
 
-- **Security:** Verified principals instead of **`X-User-Id`** for browser clients.
+- **Security:** Implement **`TrustedTransportIdentityPort`** with JWT/OAuth and stop treating **`X-User-Id`** as trusted on public networks.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
 - **DX:** Deduplicate **`ManualEvaluationService.evaluate_question`** vs **`RunManualEvaluationUseCase`**; keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
 - **CI:** Run **`pytest tests/architecture/`** when `src/`, `apps/api`, `pages/`, or `src/ui/` change.

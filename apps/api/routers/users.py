@@ -7,14 +7,20 @@ SPA clients; interactive login/register may remain hosted outside this API until
 
 from __future__ import annotations
 
-import re
-import shutil
-from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, UploadFile
 
-from apps.api.dependencies import get_request_user_id, get_user_repository
+from apps.api.dependencies import (
+    get_authenticated_principal,
+    get_change_user_password_use_case,
+    get_delete_user_account_use_case,
+    get_get_current_user_profile_use_case,
+    get_remove_user_avatar_use_case,
+    get_update_user_profile_use_case,
+    get_upload_user_avatar_use_case,
+)
+from apps.api.schemas.mappers import user_profile_summary_to_me
 from apps.api.schemas.users import (
     DeleteAccountRequest,
     PasswordChangeRequest,
@@ -23,167 +29,107 @@ from apps.api.schemas.users import (
     SimpleStatusResponse,
     UserMeResponse,
 )
-from apps.api.user_avatar_io import (
-    avatar_suffix_from_upload_filename,
-    safe_remove_stored_avatar_file,
-    write_avatar_bytes,
+from src.application.auth.authenticated_principal import AuthenticatedPrincipal
+from src.application.auth.dtos import (
+    ChangeUserPasswordCommand,
+    DeleteUserAccountCommand,
+    GetUserProfileCommand,
+    RemoveUserAvatarCommand,
+    UpdateUserProfileCommand,
+    UploadUserAvatarCommand,
 )
-from src.auth.password_utils import hash_password, verify_password
-from src.domain.ports.user_repository_port import UserRepositoryPort
-from src.core.paths import get_data_root
+from src.application.use_cases.users.change_user_password import ChangeUserPasswordUseCase
+from src.application.use_cases.users.delete_user_account import DeleteUserAccountUseCase
+from src.application.use_cases.users.get_current_user_profile import GetCurrentUserProfileUseCase
+from src.application.use_cases.users.remove_user_avatar import RemoveUserAvatarUseCase
+from src.application.use_cases.users.update_user_profile import UpdateUserProfileUseCase
+from src.application.use_cases.users.upload_user_avatar import UploadUserAvatarUseCase
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-DATA_ROOT = get_data_root()
-
-UserRepositoryDep = Annotated[UserRepositoryPort, Depends(get_user_repository)]
-RequestUserIdDep = Annotated[str, Depends(get_request_user_id)]
-
-
-def _row_to_user(row) -> UserMeResponse | None:
-    if row is None:
-        return None
-    return UserMeResponse(
-        username=str(row["username"]),
-        user_id=str(row["user_id"]),
-        display_name=str(row["display_name"]),
-        avatar_path=row["avatar_path"],
-        created_at=str(row["created_at"]) if row["created_at"] is not None else None,
-    )
-
-
-def _user_root(user_id: str) -> Path:
-    return DATA_ROOT / "users" / user_id
+PrincipalDep = Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)]
+GetProfileUCDep = Annotated[GetCurrentUserProfileUseCase, Depends(get_get_current_user_profile_use_case)]
+UpdateProfileUCDep = Annotated[UpdateUserProfileUseCase, Depends(get_update_user_profile_use_case)]
+ChangePasswordUCDep = Annotated[ChangeUserPasswordUseCase, Depends(get_change_user_password_use_case)]
+UploadAvatarUCDep = Annotated[UploadUserAvatarUseCase, Depends(get_upload_user_avatar_use_case)]
+RemoveAvatarUCDep = Annotated[RemoveUserAvatarUseCase, Depends(get_remove_user_avatar_use_case)]
+DeleteAccountUCDep = Annotated[DeleteUserAccountUseCase, Depends(get_delete_user_account_use_case)]
 
 
 @router.get("/me", response_model=UserMeResponse, summary="Current user profile (by X-User-Id)")
-def get_me(
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
-) -> UserMeResponse:
-    row = repo.get_by_user_id(user_id)
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    u = _row_to_user(row)
-    assert u is not None
-    return u
+def get_me(principal: PrincipalDep, use_case: GetProfileUCDep) -> UserMeResponse:
+    result = use_case.execute(GetUserProfileCommand(user_id=principal.user_id))
+    return user_profile_summary_to_me(result.user)
 
 
 @router.patch("/me", response_model=ProfileUpdateResponse, summary="Update username and display name")
 def patch_me(
     body: ProfileUpdateRequest,
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
+    principal: PrincipalDep,
+    use_case: UpdateProfileUCDep,
 ) -> ProfileUpdateResponse:
-    new_username = body.username.strip().lower()
-    new_display_name = body.display_name.strip()
-    if not new_username or not new_display_name:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username and display name are required.",
+    result = use_case.execute(
+        UpdateUserProfileCommand(
+            user_id=principal.user_id,
+            username=body.username,
+            display_name=body.display_name,
         )
-    if not re.fullmatch(r"[a-z0-9._-]{3,30}", new_username):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username must be 3-30 chars and contain only letters, numbers, dots, underscores or hyphens.",
-        )
-    current = repo.get_by_user_id(user_id)
-    if not current:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    existing = repo.get_by_username(new_username)
-    if existing and str(existing["user_id"]) != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This username is already taken.",
-        )
-    repo.update_profile(user_id=user_id, username=new_username, display_name=new_display_name)
-    updated = repo.get_by_user_id(user_id)
-    u = _row_to_user(updated)
-    assert u is not None
-    return ProfileUpdateResponse(success=True, message="Profile updated successfully.", user=u)
+    )
+    return ProfileUpdateResponse(
+        success=True,
+        message=result.message,
+        user=user_profile_summary_to_me(result.user),
+    )
 
 
 @router.post("/me/password", response_model=SimpleStatusResponse, summary="Change password")
 def post_password(
     body: PasswordChangeRequest,
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
+    principal: PrincipalDep,
+    use_case: ChangePasswordUCDep,
 ) -> SimpleStatusResponse:
-    if body.new_password != body.confirm_new_password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New passwords do not match.",
+    result = use_case.execute(
+        ChangeUserPasswordCommand(
+            user_id=principal.user_id,
+            current_password=body.current_password,
+            new_password=body.new_password,
+            confirm_new_password=body.confirm_new_password,
         )
-    user = repo.get_by_user_id(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    if not verify_password(body.current_password, user["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect.",
-        )
-    repo.update_password(user_id, hash_password(body.new_password))
-    return SimpleStatusResponse(success=True, message="Password updated successfully.")
+    )
+    return SimpleStatusResponse(success=True, message=result.message)
 
 
 @router.post("/me/avatar", response_model=SimpleStatusResponse, summary="Upload avatar image")
 async def post_avatar(
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
+    principal: PrincipalDep,
+    use_case: UploadAvatarUCDep,
     file: UploadFile = File(..., description="PNG, JPG, JPEG, or WEBP (max 2 MB)."),
 ) -> SimpleStatusResponse:
-    try:
-        suffix = avatar_suffix_from_upload_filename(file.filename)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     raw = await file.read()
-    try:
-        avatar_path = write_avatar_bytes(
-            data_root=DATA_ROOT,
-            user_id=user_id,
-            suffix=suffix,
+    result = use_case.execute(
+        UploadUserAvatarCommand(
+            user_id=principal.user_id,
+            upload_filename=file.filename,
             raw=raw,
             content_type=file.content_type,
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    repo.update_avatar_path(user_id, str(avatar_path))
-    return SimpleStatusResponse(success=True, message="Avatar updated successfully.")
+    )
+    return SimpleStatusResponse(success=True, message=result.message)
 
 
 @router.delete("/me/avatar", response_model=SimpleStatusResponse, summary="Remove avatar")
-def delete_avatar(
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
-) -> SimpleStatusResponse:
-    user = repo.get_by_user_id(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    safe_remove_stored_avatar_file(
-        data_root=DATA_ROOT,
-        user_id=user_id,
-        avatar_path_str=user["avatar_path"],
-    )
-    repo.update_avatar_path(user_id, None)
-    return SimpleStatusResponse(success=True, message="Avatar removed successfully.")
+def delete_avatar(principal: PrincipalDep, use_case: RemoveAvatarUCDep) -> SimpleStatusResponse:
+    result = use_case.execute(RemoveUserAvatarCommand(user_id=principal.user_id))
+    return SimpleStatusResponse(success=True, message=result.message)
 
 
 @router.delete("/me", response_model=SimpleStatusResponse, summary="Delete account")
 def delete_me(
     body: DeleteAccountRequest,
-    user_id: RequestUserIdDep,
-    repo: UserRepositoryDep,
+    principal: PrincipalDep,
+    use_case: DeleteAccountUCDep,
 ) -> SimpleStatusResponse:
-    user = repo.get_by_user_id(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    if not verify_password(body.current_password, user["password_hash"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect.",
-        )
-    repo.delete_user(user_id)
-    root = _user_root(user_id)
-    if root.exists():
-        shutil.rmtree(root, ignore_errors=True)
-    return SimpleStatusResponse(success=True, message="Your account has been deleted.")
+    result = use_case.execute(
+        DeleteUserAccountCommand(user_id=principal.user_id, current_password=body.current_password)
+    )
+    return SimpleStatusResponse(success=True, message=result.message)

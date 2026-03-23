@@ -18,7 +18,7 @@ from apps.api.dependencies import (
     get_generate_qa_dataset_use_case,
     get_list_qa_dataset_entries_use_case,
     get_list_retrieval_query_logs_use_case,
-    get_request_user_id,
+    get_authenticated_principal,
     get_run_gold_qa_dataset_evaluation_use_case,
     get_run_manual_evaluation_use_case,
     get_update_qa_dataset_entry_use_case,
@@ -70,6 +70,7 @@ from src.application.evaluation.dtos import (
     RunManualEvaluationCommand,
     UpdateQaDatasetEntryCommand,
 )
+from src.application.auth.authenticated_principal import AuthenticatedPrincipal
 from src.domain.benchmark_result import coerce_benchmark_result
 from src.domain.qa_dataset_entry import QADatasetEntry
 
@@ -92,7 +93,7 @@ def _content_disposition_attachment(filename: str) -> str:
 )
 def post_manual_evaluation(
     body: ManualEvaluationRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[RunManualEvaluationUseCase, Depends(get_run_manual_evaluation_use_case)],
 ) -> ManualEvaluationResponse:
     """
@@ -104,7 +105,7 @@ def post_manual_evaluation(
     """
     result = use_case.execute(
         RunManualEvaluationCommand(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=body.project_id,
             question=body.question,
             expected_answer=body.expected_answer,
@@ -128,7 +129,7 @@ def post_manual_evaluation(
 )
 def post_dataset_benchmark_run(
     body: DatasetBenchmarkRunRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[
         RunGoldQaDatasetEvaluationUseCase, Depends(get_run_gold_qa_dataset_evaluation_use_case)
     ],
@@ -136,7 +137,7 @@ def post_dataset_benchmark_run(
     """Runs the full saved QA dataset for the project with fixed retrieval flags per row."""
     result = use_case.execute(
         RunGoldQaDatasetEvaluationCommand(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=body.project_id,
             enable_query_rewrite=body.enable_query_rewrite,
             enable_hybrid_retrieval=body.enable_hybrid_retrieval,
@@ -152,11 +153,11 @@ def post_dataset_benchmark_run(
     summary="List QA dataset entries",
 )
 def get_dataset_entries(
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     project_id: Annotated[str, Query(min_length=1)],
     use_case: Annotated[ListQaDatasetEntriesUseCase, Depends(get_list_qa_dataset_entries_use_case)],
 ) -> QaDatasetEntryListResponse:
-    rows = use_case.execute(ListQaDatasetEntriesQuery(user_id=user_id, project_id=project_id))
+    rows = use_case.execute(ListQaDatasetEntriesQuery(user_id=principal.user_id, project_id=project_id))
     return QaDatasetEntryListResponse(entries=[qa_dataset_entry_to_response(e) for e in rows])
 
 
@@ -168,12 +169,12 @@ def get_dataset_entries(
 )
 def post_dataset_entry(
     body: QaDatasetEntryCreateRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[CreateQaDatasetEntryUseCase, Depends(get_create_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryResponse:
     entry = use_case.execute(
         CreateQaDatasetEntryCommand(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=body.project_id,
             question=body.question,
             expected_answer=body.expected_answer,
@@ -192,13 +193,13 @@ def post_dataset_entry(
 def put_dataset_entry(
     entry_id: int,
     body: QaDatasetEntryUpdateRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[UpdateQaDatasetEntryUseCase, Depends(get_update_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryResponse:
     entry = use_case.execute(
         UpdateQaDatasetEntryCommand(
             entry_id=entry_id,
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=body.project_id,
             question=body.question,
             expected_answer=body.expected_answer,
@@ -216,12 +217,12 @@ def put_dataset_entry(
 )
 def delete_dataset_entry(
     entry_id: int,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     project_id: Annotated[str, Query(min_length=1)],
     use_case: Annotated[DeleteQaDatasetEntryUseCase, Depends(get_delete_qa_dataset_entry_use_case)],
 ) -> QaDatasetEntryDeleteResponse:
     use_case.execute(
-        DeleteQaDatasetEntryCommand(entry_id=entry_id, user_id=user_id, project_id=project_id)
+        DeleteQaDatasetEntryCommand(entry_id=entry_id, user_id=principal.user_id, project_id=project_id)
     )
     return QaDatasetEntryDeleteResponse(deleted=True, entry_id=entry_id)
 
@@ -237,12 +238,12 @@ def delete_dataset_entry(
 )
 def post_dataset_generate(
     body: QaDatasetGenerateRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[GenerateQaDatasetUseCase, Depends(get_generate_qa_dataset_use_case)],
 ) -> QaDatasetGenerateResponse:
     raw = use_case.execute(
         GenerateQaDatasetCommand(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=body.project_id,
             num_questions=body.num_questions,
             source_files=body.source_files,
@@ -266,7 +267,7 @@ def post_dataset_generate(
     summary="List query / retrieval logs",
 )
 def get_retrieval_logs(
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     project_id: Annotated[str, Query(min_length=1)],
     use_case: Annotated[ListRetrievalQueryLogsUseCase, Depends(get_list_retrieval_query_logs_use_case)],
     since: Annotated[str | None, Query(description="ISO-8601 lower bound (inclusive)")] = None,
@@ -275,7 +276,7 @@ def get_retrieval_logs(
 ) -> RetrievalLogsResponse:
     entries = use_case.execute(
         ListRetrievalQueryLogsQuery(
-            user_id=user_id,
+            user_id=principal.user_id,
             project_id=project_id,
             since_iso=since,
             until_iso=until,

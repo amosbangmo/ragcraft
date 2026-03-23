@@ -16,7 +16,7 @@ from apps.api.dependencies import (
     get_inspect_pipeline_use_case,
     get_preview_summary_recall_use_case,
     get_resolve_project_use_case,
-    get_request_user_id,
+    get_authenticated_principal,
 )
 from apps.api.openapi_common import chat_route_responses
 from apps.api.schemas.chat import (
@@ -39,6 +39,7 @@ from src.application.http.wire import (
     RagAnswerWirePayload,
     RetrievalComparisonWirePayload,
 )
+from src.application.auth.authenticated_principal import AuthenticatedPrincipal
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -52,7 +53,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 )
 def post_chat_ask(
     body: ChatAskRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[AskQuestionUseCase, Depends(get_ask_question_use_case)],
 ) -> ChatAskResponse:
@@ -61,7 +62,7 @@ def post_chat_ask(
 
     Send ``X-User-Id`` and a body with ``project_id`` and ``question`` (see schema example).
     """
-    project = resolve_project.execute(user_id, body.project_id)
+    project = resolve_project.execute(principal.user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     result = use_case.execute(
         project,
@@ -96,14 +97,14 @@ def post_chat_ask(
 )
 def post_pipeline_inspect(
     body: PipelineInspectRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[InspectRagPipelineUseCase, Depends(get_inspect_pipeline_use_case)],
 ) -> PipelineInspectResponse:
     """
     Build the same pipeline as ``/chat/ask`` but stop before answer generation and do not write query logs.
     """
-    project = resolve_project.execute(user_id, body.project_id)
+    project = resolve_project.execute(principal.user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     pipeline = use_case.execute(
         project,
@@ -136,14 +137,14 @@ def post_pipeline_inspect(
 )
 def post_preview_summary_recall(
     body: PreviewSummaryRecallRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     resolve_project: Annotated[ResolveProjectUseCase, Depends(get_resolve_project_use_case)],
     use_case: Annotated[PreviewSummaryRecallUseCase, Depends(get_preview_summary_recall_use_case)],
 ) -> PreviewSummaryRecallResponse:
     """
     Run vector (+ optional BM25) summary recall and return recalled chunks (preview stage only).
     """
-    project = resolve_project.execute(user_id, body.project_id)
+    project = resolve_project.execute(principal.user_id, body.project_id)
     filters = body.filters.to_domain() if body.filters else None
     raw = use_case.execute(
         project,
@@ -176,11 +177,11 @@ def post_preview_summary_recall(
 )
 def post_retrieval_compare(
     body: RetrievalCompareRequest,
-    user_id: Annotated[str, Depends(get_request_user_id)],
+    principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[CompareRetrievalModesUseCase, Depends(get_compare_retrieval_modes_use_case)],
 ) -> RetrievalCompareResponse:
     raw = use_case.execute(
-        user_id=user_id,
+        user_id=principal.user_id,
         project_id=body.project_id,
         questions=list(body.questions),
         enable_query_rewrite=bool(body.enable_query_rewrite),
