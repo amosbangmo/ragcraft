@@ -42,7 +42,8 @@ This report is the **canonical end-state** summary after the migration hardening
 | Gateway does not import infrastructure | **Met** — layer + gateway guardrails |
 | Chat RAG uses **ports** for inspect / answer generation where required | **Met** — `test_application_chat_rag_boundary_ports.py` |
 | Chat / eval / RAG-DTO subtrees avoid infra + delivery stacks | **Met** — `test_orchestration_package_import_boundaries.py` |
-| Repo lint/format/typing config present for contributors | **Met** — `pyproject.toml` (Ruff, Black, mypy) + `ruff` in `requirements.txt` |
+| Repo lint/format/typing config present for contributors | **Met** — `pyproject.toml` (Ruff, Black, mypy, pytest defaults) + `ruff` / `pytest` in `requirements.txt` |
+| CI enforces architecture tests + project Ruff on `src` / `apps` | **Met** — `.github/workflows/ci.yml` + `scripts/validate.sh` / `validate.ps1` (**§14**) |
 
 ---
 
@@ -117,17 +118,17 @@ These do **not** invalidate the migration but are worth tracking:
 
 ## 8. Is the migration “complete”?
 
-**For Clean Architecture boundaries and RAG orchestration ownership: yes.** Layers, guardrail tests, and docs describe the same dependency rules and flows.
+**Verdict: yes — the Clean Architecture migration is complete for this repository’s stated scope.** The codebase matches the target layering, dependency direction, and orchestration ownership described in **`docs/architecture.md`**, **`docs/dependency_rules.md`**, and **`docs/rag_orchestration.md`**, and **§10** / **§14** describe how that state is enforced in CI and locally.
 
-**Auth / users (final):** The API boundary uses **`get_authenticated_principal` → `AuthenticationPort.authenticate_bearer_token` → `AuthenticatedPrincipal`**. Transport parses **`Authorization: Bearer`** only in **`apps/api/dependencies.py`**; **`JwtAuthenticationAdapter`** (infrastructure) validates signatures and claims. Login and registration return a JWT plus profile (**`AccessTokenIssuerPort`**). **`/users/*`** uses account use cases. Password and avatar I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**. Streamlit HTTP mode stores **`access_token`** in session and **`HttpBackendClient`** sends it on every scoped call; in-process mode still uses **`auth_credentials`** without HTTP tokens.
+**Auth / users (final model):** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** are **domain** types (`src/domain/`). The API uses **`get_authenticated_principal` → `AuthenticationPort.authenticate_bearer_token` → `AuthenticatedPrincipal`**. Transport parses **`Authorization: Bearer`** in **`apps/api/dependencies.py`**; **`JwtAuthenticationAdapter`** implements both ports and validates HS256 JWTs (**`RAGCRAFT_JWT_SECRET`**). The trusted **`X-User-Id`** header is **removed**. Login/register issue tokens via **`AccessTokenIssuerPort`**. **`/users/*`** goes through account use cases; hashing and avatar storage use **`PasswordHasherPort`** / **`AvatarStoragePort`**.
 
-**RAG orchestration (corrected):** Typed overrides (**`RetrievalSettingsOverrideSpec`**), recall/assembly DTOs, explicit eval input (**`RagEvaluationPipelineInput`**), and **`RagInspectAnswerRun`** with **`PipelineLatency`**. Ask vs inspect vs preview vs evaluation modes are documented in **`docs/rag_orchestration.md`**.
+**RAG orchestration (final model):** Application-owned sequencing (**`ApplicationSummaryRecallStage`**, **`ApplicationPipelineAssembly`**, **`post_recall_pipeline_steps`**); infrastructure supplies single-step adapters. Typed boundaries: **`RetrievalSettingsOverrideSpec`**, **`VectorLexicalRecallBundle`**, **`RagEvaluationPipelineInput`**, **`RagInspectAnswerRun`** / **`PipelineLatency`**, **`GoldQaPipelineRowInput`**. **`InspectRagPipelineUseCase`** shares **`BuildRagPipelineUseCase`** with **`emit_query_log=False`**.
 
-**Ingestion / settings / evaluation edges (corrected):** **`BufferedDocumentUpload`**, chunked multipart reads + **`RAG_MAX_UPLOAD_BYTES`**, **`ProjectDocumentDetailRow`**, **`GenerateQaDatasetResult`** + wire payloads, benchmark export bundle typing.
+**Upload / ingestion (final model):** Bounded chunked buffering via **`apps/api/upload_adapter.py`** → **`BufferedDocumentUpload`** → use cases; documented in **`src/application/ingestion/upload_boundary.py`** and **`docs/api.md`**. Avatars share the same transport pattern with a smaller byte cap.
 
-**Structural guardrails (final pass):** **`test_orchestration_package_import_boundaries.py`**; **`pyproject.toml`** for **Ruff**, **Black**, and incremental **mypy**; **Ruff** surfaced missing **`RetrievalSettingsOverrideSpec`** imports in **`build_rag_pipeline.py`** / **`summary_recall_workflow.py`** (fixed).
+**Evaluation (final model):** Single manual-eval orchestrator (**`RunManualEvaluationUseCase`**). Gold-QA via **`BenchmarkExecutionUseCase`** and **`RagInspectAnswerRun`** only. **`test_manual_evaluation_single_orchestrator.py`** guards against a second orchestration class on the manual-eval infrastructure module.
 
-**Not claimed:** production security hardening, performance tuning, full **mypy --strict** across the repo, or deduplicating every evaluation convenience path — see **§7** and **§6**.
+**Explicitly not claimed as “done”:** production security program (beyond bearer JWT design), performance SLOs, **mypy strict** on the full tree, and typed rows for every SQLite list endpoint — see **§6**, **§7**, and **§9**.
 
 ---
 
@@ -136,13 +137,24 @@ These do **not** invalidate the migration but are worth tracking:
 - **Security:** Add refresh tokens, asymmetric signing (JWKS), or an external IdP; rate-limit **`/auth/login`**.
 - **Performance:** Caching, batching, async retrieval, index maintenance.
 - **DX:** Keep **`README.github.md`** diagrams aligned with **`docs/architecture.md`**.
-- **CI:** Run **`pytest tests/architecture/`** when `src/`, `apps/api`, `pages/`, or `src/ui/` change.
+- **Typing:** Tighten **mypy** beyond incremental packages when convenient; **`src.domain`** is not yet error-free under strict checking.
 
 ---
 
-## 9. Tests and architecture guards
+## 10. Tests and architecture guards
+
+**Local / CI:** from repo root with **`PYTHONPATH=.`** (set automatically in **`.github/workflows/ci.yml`** for the pytest step):
 
 ```bash
+./scripts/validate.sh
+# Windows PowerShell:
+# .\scripts\validate.ps1
+```
+
+Equivalent manual steps:
+
+```bash
+ruff check src apps tests/architecture
 pytest tests/architecture/ -q
 ```
 
@@ -154,12 +166,14 @@ pytest tests/architecture/ -q
 | Composition | **`test_composition_import_boundaries.py`** |
 | RAG façade absent; adapters vs chat use case classes | **`test_no_rag_service_facade.py`** |
 | Post-recall / transport RAG imports | **`test_orchestration_boundaries.py`** |
-| **All adapters** → application import allowlist | **`test_adapter_application_imports.py`** |
+| **All adapters** → **no** `src.application` imports | **`test_adapter_application_imports.py`** |
 | Chat RAG port names / boundaries | **`test_application_chat_rag_boundary_ports.py`** |
 | UI surface | **`test_streamlit_import_guardrails.py`** |
 | Smoke `build_backend` | **`test_migration_regression_flows.py`** |
 | Orchestration subtrees (chat/eval/rag) | **`test_orchestration_package_import_boundaries.py`** |
 | Manual evaluation single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
+
+**Multipart / upload:** `src/application` must not import **FastAPI** or **Starlette** (`test_application_orchestration_purity.py`); ingest use cases accept **`BufferedDocumentUpload`** only. Transport reads live in **`apps/api/upload_adapter.py`** (see §12).
 
 ---
 
@@ -210,7 +224,7 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 ---
 
-## 11. Ingestion, project document details, and evaluation wire (API / application hardening)
+## 12. Ingestion, project document details, and evaluation wire (API / application hardening)
 
 **Multipart upload boundary (documents + avatars)**
 
@@ -273,15 +287,28 @@ tests/
 
 ---
 
-## Final verdict (architecture maturity)
+## 14. Lock-in (Prompt 6 — CI and validation)
 
-The repository is an **excellent long-term base** for feature work **within** the chosen Clean Architecture style:
+**Goal:** Make accidental architectural drift **noisy** without burdening every PR with the full pytest suite.
 
-- **Layers and dependency direction** are **enforced by tests**, not only described in docs.
-- **RAG orchestration** is **application-owned**, typed at the main boundaries, and **split by execution mode** (ask / inspect / preview / evaluation) with **logging only through ports** on product paths.
-- **Delivery** (FastAPI, gateway, UI) stays **thin** relative to use cases; **composition** is the only place that should know about concrete adapters.
-- **Tooling** (**`pyproject.toml`**) gives contributors a **shared Ruff/Black/mypy baseline**; **mypy strict** for the entire tree remains **deferred** (incremental adoption is intentional).
+| Mechanism | Role |
+|-----------|------|
+| **`.github/workflows/ci.yml`** | Sets **`PYTHONPATH=.`**; runs **Ruff** on **`src`**, **`apps`**, **`tests/architecture`**; runs **`pytest tests/architecture`**; keeps existing **unittest** jobs for infrastructure/integration/quality. |
+| **`scripts/validate.sh`** / **`scripts/validate.ps1`** | Same Ruff + architecture pytest targets for local pre-push checks. |
+| **`pyproject.toml`** | **`[tool.pytest.ini_options]`** — **`testpaths`**, **`pythonpath = ["."]`**, optional **`architecture`** marker for future filtering. |
 
-**Intentionally deferred:** OAuth2 / social login, refresh-token flows, **mypy strict** everywhere, optional consolidation of duplicate evaluation helpers, and typed rows for every SQLite-backed list endpoint.
+**Optional local commands** (full tree): **`pytest tests/ -q`**, **`ruff check src apps`**, incremental **`mypy --config-file=pyproject.toml -p …`** as documented in **`docs/architecture.md`**.
 
-Treat **§7** (risks) and **§6** (acceptable residual) as the living registers for product and operations follow-up.
+---
+
+## Final verdict (architecture maturity — declaration of completion)
+
+This repository **meets the completion standard** for the **Clean Architecture migration** as defined in this report and **`ARCHITECTURE_TARGET.md`**:
+
+- **Enforced boundaries:** Layering, adapter purity (no **`src.application`** inside **`src/infrastructure/adapters`**), FastAPI isolation from infrastructure, gateway/UI isolation from domain and composition, and RAG orchestration folder purity are **checked by automated tests** (**§10**, **§14**).
+- **Documented end state:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/testing_strategy.md`**, **`docs/api.md`**, **`docs/rag_orchestration.md`**, and this file are **aligned with the current code** after the lock-in pass.
+- **Honest scope:** Remaining items are **product or incremental-quality** work (**§6**, **§7**, **§9**), not missing migration steps.
+
+The codebase is **ready for feature development** on top of this architecture without further structural migration passes unless requirements change materially.
+
+Treat **§7** (risks) and **§6** (acceptable residual) as the living registers for operations and follow-up quality work.

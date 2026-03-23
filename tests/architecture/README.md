@@ -32,6 +32,12 @@ Module `test_fastapi_migration_guardrails.py` adds the last two rows plus **beha
 
 ## Running
 
+From repo root with **`PYTHONPATH=.`**:
+
 ```bash
+./scripts/validate.sh
+# or:
 pytest tests/architecture -q
 ```
+
+**Windows:** **`.\scripts\validate.ps1`**. Same steps run in **`.github/workflows/ci.yml`**.

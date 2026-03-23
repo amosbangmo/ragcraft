@@ -44,3 +44,4 @@ See **`docs/README.md`** (local development) for env vars.
 - **`docs/README.md`** — doc index + local dev notes.
 - **`docs/dependency_rules.md`** — import rules.
 - **`tests/architecture/README.md`** — what pytest enforces.
+- **`scripts/validate.sh`** / **`scripts/validate.ps1`** — local **Ruff** + **`pytest tests/architecture`** (mirrors CI).

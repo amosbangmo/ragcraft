@@ -1,10 +1,6 @@
 # Dependency rules
 
-Import directions enforced in code and by **`tests/architecture/`** (AST scans). When in doubt, run:
-
-```bash
-pytest tests/architecture -q
-```
+Import directions enforced in code and by **`tests/architecture/`** (AST scans). When in doubt, run **`./scripts/validate.sh`** (or **`pytest tests/architecture -q`** with **`PYTHONPATH=.`**).
 
 ## Allowed directions
 

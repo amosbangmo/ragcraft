@@ -2,13 +2,15 @@
 
 The suite is organized as a **pyramid**: fast **architecture** import guards at the base, **unit** use-case and domain tests, **HTTP/API** tests with dependency overrides, then heavier **integration** / optional-dependency flows.
 
+**CI lock-in:** GitHub Actions runs **`ruff check src apps tests/architecture`** and **`pytest tests/architecture`** (with **`PYTHONPATH=.`**). Locally use **`scripts/validate.sh`** or **`scripts/validate.ps1`** for the same subset. **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`pythonpath = ["."]`** so pytest discovers **`src`** / **`apps`** from the repo root.
+
 ## Architecture tests (`tests/architecture/`)
 
 | Area | Examples |
 |------|-----------|
 | **Layer imports** | `test_layer_boundaries.py` — domain / application / infrastructure / composition / routers |
 | **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `use_cases/chat/orchestration`, `use_cases/evaluation`, and `application/rag` must not import `src.infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
-| **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Streamlit/FAISS/LangChain in `src/application`; use cases must not import `src.frontend_gateway` |
+| **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Starlette/Streamlit/FAISS/LangChain in `src/application` (keeps multipart **`UploadFile`** and HTTP types out of use cases); use cases must not import `src.frontend_gateway` |
 | **Legacy packages** | `test_deprecated_backend_and_gateway_guardrails.py` — no `src.backend`, `src.adapters`, `src.infrastructure.services` |
 | **Gateway** | Same module — `src/frontend_gateway` must not import `src.infrastructure` |
 | **FastAPI** | `test_fastapi_migration_guardrails.py` — no Streamlit/UI/infra adapters in `apps/api` source |

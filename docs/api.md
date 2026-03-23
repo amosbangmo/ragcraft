@@ -13,6 +13,8 @@
 
    Scoped areas include: **`/users/me`**, **`/projects`**, **`/chat/*`**, **`/evaluation/*`** (except routes explicitly documented as public, e.g. some export discovery endpoints).
 
+   **Types:** **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** are defined under **`src/domain/`** (see **`docs/architecture.md`**). **`apps/api/dependencies.py`** resolves the JWT adapter from the composition root; routers depend on **`AuthenticatedPrincipal`** via **`Depends`**, not on infrastructure.
+
 3. **Configuration** — the API process requires a strong random secret:
 
    - **`RAGCRAFT_JWT_SECRET`** (required) — symmetric key for HS256 signing and verification.

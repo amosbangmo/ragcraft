@@ -105,6 +105,7 @@ flowchart TB
   end
   API --> UC
   API --> COMP
+  API --> PORTS
   GW --> UC
   GW --> COMP
   UI --> GW
@@ -128,4 +129,4 @@ Configuration lives in **`pyproject.toml`** at the repo root (dependencies for r
 | **Black** | Formatter; line length **100** (match Ruff). Example: `black src apps pages tests`. |
 | **mypy** | Incremental static typing; **`ignore_missing_imports`** by default for third-party gaps. Prefer tightening **ports, DTOs, and use-case signatures** over repo-wide strict mode in one step. Example: `mypy --config-file=pyproject.toml -p src.application.use_cases.chat.ask_question`. |
 
-**CI suggestion:** run **`pytest tests/architecture/`** and **`ruff check src apps --select F,E9`** (or the full Ruff rule set from `pyproject.toml`) on PRs touching `src/`, `apps/`, `pages/`, or `src/ui/`.
+**CI (enforced):** **`.github/workflows/ci.yml`** runs **`ruff check src apps tests/architecture`** and **`pytest tests/architecture`** with **`PYTHONPATH=.`** (see **`scripts/validate.sh`** / **`validate.ps1`** for the same locally). For broader quality, run **`pytest tests/ -q`** and full-package **mypy** incrementally as described above.

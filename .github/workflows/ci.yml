@@ -11,6 +11,7 @@ jobs:
     env:
       OPENAI_API_KEY: ci-test-key
       RAGCRAFT_JWT_SECRET: ci-jwt-secret-at-least-32-characters-long!!
+      PYTHONPATH: .
 
     steps:
       - name: Checkout
@@ -31,6 +32,12 @@ jobs:
 
       - name: Lint (critical rules)
         run: ruff check . --select E9,F63,F7,F82
+
+      - name: Lint (project Ruff rules, src + apps + architecture tests)
+        run: ruff check src apps tests/architecture
+
+      - name: Architecture tests (pytest)
+        run: pytest tests/architecture -q --tb=short
 
       - name: Run backend runtime tests
         run: python -m unittest discover -s tests/infrastructure_services -p "test_*.py"

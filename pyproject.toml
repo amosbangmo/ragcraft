@@ -48,3 +48,11 @@ namespace_packages = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 ignore_errors = true
+
+# Default test discovery; PYTHONPATH=. (or repo root as cwd) required for `src` / `apps` imports.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "architecture: layering and import-boundary guards (tests/architecture/)",
+]
