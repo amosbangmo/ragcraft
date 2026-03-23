@@ -216,23 +216,23 @@ ragcraft/
 │
 ├── api/
 │   ├── main.py                  # ASGI entry (uvicorn: api.main:app)
-│   └── src/                     # PYTHONPATH: domain, application, infrastructure, composition, interfaces
-│       ├── application/         # use_cases, orchestration/, rag/, dto/, frontend_support/, …
-│       ├── composition/
-│       ├── domain/
-│       ├── infrastructure/      # rag/, evaluation/, persistence/, auth/, …
-│       └── interfaces/http/    # FastAPI app, routers/, schemas/, dependencies
+│   ├── src/                     # PYTHONPATH: domain, application, infrastructure, composition, interfaces
+│   │   ├── application/       # use_cases, orchestration/, rag/, dto/, frontend_support/, …
+│   │   ├── composition/
+│   │   ├── domain/
+│   │   ├── infrastructure/    # rag/, evaluation/, persistence/, auth/, …
+│   │   └── interfaces/http/     # FastAPI app, routers/, schemas/, dependencies
+│   └── tests/                   # pytest: architecture/, api/, appli/, infra/, e2e/, …
 ├── frontend/
 │   ├── app.py                   # Streamlit entry (run from frontend/)
-│   └── src/
-│       ├── pages/
-│       ├── components/
-│       ├── services/            # BackendClient, HTTP / in-process clients, Streamlit factory
-│       ├── state/
-│       ├── viewmodels/
-│       └── utils/
-├── api/tests/                   # pytest: architecture/, api/, appli/, infra/, e2e/, …
-├── frontend/tests/              # streamlit/, ui/, …
+│   ├── src/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── services/          # BackendClient, HTTP / in-process clients, Streamlit factory
+│   │   ├── state/
+│   │   ├── viewmodels/
+│   │   └── utils/
+│   └── tests/                   # streamlit/, ui/, …
 ├── docs/                        # architecture.md, api.md, dependency_rules.md, …
 ├── scripts/                     # validate_architecture, run_tests, lint, validate
 ├── data/
