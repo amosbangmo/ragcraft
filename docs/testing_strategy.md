@@ -10,6 +10,7 @@ Tests are layered: **fast architecture and layout guards** at the base, then **u
 |-------|----------|--------|
 | **Architecture** | **`api/tests/architecture/`** | Repo layout, forbidden imports, router/schema placement, orchestration purity, frontend thinness |
 | **Bootstrap** | **`api/tests/bootstrap/`** | **`api/main.py`** wiring, **`create_app()`**, **`/health`**, OpenAPI |
+| **Reliability** | **`api/tests/reliability/`** | Runtime confidence: app boot (**`test_app_boot.py`**), register/login → **`/users/me`** (**`test_auth_flow.py`**), **`POST /chat/ask`** (**`test_chat_flow.py`**), project → ingest → ask (**`test_e2e_flow.py`**) — **`TestClient`** + dependency overrides, no real vector/LLM stack |
 | **API / HTTP** | **`api/tests/api/`** | Route contracts, auth, validation (**422**), **`RAGCraftError`** envelope (**400/401/409/…**), multipart limits, cross-route conventions (e.g. empty **`project_id`** on chat / evaluation) |
 | **Application** | **`api/tests/appli/`** | Use cases with fake ports; **`appli/orchestration/test_rag_mode_contracts.py`** — ask vs inspect vs preview vs evaluation and query-log rules |
 | **Domain** | **`api/tests/domain/`** | Domain policy |
@@ -24,7 +25,7 @@ Together, these give **9/10+** confidence for **regressions in layering, HTTP co
 
 ## Pytest markers (optional filters)
 
-Markers are **registered** in **`api/tests/conftest.py`** (`pytest_configure`) and duplicated in root **`pyproject.toml`** for documentation. **`pytest_collection_modifyitems`** also **assigns** markers from each test file’s path (e.g. everything under **`api/tests/api/`** gets **`api_http`**).
+Markers are **registered** in **`api/tests/conftest.py`** (`pytest_configure`) and duplicated in root **`pyproject.toml`** for documentation. **`pytest_collection_modifyitems`** also **assigns** markers from each test file’s path (e.g. everything under **`api/tests/api/`** gets **`api_http`**, **`api/tests/reliability/`** gets **`reliability`**).
 
 Examples (repository root, **`PYTHONPATH=api/src:frontend/src:api/tests`**):
 
@@ -37,6 +38,9 @@ python -m pytest -m "not e2e" -q
 
 # Application use cases only
 python -m pytest -m appli -q
+
+# Runtime reliability flows (boot, auth, chat, short e2e chain)
+python -m pytest -m reliability -q
 ```
 
 CI continues to use **path-based** runs (**`validate_architecture`** then **`api/tests`** minus **`architecture/`** and **`bootstrap/`** + **`frontend/tests`**); markers are for **local narrowing**, not a separate required gate.

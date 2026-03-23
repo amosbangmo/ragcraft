@@ -76,4 +76,5 @@ markers = [
     "composition: composition wiring smoke under api/tests/composition",
     "frontend: Streamlit/UI and HTTP client tests under frontend/tests",
     "integration: cross-boundary HTTP walk (e.g. api/tests/api/test_http_pipeline_e2e.py)",
+    "reliability: runtime boot + auth/chat/e2e flow tests under api/tests/reliability",
 ]

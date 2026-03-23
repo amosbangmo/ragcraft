@@ -177,7 +177,8 @@ scripts/
 - **`api/tests/bootstrap/`** — run with **`scripts/validate_architecture.sh`** / **`.ps1`**: **`api/main.py`** still references **`interfaces.http.main`** / **`create_app`**; **`create_app()`** returns a working FastAPI app (**`/health`**, **`/openapi.json`**); loading **`api/main.py`** by file path validates the Uvicorn entry without relying on ambiguous **`import api.main`** when **`api/tests`** is on **`PYTHONPATH`**.
 - **`api/tests/api/test_core_routes.py`** — preview summary recall (**`POST /chat/pipeline/preview-summary-recall`**), project retrieval settings (**`GET .../retrieval-settings`**), plus existing ask/inspect/evaluation/ingest/auth envelopes.
 - **`api/tests/api/test_http_pipeline_e2e.py`** — extended HTTP chain includes preview and retrieval-settings steps; parametrized bearer checks cover those routes.
-- **`frontend/tests/streamlit/test_http_client_route_contract.py`** — static contract on path strings for RAG routes and auth endpoints used by the Streamlit HTTP client layer.
+- **`frontend/tests/streamlit/test_http_client_route_contract.py`** — static contract on path strings for RAG routes and auth endpoints used by the Streamlit HTTP client layer (paths under **`api/src/application/frontend_support/http_backend_client.py`**).
+- **`api/tests/reliability/`** — **`test_app_boot.py`** (**`create_app`**, **`/health`**, **`/version`**, **`/openapi.json`**, **`api/main.py`** file load); **`test_auth_flow.py`** (shared fake user repository across requests: register → **`/users/me`**, login → **`/users/me`**); **`test_chat_flow.py`** and **`test_e2e_flow.py`** (stubbed use cases: **`POST /chat/ask`**, project → ingest → ask). Marker: **`reliability`**.
 
 **Failure classes partially covered:** broken ASGI/bootstrap imports, stale **`api/main.py`** wiring, missing public routes on app factory, regressed auth-required behavior on new routes, oversized ingest (**413**), frontend/backend path typos for critical URLs.
 

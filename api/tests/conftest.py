@@ -42,6 +42,7 @@ def pytest_configure(config) -> None:
         "composition: composition smoke (api/tests/composition)",
         "frontend: frontend tests (frontend/tests)",
         "integration: cross-boundary HTTP walk (e.g. test_http_pipeline_e2e)",
+        "reliability: runtime boot + auth/chat/e2e flow confidence (api/tests/reliability)",
     ):
         config.addinivalue_line("markers", line)
 
@@ -71,6 +72,8 @@ def pytest_collection_modifyitems(config, items) -> None:
                 item.add_marker(pytest.mark.domain)
             elif top == "composition":
                 item.add_marker(pytest.mark.composition)
+            elif top == "reliability":
+                item.add_marker(pytest.mark.reliability)
         elif str(p).startswith(str(frontend_tests_dir.resolve())):
             item.add_marker(pytest.mark.frontend)
         if "test_http_pipeline_e2e" in item.nodeid:
