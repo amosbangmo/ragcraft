@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src", "apps", "pages", "tests"]
+src = ["api/src", "frontend/src"]
 
 [tool.ruff.lint]
 select = [
@@ -49,10 +49,10 @@ namespace_packages = true
 module = "tests.*"
 ignore_errors = true
 
-# Default test discovery; PYTHONPATH=. (or repo root as cwd) required for `src` / `apps` imports.
+# Tests live under api/tests and frontend/tests; source roots are api/src and frontend/src.
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
+testpaths = ["api/tests", "frontend/tests"]
+pythonpath = ["api/tests", "api/src", "frontend/src"]
 markers = [
     "architecture: layering and import-boundary guards (tests/architecture/)",
 ]

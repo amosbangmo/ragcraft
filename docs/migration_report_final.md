@@ -1,8 +1,21 @@
 # Final migration report — Clean Architecture (closure)
 
-This report is the **canonical end-state** summary after the migration hardening passes: layer guardrails, documentation, and alignment with the code under `src/`, `apps/api/`, `src/frontend_gateway/`, and `tests/architecture/`.
+## Physical repository layout (enforced)
 
-**Related:** `docs/architecture.md` (includes a **mermaid** layer diagram), `docs/rag_orchestration.md`, `docs/dependency_rules.md`, `docs/final_orchestration_gap_analysis.md` (baseline → closure), `ARCHITECTURE_TARGET.md`.
+As of the **api/frontend split** refactor, the canonical layout is:
+
+- **Backend:** `api/src/` — top-level packages `domain`, `application`, `infrastructure`, `composition`, `interfaces` (FastAPI under `interfaces/http/`). Entry: `api/main.py`.
+- **Frontend:** `frontend/src/` — Streamlit pages, components, services (former `frontend_gateway`), utils. Entry: `frontend/app.py`.
+- **Tests:** `api/tests/` (architecture, application_tests, infrastructure_tests, apps_api, e2e, …) and `frontend/tests/`.
+- **Removed:** root `src/`, root `apps/`, root `pages/`, root `streamlit_app.py` (replaced by the tree above).
+
+Automated **layout drift** checks live in `api/tests/architecture/test_repository_layout.py`. CI-oriented scripts: `scripts/validate_architecture.sh`, `scripts/run_tests.sh`, `scripts/lint.sh`.
+
+---
+
+This report remains the **canonical end-state** summary for Clean Architecture guardrails; paths below that still mention `src/` or `apps/api/` should be read as **historical** unless cross-referenced with the layout section above.
+
+**Related:** `docs/architecture.md`, `docs/rag_orchestration.md`, `docs/dependency_rules.md`, `docs/testing_strategy.md`, `docs/api.md`.
 
 ---
 
@@ -38,7 +51,7 @@ This report is the **canonical end-state** summary after the migration hardening
 | Infrastructure adapters do not import application | **Met** — `test_adapter_application_imports.py` (no allowlist) |
 | Gold-QA benchmark stack not constructed inside `EvaluationService` | **Met** — `evaluation_wiring.py` + `GoldQaBenchmarkAdapter` |
 | Query-log / judge row DTOs in domain | **Met** — `QueryLogIngressPayload`, `EvaluationJudgeMetricsRow` |
-| **`apps/api`** → no `src.infrastructure.adapters` / services legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
+| **`apps/api`** → no `infrastructure.adapters` / services legacy paths | **Met** — `test_fastapi_migration_guardrails.py` |
 | Gateway does not import infrastructure | **Met** — layer + gateway guardrails |
 | Chat RAG uses **ports** for inspect / answer generation where required | **Met** — `test_application_chat_rag_boundary_ports.py` |
 | Chat / eval / RAG-DTO subtrees avoid infra + delivery stacks | **Met** — `test_orchestration_package_import_boundaries.py` |
@@ -66,7 +79,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 - **Evaluation wiring** — **`EvaluationWiringParts`**, **`default_evaluation_wiring_parts()`**, **`build_evaluation_service(parts)`**; **`RagInspectAnswerRun`**-only **`pipeline_runner`** contract in **`BenchmarkExecutionUseCase`**.
 - **Composition root** — explicit **`chat_transcript`** and **`backend`** parameters; RAG subgraph construction centralized (**`build_rag_retrieval_subgraph`** always builds **`AnswerGenerationService`** internally).
 - **Multimodal hints** — orchestration-adjacent logic in **`src/application/chat/multimodal_prompt_hints.py`** (injected from **`chat_rag_wiring`**), not a fat infrastructure façade.
-- **API layer purity** — **`apps/api/dependencies.py`** uses **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
+- **API layer purity** — **`apps/api/dependencies.py`** uses **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`** so the FastAPI package never imports infrastructure adapters; **`get_authenticated_principal`** delegates JWT verification to **`AuthenticationPort`** from the composition root; auth and **`/users`** routes use application use cases and **`AuthenticatedPrincipal`**.
 - **Docs** — this report, **`docs/architecture.md`** diagram, **`dependency_rules`**, **`rag_orchestration`**, **`ARCHITECTURE_TARGET`** aligned with the above.
 - **Structural exceptions (final standard)** — **`test_adapter_application_imports.py`** enforces **zero** `src.application` imports under **`src/infrastructure/adapters`** (the old **`rag/retrieval_settings_service.py`** allowlist is gone). **`RetrievalSettingsTuner`** is constructed in **`backend_composition`** and passed as **`retrieval_settings_tuner`**. **`MemoryChatTranscript`** exists only under **`src/application/frontend_support`**. **`AuthenticatedPrincipal`**, **`AuthenticationPort`**, and **`AccessTokenIssuerPort`** live under **`src/domain/`** so the JWT adapter does not depend on **`src.application`**.
 
@@ -80,7 +93,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 | **`src/infrastructure/adapters/rag/pipeline_assembly_service.py`** | Post-recall assembly moved to application |
 | **`src/infrastructure/adapters/rag/summary_recall_adapter.py`** | Replaced by app workflow + **`summary_recall_technical_adapters.py`** |
 | **`src/infrastructure/adapters/evaluation/benchmark_report_service.py`** | Callers use **`BuildBenchmarkExportArtifactsUseCase`** |
-| **`src/backend/`**, **`src/adapters/`**, **`src.infrastructure.services/`** | Legacy trees; directory + import guardrails |
+| **`src/backend/`**, **`src/adapters/`**, **`infrastructure.services/`** | Legacy trees; directory + import guardrails |
 | **`src/services/`** (package) | Removed / guarded |
 | Legacy **`ragcraft_app`** / monolithic app wrapper | Removed; composition + API entrypoints only |
 | **`src/application/chat/ports.py`** | Unused re-export barrel |

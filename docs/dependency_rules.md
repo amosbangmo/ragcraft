@@ -11,14 +11,14 @@ Import directions enforced in code and by **`tests/architecture/`** (AST scans).
 | **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
 | **Infrastructure adapters** | **Domain** always; **not** **`src.application`** (see **`test_adapter_application_imports.py`**) |
 | **Composition** | Domain ports, infrastructure adapters, application use cases for typing/wiring; **not** `src.frontend_gateway` |
-| **`apps/api`** | FastAPI, `src.composition`, `src.application` (DTOs, **`frontend_support`** transcript), **`src.domain`** (**`AuthenticatedPrincipal`**, **`AuthenticationPort`** / **`AccessTokenIssuerPort`** types for dependencies), **not** `streamlit`, **`src.ui`**, or **`src.infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
+| **`apps/api`** | FastAPI, `src.composition`, `src.application` (DTOs, **`frontend_support`** transcript), **`src.domain`** (**`AuthenticatedPrincipal`**, **`AuthenticationPort`** / **`AccessTokenIssuerPort`** types for dependencies), **not** `streamlit`, **`src.ui`**, or **`infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
 | **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
 | **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
 
 ### Infrastructure adapters (`src/infrastructure/adapters/`)
 
 - Must **not** import **`src.application`** (enforced by **`tests/architecture/test_adapter_application_imports.py`**). Retrieval tuning is **`RetrievalSettingsTuner`** in **`src/application/settings/`**, wired from **`src/composition/backend_composition.py`** — not via an infra subclass.
-- RAG adapters must **not** import chat **use case classes** from `src.application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
+- RAG adapters must **not** import chat **use case classes** from `application.use_cases.chat` (see **`test_no_rag_service_facade.py`**).
 
 ### Shared boundary types (query log, evaluation rows)
 
@@ -49,7 +49,7 @@ Import directions enforced in code and by **`tests/architecture/`** (AST scans).
 | Domain / application / infra layer directions | **`test_layer_boundaries.py`** |
 | No FastAPI/LC/FAISS in `src/application` | **`test_application_orchestration_purity.py`** |
 | Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
-| `apps/api` no `src.infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
+| `apps/api` no `infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
 | Adapters must not import application | **`test_adapter_application_imports.py`** |
 | Manual eval single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 | No RAG monolith façade | **`test_no_rag_service_facade.py`** |

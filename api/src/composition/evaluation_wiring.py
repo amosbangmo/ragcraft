@@ -1,0 +1,91 @@
+"""
+Gold-QA benchmark stack: application :class:`~application.use_cases.evaluation.benchmark_execution.BenchmarkExecutionUseCase`
+plus infrastructure row/metric services.
+
+**Layering:** this module may import both ``application.use_cases`` and ``infrastructure.adapters``;
+infrastructure adapters must not import application use cases (see architecture tests).
+
+Wiring is linear: no optional dependency branching. Tests override pieces via
+:class:`EvaluationWiringParts` + :func:`dataclasses.replace`.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from application.orchestration.evaluation.benchmark_execution import BenchmarkExecutionUseCase
+from application.orchestration.evaluation.gold_qa_benchmark_adapter import GoldQaBenchmarkAdapter
+from domain.evaluation.benchmark_failure_analysis import FailureAnalysisService
+from infrastructure.evaluation.answer_quality_aggregation_service import (
+    AnswerQualityAggregationService,
+)
+from infrastructure.evaluation.auto_debug_service import AutoDebugService
+from infrastructure.evaluation.benchmark_aggregation_service import BenchmarkAggregationService
+from infrastructure.evaluation.correlation_service import CorrelationService
+from infrastructure.evaluation.evaluation_service import EvaluationService
+from infrastructure.evaluation.explainability_service import ExplainabilityService
+from infrastructure.evaluation.llm_judge_service import LLMJudgeService
+from infrastructure.evaluation.retrieval_metrics_service import RetrievalMetricsService
+from infrastructure.evaluation.row_evaluation_service import RowEvaluationService
+from infrastructure.evaluation.semantic_similarity_service import SemanticSimilarityService
+
+
+@dataclass(frozen=True)
+class EvaluationWiringParts:
+    """Concrete collaborators for :func:`build_evaluation_service` (composition-only bundle)."""
+
+    llm_judge_service: object
+    correlation_service: CorrelationService
+    failure_analysis_service: FailureAnalysisService
+    semantic_similarity_service: object
+    explainability_service: ExplainabilityService
+    auto_debug_service: AutoDebugService
+
+
+def default_evaluation_wiring_parts() -> EvaluationWiringParts:
+    """Process-default evaluation adapters (no conditionals; used by :func:`build_backend_composition`)."""
+    return EvaluationWiringParts(
+        llm_judge_service=LLMJudgeService(),
+        correlation_service=CorrelationService(),
+        failure_analysis_service=FailureAnalysisService(),
+        semantic_similarity_service=SemanticSimilarityService(),
+        explainability_service=ExplainabilityService(),
+        auto_debug_service=AutoDebugService(),
+    )
+
+
+def build_evaluation_service(parts: EvaluationWiringParts) -> EvaluationService:
+    """
+    Construct :class:`~infrastructure.evaluation.evaluation_service.EvaluationService`
+    with a fully wired :class:`~domain.common.ports.gold_qa_benchmark_port.GoldQaBenchmarkPort` implementation.
+    """
+    retrieval_metrics = RetrievalMetricsService()
+    answer_quality = AnswerQualityAggregationService()
+    row_evaluation = RowEvaluationService(
+        retrieval_metrics_service=retrieval_metrics,
+        answer_quality_service=answer_quality,
+        semantic_similarity_service=parts.semantic_similarity_service,
+        llm_judge_service=parts.llm_judge_service,
+    )
+    benchmark_execution = BenchmarkExecutionUseCase(
+        row_evaluation=row_evaluation,
+        aggregation=BenchmarkAggregationService(),
+        correlation=parts.correlation_service,
+        failure_analysis=parts.failure_analysis_service,
+        explainability=parts.explainability_service,
+        auto_debug=parts.auto_debug_service,
+    )
+    gold_qa = GoldQaBenchmarkAdapter(benchmark_execution)
+
+    return EvaluationService(
+        gold_qa_benchmark=gold_qa,
+        retrieval_metrics_service=retrieval_metrics,
+        answer_quality_service=answer_quality,
+    )
+
+
+__all__ = [
+    "EvaluationWiringParts",
+    "build_evaluation_service",
+    "default_evaluation_wiring_parts",
+]

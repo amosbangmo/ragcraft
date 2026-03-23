@@ -5,7 +5,7 @@ Short form of the layout enforced in code. **Canonical detail:** `docs/architect
 ## HTTP backend — `apps/api/`
 
 - **FastAPI** (`apps/api/main.py`), routers, schemas, **`apps/api/dependencies.py`** → **`BackendApplicationContainer`** and use cases.
-- **`dependencies.py`** and routers use **composition + use cases** only; the **`apps/api`** tree must not import **`src.infrastructure.*`** (AST scan covers all modules, not only routers).
+- **`dependencies.py`** and routers use **composition + use cases** only; the **`apps/api`** tree must not import **`infrastructure.*`** (AST scan covers all modules, not only routers).
 
 ## Streamlit — reference UI client
 
@@ -33,7 +33,7 @@ See **`docs/README.md`** (local development) for env vars.
 | **`src/frontend_gateway/`** | `BackendClient`, HTTP/in-process, **`StreamlitChatTranscript`**. No `src.infrastructure`. |
 | **`src/auth/`** | Shared auth helpers. |
 
-**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`src.application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`src/infrastructure/adapters`**).
+**Composition chat transcript:** callers pass **`ChatTranscriptPort`**. FastAPI and tests use **`application.frontend_support.memory_chat_transcript.MemoryChatTranscript`**; Streamlit uses **`StreamlitChatTranscript`** from **`streamlit_backend_factory`**. There is a single in-memory implementation (no duplicate under **`src/infrastructure/adapters`**).
 
 ## Removed legacy paths
 

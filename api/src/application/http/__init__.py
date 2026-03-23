@@ -1,0 +1,43 @@
+"""Application → HTTP/JSON wire boundary (stable payloads for REST clients)."""
+
+from application.http.wire import (
+    BenchmarkExportBundleWirePayload,
+    BenchmarkRunWirePayload,
+    EffectiveRetrievalSettingsWirePayload,
+    IngestDocumentWirePayload,
+    PipelineSnapshotWirePayload,
+    PreviewSummaryRecallWirePayload,
+    QaDatasetGenerateWirePayload,
+    RagAnswerWirePayload,
+    RetrievalComparisonWirePayload,
+    benchmark_export_bundle_to_wire_dict,
+    benchmark_result_to_wire_dict,
+    effective_retrieval_settings_view_to_wire_dict,
+    generate_qa_dataset_result_to_wire_dict,
+    ingest_document_result_to_wire_dict,
+    pipeline_build_result_to_wire_dict,
+    preview_summary_recall_to_wire_dict,
+    rag_response_to_wire_dict,
+    retrieval_comparison_to_wire_dict,
+)
+
+__all__ = [
+    "BenchmarkExportBundleWirePayload",
+    "BenchmarkRunWirePayload",
+    "EffectiveRetrievalSettingsWirePayload",
+    "IngestDocumentWirePayload",
+    "PipelineSnapshotWirePayload",
+    "PreviewSummaryRecallWirePayload",
+    "QaDatasetGenerateWirePayload",
+    "RagAnswerWirePayload",
+    "RetrievalComparisonWirePayload",
+    "benchmark_export_bundle_to_wire_dict",
+    "benchmark_result_to_wire_dict",
+    "effective_retrieval_settings_view_to_wire_dict",
+    "generate_qa_dataset_result_to_wire_dict",
+    "ingest_document_result_to_wire_dict",
+    "pipeline_build_result_to_wire_dict",
+    "preview_summary_recall_to_wire_dict",
+    "rag_response_to_wire_dict",
+    "retrieval_comparison_to_wire_dict",
+]

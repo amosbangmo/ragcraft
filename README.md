@@ -126,7 +126,7 @@ LLM
 
 | Done | Transitional / deprecated |
 |------|---------------------------|
-| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Legacy **`src/backend/`**, **`src/adapters/`** removed — use **`src.infrastructure.adapters`** |
+| FastAPI + use-case wiring, `BackendApplicationContainer`, HTTP E2E tests | Legacy **`src/backend/`**, **`src/adapters/`** removed — use **`infrastructure.adapters`** |
 | Streamlit → `BackendClient`; architecture boundaries tested | Streamlit as **primary demo UI** until a SPA replaces it for product work |
 | Domain without LangChain/FastAPI/Streamlit; `SummaryRecallDocument` for recall DTOs | **Bearer JWT** for HTTP API; rotate secrets and tune expiry for production |
 
@@ -231,7 +231,7 @@ ragcraft/
 ├── tests/
 │   ├── architecture/            # Layer boundary + orchestration guardrails
 │   ├── apps_api/                # FastAPI contract tests
-│   └── infrastructure_services/ # Unit tests for src.infrastructure.adapters
+│   └── infrastructure_services/ # Unit tests for infrastructure.adapters
 ├── data/
 ├── requirements.txt
 ├── ARCHITECTURE_TARGET.md       # Short runtime layout (read this first)

@@ -64,13 +64,13 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Auth and profile:** **`/auth/login`** and **`/auth/register`** call **`LoginUserUseCase`** / **`RegisterUserUseCase`** and issue a signed JWT via **`AccessTokenIssuerPort`** (same adapter). **`/users/*`** routes call dedicated user/account use cases. Password hashing and avatar filesystem I/O sit behind **`PasswordHasherPort`** and **`AvatarStoragePort`**, implemented by **`BcryptPasswordHasher`** and **`FileAvatarStorage`** (under **`src/infrastructure/adapters/auth/`** and **`…/filesystem/`**) and wired in **`build_backend_composition`**. JWT signing uses **`RAGCRAFT_JWT_SECRET`** (and optional **`RAGCRAFT_JWT_ISSUER`** / **`RAGCRAFT_JWT_AUDIENCE`**) — never hardcoded in source.
 
-**Rule:** The whole **`apps/api`** package must not import **`src.infrastructure.*`** (including **`dependencies.py`**); routers resolve **use cases** via **`Depends`** → **`BackendApplicationContainer`** (and per-request use-case factories that take **`get_user_repository`** overrides for tests). **`MemoryChatTranscript`** for the HTTP worker comes from **`src.application.frontend_support.memory_chat_transcript`**.
+**Rule:** The whole **`apps/api`** package must not import **`infrastructure.*`** (including **`dependencies.py`**); routers resolve **use cases** via **`Depends`** → **`BackendApplicationContainer`** (and per-request use-case factories that take **`get_user_repository`** overrides for tests). **`MemoryChatTranscript`** for the HTTP worker comes from **`application.frontend_support.memory_chat_transcript`**.
 
 ## `src/frontend_gateway/`
 
 **Belongs here:** `BackendClient` protocol, `HttpBackendClient`, `InProcessBackendClient`, HTTP transport/payloads, Streamlit auth glue, `StreamlitChatTranscript` (session-backed transcript), `streamlit_backend_factory`, factories under **`factories/`** (e.g. chat service wiring for Streamlit).
 
-**Rule:** No imports of `src.infrastructure`. HTTP placeholders come from `src.application.frontend_support`. Gold-QA **`pipeline_runner`** must return **`RagInspectAnswerRun`** (**`BenchmarkExecutionUseCase`** raises **`TypeError`** otherwise).
+**Rule:** No imports of `src.infrastructure`. HTTP placeholders come from `application.frontend_support`. Gold-QA **`pipeline_runner`** must return **`RagInspectAnswerRun`** (**`BenchmarkExecutionUseCase`** raises **`TypeError`** otherwise).
 
 ## Other roots
 
@@ -127,6 +127,6 @@ Configuration lives in **`pyproject.toml`** at the repo root (dependencies for r
 |------|------|
 | **Ruff** | Lint + import sort (`I`) + safe pyupgrade (`UP`); catches undefined names (`F821`) and unused imports (`F401`). Example: `ruff check src apps` / `ruff format src apps`. |
 | **Black** | Formatter; line length **100** (match Ruff). Example: `black src apps pages tests`. |
-| **mypy** | Incremental static typing; **`ignore_missing_imports`** by default for third-party gaps. Prefer tightening **ports, DTOs, and use-case signatures** over repo-wide strict mode in one step. Example: `mypy --config-file=pyproject.toml -p src.application.use_cases.chat.ask_question`. |
+| **mypy** | Incremental static typing; **`ignore_missing_imports`** by default for third-party gaps. Prefer tightening **ports, DTOs, and use-case signatures** over repo-wide strict mode in one step. Example: `mypy --config-file=pyproject.toml -p application.use_cases.chat.ask_question`. |
 
 **CI (enforced):** **`.github/workflows/ci.yml`** runs **`ruff check src apps tests/architecture`** and **`pytest tests/architecture`** with **`PYTHONPATH=.`** (see **`scripts/validate.sh`** / **`validate.ps1`** for the same locally). For broader quality, run **`pytest tests/ -q`** and full-package **mypy** incrementally as described above.

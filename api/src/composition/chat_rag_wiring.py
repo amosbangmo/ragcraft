@@ -1,0 +1,209 @@
+"""
+Wires RAG retrieval infrastructure services into chat use cases.
+
+Called from :class:`~composition.application_container.BackendApplicationContainer` using
+technical adapters from :class:`~composition.backend_composition.BackendComposition`.
+Orchestration lives in application use cases; this module only constructs the object graph.
+
+**Orchestration inventory (adjacent wiring):**
+
+- Summary recall sequencing: :class:`~application.use_cases.chat.orchestration.summary_recall_workflow.ApplicationSummaryRecallStage`
+  with technical ports from :mod:`infrastructure.rag.summary_recall_technical_adapters`.
+- Post-recall assembly: :class:`~application.use_cases.chat.orchestration.application_pipeline_assembly.ApplicationPipelineAssembly`
+  (application) with technical stage adapters in
+  :mod:`infrastructure.rag.post_recall_stage_adapters` and multimodal hints from
+  :mod:`application.chat.multimodal_prompt_hints`.
+
+**Target ownership:** this file instantiates adapters and use cases only. Flow order for build/ask is owned by
+``BuildRagPipelineUseCase``, ``AskQuestionUseCase``, and ``src/application/use_cases/chat/orchestration/*``.
+``InspectRagPipelineUseCase`` shares the same :class:`~domain.common.ports.RetrievalPort` as ask but always calls
+``execute(..., emit_query_log=False)``.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from application.chat.multimodal_prompt_hints import MultimodalPromptHints
+from application.services.retrieval_settings_tuner import RetrievalSettingsTuner
+from application.use_cases.chat.ask_question import AskQuestionUseCase
+from application.use_cases.chat.build_rag_pipeline import BuildRagPipelineUseCase
+from application.use_cases.chat.generate_answer_from_pipeline import (
+    GenerateAnswerFromPipelineUseCase,
+)
+from application.use_cases.chat.inspect_rag_pipeline import InspectRagPipelineUseCase
+from application.orchestration.rag.application_pipeline_assembly import (
+    ApplicationPipelineAssembly,
+)
+from application.orchestration.rag.pipeline_query_log_emitter import (
+    PipelineQueryLogEmitter,
+)
+from application.orchestration.rag.ports import PostRecallStagePorts
+from application.orchestration.rag.summary_recall_ports import (
+    SummaryRecallTechnicalPorts,
+)
+from application.orchestration.rag.summary_recall_workflow import (
+    ApplicationSummaryRecallStage,
+)
+from application.use_cases.chat.preview_summary_recall import PreviewSummaryRecallUseCase
+from infrastructure.config.config import RETRIEVAL_CONFIG
+from domain.common.ports import QueryLogPort
+from infrastructure.rag.answer_generation_service import AnswerGenerationService
+from infrastructure.rag.docstore_service import DocStoreService
+from infrastructure.rag.hybrid_retrieval_service import HybridRetrievalService
+from infrastructure.rag.post_recall_stage_adapters import (
+    AssetRerankingAdapter,
+    ContextualCompressionAdapter,
+    DocstoreRecallReadAdapter,
+    LayoutGroupingAdapter,
+    PostRecallStageServices,
+    PromptRenderAdapter,
+    PromptSourceBuildAdapter,
+    RerankedConfidenceAdapter,
+    SectionExpansionStageAdapter,
+    TableQaAdjunctAdapter,
+    build_post_recall_stage_services,
+)
+from infrastructure.rag.query_rewrite_service import QueryRewriteService
+from infrastructure.rag.reranking_service import RerankingService
+from infrastructure.rag.summary_recall_technical_adapters import (
+    QueryRewriteAdapter,
+    SummaryLexicalRecallAdapter,
+    SummaryVectorRecallAdapter,
+)
+from infrastructure.rag.table_qa_service import TableQAService
+from infrastructure.rag.vectorstore_service import VectorStoreService
+
+
+def post_recall_stage_ports_from_services(
+    services: PostRecallStageServices,
+) -> PostRecallStagePorts:
+    """Bind concrete post-recall services to application port bundle (composition root)."""
+    return PostRecallStagePorts(
+        docstore_read=DocstoreRecallReadAdapter(services.docstore_service),
+        section_expansion=SectionExpansionStageAdapter(services.section_retrieval_service),
+        reranking=AssetRerankingAdapter(services.reranking_service),
+        table_qa=TableQaAdjunctAdapter(services.table_qa_service),
+        contextual_compression=ContextualCompressionAdapter(
+            services.contextual_compression_service
+        ),
+        prompt_sources=PromptSourceBuildAdapter(services.prompt_source_service),
+        layout_grouping=LayoutGroupingAdapter(services.layout_context_service),
+        multimodal_hints=services.multimodal_prompt_hints,
+        prompt_render=PromptRenderAdapter(services.prompt_builder_service),
+        confidence=RerankedConfidenceAdapter(services.confidence_service),
+    )
+
+
+@dataclass
+class RagRetrievalSubgraph:
+    """Shared RAG infrastructure services (built alongside chat use-case wiring)."""
+
+    table_qa_service: TableQAService
+    summary_recall_stage: ApplicationSummaryRecallStage
+    pipeline_assembly: ApplicationPipelineAssembly
+    post_recall_stage_services: PostRecallStageServices
+    answer_generation_service: AnswerGenerationService
+    retrieval_settings_tuner: RetrievalSettingsTuner
+
+    @property
+    def config(self) -> Any:
+        return self.retrieval_settings_tuner.config_source
+
+    @config.setter
+    def config(self, value: Any) -> None:
+        self.retrieval_settings_tuner.set_config_source(value)
+
+
+def build_rag_retrieval_subgraph(
+    *,
+    vectorstore_service: VectorStoreService,
+    docstore_service: DocStoreService,
+    reranking_service: RerankingService,
+    retrieval_settings_tuner: RetrievalSettingsTuner,
+) -> RagRetrievalSubgraph:
+    table_qa = TableQAService()
+    query_rewrite = QueryRewriteService(
+        max_history_messages=RETRIEVAL_CONFIG.query_rewrite_max_history_messages
+    )
+    hybrid = HybridRetrievalService(
+        k1=RETRIEVAL_CONFIG.bm25_k1,
+        b=RETRIEVAL_CONFIG.bm25_b,
+        epsilon=RETRIEVAL_CONFIG.bm25_epsilon,
+    )
+    technical = SummaryRecallTechnicalPorts(
+        query_rewrite=QueryRewriteAdapter(query_rewrite),
+        vector_recall=SummaryVectorRecallAdapter(vectorstore_service),
+        lexical_recall=SummaryLexicalRecallAdapter(docstore_service, hybrid),
+    )
+    summary = ApplicationSummaryRecallStage(
+        settings_tuner=retrieval_settings_tuner,
+        technical_ports=technical,
+    )
+    post_recall = build_post_recall_stage_services(
+        docstore_service=docstore_service,
+        reranking_service=reranking_service,
+        table_qa_service=table_qa,
+        multimodal_prompt_hints=MultimodalPromptHints(),
+    )
+    assembly = ApplicationPipelineAssembly(
+        stages=post_recall_stage_ports_from_services(post_recall),
+    )
+    answer_generation_service = AnswerGenerationService()
+    return RagRetrievalSubgraph(
+        table_qa_service=table_qa,
+        summary_recall_stage=summary,
+        pipeline_assembly=assembly,
+        post_recall_stage_services=post_recall,
+        answer_generation_service=answer_generation_service,
+        retrieval_settings_tuner=retrieval_settings_tuner,
+    )
+
+
+@dataclass(frozen=True)
+class ChatRagUseCases:
+    build_rag_pipeline: BuildRagPipelineUseCase
+    inspect_rag_pipeline: InspectRagPipelineUseCase
+    preview_summary_recall: PreviewSummaryRecallUseCase
+    generate_answer_from_pipeline: GenerateAnswerFromPipelineUseCase
+    ask_question: AskQuestionUseCase
+
+
+def build_chat_rag_use_cases(
+    subgraph: RagRetrievalSubgraph,
+    *,
+    query_log: QueryLogPort | None,
+) -> ChatRagUseCases:
+    emitter = PipelineQueryLogEmitter(query_log)
+    build_uc = BuildRagPipelineUseCase(
+        summary_recall_service=subgraph.summary_recall_stage,
+        pipeline_assembly_service=subgraph.pipeline_assembly,
+        query_log_emitter=emitter,
+    )
+    inspect_uc = InspectRagPipelineUseCase(retrieval=build_uc)
+    preview_uc = PreviewSummaryRecallUseCase(summary_recall_service=subgraph.summary_recall_stage)
+    generate_uc = GenerateAnswerFromPipelineUseCase(
+        generation=subgraph.answer_generation_service,
+    )
+    ask_uc = AskQuestionUseCase(
+        retrieval=build_uc,
+        generation=subgraph.answer_generation_service,
+        query_log=query_log,
+    )
+    return ChatRagUseCases(
+        build_rag_pipeline=build_uc,
+        inspect_rag_pipeline=inspect_uc,
+        preview_summary_recall=preview_uc,
+        generate_answer_from_pipeline=generate_uc,
+        ask_question=ask_uc,
+    )
+
+
+__all__ = [
+    "ChatRagUseCases",
+    "RagRetrievalSubgraph",
+    "build_chat_rag_use_cases",
+    "build_rag_retrieval_subgraph",
+    "post_recall_stage_ports_from_services",
+]

@@ -1,0 +1,9 @@
+[project]
+name = "ragcraft-frontend"
+version = "0.1.0"
+description = "RAGCraft Streamlit UI (src layout)"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
