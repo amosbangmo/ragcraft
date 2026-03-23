@@ -32,7 +32,7 @@ This document describes **what the repository implements today**, how it is **en
 | Full HTTP walk (mocked use cases) | **`api/tests/api/test_http_pipeline_e2e.py`** |
 | Composition smoke upload → ask (mocked services) | **`api/tests/e2e/test_smoke_upload_ingest_ask.py`** |
 | Mocked ask **wall time** bound | **`api/tests/appli/test_performance_smoke.py`** |
-| Browser / API E2E on **live uvicorn** (`/docs`, `/health`, parcours workspace HTTP) | **`cypress/e2e/`** (Cypress, **`npm run cy:ci`**) |
+| Browser / API E2E on **live uvicorn** + **Streamlit headless** (`/docs`, `/health`, parcours HTTP + iframe Streamlit) | **`cypress/e2e/`** (Cypress, **`npm run cy:ci`**) — voir **`docs/cypress_scope.md`** |
 
 ---
 
@@ -40,16 +40,34 @@ This document describes **what the repository implements today**, how it is **en
 
 - Lint (Ruff), architecture scripts, main pytest slice, infra/appli unittest slices.
 - **Boot check:** **`create_app()`** from **`interfaces.http.main`** (not Streamlit composition).
-- **Cypress:** **`npm ci`** then **`npm run cy:ci`** (**`scripts/run_cypress_e2e.py`**: API + **`cypress run`**).
+- **Cypress:** **`npm ci`** then **`npm run cy:ci`** (**`scripts/run_cypress_e2e.py`**: API **18976** + Streamlit **18975** + **`cypress run`**, sauf **`RAGCRAFT_CYPRESS_SKIP_STREAMLIT=1`**).
 - **Coverage:** pytest-cov over **`api/tests/appli`** + **`api/tests/domain`** for packages **`application`** and **`domain`**, XML report **`coverage.xml`** (no fixed fail-under in CI; tune locally before raising a gate).
 
 ---
 
 ## 5. Limitations (factual)
 
-- **Cypress E2E** covers the **OpenAPI UI + health** in a browser and, via **`cy.request`**, le même parcours **HTTP** que Streamlit en mode backend HTTP (inscription, login, projet, ingest, ask + champs sources, réglages retrieval, évaluation manuelle, erreurs API structurées). L’UI Streamlit widgets n’est pas pilotée au pixel près; le contrat réseau l’est.
+- **Cypress** exécute désormais **Streamlit réel** (port **18975**) en plus de l’API (**18976**) : voir **`cypress/e2e/streamlit/`** et **`docs/cypress_scope.md`**. Les parcours **HTTP** (`workspace_journey`, etc.) restent la preuve la plus déterministe pour ingest/ask/settings ; le shell Streamlit et le login widgets sont couverts en navigateur (iframe, **`data-testid`** sur le HTML injecté par markdown).
 - **Mypy** is **not** strict repo-wide; **`pyproject.toml`** enables **`warn_return_any`** and **`no_implicit_optional`** as incremental tightening — full strict passes are optional developer commands.
 - **Heavy parsers** (e.g. unstructured) and **external LLM/embedding** calls are not required for the default CI pytest slice; many tests use **mocks** or **dependency overrides**.
+
+---
+
+## 5b. Prouvé vs non prouvé (audit)
+
+**Prouvé par tests / artefacts**
+
+- Transport UI **HTTP uniquement** (pas de client in-process documenté pour Streamlit) — code + **`docs/`** + **`api/tests/architecture/test_docs_transport_and_client_topology.py`**.
+- Client canonique : **`frontend/src/services/http_backend_client.py`** ; façade **`services.api_client`**.
+- **`application/frontend_support/`** : re-export optionnel du **protocole** uniquement ; composition pytest : **`api/tests/support/backend_container.py`** (**`build_streamlit_session_aware_backend_container_for_tests`**).
+- Prévisualisation summary-recall : **`SummaryRecallPreviewDTO`** sans **`to_dict`** ; sérialisation dans **`application/http/wire`** ; types fil **`SummaryRecallPreviewPayload`** côté frontend.
+- Cypress : parcours listés dans **`docs/cypress_scope.md`** et **`artifacts/E2E_UI_JOURNEY_MAP.txt`** (après **`generate_artifacts`**).
+
+**Non revendiqué**
+
+- SLO production, charge, sécurité opérationnelle complète des JWT.
+- Couverture exhaustive de **chaque** widget Streamlit sur **chaque** page.
+- Benchmark **`BENCHMARK_RUNTIME.txt`** comme preuve de performance réelle (voir en-tête du fichier : mocks uniquement).
 
 ---
 
@@ -61,7 +79,8 @@ This document describes **what the repository implements today**, how it is **en
 | **`docs/dependency_rules.md`** | Import rules ↔ architecture tests |
 | **`docs/api.md`** | HTTP, JWT, env vars |
 | **`docs/testing_strategy.md`** | Pytest layout and markers |
-| **`docs/rag_orchestration.md`** | RAG flows (update in-process Streamlit notes manually if any remain) |
+| **`docs/rag_orchestration.md`** | RAG flows |
+| **`docs/cypress_scope.md`** | Périmètre Cypress, artefacts, specs Streamlit + HTTP |
 
 ---
 
@@ -74,4 +93,5 @@ Do not reference these as living code:
 - **`api/src/application/frontend_support/client_wire_mappers.py`**
 - **`api/src/application/frontend_support/view_models.py`**
 - **`api/src/application/frontend_support/streamlit_backend_access.py`**
+- **`api/src/application/frontend_support/streamlit_backend_factory.py`** (remplacé par **`api/tests/support/backend_container.py`**)
 - **`api/src/application/services/http_backend_stubs.py`**
