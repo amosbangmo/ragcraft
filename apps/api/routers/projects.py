@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from apps.api.dependencies import (
     get_create_project_use_case,
@@ -27,7 +27,10 @@ from apps.api.dependencies import (
     get_resolve_project_use_case,
     get_update_project_retrieval_settings_use_case,
 )
-from apps.api.schemas.mappers import document_asset_row_from_store, project_document_detail_item
+from apps.api.schemas.mappers import (
+    document_asset_row_from_store,
+    project_document_detail_row_to_item,
+)
 from apps.api.schemas.projects import (
     CreateProjectRequest,
     CreateProjectResponse,
@@ -47,7 +50,11 @@ from src.application.http.wire import (
     EffectiveRetrievalSettingsWirePayload,
     IngestDocumentWirePayload,
 )
-from apps.api.upload_adapter import read_upload_for_ingestion
+from apps.api.upload_adapter import (
+    StarletteUploadPayloadError,
+    StarletteUploadTooLargeError,
+    read_buffered_document_upload,
+)
 from src.application.ingestion.dtos import (
     DeleteDocumentCommand,
     IngestUploadedFileCommand,
@@ -145,7 +152,7 @@ def get_project_retrieval_settings(
         GetEffectiveRetrievalSettingsUseCase, Depends(get_get_effective_retrieval_settings_use_case)
     ],
 ) -> ProjectRetrievalSettingsResponse:
-    """Returns persisted preferences and merged :class:`~src.domain.retrieval_settings.RetrievalSettings` (as dict)."""
+    """Returns persisted preferences and merged effective retrieval settings (wire maps to JSON dicts)."""
     view = use_case.execute(
         GetEffectiveRetrievalSettingsQuery(user_id=principal.user_id, project_id=project_id)
     )
@@ -192,6 +199,8 @@ def put_project_retrieval_settings(
     response_model=IngestDocumentResponse,
     summary="Ingest an uploaded document",
     responses={
+        400: {"description": "Empty or invalid upload payload"},
+        413: {"description": "Upload larger than RAG_MAX_UPLOAD_BYTES"},
         502: {"description": "LLM or upstream model failure during summarization"},
         503: {"description": "Vector store, doc store, or extraction failure"},
     },
@@ -213,13 +222,17 @@ async def post_document_ingest(
     """
     **Multipart:** form field name must be ``file`` (``multipart/form-data``).
 
-    The server reads the entire body into memory before calling the ingest use case.
+    Transport reads the body in chunks up to ``RAG_MAX_UPLOAD_BYTES``, then delegates to
+    :class:`~src.application.use_cases.ingestion.ingest_uploaded_file.IngestUploadedFileUseCase`.
     """
-    buffered = await read_upload_for_ingestion(file)
+    try:
+        upload = await read_buffered_document_upload(file)
+    except StarletteUploadTooLargeError as exc:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
+    except StarletteUploadPayloadError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     project = resolve_project.execute(principal.user_id, project_id)
-    result = use_case.execute(
-        IngestUploadedFileCommand(project=project, uploaded_file=buffered)
-    )
+    result = use_case.execute(IngestUploadedFileCommand(project=project, upload=upload))
     wire = IngestDocumentWirePayload.from_ingest_result(result)
     return IngestDocumentResponse.model_validate(wire.as_json_dict())
 
@@ -323,23 +336,9 @@ def get_project_document_details(
 ) -> ProjectDocumentDetailsResponse:
     doc_names = list_docs.execute(principal.user_id, project_id)
     rows = details_uc.execute(user_id=principal.user_id, project_id=project_id, document_names=doc_names)
-    details = []
-    for row in rows:
-        latest = row.get("latest_ingested_at")
-        details.append(
-            project_document_detail_item(
-                name=str(row["name"]),
-                project_id=str(row["project_id"]),
-                path=str(row["path"]),
-                size_bytes=int(row["size_bytes"]),
-                asset_count=int(row["asset_count"]),
-                text_count=int(row["text_count"]),
-                table_count=int(row["table_count"]),
-                image_count=int(row["image_count"]),
-                latest_ingested_at=None if latest is None else str(latest),
-            )
-        )
-    return ProjectDocumentDetailsResponse(documents=details)
+    return ProjectDocumentDetailsResponse(
+        documents=[project_document_detail_row_to_item(r) for r in rows],
+    )
 
 
 @router.get(

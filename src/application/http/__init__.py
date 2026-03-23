@@ -1,15 +1,19 @@
 """Application → HTTP/JSON wire boundary (stable payloads for REST clients)."""
 
 from src.application.http.wire import (
+    BenchmarkExportBundleWirePayload,
     BenchmarkRunWirePayload,
     EffectiveRetrievalSettingsWirePayload,
     IngestDocumentWirePayload,
     PipelineSnapshotWirePayload,
     PreviewSummaryRecallWirePayload,
+    QaDatasetGenerateWirePayload,
     RagAnswerWirePayload,
     RetrievalComparisonWirePayload,
+    benchmark_export_bundle_to_wire_dict,
     benchmark_result_to_wire_dict,
     effective_retrieval_settings_view_to_wire_dict,
+    generate_qa_dataset_result_to_wire_dict,
     ingest_document_result_to_wire_dict,
     pipeline_build_result_to_wire_dict,
     preview_summary_recall_to_wire_dict,
@@ -18,15 +22,19 @@ from src.application.http.wire import (
 )
 
 __all__ = [
+    "BenchmarkExportBundleWirePayload",
     "BenchmarkRunWirePayload",
     "EffectiveRetrievalSettingsWirePayload",
     "IngestDocumentWirePayload",
     "PipelineSnapshotWirePayload",
     "PreviewSummaryRecallWirePayload",
+    "QaDatasetGenerateWirePayload",
     "RagAnswerWirePayload",
     "RetrievalComparisonWirePayload",
+    "benchmark_export_bundle_to_wire_dict",
     "benchmark_result_to_wire_dict",
     "effective_retrieval_settings_view_to_wire_dict",
+    "generate_qa_dataset_result_to_wire_dict",
     "ingest_document_result_to_wire_dict",
     "pipeline_build_result_to_wire_dict",
     "preview_summary_recall_to_wire_dict",

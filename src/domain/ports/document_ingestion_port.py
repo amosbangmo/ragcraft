@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 from src.domain.project import Project
 
 
 @runtime_checkable
 class DocumentIngestionPort(Protocol):
-    def ingest_uploaded_file(self, project: Project, uploaded_file: Any) -> tuple[Any, Any, Any]: ...
+    def ingest_uploaded_file(
+        self, project: Project, uploaded_file: BufferedDocumentUpload
+    ) -> tuple[Any, Any, Any]: ...
 
     def ingest_file_path(
         self,

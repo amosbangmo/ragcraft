@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from src.domain.qa_dataset_proposal import ProposedQaDatasetRow
 from src.infrastructure.llm.qa_dataset_llm_gateway import QADatasetLlmGateway
 from src.infrastructure.adapters.rag.docstore_service import DocStoreService
 from src.infrastructure.adapters.workspace.project_service import ProjectService
@@ -35,7 +36,7 @@ class QADatasetGenerationService:
         project_id: str,
         num_questions: int,
         source_files: list[str] | None = None,
-    ) -> list[dict]:
+    ) -> list[ProposedQaDatasetRow]:
         normalized_num_questions = max(1, min(int(num_questions), 20))
         selected_source_files = self._resolve_source_files(
             user_id=user_id,
@@ -57,12 +58,13 @@ class QADatasetGenerationService:
 
         context = self._build_generation_context(raw_assets)
 
-        return self._llm_gateway.generate_qa_entry_dicts(
+        raw = self._llm_gateway.generate_qa_entry_dicts(
             project_id=project_id,
             num_questions=normalized_num_questions,
             source_files=selected_source_files,
             context=context,
         )
+        return [ProposedQaDatasetRow.from_llm_dict(item) for item in raw]
 
     def _resolve_source_files(
         self,

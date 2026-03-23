@@ -1,31 +1,74 @@
 """
-Bridge FastAPI ``UploadFile`` to the ingestion layer, which expects upload-shaped objects
-(``name`` + ``getbuffer()``) compatible with :func:`src.infrastructure.ingestion.loader.save_uploaded_file`.
+FastAPI / Starlette multipart → domain :class:`~src.domain.buffered_document_upload.BufferedDocumentUpload`.
+
+**Policy:** uploads are read in chunks with a hard byte cap so oversized bodies are rejected without
+buffering the full file. True streaming into extraction is not supported yet; the bounded buffer is
+passed to the application use case, which persists then runs the existing on-disk pipeline.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import UploadFile
 
+from src.core.config import INGESTION_CONFIG
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 
-async def read_upload_for_ingestion(upload: UploadFile, *, default_name: str = "upload") -> object:
+_READ_CHUNK = 1024 * 1024
+
+
+class StarletteUploadPayloadError(ValueError):
+    """Invalid or unreadable multipart upload (client error)."""
+
+
+class StarletteUploadTooLargeError(StarletteUploadPayloadError):
+    """Total body size exceeds configured ``RAG_MAX_UPLOAD_BYTES`` / :attr:`INGESTION_CONFIG.max_upload_bytes`."""
+
+
+def _client_filename(upload: UploadFile, *, default_name: str) -> str:
+    raw = (upload.filename or "").strip() or default_name
+    base = Path(raw).name.strip()
+    return base if base and base not in {".", ".."} else default_name
+
+
+async def read_buffered_document_upload(
+    upload: UploadFile,
+    *,
+    default_name: str = "upload",
+    max_bytes: int | None = None,
+) -> BufferedDocumentUpload:
     """
-    Read the full upload body and return a small object compatible with ``save_uploaded_file``.
+    Read the upload body up to ``max_bytes`` (default: ingestion config).
 
-    The returned object's ``name`` is the client filename (or ``default_name`` if missing).
-    That name is used as ``source_file`` in the project workspace (same as the saved basename).
+    Raises:
+        StarletteUploadTooLargeError: if more than ``max_bytes`` would be required.
+        StarletteUploadPayloadError: if the stream cannot be read.
     """
-    data = await upload.read()
-    raw_name = (upload.filename or "").strip() or default_name
+    limit = INGESTION_CONFIG.max_upload_bytes if max_bytes is None else max_bytes
+    name = _client_filename(upload, default_name=default_name)
+    chunks: list[bytes] = []
+    total = 0
+    try:
+        while True:
+            chunk = await upload.read(_READ_CHUNK)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > limit:
+                raise StarletteUploadTooLargeError(
+                    f"Upload exceeds maximum size of {limit} bytes (configured via RAG_MAX_UPLOAD_BYTES)."
+                )
+            chunks.append(chunk)
+    except StarletteUploadTooLargeError:
+        raise
+    except Exception as exc:
+        raise StarletteUploadPayloadError(f"Failed to read upload body: {exc}") from exc
 
-    class _BufferedUpload:
-        __slots__ = ("name", "_data")
-
-        def __init__(self, name: str, body: bytes) -> None:
-            self.name = name
-            self._data = body
-
-        def getbuffer(self) -> memoryview:
-            return memoryview(self._data)
-
-    return _BufferedUpload(raw_name, data)
+    body = b"".join(chunks)
+    media = upload.content_type
+    return BufferedDocumentUpload(
+        source_filename=name,
+        body=body,
+        declared_media_type=media,
+    )

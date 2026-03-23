@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from src.domain.qa_dataset_entry import QADatasetEntry
+
 
 @dataclass(frozen=True)
 class RunManualEvaluationCommand:
@@ -79,3 +81,15 @@ class GenerateQaDatasetCommand:
     num_questions: int
     source_files: list[str] | None = None
     generation_mode: str = "append"
+
+
+@dataclass(frozen=True)
+class GenerateQaDatasetResult:
+    """Outcome of LLM-backed QA row generation and optional persistence."""
+
+    generation_mode: str
+    deleted_existing_entries: int
+    created_entries: tuple[QADatasetEntry, ...]
+    skipped_duplicates: tuple[str, ...]
+    requested_questions: int
+    raw_generated_count: int

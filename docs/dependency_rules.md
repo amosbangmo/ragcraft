@@ -10,7 +10,7 @@ pytest tests/architecture -q
 
 | From | May import |
 |------|------------|
-| **Domain** | `src.core` (as established), stdlib, third-party **without** pulling app/infra (see tests for forbidden list). RAG-related typed transport for retrieval overrides lives in **`src/domain/retrieval_settings_override_spec.py`** so **`RetrievalPort`** and related protocols stay dict-free at the orchestration boundary. |
+| **Domain** | `src.core` (as established), stdlib, third-party **without** pulling app/infra (see tests for forbidden list). RAG-related typed transport for retrieval overrides lives in **`src/domain/retrieval_settings_override_spec.py`** so **`RetrievalPort`** and related protocols stay dict-free at the orchestration boundary. **`BufferedDocumentUpload`** and **`ProposedQaDatasetRow`** keep ingest and QA-generation ports off anonymous dict payloads at those boundaries. |
 | **Application** | `src.domain`, `src.core`; **`frontend_support`** may use `src.frontend_gateway` for stubs only |
 | **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
 | **Infrastructure adapters** | **Domain** always; **`src.application`** only where the codebase explicitly allows (see below) |

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from src.core.config import INGESTION_CONFIG
 from src.domain.ports import AssetRepositoryPort, VectorStorePort
 from src.domain.ports.document_ingestion_port import DocumentIngestionPort
 
 from src.application.ingestion.dtos import IngestDocumentResult, IngestUploadedFileCommand
+from src.application.ingestion.upload_policy import validate_buffered_document_upload
 
 from .ingest_common import finalize_ingestion_pipeline
 from .replace_document_assets import replace_document_assets_for_reingest
@@ -32,12 +34,15 @@ class IngestUploadedFileUseCase:
 
     def execute(self, command: IngestUploadedFileCommand) -> IngestDocumentResult:
         project = command.project
-        uploaded_file = command.uploaded_file
+        upload = validate_buffered_document_upload(
+            command.upload,
+            max_bytes=INGESTION_CONFIG.max_upload_bytes,
+        )
         replacement_info = replace_document_assets_for_reingest(
             project=project,
             user_id=project.user_id,
             project_id=project.project_id,
-            source_file=uploaded_file.name,
+            source_file=upload.name,
             asset_repository=self._assets,
             vector_index=self._vectors,
             invalidate_project_chain=self._invalidate_chain,
@@ -45,14 +50,14 @@ class IngestUploadedFileUseCase:
 
         summary_documents, raw_assets, diagnostics = self._ingestion.ingest_uploaded_file(
             project,
-            uploaded_file,
+            upload,
         )
 
         return finalize_ingestion_pipeline(
             project=project,
             user_id=project.user_id,
             project_id=project.project_id,
-            source_file=uploaded_file.name,
+            source_file=upload.name,
             summary_documents=summary_documents,
             raw_assets=raw_assets,
             diagnostics=diagnostics,

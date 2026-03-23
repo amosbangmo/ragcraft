@@ -10,6 +10,7 @@ from src.application.evaluation.dtos import (
     CreateQaDatasetEntryCommand,
     DeleteAllQaDatasetEntriesCommand,
     GenerateQaDatasetCommand,
+    GenerateQaDatasetResult,
 )
 
 
@@ -29,7 +30,7 @@ class GenerateQaDatasetUseCase:
         self._qa = qa_dataset
         self._gen = qa_dataset_generation_service
 
-    def execute(self, command: GenerateQaDatasetCommand) -> dict:
+    def execute(self, command: GenerateQaDatasetCommand) -> GenerateQaDatasetResult:
         normalized_mode = (command.generation_mode or "append").strip().lower()
         if normalized_mode not in {"append", "replace", "append_dedup"}:
             raise ValueError("generation_mode must be one of: append, replace, append_dedup.")
@@ -65,7 +66,7 @@ class GenerateQaDatasetUseCase:
         skipped_duplicates = []
 
         for item in generated_entries:
-            question = item["question"]
+            question = item.question
             question_key = normalized_qa_question_key(question)
 
             if normalized_mode == "append_dedup" and question_key in existing_question_keys:
@@ -77,9 +78,9 @@ class GenerateQaDatasetUseCase:
                     user_id=command.user_id,
                     project_id=command.project_id,
                     question=question,
-                    expected_answer=item.get("expected_answer"),
-                    expected_doc_ids=item.get("expected_doc_ids", []),
-                    expected_sources=item.get("expected_sources", []),
+                    expected_answer=item.expected_answer,
+                    expected_doc_ids=list(item.expected_doc_ids),
+                    expected_sources=list(item.expected_sources),
                 )
             )
             created_entries.append(created_entry)
@@ -87,11 +88,11 @@ class GenerateQaDatasetUseCase:
             if normalized_mode == "append_dedup":
                 existing_question_keys.add(question_key)
 
-        return {
-            "generation_mode": normalized_mode,
-            "deleted_existing_entries": deleted_existing_entries,
-            "created_entries": created_entries,
-            "skipped_duplicates": skipped_duplicates,
-            "requested_questions": int(command.num_questions),
-            "raw_generated_count": len(generated_entries),
-        }
+        return GenerateQaDatasetResult(
+            generation_mode=normalized_mode,
+            deleted_existing_entries=deleted_existing_entries,
+            created_entries=tuple(created_entries),
+            skipped_duplicates=tuple(skipped_duplicates),
+            requested_questions=int(command.num_questions),
+            raw_generated_count=len(generated_entries),
+        )

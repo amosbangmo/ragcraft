@@ -66,3 +66,9 @@ Composition builds the graph in `src/composition/chat_rag_wiring.py` and exposes
 ## Retrieval comparison
 
 - **`CompareRetrievalModesUseCase`** — uses **`InspectRagPipelinePort`** (application); no direct RAG adapter imports from routers or gateway.
+
+## Document ingestion (orthogonal to RAG query path)
+
+- **HTTP:** `POST /projects/{project_id}/documents/ingest` uses **`read_buffered_document_upload`** (`apps/api/upload_adapter.py`) then **`IngestUploadedFileUseCase`** with **`IngestUploadedFileCommand.upload`** = domain **`BufferedDocumentUpload`**.
+- **Application:** **`validate_buffered_document_upload`** applies basename-only names, non-empty body, and size limits (aligned with **`RAG_MAX_UPLOAD_BYTES`**).
+- **Infrastructure:** **`IngestionService.ingest_uploaded_file`** persists via **`save_uploaded_file`** then runs the existing on-disk extraction pipeline (not streaming from the socket into unstructured).

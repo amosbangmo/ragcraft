@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 
@@ -35,10 +36,10 @@ class DeleteDocumentCommand:
 
 @dataclass(frozen=True)
 class IngestUploadedFileCommand:
-    """Ingest a browser/API upload (object must expose ``name`` like Streamlit ``UploadedFile``)."""
+    """Ingest a buffered upload (transport builds :class:`~src.domain.buffered_document_upload.BufferedDocumentUpload`)."""
 
     project: Project
-    uploaded_file: object
+    upload: BufferedDocumentUpload
 
 
 @dataclass

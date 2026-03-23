@@ -88,6 +88,11 @@ class RetrievalConfig:
 
 @dataclass(frozen=True)
 class IngestionConfig:
+    """Ingestion limits; ``max_upload_bytes`` caps multipart upload bodies (chunked read in API adapter)."""
+
+    max_upload_bytes: int = field(
+        default_factory=lambda: _get_int_env("RAG_MAX_UPLOAD_BYTES", 100 * 1024 * 1024)
+    )
     extraction_max_text_chars_per_asset: int = field(
         default_factory=lambda: _get_int_env("RAG_EXTRACTION_MAX_TEXT_CHARS_PER_ASSET", 2500)
     )

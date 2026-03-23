@@ -101,7 +101,11 @@ class TestSmokeUploadIngestAsk(unittest.TestCase):
 
         user_id = "u1"
         project_id = "p1"
-        uploaded_file = SimpleNamespace(name="sample.pdf")
+        _pdf_bytes = b"%PDF-1.4 minimal"
+        uploaded_file = SimpleNamespace(
+            name="sample.pdf",
+            getbuffer=lambda: memoryview(_pdf_bytes),
+        )
         project = Project(user_id=user_id, project_id=project_id)
 
         backend.project_service = MagicMock()

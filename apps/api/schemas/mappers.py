@@ -21,6 +21,7 @@ from apps.api.schemas.projects import DocumentAssetRow, ProjectDocumentDetailIte
 from apps.api.schemas.users import UserMeResponse
 
 from src.application.auth.dtos import UserProfileSummary
+from src.application.projects.dtos import ProjectDocumentDetailRow
 
 
 def user_profile_summary_to_me(user: UserProfileSummary) -> UserMeResponse:
@@ -115,4 +116,18 @@ def project_document_detail_item(
         table_count=table_count,
         image_count=image_count,
         latest_ingested_at=latest_ingested_at,
+    )
+
+
+def project_document_detail_row_to_item(row: ProjectDocumentDetailRow) -> ProjectDocumentDetailItem:
+    return project_document_detail_item(
+        name=row.name,
+        project_id=row.project_id,
+        path=row.path,
+        size_bytes=row.size_bytes,
+        asset_count=row.asset_count,
+        text_count=row.text_count,
+        table_count=row.table_count,
+        image_count=row.image_count,
+        latest_ingested_at=row.latest_ingested_at,
     )

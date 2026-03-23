@@ -45,7 +45,11 @@ from apps.api.schemas.mappers import (
     qa_dataset_entry_to_response,
     retrieval_query_log_rows_to_entries,
 )
-from src.application.http.wire import BenchmarkRunWirePayload
+from src.application.http.wire import (
+    BenchmarkExportBundleWirePayload,
+    BenchmarkRunWirePayload,
+    QaDatasetGenerateWirePayload,
+)
 from src.application.evaluation.benchmark_export_dtos import BuildBenchmarkExportCommand
 from src.application.use_cases.evaluation.build_benchmark_export_artifacts import (
     BuildBenchmarkExportArtifactsUseCase,
@@ -241,7 +245,7 @@ def post_dataset_generate(
     principal: Annotated[AuthenticatedPrincipal, Depends(get_authenticated_principal)],
     use_case: Annotated[GenerateQaDatasetUseCase, Depends(get_generate_qa_dataset_use_case)],
 ) -> QaDatasetGenerateResponse:
-    raw = use_case.execute(
+    result = use_case.execute(
         GenerateQaDatasetCommand(
             user_id=principal.user_id,
             project_id=body.project_id,
@@ -250,15 +254,8 @@ def post_dataset_generate(
             generation_mode=body.generation_mode,
         )
     )
-    created = [_entry_to_response(e) for e in raw["created_entries"]]
-    return QaDatasetGenerateResponse(
-        generation_mode=raw["generation_mode"],
-        deleted_existing_entries=int(raw["deleted_existing_entries"]),
-        created_entries=created,
-        skipped_duplicates=list(raw["skipped_duplicates"]),
-        requested_questions=int(raw["requested_questions"]),
-        raw_generated_count=int(raw["raw_generated_count"]),
-    )
+    wire = QaDatasetGenerateWirePayload.from_result(result)
+    return QaDatasetGenerateResponse.model_validate(wire.as_json_dict())
 
 
 @router.get(
@@ -346,7 +343,8 @@ def post_benchmark_export(
     )
     fmt = body.export_format
     if fmt == "all":
-        return BenchmarkExportResponse.model_validate(artifacts.to_http_bundle_dict())
+        bundle = BenchmarkExportBundleWirePayload.from_artifacts(artifacts)
+        return BenchmarkExportResponse.model_validate(bundle.as_json_dict())
     if fmt == "json":
         return Response(
             content=artifacts.json_bytes,

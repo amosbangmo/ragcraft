@@ -12,6 +12,8 @@ from dataclasses import asdict, dataclass
 from typing import Any, cast
 
 from src.application.common.summary_recall_preview import SummaryRecallPreviewDTO
+from src.application.evaluation.benchmark_export_dtos import BenchmarkExportArtifacts
+from src.application.evaluation.dtos import GenerateQaDatasetResult
 from src.application.ingestion.dtos import IngestDocumentResult
 from src.application.settings.dtos import EffectiveRetrievalSettingsView
 from src.domain.benchmark_result import BenchmarkResult
@@ -219,6 +221,53 @@ class RetrievalComparisonWirePayload:
         }
 
 
+@dataclass(frozen=True)
+class QaDatasetGenerateWirePayload:
+    """Maps :class:`~src.application.evaluation.dtos.GenerateQaDatasetResult` to QA generate API JSON."""
+
+    generation_mode: str
+    deleted_existing_entries: int
+    created_entries: list[dict[str, Any]]
+    skipped_duplicates: list[str]
+    requested_questions: int
+    raw_generated_count: int
+
+    @classmethod
+    def from_result(cls, result: GenerateQaDatasetResult) -> QaDatasetGenerateWirePayload:
+        return cls(
+            generation_mode=result.generation_mode,
+            deleted_existing_entries=result.deleted_existing_entries,
+            created_entries=[e.to_dict() for e in result.created_entries],
+            skipped_duplicates=list(result.skipped_duplicates),
+            requested_questions=result.requested_questions,
+            raw_generated_count=result.raw_generated_count,
+        )
+
+    def as_json_dict(self) -> dict[str, Any]:
+        return {
+            "generation_mode": self.generation_mode,
+            "deleted_existing_entries": self.deleted_existing_entries,
+            "created_entries": list(self.created_entries),
+            "skipped_duplicates": list(self.skipped_duplicates),
+            "requested_questions": self.requested_questions,
+            "raw_generated_count": self.raw_generated_count,
+        }
+
+
+@dataclass(frozen=True)
+class BenchmarkExportBundleWirePayload:
+    """Wrapper for ``export_format=all`` JSON (base64 artifacts + metadata)."""
+
+    bundle: dict[str, Any]
+
+    @classmethod
+    def from_artifacts(cls, artifacts: BenchmarkExportArtifacts) -> BenchmarkExportBundleWirePayload:
+        return cls(bundle=dict(artifacts.to_http_bundle_dict()))
+
+    def as_json_dict(self) -> dict[str, Any]:
+        return dict(self.bundle)
+
+
 # --- Thin callables (stable names for ``apps.api.schemas.serialization`` re-exports) ---
 
 
@@ -250,3 +299,11 @@ def benchmark_result_to_wire_dict(result: BenchmarkResult) -> dict[str, Any]:
 
 def retrieval_comparison_to_wire_dict(raw: dict[str, Any]) -> dict[str, Any]:
     return RetrievalComparisonWirePayload.from_service_dict(raw).as_json_dict()
+
+
+def generate_qa_dataset_result_to_wire_dict(result: GenerateQaDatasetResult) -> dict[str, Any]:
+    return QaDatasetGenerateWirePayload.from_result(result).as_json_dict()
+
+
+def benchmark_export_bundle_to_wire_dict(artifacts: BenchmarkExportArtifacts) -> dict[str, Any]:
+    return BenchmarkExportBundleWirePayload.from_artifacts(artifacts).as_json_dict()

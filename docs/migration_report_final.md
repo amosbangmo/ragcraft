@@ -161,7 +161,32 @@ This pass removed loose retrieval-settings ``dict`` shapes from core RAG orchest
 
 ---
 
-## 11. Repository tree (main folders)
+## 11. Ingestion, project document details, and evaluation wire (API / application hardening)
+
+**Document upload boundary**
+
+- **Transport:** ``apps/api/upload_adapter.py`` reads multipart bodies in **chunks** (1 MiB) and rejects payloads larger than ``INGESTION_CONFIG.max_upload_bytes`` (env **`RAG_MAX_UPLOAD_BYTES`**, default 100 MiB) with **HTTP 413** before the ingest use case runs.
+- **Domain:** **`BufferedDocumentUpload`** (`src/domain/buffered_document_upload.py`) is the stable name + bytes (+ optional declared media type) object passed into **`DocumentIngestionPort.ingest_uploaded_file`** and **`IngestUploadedFileCommand`** (field **`upload`**).
+- **Application validation:** **`validate_buffered_document_upload`** (`src/application/ingestion/upload_policy.py`) enforces non-empty body, size cap (defense in depth), and basename-only filenames.
+- **Streaming:** Extraction still runs from a **persisted file** on disk (existing pipeline); streaming directly into unstructured is **not** implemented — the adapter documents this limitation.
+
+**Settings**
+
+- Retrieval GET/PUT already used **`EffectiveRetrievalSettingsView`** + **`EffectiveRetrievalSettingsWirePayload`**; **`src/application/settings/dtos.py`** docstrings now spell out query/command/view roles and wire mapping.
+
+**Row-dict leakage reduced**
+
+- **`GetProjectDocumentDetailsUseCase`** returns **`list[ProjectDocumentDetailRow]`** (`src/application/projects/dtos.py`); the projects router maps rows via **`project_document_detail_row_to_item`** (`apps/api/schemas/mappers.py`).
+- **QA dataset generation:** **`ProposedQaDatasetRow`** (domain), **`QaDatasetGenerationPort`** returns typed proposals, **`GenerateQaDatasetResult`** (`src/application/evaluation/dtos.py`), **`QaDatasetGenerateWirePayload`** for FastAPI **`QaDatasetGenerateResponse`**. **`BenchmarkExportBundleWirePayload`** wraps **`BenchmarkExportArtifacts.to_http_bundle_dict()`** for the export ``all`` format.
+
+**Residual**
+
+- **SQLite asset listing** for document assets is still ``list[dict]`` from the repository; a typed asset row model can follow the same pattern as document details.
+- **`ListRetrievalQueryLogsUseCase`** / log entries may remain dict-shaped at the HTTP mapper where the store is JSON-oriented.
+
+---
+
+## 12. Repository tree (main folders)
 
 ```text
 apps/api/

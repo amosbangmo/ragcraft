@@ -8,13 +8,20 @@ from src.domain.retrieval_settings import RetrievalSettings
 
 @dataclass(frozen=True)
 class GetEffectiveRetrievalSettingsQuery:
+    """Input for loading saved project preferences and computing merged retrieval tuning."""
+
     user_id: str
     project_id: str
 
 
 @dataclass(frozen=True)
 class UpdateProjectRetrievalSettingsCommand:
-    """Persisted retrieval preferences for a project (preset semantics unchanged from UI)."""
+    """
+    Persisted retrieval preferences for a project.
+
+    Preset strings are normalized via :func:`~src.domain.retrieval_presets.parse_retrieval_preset`
+    in the update use case; invalid values surface as :class:`ValueError`.
+    """
 
     user_id: str
     project_id: str
@@ -26,7 +33,12 @@ class UpdateProjectRetrievalSettingsCommand:
 
 @dataclass(frozen=True)
 class EffectiveRetrievalSettingsView:
-    """Loaded preferences plus merged effective tuning used by RAG retrieval."""
+    """
+    Application read model: saved :class:`~src.domain.project_settings.ProjectSettings` plus
+    merged :class:`~src.domain.retrieval_settings.RetrievalSettings` used by RAG.
+
+    HTTP responses map this through :class:`~src.application.http.wire.EffectiveRetrievalSettingsWirePayload`.
+    """
 
     preferences: ProjectSettings
     effective_retrieval: RetrievalSettings

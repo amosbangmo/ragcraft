@@ -9,6 +9,7 @@ from src.core.exceptions import (
     LLMServiceError,
     OCRDependencyError,
 )
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.infrastructure.ingestion.loader import save_uploaded_file
@@ -29,7 +30,7 @@ class IngestionService:
         self.config = INGESTION_CONFIG
 
     def ingest_uploaded_file(
-        self, project: Project, uploaded_file
+        self, project: Project, uploaded_file: BufferedDocumentUpload
     ) -> tuple[list[Document], list[dict], IngestionDiagnostics]:
         try:
             project.path.mkdir(parents=True, exist_ok=True)

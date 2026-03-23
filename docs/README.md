@@ -18,3 +18,4 @@ Concise, **code-aligned** documentation for the repository layout after the Clea
 - Run API: `python -m uvicorn apps.api.main:app --reload --host 127.0.0.1 --port 8000` with `PYTHONPATH` set to the repo root.
 - Point Streamlit at the API: set `RAGCRAFT_BACKEND_CLIENT=http` and `RAGCRAFT_API_BASE_URL` (e.g. `http://127.0.0.1:8000`).
 - In-process Streamlit (no uvicorn): `RAGCRAFT_BACKEND_CLIENT=in_process` uses `build_streamlit_backend_application_container()` (same use cases, `StreamlitChatTranscript` for session state).
+- Optional: **`RAG_MAX_UPLOAD_BYTES`** caps multipart document upload size on the API (see `docs/migration_report_final.md` §11).

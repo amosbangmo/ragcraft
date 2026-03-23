@@ -1,7 +1,16 @@
 from __future__ import annotations
 
+from src.application.projects.dtos import ProjectDocumentDetailRow
 from src.application.use_cases.projects.resolve_project import ResolveProjectUseCase
 from src.domain.ports import AssetRepositoryPort
+
+
+def _latest_ingested_iso(value: object) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return str(value)
 
 
 class GetProjectDocumentDetailsUseCase:
@@ -11,9 +20,9 @@ class GetProjectDocumentDetailsUseCase:
         self._resolve_project = resolve_project
         self._assets = asset_repository
 
-    def execute(self, *, user_id: str, project_id: str, document_names: list[str]) -> list[dict]:
+    def execute(self, *, user_id: str, project_id: str, document_names: list[str]) -> list[ProjectDocumentDetailRow]:
         project = self._resolve_project.execute(user_id, project_id)
-        details: list[dict] = []
+        details: list[ProjectDocumentDetailRow] = []
 
         for doc_name in document_names:
             file_path = project.path / doc_name
@@ -28,17 +37,17 @@ class GetProjectDocumentDetailsUseCase:
                 source_file=doc_name,
             )
             details.append(
-                {
-                    "name": doc_name,
-                    "project_id": project_id,
-                    "path": str(file_path),
-                    "size_bytes": file_path.stat().st_size if file_path.exists() else 0,
-                    "asset_count": asset_count,
-                    "text_count": int(asset_stats.get("text_count", 0)),
-                    "table_count": int(asset_stats.get("table_count", 0)),
-                    "image_count": int(asset_stats.get("image_count", 0)),
-                    "latest_ingested_at": asset_stats.get("latest_ingested_at"),
-                }
+                ProjectDocumentDetailRow(
+                    name=doc_name,
+                    project_id=project_id,
+                    path=str(file_path),
+                    size_bytes=file_path.stat().st_size if file_path.exists() else 0,
+                    asset_count=asset_count,
+                    text_count=int(asset_stats.get("text_count", 0)),
+                    table_count=int(asset_stats.get("table_count", 0)),
+                    image_count=int(asset_stats.get("image_count", 0)),
+                    latest_ingested_at=_latest_ingested_iso(asset_stats.get("latest_ingested_at")),
+                )
             )
 
         return details

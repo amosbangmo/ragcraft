@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 from src.domain.ingestion_diagnostics import IngestionDiagnostics
 from src.domain.project import Project
 from src.application.ingestion.dtos import (
@@ -15,10 +14,10 @@ from src.application.ingestion.dtos import (
 
 def test_ingest_upload_file_command_holds_handles() -> None:
     project = Project(user_id="u", project_id="p")
-    upload = SimpleNamespace(name="doc.pdf")
-    cmd = IngestUploadedFileCommand(project=project, uploaded_file=upload)
+    upload = BufferedDocumentUpload(source_filename="doc.pdf", body=b"x")
+    cmd = IngestUploadedFileCommand(project=project, upload=upload)
     assert cmd.project is project
-    assert cmd.uploaded_file is upload
+    assert cmd.upload is upload
 
 
 def test_ingest_result_format_first_upload_message() -> None:

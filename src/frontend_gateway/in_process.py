@@ -30,6 +30,7 @@ from src.application.settings.dtos import (
     UpdateProjectRetrievalSettingsCommand,
 )
 from src.composition import BackendApplicationContainer
+from src.domain.buffered_document_upload import BufferedDocumentUpload
 from src.domain.benchmark_result import BenchmarkResult
 from src.domain.manual_evaluation_result import ManualEvaluationResult
 from src.domain.pipeline_payloads import PipelineBuildResult
@@ -167,8 +168,13 @@ class InProcessBackendClient:
         self, user_id: str, project_id: str, uploaded_file: Any
     ) -> IngestDocumentResult:
         project = self.get_project(user_id, project_id)
+        upload = (
+            uploaded_file
+            if isinstance(uploaded_file, BufferedDocumentUpload)
+            else BufferedDocumentUpload.from_duck_typed(uploaded_file)
+        )
         return self._container.ingestion_ingest_uploaded_file_use_case.execute(
-            IngestUploadedFileCommand(project=project, uploaded_file=uploaded_file)
+            IngestUploadedFileCommand(project=project, upload=upload)
         )
 
     def reindex_project_document(
@@ -417,7 +423,7 @@ class InProcessBackendClient:
         source_files: list[str] | None = None,
         generation_mode: str = "append",
     ) -> dict:
-        return self._container.evaluation_generate_qa_dataset_use_case.execute(
+        result = self._container.evaluation_generate_qa_dataset_use_case.execute(
             GenerateQaDatasetCommand(
                 user_id=user_id,
                 project_id=project_id,
@@ -426,6 +432,14 @@ class InProcessBackendClient:
                 generation_mode=generation_mode,
             )
         )
+        return {
+            "generation_mode": result.generation_mode,
+            "deleted_existing_entries": result.deleted_existing_entries,
+            "created_entries": list(result.created_entries),
+            "skipped_duplicates": list(result.skipped_duplicates),
+            "requested_questions": result.requested_questions,
+            "raw_generated_count": result.raw_generated_count,
+        }
 
     def list_retrieval_query_logs(
         self,

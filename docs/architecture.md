@@ -6,7 +6,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 ## `src/domain/`
 
-**Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), and shared types such as `PipelineBuildResult`, `SummaryRecallDocument`, `RetrievalSettings`, **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).
+**Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), and shared types such as `PipelineBuildResult`, `SummaryRecallDocument`, `RetrievalSettings`, **`BufferedDocumentUpload`** (multipart ingest payload: filename + bytes), **`ProposedQaDatasetRow`** (LLM QA proposals before persistence), **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).
 
 **Does not belong:** FastAPI, Streamlit, SQLite drivers, LangChain, calls into `src.application` or `src.infrastructure`. (Domain may use `src.core` for config paths and shared exceptions where already established.)
 
@@ -58,7 +58,7 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 ## `apps/api/`
 
-**Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`.
+**Belongs here:** FastAPI app (`main.py`), routers, Pydantic schemas, `dependencies.py` resolving `BackendApplicationContainer` and use cases via `Depends`. Multipart document ingest uses **`apps/api/upload_adapter.read_buffered_document_upload`** (chunked read, size cap) before **`IngestUploadedFileCommand`**.
 
 **Identity:** Routes that require a logged-in workspace user depend on **`get_authenticated_principal`**, which returns a framework-agnostic **`AuthenticatedPrincipal`** (today from the trusted **`X-User-Id`** header). Handlers pass **`principal.user_id`** into use cases; they do not treat a raw header string as the application boundary.
 

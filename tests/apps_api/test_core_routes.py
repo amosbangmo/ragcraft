@@ -199,6 +199,27 @@ def test_project_documents_missing_header_400(override_app: tuple[TestClient, Fa
     assert r.status_code == 400
 
 
+def test_document_ingest_too_large_returns_413(
+    override_app: tuple[TestClient, FastAPI],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tc, app = override_app
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
+    app.dependency_overrides[get_ingest_uploaded_file_use_case] = lambda: _CallableUseCase(
+        lambda *_a, **_k: pytest.fail("use case must not run when upload exceeds cap")
+    )
+    monkeypatch.setattr("apps.api.upload_adapter.INGESTION_CONFIG", type("C", (), {"max_upload_bytes": 4})())
+
+    r = tc.post(
+        "/projects/demo/documents/ingest",
+        headers=_uid_header(),
+        files={"file": ("big.txt", b"12345", "text/plain")},
+    )
+    assert r.status_code == 413
+
+
 def test_document_ingest_happy_path(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
 
