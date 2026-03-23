@@ -38,7 +38,7 @@ The remaining work was **consistency** (paths, docs, tests naming), **guardrail 
 - **Single backend root:** all backend application modules live under **`api/src/`**, with **`api/main.py`** as the only ASGI bootstrap outside that tree (plus **`api/__init__.py`** if present). Tests live under **`api/tests/`**.
 - **Single frontend root:** UI and client code under **`frontend/src/`**, entry **`frontend/app.py`**, tests under **`frontend/tests/`**.
 - **CI and local scripts** use the same **`PYTHONPATH`** and pytest splits (**`scripts/validate_architecture.sh`**, **`run_tests.sh`**, **`lint.sh`**).
-- **Architecture tests** forbid duplicate roots (`src/`, `apps/` at repo root), misplaced FastAPI routers, stray packages under **`api/src`**, and Python files outside the allowed trees (**`test_repository_structure.py`**).
+- **Architecture tests** forbid duplicate roots (`src/`, `apps/` at repo root), misplaced FastAPI routers, stray packages under **`api/src`**, Python files outside the allowed trees (**`test_repository_structure.py`**), and **stale alternate-tree path literals** in tracked text (**`test_no_legacy_paths.py`**).
 
 ---
 
@@ -79,7 +79,7 @@ The remaining work was **consistency** (paths, docs, tests naming), **guardrail 
 
 | Mechanism | Role |
 |-----------|------|
-| **`api/tests/architecture/`** | Authoritative gate: layout, skeleton, imports, FastAPI/Streamlit boundaries, orchestration purity |
+| **`api/tests/architecture/`** | Authoritative gate: layout, skeleton, imports, FastAPI/Streamlit boundaries, orchestration purity, legacy path string scan (**`test_no_legacy_paths.py`**) |
 | **`api/tests/bootstrap/`** | ASGI entry + **`create_app()`** smoke (**`/health`**, **`/openapi.json`**, **`api/main.py`** wiring) — run together with architecture via **`scripts/validate_architecture.sh`** |
 | **`scripts/validate_architecture.sh`** | Runs **`architecture/`** + **`bootstrap/`** with correct **`PYTHONPATH`** |
 | **`.github/workflows/ci.yml`** | Lint + architecture + pytest slice mirroring **`run_tests.sh`** |
@@ -342,6 +342,8 @@ The **remaining ~1/10** is **intentional** and **non-blocking** for using this r
 ### 18.7 Stale-reference cleanup (closure audit)
 
 **`ARCHITECTURE_TARGET.md`** was aligned with the enforced tree: it **no longer** lists non-existent **`api/src/auth`** or **`api/src/core`** packages; auth placement matches **§4** and **`docs/rag_orchestration.md`**. **`scripts/validate.sh`** documentation now states **Ruff + architecture + bootstrap**, not architecture-only pytest.
+
+**`test_no_legacy_paths.py`** blocks reintroduction of pre-migration path spellings (alternate **`apps`** + **`/api`** tree, monolith **`src`** + **`.ui`** / **`/ui`**, **`frontend_`**+**`gateway`** identifiers, and **`frontend_`**+**`gateway`** directory segments). The monolith-import shim module was renamed to **`test_deprecated_backend_shim_guardrails.py`** (no “gateway” in the filename). The obsolete root **`source_bundle.txt`** aggregate (stale full-tree copy) was removed in favor of the live repository tree.
 
 ### 18.8 Final verdict
 

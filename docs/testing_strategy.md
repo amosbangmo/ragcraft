@@ -94,7 +94,8 @@ mypy --config-file=pyproject.toml -p domain
 | **`test_orchestration_package_import_boundaries.py`** | Orchestration + **`application/rag`** avoid **`infrastructure`** and frameworks |
 | **`test_orchestration_boundaries.py`** | Transport layers must not import **`infrastructure.rag`**; composition **`execute`** usage; adapter size ratchets |
 | **`test_application_orchestration_purity.py`** | Application avoids FastAPI, Streamlit, FAISS, LangChain, etc.; use cases avoid **`services`** |
-| **`test_deprecated_backend_and_gateway_guardrails.py`** | Forbidden directories under **`api/src`**, forbidden monolith **`import`** patterns, **`frontend/src/services`** infra limits |
+| **`test_deprecated_backend_shim_guardrails.py`** | Forbidden directories under **`api/src`**, forbidden monolith **`import`** patterns, **`frontend/src/services`** infra limits |
+| **`test_no_legacy_paths.py`** | Text scan: banned pre-migration path tokens and no **`frontend_`**+**`gateway`** directory segments |
 | **`test_composition_import_boundaries.py`** | Composition must not import frontend **`services`** |
 | **`test_adapter_application_imports.py`** | **`api/src/infrastructure`** must not import **`application`** (narrow exception documented) |
 | **`test_no_rag_service_facade.py`** | No **`RAGService`** / **`rag_service.py`** façade |

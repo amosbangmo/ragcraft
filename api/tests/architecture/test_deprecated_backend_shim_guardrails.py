@@ -125,7 +125,7 @@ def test_codebase_python_does_not_import_removed_src_services_package() -> None:
 
 def test_frontend_services_infrastructure_imports_are_limited() -> None:
     """
-    Gateway code lives under ``frontend/src/services``; it may use ``infrastructure.config`` and
+    Streamlit client code lives under ``frontend/src/services``; it may use ``infrastructure.config`` and
     ``infrastructure.auth`` only — not adapters, persistence, RAG, or vector stores.
     """
     root = REPO_ROOT / "frontend" / "src" / "services"

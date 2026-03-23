@@ -1,7 +1,7 @@
 """
 Streamlit session singletons for resolving a :class:`~services.protocol.BackendClient`.
 
-Pages and ``src/ui`` must call :func:`get_backend_client` (via
+Pages under ``frontend/src/pages`` must call :func:`get_backend_client` (via
 :mod:`services.streamlit_api_client` / :mod:`services.streamlit_context`).
 **Default:** :class:`~services.http_client.HttpBackendClient` (``RAGCRAFT_BACKEND_CLIENT`` unset
 or ``http``). **Escape hatch:** ``RAGCRAFT_BACKEND_CLIENT=in_process`` caches a

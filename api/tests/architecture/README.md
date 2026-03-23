@@ -1,6 +1,6 @@
 # Architecture boundary tests
 
-Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. **Physical layout** is enforced by **`test_repository_structure.py`**; **required anchor files and directories** by **`test_required_tree.py`**. Run from repo root: **`./scripts/validate_architecture.sh`** or **`pytest api/tests/architecture -q`** (see **`docs/testing_strategy.md`**). Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`docs/architecture.md`** and **`docs/dependency_rules.md`**.
+Pytest modules under this package scan **import statements** (via the AST) and fail if a layer pulls in a forbidden package prefix. **Physical layout** is enforced by **`test_repository_structure.py`**; **required anchor files and directories** by **`test_required_tree.py`**; **legacy path strings** in docs and sources by **`test_no_legacy_paths.py`**. Run from repo root: **`./scripts/validate_architecture.sh`** or **`pytest api/tests/architecture -q`** (see **`docs/testing_strategy.md`**). Shared helper: `collect_import_violations` in `import_scanner.py`. The **intended runtime layout** is documented in **`docs/architecture.md`** and **`docs/dependency_rules.md`**.
 
 ## Rules enforced
 
@@ -27,7 +27,7 @@ Module `test_fastapi_migration_guardrails.py` adds **behavioral** checks that `H
 - **Routers** wire use cases via **`Depends`** and must not import **`infrastructure.*`** directly.
 - **Streamlit pages and components** use **`services`** and **`streamlit`**; they must not import **`domain`** or **`application`** directly.
 - **`frontend/src/services`** must not import **`infrastructure`** beyond **`infrastructure.config`** / **`infrastructure.auth`** (no persistence, RAG, or vector stores).
-- **Codebase Python** under **`api/src`**, **`frontend/src`**, tests, and **`frontend/app.py`** must not import monolith **`src.*`** / **`apps.*`** shims or removed package names checked in **`test_deprecated_backend_and_gateway_guardrails.py`**; stray **`api/src/adapters`**, **`api/src/backend`**, **`api/src/services`**, **`api/src/infrastructure/services`** must stay absent.
+- **Codebase Python** under **`api/src`**, **`frontend/src`**, tests, and **`frontend/app.py`** must not import monolith **`src.*`** / **`apps.*`** shims or removed package names checked in **`test_deprecated_backend_shim_guardrails.py`**; stray **`api/src/adapters`**, **`api/src/backend`**, **`api/src/services`**, **`api/src/infrastructure/services`** must stay absent.
 - **`api/src/infrastructure/services/`** must not exist, and nothing may import **`infrastructure.services`**.
 - We do **not** assert a clean `sys.modules` after `import interfaces.http.main`: third-party transitive imports can load unrelated packages; the **AST scan** of **`interfaces/http`** is the stable guard for “HTTP delivery code does not reference Streamlit”.
 - These checks are **import-level** only: they do not prove absence of logical coupling.

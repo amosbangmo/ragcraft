@@ -25,11 +25,12 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 | **Forbidden** at repo root: **`src/`**, **`apps/`**, **`pages/`**, **`streamlit_app.py`** | **`test_repository_structure.py`** |
 | Backend **application** `.py` only under **`api/src/`** (plus **`api/main.py`**, **`api/__init__.py`**, **`api/tests/**`) | **`test_repository_structure.py`** |
 | Frontend **application** `.py` only under **`frontend/src/`** (plus **`frontend/app.py`**, **`frontend/tests/**`) | **`test_repository_structure.py`** |
-| **Forbidden** under **`api/src/`**: top-level **`pages/`**, **`ui/`**; stray **`adapters/`**, **`backend/`**, **`services/`** packages; **`infrastructure/services/`** | **`test_repository_structure.py`**, **`test_deprecated_backend_and_gateway_guardrails.py`** |
+| **Forbidden** under **`api/src/`**: top-level **`pages/`**, **`ui/`**; stray **`adapters/`**, **`backend/`**, **`services/`** packages; **`infrastructure/services/`** | **`test_repository_structure.py`**, **`test_deprecated_backend_shim_guardrails.py`** |
 | **Forbidden** under **`frontend/src/`**: vendored **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`** trees | **`test_repository_structure.py`** |
 | FastAPI **`APIRouter`** only under **`api/src/interfaces/http/routers/`** | **`test_repository_structure.py`** |
 | Pydantic **`BaseModel`** HTTP types under **`interfaces/http/schemas/`** (not loose router files) | **`test_repository_structure.py`** |
 | Required skeleton files and directories | **`test_required_tree.py`** |
+| No alternate-tree path literals or **`frontend_`**+**`gateway`** segments in tracked text (see **`test_no_legacy_paths`** module) | **`test_no_legacy_paths.py`** |
 
 ---
 
@@ -43,7 +44,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 | **`api/src/composition/`** | `domain`, `application`, `infrastructure` for wiring | Streamlit, **`services`** (frontend) |
 | **`api/src/interfaces/http/routers/`** | FastAPI, `application`, `domain`, `composition` via deps | **`infrastructure.*`** (any) |
 | **`api/src/interfaces/http/`** (non-router) | As needed for app, errors, upload | Streamlit; also no frontend top-level packages or monolith **`src`/`apps`** import roots (**`test_fastapi_delivery_boundaries`**) |
-| **`frontend/src/services/`** | `domain`, `application`, `composition`, `infrastructure.config`, `infrastructure.auth` | Other **`infrastructure.*`** (**`test_frontend_services_infrastructure_imports_are_limited`** in **`test_deprecated_backend_and_gateway_guardrails.py`**) |
+| **`frontend/src/services/`** | `domain`, `application`, `composition`, `infrastructure.config`, `infrastructure.auth` | Other **`infrastructure.*`** (**`test_frontend_services_infrastructure_imports_are_limited`** in **`test_deprecated_backend_shim_guardrails.py`**) |
 | **`frontend/src/pages`**, **`components/`** | `services`, Streamlit, `infrastructure.auth` for guards | `domain`, `application`, `composition`, `interfaces` (**`test_frontend_structure.py`**) |
 
 ---
@@ -72,7 +73,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 1. Routers constructing **`VectorStoreService`**, **`EvaluationService`**, or other infra services inline — use **`Depends`** → container → use case.  
 2. Application importing concrete persistence/RAG modules — wire in **composition**.  
 3. Reintroducing forbidden directories under **`api/src`** or forbidden roots at repo root — tests fail.  
-4. Python **`import`** of legacy monolith package names (**`src.backend`**, **`src.services`**, **`infrastructure.services`**, etc.) — forbidden across scanned trees (**`test_deprecated_backend_and_gateway_guardrails.py`**).
+4. Python **`import`** of legacy monolith package names (**`src.backend`**, **`src.services`**, **`infrastructure.services`**, etc.) — forbidden across scanned trees (**`test_deprecated_backend_shim_guardrails.py`**).
 
 ---
 
@@ -80,11 +81,11 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 
 | Concern | Test module(s) |
 |---------|----------------|
-| Layout + code roots | **`test_repository_structure.py`**, **`test_required_tree.py`** |
+| Layout + code roots | **`test_repository_structure.py`**, **`test_required_tree.py`**, **`test_no_legacy_paths.py`** |
 | Domain / application / router imports | **`test_layer_import_rules.py`** |
 | Infrastructure / composition | **`test_layer_boundaries.py`**, **`test_adapter_application_imports.py`** |
 | FastAPI package purity | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
-| Frontend imports | **`test_frontend_structure.py`**, **`test_deprecated_backend_and_gateway_guardrails.py`** (`test_frontend_services_infrastructure_imports_are_limited`) |
+| Frontend imports | **`test_frontend_structure.py`**, **`test_deprecated_backend_shim_guardrails.py`** (`test_frontend_services_infrastructure_imports_are_limited`) |
 | Application tech purity | **`test_application_orchestration_purity.py`** |
 | Orchestration subtrees | **`test_orchestration_package_import_boundaries.py`**, **`test_orchestration_boundaries.py`** |
 | Composition vs `services` | **`test_composition_import_boundaries.py`** |
