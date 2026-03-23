@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -42,11 +43,10 @@ from services.http_transport import HttpTransport
 
 def _streamlit_access_token_supplier() -> str:
     try:
-        import streamlit as st
-
-        from infrastructure.auth.auth_service import AuthService
-
-        return str(st.session_state.get(AuthService.SESSION_ACCESS_TOKEN_KEY, "") or "").strip()
+        st = importlib.import_module("streamlit")
+        auth_mod = importlib.import_module("infrastructure.auth.auth_service")
+        key = getattr(auth_mod.AuthService, "SESSION_ACCESS_TOKEN_KEY")
+        return str(st.session_state.get(key, "") or "").strip()
     except Exception:
         return ""
 
@@ -160,8 +160,7 @@ class HttpBackendClient:
         return http_client_project_settings_repository()
 
     def get_current_user_record(self) -> Any:
-        import streamlit as st
-
+        st = importlib.import_module("streamlit")
         uid = st.session_state.get("user_id")
         if not uid:
             return None

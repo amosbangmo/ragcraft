@@ -12,7 +12,7 @@ RAGCraft follows **Clean Architecture**: **domain** at the center, **application
 |------|------|------|
 | Backend | **`api/src/`** | Packages: **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`** |
 | ASGI entry | **`api/main.py`** | Sets **`sys.path`**, exposes **`app`** from **`interfaces.http.main:create_app`** for Uvicorn |
-| Frontend | **`frontend/src/`** | **`pages`**, **`components`**, **`services`**, **`state`**, **`viewmodels`**, **`utils`** |
+| Frontend | **`frontend/src/`** | **`pages`**, **`components`**, **`services`**, **`state`**, **`utils`** |
 | Streamlit shell | **`frontend/app.py`** | Multi-page entry |
 | Tests (API) | **`api/tests/`** | **`architecture`**, **`bootstrap`**, **`reliability`**, **`api`**, **`appli`**, **`infra`**, **`e2e`**, … |
 | Tests (UI) | **`frontend/tests/`** | Streamlit, wire contracts, **`test_api_client.py`** |

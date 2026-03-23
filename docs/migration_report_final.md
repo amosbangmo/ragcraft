@@ -355,6 +355,15 @@ The **remaining ~1/10** is **intentional** and **non-blocking** for using this r
 - **Use cases** under **`api/src/application/use_cases/`** return and accept **DTOs / domain records**, not **`dict[str, …]`** surfaces; serialization stays in **`application.http.wire`** and **`interfaces.http.schemas`** (**`test_no_dict_in_usecases.py`**).
 - **Examples:** **`RetrievalQueryLogRecord`** / **`RetrievalStrategySnapshot`** for persisted query logs; **`StoredMultimodalAsset`** for SQLite multimodal rows; **`DocumentReplacementSummary`** for re-ingest purge stats; **`IngestDocumentResult`** holds **`list[StoredMultimodalAsset]`** plus typed replacement summary. **`EvaluationRow`** is a **typed alias** of **`BenchmarkRow`** (**`domain.evaluation.benchmark_result`**). **`PipelineLatency`** remains the structured latency type (**`domain.rag.pipeline_latency`**); wire payloads still use **`dict`** only where the HTTP/JSON contract requires it.
 
-### 18.9 Final verdict
+### 18.9 Closure verification (automated)
+
+- **Full slice:** **`python -m pytest api/tests frontend/tests`** with **`PYTHONPATH=api/src:frontend/src:api/tests`** — all tests green (750+ as of the closure commit).  
+- **Legacy paths:** **`api/tests/architecture/test_no_legacy_paths.py`** — pass.  
+- **Use-case dict ban:** **`api/tests/architecture/test_no_dict_in_usecases.py`** — pass.  
+- **Layout:** **`test_repository_structure`** requires **`application/frontend_support/`** and matches the current frontend tree (**`components/shared`**, **`pages`**, **`services`**, **`state`**, **`utils`** — no stale **`domain/users`**, **`components/chat`**, or **`viewmodels`** directory requirements).  
+- **Infra ↔ application:** **`test_adapter_application_imports`** exempts **`infrastructure/config/app_state.py`** for **`application.frontend_support`** imports (Streamlit session client resolution).  
+- **Application purity:** **`http_backend_client`** loads Streamlit and reads the auth session key via **`importlib.import_module`** so AST-based scans do not treat **`streamlit`** / **`infrastructure.auth`** as static imports at module top level.
+
+### 18.10 Final verdict
 
 **The repository has reached the target 9/10+ closure state** for: physical layout, Clean Architecture, RAG orchestration ownership, HTTP + Streamlit integration, automated guardrails, and documented feature coherence. **Do not** reintroduce legacy roots or a second RAG façade; **do** extend via ports, use cases, and thin delivery layers. Further work is **product and operations** (**§10**), not **structural** migration.

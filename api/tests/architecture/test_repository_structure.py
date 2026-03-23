@@ -109,7 +109,6 @@ def test_api_entrypoint_exists() -> None:
 
 def test_core_backend_directories_exist() -> None:
     _must_dir(API_SRC / "domain" / "auth")
-    _must_dir(API_SRC / "domain" / "users")
     _must_dir(API_SRC / "domain" / "projects")
     _must_dir(API_SRC / "domain" / "rag")
     _must_dir(API_SRC / "domain" / "evaluation")
@@ -121,6 +120,7 @@ def test_core_backend_directories_exist() -> None:
     _must_dir(API_SRC / "application" / "orchestration" / "evaluation")
     _must_dir(API_SRC / "application" / "policies")
     _must_dir(API_SRC / "application" / "services")
+    _must_dir(API_SRC / "application" / "frontend_support")
     _must_dir(API_SRC / "application" / "http" / "wire")
     _must_dir(API_SRC / "infrastructure" / "auth")
     _must_dir(API_SRC / "infrastructure" / "persistence")
@@ -271,12 +271,9 @@ def test_frontend_entrypoint_and_layout_dirs() -> None:
     src = fe / "src"
     _must_dir(fe)
     _must_dir(src / "pages")
-    _must_dir(src / "components" / "chat")
-    _must_dir(src / "components" / "projects")
     _must_dir(src / "components" / "shared")
     _must_dir(src / "state")
     _must_dir(src / "services")
-    _must_dir(src / "viewmodels")
     _must_dir(src / "utils")
     assert (fe / "app.py").is_file()
 
