@@ -10,7 +10,7 @@ Tests are layered: **fast architecture and layout guards** at the base, then **u
 |-------|----------|--------|
 | **Architecture** | **`api/tests/architecture/`** | Repo layout, forbidden imports, router/schema placement, orchestration purity, frontend thinness |
 | **Bootstrap** | **`api/tests/bootstrap/`** | **`api/main.py`** wiring, **`create_app()`**, **`/health`**, OpenAPI |
-| **API / HTTP** | **`api/tests/api/`** | Route contracts, auth, validation (**422**), **`RAGCraftError`** envelope (**400/401/409/…**), multipart limits |
+| **API / HTTP** | **`api/tests/api/`** | Route contracts, auth, validation (**422**), **`RAGCraftError`** envelope (**400/401/409/…**), multipart limits, cross-route conventions (e.g. empty **`project_id`** on chat / evaluation) |
 | **Application** | **`api/tests/appli/`** | Use cases with fake ports; **`appli/orchestration/test_rag_mode_contracts.py`** — ask vs inspect vs preview vs evaluation and query-log rules |
 | **Domain** | **`api/tests/domain/`** | Domain policy |
 | **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
@@ -18,7 +18,7 @@ Tests are layered: **fast architecture and layout guards** at the base, then **u
 | **E2E / regression** | **`api/tests/e2e/`** | Thresholds and heavier checks (may be environment-sensitive) |
 | **Frontend** | **`frontend/tests/streamlit/`**, **`frontend/tests/ui/`** | HTTP client paths, wire JSON parsing, Streamlit helpers |
 
-Together, these give **9/10+** confidence for **regressions in layering, HTTP contracts, RAG mode separation, and the Streamlit↔API boundary**, assuming normal CI runs (**`scripts/run_tests.sh`** / **`.ps1`**). They do **not** replace production security review, load testing, or real LLM/vector SLO validation.
+Together, these give **9/10+** confidence for **regressions in layering, HTTP contracts, RAG mode separation, and the Streamlit↔API boundary**, assuming normal CI runs (**`scripts/run_tests.sh`** / **`.ps1`**). The **feature matrix** in **`docs/product_features.md`** lists which behaviors are backed by which tests and UI paths. They do **not** replace production security review, load testing, or real LLM/vector SLO validation.
 
 ---
 

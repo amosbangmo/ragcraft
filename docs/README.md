@@ -20,7 +20,8 @@ Structural rules are **enforced in CI** by **`api/tests/architecture/`** (see **
 | **[architecture.md](architecture.md)** | Layers, dependency direction, orchestration ownership, FastAPI and Streamlit integration, diagram |
 | **[dependency_rules.md](dependency_rules.md)** | Import rules, forbidden paths, mapping to architecture tests |
 | **[rag_orchestration.md](rag_orchestration.md)** | Ask, inspect, preview recall, evaluation flows; logging; typed DTOs |
-| **[api.md](api.md)** | How to run Uvicorn, JWT auth, uploads, OpenAPI, route ownership |
+| **[api.md](api.md)** | How to run Uvicorn, JWT auth, uploads, OpenAPI, route ownership, API conventions |
+| **[product_features.md](product_features.md)** | Supported features matrix: routes, DTOs, errors, tests, Streamlit |
 | **[testing_strategy.md](testing_strategy.md)** | Scripts, pytest layout, architecture test index |
 | **[migration_report_final.md](migration_report_final.md)** | Closure report: what is fixed, what is enforced, what is out of scope |
 

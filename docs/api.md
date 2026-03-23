@@ -74,6 +74,17 @@ Routers live only under **`api/src/interfaces/http/routers/`**. Each route modul
 
 ---
 
+## API conventions (consistency)
+
+- **`project_id` in JSON bodies** (chat, manual evaluation, benchmark run, etc.): required **non-empty string**; invalid or missing fields yield **`422`** with FastAPI validation detail (and, where configured, the shared error helper’s **`error_type`** / **`code`** for app-level errors).
+- **`project_id` in paths** (`**/projects/{project_id}/**`): identifies the project resource; resolution failures map to the appropriate **`4xx`** / **`5xx`** via use cases and exception handlers.
+- **Bearer JWT** on all scoped routes; omitting or sending a bad token yields **`401`** (or **`400`** for malformed `Authorization`), not **`5xx`**.
+- **Multipart** document and avatar uploads use bounded readers and return **`413`** when over policy limits (see **Multipart uploads** above).
+
+**Product ↔ route map (tests + Streamlit):** **`docs/product_features.md`**.
+
+---
+
 ## Streamlit client (frontend) — canonical contract
 
 The Streamlit app must not treat **`application.dto`** or **`domain`** types as the HTTP wire shape. Integration is owned by:

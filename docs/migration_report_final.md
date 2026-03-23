@@ -211,7 +211,7 @@ scripts/
 
 Further work is **product quality and operational hardening** (**§10**), not structural migration. Incremental typing beyond **§11** follows the same rule: typed application DTOs, dicts only at transport/export. RAG mode and logging guarantees are summarized in **§12**. Runtime and contract coverage are summarized in **§13**. Frontend–backend wire integration is summarized in **§14**.
 
-**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), **§13** (runtime confidence), **§14** (canonical HTTP client / wire types), and **§16** (testing matrix and confidence).
+**Primary references for day-to-day work:** **`docs/architecture.md`**, **`docs/dependency_rules.md`**, **`docs/rag_orchestration.md`**, **`docs/api.md`**, **`docs/product_features.md`**, **`docs/testing_strategy.md`**, **§11** (typed vs dict boundaries), **§12** (orchestration modes and logging), **§13** (runtime confidence), **§14** (canonical HTTP client / wire types), **§16** (testing matrix and confidence), and **§17** (feature quality and endpoint consistency).
 
 ---
 
@@ -250,3 +250,27 @@ Further work is **product quality and operational hardening** (**§10**), not st
 - **Frontend integration** is guarded by **client contract tests** and **UI tests** that align with **wire** types.
 
 Remaining **1/10** is intentional: **production security hardening**, **real LLM/vector SLOs**, **browser E2E**, and **chaos/load** are **out of scope** for this matrix (**§10**).
+
+---
+
+## 17. Feature quality, endpoint consistency, and robustness (9/10+ polish)
+
+**What was inconsistent or implicit**
+
+- **No single doc** tied **login / projects / retrieval settings / ingestion / ask / inspect / preview / evaluation / QA / export** to **routes, DTOs, error style, tests, and Streamlit** in one place — contributors had to infer support from scattered routers and tests.
+- **API conventions** (e.g. **`project_id`** in body vs path, bearer rules, multipart limits) were partly described in prose but not summarized next to the HTTP runbook.
+
+**What was fixed or added**
+
+- **`docs/product_features.md`** — feature matrix: user outcome, auth, routes, schema references, error classes, **`api/tests/api`** coverage pointers, frontend integration pointers; plus a short note on **retrieval settings → RAG** behavior and the **Streamlit wire** rule.
+- **`docs/api.md`** — **API conventions (consistency)** subsection: body vs path **`project_id`**, auth expectations, multipart **`413`**, link to the product matrix.
+- **`docs/architecture.md`**, **`docs/testing_strategy.md`**, **`docs/README.md`** — cross-links and test-strategy wording for **cross-route validation** and the matrix.
+- **`api/tests/api/test_core_routes.py`** — asserts **`422`** for **empty string `project_id`** on **`POST /chat/ask`**, **`POST /chat/pipeline/inspect`**, and **`POST /evaluation/manual`** so major flows reject invalid workspace keys consistently at validation time (no use-case invocation).
+
+**Why the feature set is now more coherent**
+
+- **Developers and reviewers** can verify **use case ↔ route ↔ test ↔ UI** from one matrix.
+- **Endpoint behavior** is **predictable** for **`project_id`** and auth across chat and evaluation POSTs.
+- **Documentation** matches the **enforced** Pydantic constraints and existing error envelope (**`docs/api.md`**).
+
+Further hardening remains in **§10** (operational and security scope); this pass is **documentation + contract tests**, not new product surface area.

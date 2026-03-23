@@ -2,7 +2,7 @@
 
 RAGCraft uses **Clean Architecture** (ports and adapters): **domain** at the center, **application** owns workflows and orchestration, **infrastructure** implements technical details, **composition** builds the object graph, and **delivery** (FastAPI and the Streamlit client) stays thin.
 
-**Related:** **`docs/rag_orchestration.md`** (RAG flows and ownership), **`docs/dependency_rules.md`** (import rules and enforcement), **`docs/api.md`** (HTTP contract), **`docs/migration_report_final.md`** (closure and guardrails).
+**Related:** **`docs/rag_orchestration.md`** (RAG flows and ownership), **`docs/dependency_rules.md`** (import rules and enforcement), **`docs/api.md`** (HTTP contract), **`docs/product_features.md`** (supported features vs routes, tests, UI), **`docs/migration_report_final.md`** (closure and guardrails).
 
 ---
 

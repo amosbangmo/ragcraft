@@ -313,6 +313,63 @@ def test_chat_ask_validation_without_loading_composition(
     assert r.status_code == 422
 
 
+def test_chat_ask_empty_project_id_returns_422(
+    override_app: tuple[TestClient, FastAPI],
+) -> None:
+    """Major POST flows require non-empty project_id (Pydantic min_length=1); consistent across chat."""
+    tc, app = override_app
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
+    app.dependency_overrides[get_ask_question_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
+
+    r = tc.post(
+        "/chat/ask",
+        headers=_uid_header(),
+        json={"project_id": "", "question": "Q"},
+    )
+    assert r.status_code == 422
+
+
+def test_pipeline_inspect_empty_project_id_returns_422(
+    override_app: tuple[TestClient, FastAPI],
+) -> None:
+    tc, app = override_app
+    app.dependency_overrides[get_resolve_project_use_case] = lambda: _FakeResolveProjectUseCase(
+        _FakeProjectService()
+    )
+    app.dependency_overrides[get_inspect_pipeline_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: None
+    )
+
+    r = tc.post(
+        "/chat/pipeline/inspect",
+        headers=_uid_header(),
+        json={"project_id": "", "question": "Q"},
+    )
+    assert r.status_code == 422
+
+
+def test_evaluation_manual_empty_project_id_returns_422(
+    override_app: tuple[TestClient, FastAPI],
+) -> None:
+    tc, app = override_app
+    app.dependency_overrides[get_run_manual_evaluation_use_case] = lambda: _CallableUseCase(
+        lambda *a, **k: ManualEvaluationResult(
+            question="q", answer="a", expected_answer=None, confidence=0.0
+        )
+    )
+
+    r = tc.post(
+        "/evaluation/manual",
+        headers=_uid_header(),
+        json={"project_id": "", "question": "Q"},
+    )
+    assert r.status_code == 422
+
+
 def test_chat_ask_answered_happy_path(override_app: tuple[TestClient, FastAPI]) -> None:
     tc, app = override_app
 

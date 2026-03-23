@@ -120,7 +120,7 @@ Prompt Construction
 LLM
 ```
 
-**Architecture reference:** **`docs/README.md`** (index) · **`docs/architecture.md`** (layers) · **`docs/dependency_rules.md`** (imports + tests) · **`docs/migration_report_final.md`** (closure) · **`ARCHITECTURE_TARGET.md`** (short target summary) · **`api/tests/architecture/README.md`** (test matrix).
+**Architecture reference:** **`docs/README.md`** (index) · **`docs/architecture.md`** (layers) · **`docs/product_features.md`** (supported features vs routes and tests) · **`docs/dependency_rules.md`** (imports + tests) · **`docs/migration_report_final.md`** (closure) · **`ARCHITECTURE_TARGET.md`** (short target summary) · **`api/tests/architecture/README.md`** (test matrix).
 
 ### Migration status (short)
 
@@ -233,7 +233,7 @@ ragcraft/
 │   │   ├── viewmodels/
 │   │   └── utils/
 │   └── tests/                   # streamlit/, ui/, …
-├── docs/                        # architecture.md, api.md, dependency_rules.md, …
+├── docs/                        # architecture.md, api.md, product_features.md, …
 ├── scripts/                     # validate_architecture, run_tests, lint, validate
 ├── data/
 ├── requirements.txt
