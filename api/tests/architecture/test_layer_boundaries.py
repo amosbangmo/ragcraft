@@ -1,5 +1,7 @@
 """
-Architectural import-boundary guards (see ``tests/architecture/README.md``).
+Infrastructure and composition import guards.
+
+Domain, application, and HTTP-router rules live in :mod:`architecture.test_layer_import_rules`.
 """
 
 from __future__ import annotations
@@ -17,87 +19,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture(scope="module")
-def domain_files() -> list[Path]:
-    return iter_python_files(REPO_ROOT / "api" / "src" / "domain")
-
-
-@pytest.fixture(scope="module")
-def application_files() -> list[Path]:
-    return iter_python_files(REPO_ROOT / "api" / "src" / "application")
-
-
-@pytest.fixture(scope="module")
 def infrastructure_files() -> list[Path]:
     return iter_python_files(REPO_ROOT / "api" / "src" / "infrastructure")
-
-
-@pytest.fixture(scope="module")
-def router_files() -> list[Path]:
-    return iter_python_files(REPO_ROOT / "api" / "src" / "interfaces" / "http" / "routers")
 
 
 @pytest.fixture(scope="module")
 def composition_files() -> list[Path]:
     root = REPO_ROOT / "api" / "src" / "composition"
     return iter_python_files(root) if root.is_dir() else []
-
-
-def test_domain_does_not_depend_on_outer_layers(domain_files: list[Path]) -> None:
-    """
-    Domain stays pure: business types and ports only.
-
-    If this fails, you likely imported FastAPI/Streamlit/SQLite/LangChain or another outer layer.
-    Move adapters to infrastructure/application and keep domain free of framework and I/O imports.
-    """
-    forbidden = (
-        "src.infrastructure",
-        "src.backend",
-        "src.services",
-        "src.application",
-        "src.ui",
-        "streamlit",
-        "fastapi",
-        "starlette",
-        "sqlite3",
-        "langchain",
-        "apps",
-    )
-    violations: list[str] = []
-    for path in domain_files:
-        mods = imported_top_level_modules(path)
-        bad = any_module_matches(mods, prefixes=forbidden)
-        for m in bad:
-            violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    msg = (
-        "Domain layer imported a forbidden module (presentation, HTTP, persistence drivers, or LangChain). "
-        "Keep ports/DTOs here; wire frameworks only in application or infrastructure.\n"
-    )
-    assert not violations, msg + "\n".join(violations)
-
-
-def test_application_does_not_depend_on_ui_or_infrastructure(application_files: list[Path]) -> None:
-    """
-    Application use cases must not depend on Streamlit, the API package, or any infrastructure code.
-
-    Wiring and concrete adapters belong in ``src/composition`` and ``src/infrastructure``.
-    """
-    violations: list[str] = []
-    for path in application_files:
-        mods = imported_top_level_modules(path)
-        for mod in mods:
-            if mod.startswith("streamlit") or mod == "streamlit":
-                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-            elif mod.startswith("apps") or mod == "apps":
-                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-            elif mod.startswith("src.adapters") or mod == "src.adapters":
-                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-            elif mod.startswith("src.infrastructure"):
-                violations.append(f"{path.relative_to(REPO_ROOT)}: imports {mod}")
-    msg = (
-        "Application layer must not import Streamlit, apps.api, the removed ``src.adapters`` package, "
-        "or any ``src.infrastructure`` subtree. Use ports/DTOs; wire implementations in composition.\n"
-    )
-    assert not violations, msg + "\n".join(violations)
 
 
 def test_infrastructure_does_not_depend_on_application_or_streamlit(
@@ -144,25 +73,6 @@ def test_infrastructure_does_not_depend_on_application_or_streamlit(
         "Non-adapter infrastructure must not import application use cases or Streamlit. "
         "Adapter modules under ``src/infrastructure/adapters`` must not import ``src.application`` "
         "(see ``test_adapter_application_imports.py``).\n"
-    )
-    assert not violations, msg + "\n".join(violations)
-
-
-def test_api_routers_do_not_import_infrastructure(router_files: list[Path]) -> None:
-    """
-    Routers resolve use cases via FastAPI ``Depends`` on the composition root.
-
-    Direct ``src.infrastructure`` imports bypass DI and couple HTTP to adapters; add a use case instead.
-    """
-    forbidden = ("src.infrastructure",)
-    violations: list[str] = []
-    for path in router_files:
-        mods = imported_top_level_modules(path)
-        bad = any_module_matches(mods, prefixes=forbidden)
-        for m in bad:
-            violations.append(f"{path.relative_to(REPO_ROOT)}: imports {m}")
-    msg = (
-        "API routers must not import infrastructure packages; wire through apps.api.dependencies.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

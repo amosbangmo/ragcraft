@@ -20,13 +20,13 @@ import pytest
 from architecture.import_scanner import collect_import_violations
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+_HTTP = REPO_ROOT / "api" / "src" / "interfaces" / "http"
 
 
 def test_apps_api_package_avoids_streamlit_and_ui_layers() -> None:
-    """HTTP stack must stay independent of Streamlit and ``src.ui`` widgets."""
-    api_root = REPO_ROOT / "apps" / "api"
+    """HTTP stack must stay independent of Streamlit and legacy ``src.ui`` widgets."""
     violations = collect_import_violations(
-        [api_root],
+        [_HTTP],
         forbidden=("streamlit", "src.ui"),
         repo_root=REPO_ROOT,
     )
@@ -43,9 +43,8 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
     namespace, removed ``src.backend`` / ``src.adapters`` / ``infrastructure.services`` packages, or the
     concrete runtime service package (``infrastructure.adapters``) directly.
     """
-    api_root = REPO_ROOT / "apps" / "api"
     violations = collect_import_violations(
-        [api_root],
+        [_HTTP],
         forbidden=(
             "src.services",
             "src.backend",
@@ -56,7 +55,7 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
         repo_root=REPO_ROOT,
     )
     msg = (
-        "FastAPI should depend on use cases from ``apps.api.dependencies`` / the composition root, "
+        "FastAPI should depend on use cases from ``interfaces.http.dependencies`` / the composition root, "
         "not on ``infrastructure.adapters``, ``infrastructure.services`` (removed), "
         "``src.adapters`` (removed), ``src.backend`` (removed), or ``src.services`` directly.\n"
     )
@@ -65,10 +64,13 @@ def test_apps_api_package_avoids_runtime_services_layer() -> None:
 
 def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     """
-    ``pages/`` and ``src/ui/`` should use the gateway (protocol, ``view_models``, context) and auth
-    helpers — not ``src.domain`` or infrastructure packages directly, nor ``src.app`` / ``apps.api``.
+    ``frontend/src/pages`` and ``frontend/src/components`` should use gateway services and auth guards,
+    not legacy ``src.*`` monolith imports or ``apps.api``.
     """
-    roots = [REPO_ROOT / "frontend" / "src" / "pages", REPO_ROOT / "api" / "src" / "ui"]
+    roots = [
+        REPO_ROOT / "frontend" / "src" / "pages",
+        REPO_ROOT / "frontend" / "src" / "components",
+    ]
     forbidden = (
         "src.backend",
         "src.adapters",
@@ -82,8 +84,7 @@ def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     )
     violations = collect_import_violations(roots, forbidden=forbidden, repo_root=REPO_ROOT)
     msg = (
-        "Streamlit pages and ``src/ui`` must use ``src.frontend_gateway`` (protocol, view_models, HTTP transport) "
-        "and must not import domain, infrastructure, composition, or ``apps.api`` directly.\n"
+        "Streamlit pages/components must not use removed ``src.*`` monolith imports or ``apps.api``.\n"
     )
     assert not violations, msg + "\n".join(violations)
 

@@ -2,8 +2,8 @@
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
-$env:PYTHONPATH = if ($env:PYTHONPATH) { $env:PYTHONPATH } else { "." }
-Write-Host "==> ruff check (src, apps, tests/architecture)"
-ruff check src apps tests/architecture
-Write-Host "==> pytest tests/architecture"
-pytest tests/architecture -q --tb=short
+$env:PYTHONPATH = "$Root/api/src;$Root/frontend/src;$Root/api/tests"
+Write-Host "==> ruff check (api/src, frontend/src, api/tests/architecture)"
+ruff check api/src frontend/src api/tests/architecture
+Write-Host "==> pytest api/tests/architecture"
+pytest api/tests/architecture -q --tb=short

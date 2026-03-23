@@ -3,8 +3,8 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-export PYTHONPATH="${PYTHONPATH:-.}"
-echo "==> ruff check (src, apps, tests/architecture)"
-ruff check src apps tests/architecture
-echo "==> pytest tests/architecture"
-pytest tests/architecture -q --tb=short
+export PYTHONPATH="${ROOT}/api/src:${ROOT}/frontend/src:${ROOT}/api/tests"
+echo "==> ruff check (api/src, frontend/src, api/tests/architecture)"
+ruff check api/src frontend/src api/tests/architecture
+echo "==> pytest api/tests/architecture"
+pytest api/tests/architecture -q --tb=short

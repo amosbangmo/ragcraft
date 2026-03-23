@@ -4,6 +4,14 @@ RAGCraft follows a **ports-and-adapters** style: **domain** at the center, **app
 
 **Canonical flow details for RAG:** **`docs/rag_orchestration.md`**. **Import rules:** **`docs/dependency_rules.md`**. **End-state migration summary:** **`docs/migration_report_final.md`**.
 
+## Canonical repository layout (enforced by tests)
+
+- **Backend:** `api/src/` — packages `domain`, `application`, `infrastructure`, `composition`, `interfaces` (FastAPI lives under `interfaces/http/`).
+- **Frontend:** `frontend/src/` — Streamlit pages, components, and `services` (HTTP / in-process gateway).
+- **Guardrails:** `api/tests/architecture/` fails CI on structural drift (forbidden roots, misplaced routers/schemas) and on import-boundary violations. Run `./scripts/validate_architecture.sh` from the repo root (or `pytest api/tests/architecture -q` with the same `PYTHONPATH` as in that script). See **`docs/testing_strategy.md`** for the module map.
+
+Historical sections below still use older `src/` and `apps/api/` path spellings in places; treat the tree above as the source of truth for disk layout.
+
 ## `src/domain/`
 
 **Belongs here:** entities, value objects, pure domain logic, **ports** (`Protocol` / ABC), **`AuthenticatedPrincipal`** (workspace identity from verified bearer auth), **`AuthenticationPort`** / **`AccessTokenIssuerPort`** (`src/domain/ports/`), and shared types such as `PipelineBuildResult` (**`latency`** is **`PipelineLatency`**, not a stage ``dict``), **`RAGResponse`** (**`latency`** is **`PipelineLatency | None`**), **`PipelineLatency`**, **`GoldQaPipelineRowInput`**, `SummaryRecallDocument`, `RetrievalSettings`, **`BufferedDocumentUpload`** (multipart ingest payload: filename + bytes), **`ProposedQaDatasetRow`** (LLM QA proposals before persistence), **`RagInspectAnswerRun`**, **`QueryLogIngressPayload`**, **`EvaluationJudgeMetricsRow`**, **`merge_summary_documents_weighted_rrf`** (`summary_document_fusion.py`), and retrieval policy helpers under **`src/domain/retrieval/`** (e.g. **`summary_recall_execution_plan`**).

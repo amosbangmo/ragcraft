@@ -9,7 +9,25 @@ As of the **api/frontend split** refactor, the canonical layout is:
 - **Tests:** `api/tests/` (architecture, application_tests, infrastructure_tests, apps_api, e2e, …) and `frontend/tests/`.
 - **Removed:** root `src/`, root `apps/`, root `pages/`, root `streamlit_app.py` (replaced by the tree above).
 
-Automated **layout drift** checks live in `api/tests/architecture/test_repository_layout.py`. CI-oriented scripts: `scripts/validate_architecture.sh`, `scripts/run_tests.sh`, `scripts/lint.sh`.
+### Blocking architecture guardrails (PROMPT 2)
+
+The following **fail the test suite** (not advisory checks) when the repo drifts:
+
+| Concern | Test module |
+|---------|-------------|
+| Required roots (`api/`, `frontend/`, `docs/`, `scripts/`, `api/src/`, `frontend/src/`), forbidden legacy roots (`src/`, `apps/` at repo root), FastAPI routers only under `api/src/interfaces/http/routers/`, Pydantic `BaseModel` HTTP types under `schemas/`, composition under `api/src/composition/`, orchestration under `api/src/application/orchestration/`, no UI trees under `api/src/` | **`api/tests/architecture/test_repository_structure.py`** |
+| Domain / application / HTTP-router import boundaries | **`test_layer_import_rules.py`** |
+| `interfaces/http` delivery (no Streamlit; no legacy monolith import paths) | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
+| Frontend pages/components stay off domain/application/composition; infrastructure limited to `infrastructure.auth.*` | **`test_frontend_structure.py`** |
+
+**Documented narrow exceptions (encoded in tests + this doc):**
+
+- **Domain** and **application** may import **`infrastructure.config`** only (paths, shared config objects, exception types) — not persistence/RAG/evaluation adapters.
+- **HTTP routers** must not import **`infrastructure.*`** at all (wiring goes through `dependencies` / use cases). Other files under `interfaces/http/` may still use **`infrastructure.config`** for errors and upload limits.
+- **Streamlit** imports under **`api/src/infrastructure/auth`** and **`api/src/infrastructure/config`** remain allowed for session/UI shims (see **`test_layer_boundaries`**).
+- **`frontend/src/services`** may import backend packages for the **in-process + HTTP gateway**; **pages** and **components** follow the stricter rules in **`test_frontend_structure.py`**.
+
+CI-oriented scripts: **`scripts/validate_architecture.sh`** (architecture tests only), **`scripts/validate.sh`** (Ruff + architecture), **`scripts/run_tests.sh`**, **`scripts/lint.sh`**.
 
 ---
 
@@ -47,7 +65,7 @@ This report remains the **canonical end-state** summary for Clean Architecture g
 | Use cases own scenarios; composition wires only | **Met** — `application_container.py`, `chat_rag_wiring.py`, `evaluation_wiring.py` |
 | Post–summary-recall order in application | **Met** — `assemble_pipeline_from_recall` + `post_recall_pipeline_steps` |
 | Summary-recall **sequencing** in application | **Met** — `ApplicationSummaryRecallStage` + `summary_recall_workflow.py`; infra = technical ports only |
-| Application does not import infrastructure | **Met** — `test_layer_boundaries.py` |
+| Application does not import concrete infrastructure (outside `infrastructure.config`) | **Met** — `test_layer_import_rules.py` |
 | Infrastructure adapters do not import application | **Met** — `test_adapter_application_imports.py` (no allowlist) |
 | Gold-QA benchmark stack not constructed inside `EvaluationService` | **Met** — `evaluation_wiring.py` + `GoldQaBenchmarkAdapter` |
 | Query-log / judge row DTOs in domain | **Met** — `QueryLogIngressPayload`, `EvaluationJudgeMetricsRow` |
@@ -123,7 +141,7 @@ The remaining work was **contract tightness**, **transport clarity**, and **long
 These do **not** invalidate the migration but are worth tracking:
 
 - **AuthN/AuthZ:** Symmetric JWTs require **`RAGCRAFT_JWT_SECRET`** rotation discipline, HTTPS in production, and optional issuer/audience tightening. **`TrustedTransportIdentityPort`** remains for non-JWT bridges if needed.
-- **Operational drift:** Contributors may reintroduce **`src.infrastructure`** imports under **`apps/api`**; **`pytest tests/architecture/`** in CI on touched trees reduces regression risk.
+- **Operational drift:** Contributors may reintroduce **`infrastructure.*`** imports under **`interfaces/http/routers/`** or legacy roots; **`pytest api/tests/architecture/`** in CI reduces regression risk.
 - **Duplicate eval paths:** **Closed for manual evaluation** — only **`RunManualEvaluationUseCase`** orchestrates; **`manual_evaluation_service`** is assembly-only.
 - **Third-party weight:** Heavy optional stacks (e.g. ingestion) can still complicate test envs; architecture tests are **import-level**, not full integration proof.
 
@@ -156,10 +174,12 @@ These do **not** invalidate the migration but are worth tracking:
 
 ## 10. Tests and architecture guards
 
-**Local / CI:** from repo root with **`PYTHONPATH=.`** (set automatically in **`.github/workflows/ci.yml`** for the pytest step):
+**Local / CI:** from repo root with **`PYTHONPATH`** including **`api/src`**, **`frontend/src`**, and **`api/tests`** (see **`.github/workflows/ci.yml`**):
 
 ```bash
 ./scripts/validate.sh
+# Architecture-only:
+./scripts/validate_architecture.sh
 # Windows PowerShell:
 # .\scripts\validate.ps1
 ```
@@ -167,13 +187,14 @@ These do **not** invalidate the migration but are worth tracking:
 Equivalent manual steps:
 
 ```bash
-ruff check src apps tests/architecture
-pytest tests/architecture/ -q
+ruff check api/src frontend/src api/tests/architecture
+pytest api/tests/architecture/ -q
 ```
 
 | Concern | Module(s) |
 |---------|-----------|
-| Layer directions | **`test_layer_boundaries.py`**, **`test_application_orchestration_purity.py`** |
+| Physical layout + delivery tree | **`test_repository_structure.py`**, **`test_fastapi_delivery_boundaries.py`**, **`test_frontend_structure.py`** |
+| Layer directions | **`test_layer_import_rules.py`**, **`test_layer_boundaries.py`**, **`test_application_orchestration_purity.py`** |
 | Legacy paths | **`test_deprecated_backend_and_gateway_guardrails.py`**, **`test_legacy_app_wrapper_removed.py`** |
 | FastAPI | **`test_fastapi_migration_guardrails.py`** |
 | Composition | **`test_composition_import_boundaries.py`** |
@@ -181,7 +202,7 @@ pytest tests/architecture/ -q
 | Post-recall / transport RAG imports | **`test_orchestration_boundaries.py`** |
 | **All adapters** → **no** `src.application` imports | **`test_adapter_application_imports.py`** |
 | Chat RAG port names / boundaries | **`test_application_chat_rag_boundary_ports.py`** |
-| UI surface | **`test_streamlit_import_guardrails.py`** |
+| UI surface | **`test_frontend_structure.py`**, **`test_fastapi_migration_guardrails.py`** |
 | Smoke `build_backend` | **`test_migration_regression_flows.py`** |
 | Orchestration subtrees (chat/eval/rag) | **`test_orchestration_package_import_boundaries.py`** |
 | Manual evaluation single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
@@ -306,11 +327,11 @@ tests/
 
 | Mechanism | Role |
 |-----------|------|
-| **`.github/workflows/ci.yml`** | Sets **`PYTHONPATH=.`**; runs **Ruff** on **`src`**, **`apps`**, **`tests/architecture`**; runs **`pytest tests/architecture`**; keeps existing **unittest** jobs for infrastructure/integration/quality. |
-| **`scripts/validate.sh`** / **`scripts/validate.ps1`** | Same Ruff + architecture pytest targets for local pre-push checks. |
-| **`pyproject.toml`** | **`[tool.pytest.ini_options]`** — **`testpaths`**, **`pythonpath = ["."]`**, optional **`architecture`** marker for future filtering. |
+| **`.github/workflows/ci.yml`** | Sets **`PYTHONPATH=api/src:frontend/src:api/tests`**; runs **Ruff** on **`api/src`**, **`frontend/src`**, **`api/tests/architecture`**; runs **`pytest api/tests/architecture`**; keeps **unittest** jobs under **`api/tests/...`**. |
+| **`scripts/validate.sh`** / **`scripts/validate_architecture.sh`** / **`scripts/validate.ps1`** | Local Ruff + architecture pytest targets (see script headers). |
+| **`pyproject.toml`** | **`[tool.pytest.ini_options]`** — **`testpaths`**, **`pythonpath`** for **`api/src`**, **`frontend/src`**, **`api/tests`**. |
 
-**Optional local commands** (full tree): **`pytest tests/ -q`**, **`ruff check src apps`**, incremental **`mypy --config-file=pyproject.toml -p …`** as documented in **`docs/architecture.md`**.
+**Optional local commands** (full tree): **`pytest api/tests frontend/tests -q`**, **`ruff check api/src frontend/src`**, incremental **`mypy --config-file=pyproject.toml -p …`** as documented in **`docs/architecture.md`**.
 
 ---
 

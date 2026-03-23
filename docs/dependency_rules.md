@@ -1,19 +1,19 @@
 # Dependency rules
 
-Import directions enforced in code and by **`tests/architecture/`** (AST scans). When in doubt, run **`./scripts/validate.sh`** (or **`pytest tests/architecture -q`** with **`PYTHONPATH=.`**).
+Import directions enforced in code and by **`api/tests/architecture/`** (AST scans). When in doubt, run **`./scripts/validate_architecture.sh`** or **`./scripts/validate.sh`** from the repo root (both run the architecture pytest package with **`PYTHONPATH`** including **`api/src`**, **`frontend/src`**, and **`api/tests`**).
 
 ## Allowed directions
 
 | From | May import |
 |------|------------|
-| **Domain** | `src.core` (as established), stdlib, third-party **without** pulling app/infra (see tests for forbidden list). RAG-related typed transport for retrieval overrides lives in **`src/domain/retrieval_settings_override_spec.py`** so **`RetrievalPort`** and related protocols stay dict-free at the orchestration boundary. **`BufferedDocumentUpload`** and **`ProposedQaDatasetRow`** keep ingest and QA-generation ports off anonymous dict payloads at those boundaries. |
-| **Application** | `src.domain`, `src.core`; **`frontend_support`** may use `src.frontend_gateway` for stubs only |
-| **Infrastructure (non-adapter)** | Technical deps; **not** `src.application` (see `test_layer_boundaries`) |
-| **Infrastructure adapters** | **Domain** always; **not** **`src.application`** (see **`test_adapter_application_imports.py`**) |
-| **Composition** | Domain ports, infrastructure adapters, application use cases for typing/wiring; **not** `src.frontend_gateway` |
-| **`apps/api`** | FastAPI, `src.composition`, `src.application` (DTOs, **`frontend_support`** transcript), **`src.domain`** (**`AuthenticatedPrincipal`**, **`AuthenticationPort`** / **`AccessTokenIssuerPort`** types for dependencies), **not** `streamlit`, **`src.ui`**, or **`infrastructure.*`** anywhere in the package (AST guard in **`test_fastapi_migration_guardrails`**) |
-| **`src/frontend_gateway`** | `src.composition`, `src.application` (DTOs/support), **not** `src.infrastructure` |
-| **`pages/`, `src/ui/`** | `streamlit`, `src.frontend_gateway`, `src.auth`, view models; **not** `src.domain`, `src.infrastructure`, `src.composition`, `apps.api` |
+| **Domain** | `domain`, stdlib, third-party **without** transport or concrete infrastructure. **Narrow exception:** imports under **`infrastructure.config`** only (paths/constants), enforced explicitly in **`test_layer_import_rules.py`**. |
+| **Application** | `domain`, **`application` DTOs/ports**; **not** FastAPI/Starlette/Streamlit/`interfaces`. **Narrow exception:** **`infrastructure.config`** only for shared config/exceptions (same test module). |
+| **Infrastructure (non-adapter)** | Technical deps; **not** `application` (except Streamlit shims whitelisted in **`test_layer_boundaries`**) |
+| **Infrastructure adapters** | **Domain** always; **not** **`application`** (see **`test_adapter_application_imports.py`**) |
+| **Composition** | Domain ports, infrastructure, application use cases for typing/wiring; **not** Streamlit |
+| **`interfaces/http`** | FastAPI, `composition`, `application`, `domain` types as needed; **not** `streamlit`. Routers must not import **`infrastructure.*`** at all (even config); other HTTP modules may use **`infrastructure.config`** for errors/settings. |
+| **`frontend/src/services`** | May import `domain`, `application`, `composition`, and **`infrastructure.config`** (and related auth helpers) for the in-process/HTTP gateway; see **`test_frontend_structure.py`** for **pages/components** (thinner rules). |
+| **`frontend/src/pages`, `components`** | **Not** `domain`, `application`, `composition`, or `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** (session guards). |
 
 ### Infrastructure adapters (`src/infrastructure/adapters/`)
 
@@ -46,10 +46,13 @@ Import directions enforced in code and by **`tests/architecture/`** (AST scans).
 
 | Rule | Primary test module |
 |------|---------------------|
-| Domain / application / infra layer directions | **`test_layer_boundaries.py`** |
-| No FastAPI/LC/FAISS in `src/application` | **`test_application_orchestration_purity.py`** |
+| Physical layout (roots, FastAPI file locations, forbidden trees) | **`test_repository_structure.py`** |
+| Domain / application / HTTP router import directions | **`test_layer_import_rules.py`** |
+| Infrastructure + composition Streamlit rules | **`test_layer_boundaries.py`** |
+| `interfaces/http` no Streamlit / legacy namespaces | **`test_fastapi_delivery_boundaries.py`**, **`test_fastapi_migration_guardrails.py`** |
+| Frontend pages/components import thinness | **`test_frontend_structure.py`** |
+| No FastAPI/LC/FAISS in `application` | **`test_application_orchestration_purity.py`** |
 | Chat orchestration + evaluation + `application/rag` no infra / frameworks | **`test_orchestration_package_import_boundaries.py`** |
-| `apps/api` no `infrastructure.adapters` | **`test_fastapi_migration_guardrails.py`** |
 | Adapters must not import application | **`test_adapter_application_imports.py`** |
 | Manual eval single orchestrator | **`test_manual_evaluation_single_orchestrator.py`** |
 | No RAG monolith façade | **`test_no_rag_service_facade.py`** |

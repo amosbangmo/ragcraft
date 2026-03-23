@@ -8,10 +8,9 @@ jobs:
   lint-test-boot:
     runs-on: ubuntu-latest
 
-    env:
       OPENAI_API_KEY: ci-test-key
       RAGCRAFT_JWT_SECRET: ci-jwt-secret-at-least-32-characters-long!!
-      PYTHONPATH: .
+      PYTHONPATH: api/src:frontend/src:api/tests
 
     steps:
       - name: Checkout
@@ -33,21 +32,21 @@ jobs:
       - name: Lint (critical rules)
         run: ruff check . --select E9,F63,F7,F82
 
-      - name: Lint (project Ruff rules, src + apps + architecture tests)
-        run: ruff check src apps tests/architecture
+      - name: Lint (project Ruff rules, api + frontend + architecture tests)
+        run: ruff check api/src frontend/src api/tests/architecture
 
       - name: Architecture tests (pytest)
-        run: pytest tests/architecture -q --tb=short
+        run: pytest api/tests/architecture -q --tb=short
 
       - name: Run backend runtime tests
-        run: python -m unittest discover -s tests/infrastructure_services -p "test_*.py"
+        run: python -m unittest discover -s api/tests/infrastructure_tests -p "test_*.py"
 
       - name: Run integration tests
-        run: python -m unittest discover -s tests/integration -p "test_*.py"
+        run: python -m unittest discover -s api/tests/application_tests/_unclassified_tests/integration -p "test_*.py"
 
       - name: Run quality gates
-        run: python -m unittest discover -s tests/quality -p "test_*.py"
+        run: python -m unittest discover -s api/tests/application_tests/_unclassified_tests/quality -p "test_*.py"
 
       - name: Basic app boot check
         run: |
-          python -c "from src.frontend_gateway.streamlit_backend_factory import build_streamlit_backend_application_container; build_streamlit_backend_application_container(); print('boot-ok')"
+          python -c "from services.streamlit_backend_factory import build_streamlit_backend_application_container; build_streamlit_backend_application_container(); print('boot-ok')"

@@ -1,55 +1,54 @@
 # Testing strategy
 
-The suite is organized as a **pyramid**: fast **architecture** import guards at the base, **unit** use-case and domain tests, **HTTP/API** tests with dependency overrides, then heavier **integration** / optional-dependency flows.
+The suite is organized as a **pyramid**: fast **architecture** import and layout guards at the base, **unit** use-case and domain tests, **HTTP/API** tests with dependency overrides, then heavier **integration** / optional-dependency flows.
 
-**CI lock-in:** GitHub Actions runs **`ruff check src apps tests/architecture`** and **`pytest tests/architecture`** (with **`PYTHONPATH=.`**). Locally use **`scripts/validate.sh`** or **`scripts/validate.ps1`** for the same subset. **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`pythonpath = ["."]`** so pytest discovers **`src`** / **`apps`** from the repo root.
+**CI lock-in:** `.github/workflows/ci.yml` sets **`PYTHONPATH=api/src:frontend/src:api/tests`**, runs **Ruff** on **`api/src`**, **`frontend/src`**, and **`api/tests/architecture`**, then **`pytest api/tests/architecture`**. Locally use **`scripts/validate.sh`**, **`scripts/validate_architecture.sh`**, or **`scripts/validate.ps1`** where available. **`pyproject.toml`** sets **`[tool.pytest.ini_options]`** **`pythonpath = ["api/tests", "api/src", "frontend/src"]`** so pytest resolves first-party packages from the repo root.
 
-## Architecture tests (`tests/architecture/`)
+## Architecture tests (`api/tests/architecture/`)
 
 | Area | Examples |
 |------|-----------|
-| **Layer imports** | `test_layer_boundaries.py` — domain / application / infrastructure / composition / routers |
-| **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `use_cases/chat/orchestration`, `use_cases/evaluation`, and `application/rag` must not import `src.infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
-| **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Starlette/Streamlit/FAISS/LangChain in `src/application` (keeps multipart **`UploadFile`** and HTTP types out of use cases); use cases must not import `src.frontend_gateway` |
+| **Physical layout** | `test_repository_structure.py` — required roots, forbidden legacy `src/` / `apps/` at repo root, FastAPI routers only under `interfaces/http/routers/`, schemas under `schemas/`, composition/orchestration trees |
+| **Layer imports** | `test_layer_import_rules.py` — domain, application, HTTP routers (AST top-level imports) |
+| **Infra + composition** | `test_layer_boundaries.py` — infrastructure vs application/Streamlit; composition vs Streamlit |
+| **FastAPI delivery** | `test_fastapi_delivery_boundaries.py` — no Streamlit or legacy `src.*` / `apps.*` namespaces under `interfaces/http` |
+| **Frontend thin UI** | `test_frontend_structure.py` — pages/components vs `services` gateway import policy |
+| **Orchestration folders** | `test_orchestration_package_import_boundaries.py` — `use_cases/chat/orchestration`, `use_cases/evaluation`, and `application/rag` must not import `infrastructure`, FastAPI, Streamlit, LangChain, FAISS, … |
+| **Application purity** | `test_application_orchestration_purity.py` — no FastAPI/Starlette/Streamlit/FAISS/LangChain in `application` |
 | **Legacy packages** | `test_deprecated_backend_and_gateway_guardrails.py` — no `src.backend`, `src.adapters`, `infrastructure.services` |
-| **Gateway** | Same module — `src/frontend_gateway` must not import `src.infrastructure` |
-| **FastAPI** | `test_fastapi_migration_guardrails.py` — no Streamlit/UI/infra adapters in `apps/api` source |
-| **Composition** | `test_composition_import_boundaries.py` — no `src.frontend_gateway` imports in `src/composition/*.py` |
-| **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `infrastructure.rag`; post-recall adapter rules; assemble pipeline + steps module location |
-| **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class, container exposes `chat_rag_use_cases`, rag adapters don’t import chat use case types |
-| **Adapters → no application imports** | `test_adapter_application_imports.py` — all of `src/infrastructure/adapters/**/*.py` must not import `src.application` |
-| **Chat RAG port wiring** | `test_application_chat_rag_boundary_ports.py` — inspect / answer-generation boundaries stay on domain ports |
-| **UI surface** | `test_streamlit_import_guardrails.py` — pages/ui import rules |
+| **FastAPI migration** | `test_fastapi_migration_guardrails.py` — HTTP stack + Streamlit surface regression checks |
+| **Composition** | `test_composition_import_boundaries.py` — no `frontend_gateway` imports in `composition/*.py` |
+| **Orchestration** | `test_orchestration_boundaries.py` — transport must not import `infrastructure.rag`; post-recall adapter rules |
+| **RAG façade** | `test_no_rag_service_facade.py` — no `rag_service.py`, no `RAGService` class |
+| **Adapters → no application imports** | `test_adapter_application_imports.py` — infrastructure adapter modules must not import `application` |
+| **Chat RAG port wiring** | `test_application_chat_rag_boundary_ports.py` |
 | **Regression flows** | `test_migration_regression_flows.py` — smoke imports for `build_backend` |
-| **Manual eval orchestration** | `test_manual_evaluation_single_orchestrator.py` — no duplicate **`ManualEvaluationService`**-style orchestration in infrastructure |
+| **Manual eval orchestration** | `test_manual_evaluation_single_orchestrator.py` |
 
-Shared helper: **`tests/architecture/import_scanner.py`**. Index: **`tests/architecture/README.md`**.
+Shared helper: **`api/tests/architecture/import_scanner.py`**. Index: **`api/tests/architecture/README.md`** (if present).
 
 ## Integration and API tests
 
-- **`tests/apps_api/`** — FastAPI contracts, dependency overrides, OpenAPI.
-- **`tests/integration/`** — heavier flows (optional deps); may skip in minimal envs.
-- **`tests/composition/`** — `build_backend_composition` / container wiring (may skip without unstructured/langchain).
+- **`api/tests/apps_api/`** — FastAPI contracts, dependency overrides, OpenAPI.
+- **`api/tests/application_tests/_unclassified_tests/integration/`** — heavier flows (optional deps).
+- **`api/tests/composition/`** — `build_backend_composition` / container wiring (may skip without unstructured/langchain).
 
 ## Service / use case unit tests
 
-- **`tests/application/`** — use case behavior with mocks (e.g. **`test_ask_question_use_case.py`**, **`test_inspect_rag_pipeline_use_case.py`**, **`test_benchmark_execution_use_case.py`**, **`test_upload_policy.py`**, **`test_ingest_uploaded_file_use_case.py`**, **`test_get_project_document_details_use_case.py`**, **`test_generate_qa_dataset_use_case.py`**).
-- **`tests/apps_api/test_upload_adapter.py`** — Starlette/FastAPI chunked reads for **document** and **avatar** adapters; oversize rejection.
-- **`tests/application/users/test_avatar_upload_policy.py`** — application-layer avatar size/emptiness checks.
-- **Config monkeypatching:** modules bind **`USER_PROFILE_UPLOAD_CONFIG`** at import time; tests that override avatar limits should patch **`apps.api.upload_adapter`**, **`application.users.avatar_upload_policy`**, or **`infrastructure.storage.file_avatar_storage`** as appropriate (not only **`infrastructure.config.config`**).
-- **`tests/domain/`** — pure domain policy (e.g. `test_summary_document_fusion.py`, `test_rag_inspect_answer_run.py` covers **`GoldQaPipelineRowInput`** via **`as_row_evaluation_input()`**, `test_retrieval_settings_override_spec.py`).
-- **`tests/application/use_cases/evaluation/test_rag_pipeline_orchestration.py`** — evaluation inspect+answer orchestration and **`RagInspectAnswerRun`** latency typing.
-- **`tests/infrastructure_services/`** — adapter behavior (e.g. `test_chat_rag_wiring.py` asserts **`PipelineBuildResult.latency`** and **`RAGResponse.latency`** are **`PipelineLatency`**; **`test_manual_evaluation_service.py`** exercises **`RunManualEvaluationUseCase`** with mocked inspect/generate/benchmark, not a legacy service orchestrator).
+- **`api/tests/application_tests/`** — use case behavior with mocks.
+- **`api/tests/domain/`** — pure domain policy.
+- **`api/tests/infrastructure_tests/`** — adapter behavior.
+- **`frontend/tests/`** — Streamlit/UI and gateway client tests.
 
 ## What architecture tests do *not* prove
 
 - Full absence of logical coupling.
-- Runtime security of **JWT bearer** verification (`AuthenticationPort` / `JwtAuthenticationAdapter`) and **`RAGCRAFT_JWT_SECRET`** configuration in real deployments.
+- Runtime security of **JWT bearer** verification and secret configuration in real deployments.
 
-Run full suite (from repo root, `PYTHONPATH` set):
+Run full suite (from repo root; `pyproject` supplies `pythonpath`):
 
 ```bash
-pytest tests/ -q
+pytest api/tests frontend/tests -q
 ```
 
-**Lint (recommended on touched trees):** `ruff check src apps` and `ruff format src apps` (see `pyproject.toml`).
+**Lint (recommended on touched trees):** `ruff check api/src frontend/src` (see `pyproject.toml`).
