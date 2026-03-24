@@ -1,9 +1,9 @@
 """
 Streamlit UI must reach the backend façade through :mod:`services.api_client` only.
 
-``frontend/src/pages`` and ``frontend/src/components`` may import other ``services.*`` helpers
-(streamlit auth, session context, DTOs, UI error mapping) but must not import transport/protocol
-modules that bypass the canonical entrypoint.
+``frontend/pages`` (Streamlit multipage) and ``frontend/src/components`` may import other
+``services.*`` helpers (streamlit auth, session context, DTOs, UI error mapping) but must not import
+transport/protocol modules that bypass the canonical entrypoint.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-_PAGES = REPO_ROOT / "frontend" / "src" / "pages"
+_PAGES = REPO_ROOT / "frontend" / "pages"
 _COMPONENTS = REPO_ROOT / "frontend" / "src" / "components"
 
 _ALLOWED_SERVICES_MODULES: frozenset[str] = frozenset(

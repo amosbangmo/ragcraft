@@ -15,7 +15,7 @@ Paths below are **on-disk** under the repository root. Python imports use packag
 | **API routers** | `api/src/interfaces/http/routers/` | `infrastructure` |
 | **Composition root** | `api/src/composition/` | `streamlit`, `interfaces` |
 | **FastAPI / HTTP package** | `api/src/interfaces/http/` (all modules) | `streamlit`, top-level frontend packages (`pages`, `components`, …), monolith roots **`src`**, **`apps`**, **`infrastructure.services`**, **`infrastructure.adapters`** |
-| **Frontend pages / components** | `frontend/src/pages/`, `frontend/src/components/` | `domain`, `application`, `composition`, `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** |
+| **Frontend pages / components** | `frontend/pages/`, `frontend/src/components/` | `domain`, `application`, `composition`, `interfaces`; **infrastructure** limited to **`infrastructure.auth.*`** |
 | **Frontend services** | `frontend/src/services/` | **`infrastructure.*`** except **`infrastructure.config`** and **`infrastructure.auth`** (`test_frontend_services_infrastructure_imports_are_limited`) |
 
 Module `test_fastapi_migration_guardrails.py` checks that `frontend/src/services` avoids `domain`/`application` imports and that `HttpBackendClient` satisfies `BackendClient` at runtime (`isinstance`).

@@ -62,7 +62,7 @@ def test_backend_test_package_directories(repo_root: Path) -> None:
 def test_frontend_directories(repo_root: Path) -> None:
     fe = repo_root / "frontend"
     src = fe / "src"
-    _dir(src / "pages")
+    _dir(fe / "pages")
     _dir(src / "components")
     _dir(src / "state")
     _dir(src / "services")
@@ -133,11 +133,12 @@ def test_frontend_top_level_key_files(repo_root: Path) -> None:
 
 
 def test_frontend_structure_key_files(repo_root: Path) -> None:
-    p = repo_root / "frontend" / "src"
-    _file(p / "pages" / "chat.py")
-    _file(p / "pages" / "projects.py")
-    _file(p / "pages" / "evaluation.py")
-    _file(p / "pages" / "settings.py")
+    fe = repo_root / "frontend"
+    p = fe / "src"
+    _file(fe / "pages" / "chat.py")
+    _file(fe / "pages" / "projects.py")
+    _file(fe / "pages" / "evaluation.py")
+    _file(fe / "pages" / "settings.py")
     _file(p / "state" / "session_state.py")
     _file(p / "services" / "api_client.py")
 

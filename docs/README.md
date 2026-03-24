@@ -5,7 +5,7 @@ Index of **code-aligned** docs for the current repository layout.
 ## Layout (today)
 
 - **Backend:** **`api/src/`** (packages `domain`, `application`, `infrastructure`, `composition`, `interfaces`). ASGI entry **`api/main.py`**.
-- **Frontend:** **`frontend/src/`** (Streamlit UI packages + **`services`** for the backend client). Entry **`frontend/app.py`**.
+- **Frontend:** **`frontend/pages/`** (Streamlit multipage), **`frontend/src/`** (components, **`services`**, utils). Entry **`frontend/app.py`**.
 - **Tests:** **`api/tests/`**, **`frontend/tests/`**.
 - **Tooling:** root **`pyproject.toml`**, **`requirements.txt`**, **`scripts/`** (validate, lint, run_tests).
 

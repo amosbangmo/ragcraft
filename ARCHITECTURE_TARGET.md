@@ -9,7 +9,7 @@ Short form of the layout enforced in code and tests. **Canonical detail:** `docs
 
 ## Streamlit — reference UI client
 
-- **Entry:** `frontend/app.py`, **`frontend/src/pages/`**, **`frontend/src/components/`**.
+- **Entry:** `frontend/app.py`, **`frontend/pages/`** (Streamlit multipage), **`frontend/src/components/`**.
 - **Rule:** Import **`BackendClient`**, **`get_backend_client`**, and UI-facing helpers **only** from **`frontend/src/services/api_client.py`**. No direct `domain`, `application`, `composition`, or `interfaces` imports from pages/components (enforced by tests). **`frontend/src/services`** implements **`HttpBackendClient`** and must not import **`domain`** / **`application`** (architecture tests).
 - **Backend transport:** Streamlit calls FastAPI **only over HTTP** at **`RAGCRAFT_API_BASE_URL`** (see **`docs/api.md`**). There is **no** supported in-process or alternate transport for the UI.
 

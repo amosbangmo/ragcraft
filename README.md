@@ -85,7 +85,7 @@ The demo allows you to:
 # 🏗️ Architecture Overview
 
 - **FastAPI** under **`api/src/interfaces/http/`** (ASGI entry **`api/main.py`**) is the **HTTP backend** — OpenAPI at `/docs`. This is the **integration contract** for SPAs, scripts, and automation.
-- **Streamlit** (`frontend/app.py`, `frontend/src/pages/`, `frontend/src/components/`) is a **reference UI client**. Pages and components import **`BackendClient`**, **`get_backend_client`**, wire types, and UI helpers **only** from **`frontend/src/services/api_client.py`**. The **`BackendClient`** protocol and **`HttpBackendClient`** live in **`frontend/src/services/`**; **`api/src/application/frontend_support/`** only mirrors the protocol type for optional merged-**`PYTHONPATH`** tooling (see **`docs/api.md`**). UI code must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
+- **Streamlit** (`frontend/app.py`, `frontend/pages/`, `frontend/src/components/`) is a **reference UI client**. Pages and components import **`BackendClient`**, **`get_backend_client`**, wire types, and UI helpers **only** from **`frontend/src/services/api_client.py`**. The **`BackendClient`** protocol and **`HttpBackendClient`** live in **`frontend/src/services/`**; **`api/src/application/frontend_support/`** only mirrors the protocol type for optional merged-**`PYTHONPATH`** tooling (see **`docs/api.md`**). UI code must **not** import `domain`, `application`, `composition`, or `interfaces` directly (enforced by architecture tests).
 - **Streamlit always uses HTTP** to reach FastAPI (**`RAGCRAFT_API_BASE_URL`**). Pytest/E2E may build an in-process **`BackendApplicationContainer`** via **`api/tests/support/backend_container.py`** — that path is **not** a supported UI transport.
 - **Angular or other SPAs** should use the **same HTTP API**: obtain a JWT from `POST /auth/login` or `/auth/register`, then send `Authorization: Bearer <access_token>` on scoped routes.
 
@@ -225,8 +225,8 @@ ragcraft/
 │   └── tests/                   # pytest: architecture/, api/, appli/, infra/, e2e/, …
 ├── frontend/
 │   ├── app.py                   # Streamlit entry (run from frontend/)
+│   ├── pages/                   # Streamlit multipage modules (next to app.py)
 │   ├── src/
-│   │   ├── pages/
 │   │   ├── components/
 │   │   ├── services/          # BackendClient, HTTP / in-process clients, Streamlit factory
 │   │   ├── state/

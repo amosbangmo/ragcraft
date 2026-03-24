@@ -44,11 +44,11 @@ def test_interfaces_http_package_avoids_runtime_services_layer() -> None:
 
 def test_streamlit_pages_and_ui_avoid_direct_backend_internals() -> None:
     """
-    ``frontend/src/pages`` and ``frontend/src/components`` should use ``services`` and auth guards,
+    ``frontend/pages`` and ``frontend/src/components`` should use ``services`` and auth guards,
     not monolith ``src.*`` or ``apps.*`` import roots.
     """
     roots = [
-        REPO_ROOT / "frontend" / "src" / "pages",
+        REPO_ROOT / "frontend" / "pages",
         REPO_ROOT / "frontend" / "src" / "components",
     ]
     forbidden = ("src", "apps")

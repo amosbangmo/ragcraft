@@ -14,7 +14,7 @@ This document describes **what the repository implements today**, how it is **en
 
 ## 2. Frontend boundary: wire types only
 
-- **`frontend/src/pages`** and **`frontend/src/components`** must not import **`domain`** or **`application`** (see **`api/tests/architecture/test_frontend_structure.py`**).
+- **`frontend/pages`** and **`frontend/src/components`** must not import **`domain`** or **`application`** (see **`api/tests/architecture/test_frontend_structure.py`**).
 - **`frontend/src/services`** must not import **`domain`**, **`application`**, **`composition`**, or **`interfaces`** (see **`api/tests/architecture/test_fastapi_migration_guardrails.py`**).
 - Presentation helpers that previously lived under **`application.frontend_support.view_models`** now live under **`frontend/src/services/`** (`benchmark_compare_ui`, `failure_analysis_ui`, `retrieval_preset_ui`, `retrieval_preset_merge_service`, etc.).
 - **`services.api_client`** re-exports the façade: **`BackendClient`**, **`HttpBackendClient`**, wire DTOs, and UI helpers.

@@ -3,6 +3,9 @@ Repo-wide frontend layout and thin-page import rules (runs in the API test suite
 
 ``frontend/src/services`` may import backend packages for the in-process gateway; pages and
 components must stay on the façade (see ``docs/dependency_rules.md``).
+
+Streamlit multipage modules live under ``frontend/pages/`` (next to ``app.py``); shared UI code
+under ``frontend/src/`` remains on ``PYTHONPATH`` for ``components``, ``services``, etc.
 """
 
 from __future__ import annotations
@@ -17,12 +20,13 @@ from architecture.import_scanner import (
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 FRONTEND_SRC = REPO_ROOT / "frontend" / "src"
+FRONTEND_PAGES = REPO_ROOT / "frontend" / "pages"
 
 
 def test_required_frontend_directories_exist() -> None:
     for p in (
         FRONTEND_SRC,
-        FRONTEND_SRC / "pages",
+        FRONTEND_PAGES,
         FRONTEND_SRC / "services",
         FRONTEND_SRC / "components",
     ):
@@ -30,7 +34,7 @@ def test_required_frontend_directories_exist() -> None:
 
 
 def test_pages_and_components_avoid_composition_and_use_cases() -> None:
-    roots = [FRONTEND_SRC / "pages", FRONTEND_SRC / "components"]
+    roots = [FRONTEND_PAGES, FRONTEND_SRC / "components"]
     violations = collect_import_violations(
         roots,
         forbidden=(
@@ -54,7 +58,7 @@ def test_pages_and_components_avoid_domain_and_application_except_documented_shi
     **Narrow exception:** none — auth for pages uses ``infrastructure.auth.guards`` only.
     """
     violations: list[str] = []
-    for root in (FRONTEND_SRC / "pages", FRONTEND_SRC / "components"):
+    for root in (FRONTEND_PAGES, FRONTEND_SRC / "components"):
         if not root.is_dir():
             continue
         for path in iter_python_files(root):
@@ -72,7 +76,7 @@ def test_pages_and_components_avoid_domain_and_application_except_documented_shi
 def test_pages_and_components_infrastructure_limited_to_auth_guards() -> None:
     """Allow only ``infrastructure.auth`` imports in pages/components (session guards)."""
     violations: list[str] = []
-    for root in (FRONTEND_SRC / "pages", FRONTEND_SRC / "components"):
+    for root in (FRONTEND_PAGES, FRONTEND_SRC / "components"):
         if not root.is_dir():
             continue
         for path in iter_python_files(root):

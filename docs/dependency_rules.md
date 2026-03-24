@@ -24,7 +24,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 | Required top-level areas: **`api/`**, **`frontend/`**, **`docs/`**, **`scripts/`**, **`api/src/`**, **`frontend/src/`** | **`test_repository_structure.py`** |
 | **Forbidden** at repo root: **`src/`**, **`apps/`**, **`pages/`**, **`streamlit_app.py`** | **`test_repository_structure.py`** |
 | Backend **application** `.py` only under **`api/src/`** (plus **`api/main.py`**, **`api/__init__.py`**, **`api/tests/**`) | **`test_repository_structure.py`** |
-| Frontend **application** `.py` only under **`frontend/src/`** (plus **`frontend/app.py`**, **`frontend/tests/**`) | **`test_repository_structure.py`** |
+| Frontend **application** `.py` under **`frontend/src/`**, Streamlit multipage under **`frontend/pages/`** (plus **`frontend/app.py`**, **`frontend/tests/**`) | **`test_repository_structure.py`** |
 | **Forbidden** under **`api/src/`**: top-level **`pages/`**, **`ui/`**; stray **`adapters/`**, **`backend/`**, **`services/`** packages; **`infrastructure/services/`** | **`test_repository_structure.py`**, **`test_deprecated_backend_shim_guardrails.py`** |
 | **Forbidden** under **`frontend/src/`**: vendored **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`** trees | **`test_repository_structure.py`** |
 | FastAPI **`APIRouter`** only under **`api/src/interfaces/http/routers/`** | **`test_repository_structure.py`** |
@@ -45,7 +45,7 @@ Scripts set **`PYTHONPATH=api/src:frontend/src:api/tests`** (use **`;`** on Wind
 | **`api/src/interfaces/http/routers/`** | FastAPI, `application`, `domain`, `composition` via deps | **`infrastructure.*`** (any) |
 | **`api/src/interfaces/http/`** (non-router) | As needed for app, errors, upload | Streamlit; also no frontend top-level packages or monolith **`src`/`apps`** import roots (**`test_fastapi_delivery_boundaries`**) |
 | **`frontend/src/services/`** | `domain`, `application`, `composition`, `infrastructure.config`, `infrastructure.auth` | Other **`infrastructure.*`** (**`test_frontend_services_infrastructure_imports_are_limited`** in **`test_deprecated_backend_shim_guardrails.py`**) |
-| **`frontend/src/pages`**, **`components/`** | `services`, Streamlit, `infrastructure.auth` for guards | `domain`, `application`, `composition`, `interfaces` (**`test_frontend_structure.py`**) |
+| **`frontend/pages`** (next to `app.py`), **`frontend/src/components/`** | `services`, Streamlit, `infrastructure.auth` for guards | `domain`, `application`, `composition`, `interfaces` (**`test_frontend_structure.py`**) |
 
 ---
 

@@ -1,6 +1,6 @@
 # Architecture
 
-RAGCraft follows **Clean Architecture**: **domain** at the center, **application** owns workflows and orchestration, **infrastructure** implements ports, **composition** builds the runtime graph, and **delivery** (FastAPI under **`interfaces/http`**, Streamlit under **`frontend/src`**) stays thin.
+RAGCraft follows **Clean Architecture**: **domain** at the center, **application** owns workflows and orchestration, **infrastructure** implements ports, **composition** builds the runtime graph, and **delivery** (FastAPI under **`interfaces/http`**, Streamlit under **`frontend/pages`** + **`frontend/src`**) stays thin.
 
 **Related:** **`docs/rag_orchestration.md`** (RAG modes and pipelines), **`docs/dependency_rules.md`** (import rules), **`docs/api.md`** (HTTP and Streamlit client contract), **`docs/testing_strategy.md`** (test matrix), **`docs/product_features.md`** (features ↔ routes), **`docs/migration_report_final.md`** (closure). **Short layout:** **`ARCHITECTURE_TARGET.md`**.
 
@@ -12,7 +12,7 @@ RAGCraft follows **Clean Architecture**: **domain** at the center, **application
 |------|------|------|
 | Backend | **`api/src/`** | Packages: **`domain`**, **`application`**, **`infrastructure`**, **`composition`**, **`interfaces`** |
 | ASGI entry | **`api/main.py`** | Sets **`sys.path`**, exposes **`app`** from **`interfaces.http.main:create_app`** for Uvicorn |
-| Frontend | **`frontend/src/`** | **`pages`**, **`components`**, **`services`**, **`state`**, **`utils`** |
+| Frontend | **`frontend/`** | **`pages/`** (Streamlit multipage next to **`app.py`**), **`src/`** (**`components`**, **`services`**, **`state`**, **`utils`**) |
 | Streamlit shell | **`frontend/app.py`** | Multi-page entry |
 | Tests (API) | **`api/tests/`** | **`architecture`**, **`bootstrap`**, **`reliability`**, **`api`**, **`appli`**, **`infra`**, **`e2e`**, … |
 | Tests (UI) | **`frontend/tests/`** | Streamlit, wire contracts, **`test_api_client.py`** |
@@ -38,7 +38,7 @@ Delivery (interfaces/http, Streamlit pages/components → services.api_client)
 - **Application** — domain + sibling **`application`**; no concrete infra or FastAPI in orchestration (see architecture tests).
 - **Infrastructure** — implements ports; does not import **`application`** (except documented exceptions, e.g. auth credentials).
 - **`interfaces/http`** — FastAPI, **`Depends`**, container, **domain** types in handlers; routers **do not** import **`infrastructure.*`**.
-- **`frontend/src/pages`** and **`components`** — allowed **`services.*`** imports only (**`api_client`**, **`ui_errors`**, **`streamlit_context`**, **`settings_dtos`**, **`streamlit_auth`**) plus **`infrastructure.auth`** for guards; **no** direct **`domain`**, **`application`**, **`composition`**, or **`interfaces`** (see **`test_frontend_streamlit_services_entrypoint.py`**).
+- **`frontend/pages`** (Streamlit multipage) and **`frontend/src/components`** — allowed **`services.*`** imports only (**`api_client`**, **`ui_errors`**, **`streamlit_context`**, **`settings_dtos`**, **`streamlit_auth`**) plus **`infrastructure.auth`** for guards; **no** direct **`domain`**, **`application`**, **`composition`**, or **`interfaces`** (see **`test_frontend_streamlit_services_entrypoint.py`**).
 - **`services/api_client.py`** — sole façade from Streamlit into HTTP wire types and **`HttpBackendClient`** (no **`application`** / **`domain`** imports in **`frontend/src/services`**).
 
 ---
@@ -84,9 +84,9 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 
 ---
 
-## 8. Frontend integration (`frontend/src/`)
+## 8. Frontend integration (`frontend/pages/`, `frontend/src/`)
 
-- **`services/api_client.py`** — **only** module **pages** and **components** use for backend façade types and **`get_backend_client`**.
+- **`services/api_client.py`** — **only** module **pages** (under **`frontend/pages/`**) and **components** use for backend façade types and **`get_backend_client`**.
 - **`services/`** wire helpers — **`api_contract_models`**, **`evaluation_wire_*`**, **`http_payloads`**, **`http_transport`**, auth/session modules. The **only** supported UI client is **`HttpBackendClient`** in **`http_backend_client.py`** (typed protocol in **`backend_client_protocol.py`**).
 
 ---
@@ -99,7 +99,7 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 
 | Tool | Config | Use |
 |------|--------|-----|
-| Ruff | **`pyproject.toml`** | `ruff check api/src frontend/src` (+ architecture tests in CI) |
+| Ruff | **`pyproject.toml`** | `ruff check api/src frontend/src frontend/pages` (+ architecture tests in CI) |
 | pytest | Root + **`api/pyproject.toml`** | Layered suites; marker **`reliability`** for **`api/tests/reliability/`** |
 | Cypress | **`cypress.config.js`**, **`npm run cy:ci`** | Streamlit + FastAPI E2E; JUnit sous **`artifacts/`** |
 

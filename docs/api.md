@@ -77,11 +77,11 @@ Routers only under **`api/src/interfaces/http/routers/`**. Handlers: validate �
 
 ## 8. Streamlit client (wire contract)
 
-The UI must treat **HTTP JSON** as the contract, not **`application.dto`** / **`domain`** types in **`frontend/src`**.
+The UI must treat **HTTP JSON** as the contract, not **`application.dto`** / **`domain`** types in **`frontend/src`**. Streamlit page scripts live under **`frontend/pages/`** (next to **`app.py`**); they use the same façade imports as **`frontend/src/components/`**.
 
 | Piece | Location | Role |
 |-------|----------|------|
-| **Public façade** | **`frontend/src/services/api_client.py`** | **Only** import for pages/components: **`BackendClient`**, **`get_backend_client`**, wire/view-model helpers, preset merge |
+| **Public façade** | **`frontend/src/services/api_client.py`** | **Only** import for **`frontend/pages/`** / **`frontend/src/components/`**: **`BackendClient`**, **`get_backend_client`**, wire/view-model helpers, preset merge |
 | **HTTP client impl.** | **`frontend/src/services/http_backend_client.py`** | Requests + JSON → **`services.api_contract_models`** / **`evaluation_wire_models`** (no **`domain`** on hot path) |
 | **Wire DTOs** | **`frontend/src/services/api_contract_models.py`**, **`evaluation_wire_*`**, **`http_payloads.py`** | Match FastAPI JSON |
 

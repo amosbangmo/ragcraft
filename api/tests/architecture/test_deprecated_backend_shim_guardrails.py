@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def _repo_python_paths_for_legacy_shim_import_guards() -> list[Path]:
     """Trees scanned so removed shim packages cannot be reintroduced via imports."""
     paths: list[Path] = []
-    for sub in ("api/src", "frontend/src", "api/tests", "frontend/tests"):
+    for sub in ("api/src", "frontend/src", "frontend/pages", "api/tests", "frontend/tests"):
         root = REPO_ROOT.joinpath(*sub.split("/"))
         if root.is_dir():
             paths.extend(iter_python_files(root))

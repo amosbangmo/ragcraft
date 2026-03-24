@@ -82,8 +82,8 @@ def test_backend_python_sources_live_only_under_api_src() -> None:
 def test_frontend_python_sources_live_only_under_frontend_src() -> None:
     """Frontend application code must not live under ``frontend/`` outside allowed roots.
 
-    Allowed: ``app.py``, ``frontend/src/``, ``frontend/tests/``, and thin Streamlit shims under
-    ``frontend/pages/`` (multipage loads ``pages/`` next to ``app.py``).
+    Allowed: ``app.py``, ``frontend/src/``, ``frontend/tests/``, and Streamlit multipage modules under
+    ``frontend/pages/`` (next to ``app.py``; shared code stays under ``frontend/src/`` on ``PYTHONPATH``).
     """
     fe = REPO_ROOT / "frontend"
     for path in fe.rglob("*.py"):
@@ -100,7 +100,7 @@ def test_frontend_python_sources_live_only_under_frontend_src() -> None:
         if parts and parts[0] == "pages":
             continue
         pytest.fail(
-            f"Unexpected Python file under frontend/ (use frontend/src/, frontend/tests/, or frontend/pages/ shims): "
+            f"Unexpected Python file under frontend/ (use frontend/src/, frontend/tests/, or frontend/pages/): "
             f"{path.relative_to(REPO_ROOT)}"
         )
 
@@ -276,7 +276,7 @@ def test_frontend_entrypoint_and_layout_dirs() -> None:
     fe = REPO_ROOT / "frontend"
     src = fe / "src"
     _must_dir(fe)
-    _must_dir(src / "pages")
+    _must_dir(fe / "pages")
     _must_dir(src / "components" / "shared")
     _must_dir(src / "state")
     _must_dir(src / "services")
@@ -285,7 +285,7 @@ def test_frontend_entrypoint_and_layout_dirs() -> None:
 
 
 def test_no_streamlit_ui_trees_under_api_src() -> None:
-    """UI pages and legacy ``ui`` packages belong under ``frontend/src``, not ``api/src``."""
+    """Streamlit multipage modules live under ``frontend/pages/``; legacy ``ui`` packages must not sit under ``api/src``."""
     for rel in ("pages", "ui"):
         p = API_SRC / rel
         assert not p.exists(), f"Forbidden under api/src: {rel}/"

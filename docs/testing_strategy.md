@@ -128,4 +128,4 @@ Full security audit of JWT deployment, production load, or real LLM/vector SLOs.
 
 Per **`scripts/lint.sh`:**
 
-`ruff check api/src frontend/src api/tests/architecture`
+`ruff check api/src frontend/src frontend/pages api/tests/architecture`
