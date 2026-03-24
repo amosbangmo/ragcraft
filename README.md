@@ -284,23 +284,25 @@ Optional: from **`api/`**, `pytest` runs only **`tests/architecture`** (see **`a
 
 ### Streamlit (default local UI)
 
-```bash
-cd frontend
-streamlit run app.py
-```
+From the **repository root**:
 
-Use **`PYTHONPATH`** as in **`docs/README.md`** (repo root + **`api/src`** + **`frontend/src`**) so `api` and Streamlit imports resolve.
+| Shell | Command |
+|-------|---------|
+| Bash | `./scripts/run_streamlit.sh` |
+| PowerShell | `.\scripts\run_streamlit.ps1` |
+
+Manual equivalent: `cd frontend`, set **`PYTHONPATH`** to **`api/src`** + **`frontend/src`**, then **`python -m streamlit run app.py`** (see **`docs/README.md`**).
 
 ### FastAPI backend (HTTP API)
 
 Use a second terminal if you want OpenAPI docs or to point Streamlit at the API:
 
-```bash
-export PYTHONPATH=$(pwd)   # Linux/macOS — repository root
-python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000
-```
+| Shell | Command |
+|-------|---------|
+| Bash | `./scripts/run_api.sh` |
+| PowerShell | `.\scripts\run_api.ps1` |
 
-PowerShell: `$env:PYTHONPATH = (Get-Location).Path` then the same `uvicorn` command.
+Manual equivalent: **`PYTHONPATH`** = repository root, then **`python -m uvicorn api.main:app --reload --host 127.0.0.1 --port 8000`**.
 
 - **Docs:** http://127.0.0.1:8000/docs  
 - **Streamlit + API:** set `RAGCRAFT_API_BASE_URL` to the running Uvicorn origin (see **`docs/README.md`** — local development).

@@ -49,8 +49,8 @@ Or: **`./scripts/validate_architecture.sh`** / **`.\scripts\validate_architectur
 
 ## Local development
 
-- **API:** set **`RAGCRAFT_JWT_SECRET`**, repo root on **`PYTHONPATH`**, then **`python -m uvicorn api.main:app --reload`** (see **`docs/api.md`**).
-- **Streamlit:** from **`frontend/`**, **`streamlit run app.py`** with **`PYTHONPATH`** including repo root, **`api/src`**, and **`frontend/src`** (see root **`README.md`**).
+- **API:** set **`RAGCRAFT_JWT_SECRET`**, then **`scripts/run_api.sh`** or **`scripts/run_api.ps1`** (repo root on **`PYTHONPATH`**) or the manual **`uvicorn`** command (see **`docs/api.md`**).
+- **Streamlit:** from repo root, **`scripts/run_streamlit.sh`** or **`scripts/run_streamlit.ps1`** (sets **`api/src`** + **`frontend/src`** on **`PYTHONPATH`**); see root **`README.md`**.
 - **Streamlit → API:** **`RAGCRAFT_API_BASE_URL`** (and optional timeout env vars — see **`docs/api.md`**). The UI uses **HTTP only**; run Uvicorn for the API separately.
 
 Optional upload caps: **`RAG_MAX_UPLOAD_BYTES`**, **`RAG_MAX_AVATAR_UPLOAD_BYTES`** (**`docs/api.md`**, **`migration_report_final.md`**).
