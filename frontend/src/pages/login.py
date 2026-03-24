@@ -1,7 +1,7 @@
 import streamlit as st
 
 from components.shared.layout import apply_layout
-from services import streamlit_auth
+import services.session.streamlit_auth as streamlit_auth
 
 st.set_page_config(
     page_title="Login | RAGCraft",

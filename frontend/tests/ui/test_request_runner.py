@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from components.shared import request_runner as rr
-from services.evaluation_wire_models import BenchmarkResult, BenchmarkRow, BenchmarkSummary
+from services.contract.evaluation_wire_models import BenchmarkResult, BenchmarkRow, BenchmarkSummary
 
 
 class _RerunStub(Exception):

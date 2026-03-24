@@ -22,7 +22,7 @@ def refresh_streamlit_auth_session_from_user_id(_user_id: str) -> None:
 
     Pulls ``GET /users/me`` over HTTP.
     """
-    from services.streamlit_session import apply_auth_user_dict_to_streamlit_session
+    from services.session.streamlit_session import apply_auth_user_dict_to_streamlit_session
 
     record = get_backend_client().get_current_user_record()
     if isinstance(record, dict):

@@ -1,11 +1,11 @@
-"""Deserialize FastAPI JSON into frontend wire types (:mod:`services.api_contract_models`)."""
+"""Deserialize FastAPI JSON into frontend wire types (:mod:`services.contract.api_contract_models`)."""
 
 from __future__ import annotations
 
 import base64
 from typing import Any
 
-from services.api_contract_models import (
+from services.contract.api_contract_models import (
     BenchmarkExportArtifactsPayload,
     BenchmarkExportMetadataPayload,
     DeleteDocumentPayload,

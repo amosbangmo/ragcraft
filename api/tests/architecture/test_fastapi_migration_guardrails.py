@@ -3,7 +3,7 @@ Regression tests for HTTP vs Streamlit transport boundaries.
 
 These complement :mod:`architecture.test_layer_boundaries` and
 :mod:`architecture.test_fastapi_delivery_boundaries`. Streamlit surfaces must stay behind
-:class:`~services.backend_client_protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
+:class:`~services.backend.backend_client_protocol.BackendClient`; FastAPI must not pull monolith shims or infra adapter graphs
 directly.
 
 Checks are **import-level** (AST of ``import`` / ``from … import``).
@@ -79,8 +79,8 @@ def test_runtime_checkable_backend_client_accepts_http_client_instance() -> None
     """Structural check: HTTP implementation satisfies the protocol used by pages."""
     import httpx
 
-    from services.backend_client_protocol import BackendClient
-    from services.http_backend_client import HttpBackendClient
+    from services.backend.backend_client_protocol import BackendClient
+    from services.backend.http_backend_client import HttpBackendClient
 
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={}))
     client = HttpBackendClient(base_url="http://test.invalid", transport=transport)

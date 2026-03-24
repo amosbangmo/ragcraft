@@ -7,8 +7,8 @@ from typing import Any
 
 import httpx
 
-from services.errors import BackendHttpError
-from services.http_error_map import raise_for_api_response
+from services.backend.errors import BackendHttpError
+from services.backend.http_error_map import raise_for_api_response
 
 
 class HttpTransport:

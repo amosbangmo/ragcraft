@@ -7,7 +7,7 @@ from components.shared.retrieval_settings_panel import (
     build_ui_retrieval_settings,
     retrieval_settings_to_request_dict,
 )
-from services.retrieval_preset_merge_service import RetrievalPresetMergeService
+from services.retrieval.retrieval_preset_merge_service import RetrievalPresetMergeService
 
 
 class TestRetrievalSettingsPanel(unittest.TestCase):

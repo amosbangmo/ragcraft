@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from services.evaluation_wire_models import BenchmarkResult
+from services.contract.evaluation_wire_models import BenchmarkResult
 from services.api_client import HttpBackendClient
 
 
@@ -129,7 +129,7 @@ def test_http_backend_client_evaluate_gold_qa_dataset() -> None:
 
 
 def test_frontend_backend_settings_split_timeouts(monkeypatch: pytest.MonkeyPatch) -> None:
-    from services import settings as fg_settings
+    from services.config import settings as fg_settings
 
     fg_settings.load_frontend_backend_settings.cache_clear()
     monkeypatch.setenv("RAGCRAFT_API_BASE_URL", "http://127.0.0.1:9999")

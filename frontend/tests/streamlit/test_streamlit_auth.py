@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-import services.streamlit_auth as streamlit_auth
+import services.session.streamlit_auth as streamlit_auth
 from infrastructure.auth.auth_service import AuthService
 
 
@@ -20,7 +20,7 @@ def test_login_uses_http_transport(monkeypatch: pytest.MonkeyPatch) -> None:
     }
     mock_transport.close = MagicMock()
     with patch.object(streamlit_auth, "_http_transport", return_value=mock_transport):
-        with patch("services.streamlit_session.apply_auth_user_dict_to_streamlit_session"):
+        with patch("services.session.streamlit_session.apply_auth_user_dict_to_streamlit_session"):
             ok, msg = streamlit_auth.login("u", "p")
     assert ok and msg == "ok"
     mock_transport.request_json.assert_called_once()

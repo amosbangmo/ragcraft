@@ -16,7 +16,7 @@ from services.api_client import (
     default_retrieval_preset_merge_port,
     parse_retrieval_preset,
 )
-from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
+from services.contract.settings_dtos import UpdateProjectRetrievalSettingsCommand
 
 _RETRIEVAL_PANEL_BOUND_PROJECT = "_retrieval_panel_bound_project"
 

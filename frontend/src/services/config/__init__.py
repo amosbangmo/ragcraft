@@ -1,0 +1,1 @@
+"""Environment-driven frontend configuration."""

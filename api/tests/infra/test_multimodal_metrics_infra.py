@@ -1,3 +1,5 @@
+"""Infra-layer unittest coverage for multimodal_metrics (basename distinct from domain tests)."""
+
 import unittest
 
 from domain.evaluation.multimodal_metrics import (

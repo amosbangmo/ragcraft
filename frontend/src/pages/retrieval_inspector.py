@@ -23,7 +23,7 @@ from services.api_client import (
     RetrievalSettingsPayload,
     parse_retrieval_preset,
 )
-from services.ui_errors import (
+from services.ui.ui_errors import (
     DocStoreError,
     LLMServiceError,
     VectorStoreError,

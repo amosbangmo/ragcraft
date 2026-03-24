@@ -10,10 +10,10 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _HTTP_CLIENT = (
-    _REPO_ROOT / "frontend" / "src" / "services" / "http_backend_client.py"
+    _REPO_ROOT / "frontend" / "src" / "services" / "backend" / "http_backend_client.py"
 )
 _SERVICES = _REPO_ROOT / "frontend" / "src" / "services"
-_STREAMLIT_AUTH = _SERVICES / "streamlit_auth.py"
+_STREAMLIT_AUTH = _SERVICES / "session" / "streamlit_auth.py"
 
 
 def test_http_client_defines_core_rag_and_project_paths() -> None:

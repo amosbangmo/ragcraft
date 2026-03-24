@@ -12,7 +12,7 @@ from components.shared.retrieval_settings_panel import (
 )
 from infrastructure.auth.guards import require_authentication
 from services.api_client import BackendClient, RetrievalFilters, SummaryRecallPreviewPayload
-from services.ui_errors import (
+from services.ui.ui_errors import (
     DocStoreError,
     VectorStoreError,
     get_user_error_message,

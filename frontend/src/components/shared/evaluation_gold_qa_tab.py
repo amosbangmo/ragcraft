@@ -16,7 +16,7 @@ from components.shared.request_runner import (
     run_request_action,
 )
 from services.api_client import BackendClient
-from services.ui_errors import (
+from services.ui.ui_errors import (
     DocStoreError,
     LLMServiceError,
     get_user_error_message,

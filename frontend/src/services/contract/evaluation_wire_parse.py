@@ -1,11 +1,11 @@
-"""Parse evaluation API JSON into :mod:`services.evaluation_wire_models` instances."""
+"""Parse evaluation API JSON into :mod:`services.contract.evaluation_wire_models` instances."""
 
 from __future__ import annotations
 
 from dataclasses import fields
 from typing import Any
 
-from services.evaluation_wire_models import (
+from services.contract.evaluation_wire_models import (
     BenchmarkResult,
     ManualEvaluationAnswerCitationQuality,
     ManualEvaluationAnswerQuality,

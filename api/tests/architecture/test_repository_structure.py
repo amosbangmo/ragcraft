@@ -80,7 +80,11 @@ def test_backend_python_sources_live_only_under_api_src() -> None:
 
 
 def test_frontend_python_sources_live_only_under_frontend_src() -> None:
-    """Frontend application code must not live under ``frontend/`` outside ``frontend/src/`` (plus entry + tests)."""
+    """Frontend application code must not live under ``frontend/`` outside allowed roots.
+
+    Allowed: ``app.py``, ``frontend/src/``, ``frontend/tests/``, and thin Streamlit shims under
+    ``frontend/pages/`` (multipage loads ``pages/`` next to ``app.py``).
+    """
     fe = REPO_ROOT / "frontend"
     for path in fe.rglob("*.py"):
         if "__pycache__" in path.parts:
@@ -93,8 +97,10 @@ def test_frontend_python_sources_live_only_under_frontend_src() -> None:
             continue
         if parts and parts[0] == "tests":
             continue
+        if parts and parts[0] == "pages":
+            continue
         pytest.fail(
-            f"Unexpected Python file under frontend/ (use frontend/src/ or frontend/tests/): "
+            f"Unexpected Python file under frontend/ (use frontend/src/, frontend/tests/, or frontend/pages/ shims): "
             f"{path.relative_to(REPO_ROOT)}"
         )
 

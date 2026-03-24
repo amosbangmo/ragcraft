@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 
 from components.shared import evaluation_dashboard as ed
-from services.benchmark_compare_ui import LOWER_IS_BETTER_METRICS
+from services.evaluation.benchmark_compare_ui import LOWER_IS_BETTER_METRICS
 from infrastructure.evaluation.benchmark_comparison_service import BenchmarkComparisonService
 
 

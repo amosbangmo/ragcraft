@@ -10,7 +10,7 @@ from infrastructure.config.exceptions import (
     RAGCraftError,
     VectorStoreError,
 )
-from services.errors import BackendHttpError
+from services.backend.errors import BackendHttpError
 
 _TYPE_MAP: dict[str, type[RAGCraftError]] = {
     "LLMServiceError": LLMServiceError,

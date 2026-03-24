@@ -15,10 +15,10 @@ import json
 import streamlit.components.v1 as components
 
 from infrastructure.auth.auth_service import AuthService
-from services.errors import BackendHttpError
-from services.http_transport import HttpTransport
-from services.settings import load_frontend_backend_settings
-from services.streamlit_session import apply_auth_user_dict_to_streamlit_session
+from services.backend.errors import BackendHttpError
+from services.backend.http_transport import HttpTransport
+from services.config.settings import load_frontend_backend_settings
+from services.session.streamlit_session import apply_auth_user_dict_to_streamlit_session
 
 # Browser cookie (not HttpOnly) so the embedded components iframe can set it on the app origin.
 _STREAMLIT_ACCESS_COOKIE = "ragcraft_streamlit_access"

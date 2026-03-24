@@ -6,7 +6,7 @@ import streamlit as st
 
 from components.shared.project_selector import render_project_selector
 from services.api_client import get_backend_client
-from services.streamlit_context import get_user_id
+from services.session.streamlit_context import get_user_id
 
 
 def render_hero(title: str, subtitle: str, badge: str):

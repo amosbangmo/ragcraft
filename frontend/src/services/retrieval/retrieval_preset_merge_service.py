@@ -8,8 +8,8 @@ from typing import Any, Protocol, runtime_checkable
 
 from infrastructure.config.config import RETRIEVAL_CONFIG, RetrievalConfig
 
-from services.api_contract_models import RetrievalSettingsPayload
-from services.retrieval_preset_ui import PRECISE_SEARCH_K, RetrievalPreset, parse_retrieval_preset
+from services.contract.api_contract_models import RetrievalSettingsPayload
+from services.retrieval.retrieval_preset_ui import PRECISE_SEARCH_K, RetrievalPreset, parse_retrieval_preset
 
 
 @runtime_checkable

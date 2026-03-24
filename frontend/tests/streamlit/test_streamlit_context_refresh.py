@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from services.streamlit_context import refresh_streamlit_auth_session_from_user_id
+from services.session.streamlit_context import refresh_streamlit_auth_session_from_user_id
 
 
 def test_refresh_streamlit_auth_session_pulls_http_profile() -> None:
@@ -19,7 +19,7 @@ def test_refresh_streamlit_auth_session_pulls_http_profile() -> None:
         return_value=mock_client,
     ):
         with patch(
-            "services.streamlit_session.apply_auth_user_dict_to_streamlit_session"
+            "services.session.streamlit_session.apply_auth_user_dict_to_streamlit_session"
         ) as apply:
             refresh_streamlit_auth_session_from_user_id("u1")
             apply.assert_called_once_with(

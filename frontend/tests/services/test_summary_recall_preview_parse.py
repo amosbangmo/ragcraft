@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from services.http_payloads import summary_recall_preview_from_api_dict
+from services.backend.http_payloads import summary_recall_preview_from_api_dict
 
 
 def test_summary_recall_preview_from_api_dict_maps_docs() -> None:

@@ -1,7 +1,7 @@
 """
 Evaluation JSON wire shapes for the Streamlit HTTP client (no ``domain.evaluation`` imports).
 
-Aligned with FastAPI response bodies; use :mod:`services.evaluation_wire_parse` to build instances
+Aligned with FastAPI response bodies; use :mod:`services.contract.evaluation_wire_parse` to build instances
 from plain dicts.
 """
 

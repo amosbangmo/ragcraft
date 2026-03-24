@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from services.settings import load_frontend_backend_settings
+from services.config.settings import load_frontend_backend_settings
 
 
 @pytest.fixture(autouse=True)

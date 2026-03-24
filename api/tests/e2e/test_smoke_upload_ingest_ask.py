@@ -62,7 +62,7 @@ def setUpModule():
         LLMJudgeService=_DummyService,
         JUDGE_FAILURE_REASON="judge_failure",
     )
-    _install_module("services.streamlit_chat_transcript", StreamlitChatTranscript=_DummyService)
+    _install_module("services.chat.streamlit_chat_transcript", StreamlitChatTranscript=_DummyService)
     _install_module("infrastructure.rag.docstore_service", DocStoreService=_DummyService)
     _install_module("infrastructure.rag.reranking_service", RerankingService=_DummyService)
 

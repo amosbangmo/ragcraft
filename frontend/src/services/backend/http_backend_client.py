@@ -23,7 +23,19 @@ def _multipart_file_parts(uploaded_file: Any, *, default_name: str) -> tuple[str
     return name, body, str(ctype)
 
 
-from services.api_contract_models import (
+from services.backend.http_payloads import (
+    benchmark_export_artifacts_from_api_dict,
+    delete_document_result_from_api_dict,
+    effective_retrieval_view_from_api_dict,
+    ingest_document_result_from_api_dict,
+    qa_dataset_entry_from_api_dict,
+    qa_generate_result_from_api_dict,
+    rag_answer_from_ask_api_dict,
+    summary_recall_preview_from_api_dict,
+)
+from services.backend.http_transport import HttpTransport
+from services.chat.memory_chat_transcript import MemoryChatTranscript
+from services.contract.api_contract_models import (
     DeleteDocumentPayload,
     EffectiveRetrievalSettingsPayload,
     IngestDocumentPayload,
@@ -34,23 +46,11 @@ from services.api_contract_models import (
     UpdateProjectRetrievalSettingsCommand,
     WorkspaceProject,
 )
-from services.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
-from services.evaluation_wire_parse import (
+from services.contract.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
+from services.contract.evaluation_wire_parse import (
     coerce_benchmark_result,
     manual_evaluation_result_from_plain_dict,
 )
-from services.http_payloads import (
-    benchmark_export_artifacts_from_api_dict,
-    delete_document_result_from_api_dict,
-    effective_retrieval_view_from_api_dict,
-    ingest_document_result_from_api_dict,
-    qa_dataset_entry_from_api_dict,
-    qa_generate_result_from_api_dict,
-    rag_answer_from_ask_api_dict,
-    summary_recall_preview_from_api_dict,
-)
-from services.http_transport import HttpTransport
-from services.memory_chat_transcript import MemoryChatTranscript
 
 
 def _streamlit_access_token_supplier() -> str:

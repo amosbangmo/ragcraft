@@ -35,7 +35,7 @@ from services.api_client import (
     compare_benchmark_failure_counts,
     compare_benchmark_summaries,
 )
-from services.ui_errors import (
+from services.ui.ui_errors import (
     get_user_error_message,
     map_evaluation_flow_exception,
 )

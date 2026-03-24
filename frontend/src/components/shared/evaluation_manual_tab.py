@@ -20,7 +20,7 @@ from components.shared.request_runner import (
     run_request_action,
 )
 from services.api_client import BackendClient, ManualEvaluationResult, is_manual_evaluation_result_like
-from services.ui_errors import map_evaluation_flow_exception
+from services.ui.ui_errors import map_evaluation_flow_exception
 
 
 def render_evaluation_manual_tab(payload: dict[str, Any]) -> None:

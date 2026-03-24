@@ -6,13 +6,13 @@ import httpx
 import pytest
 
 from infrastructure.config.exceptions import VectorStoreError
-from services.api_contract_models import IngestDocumentPayload, IngestionDiagnosticsPayload
 from services.api_client import HttpBackendClient
-from services.http_error_map import raise_for_api_response
-from services.http_payloads import (
+from services.backend.http_error_map import raise_for_api_response
+from services.backend.http_payloads import (
     effective_retrieval_view_from_api_dict,
     rag_answer_from_ask_api_dict,
 )
+from services.contract.api_contract_models import IngestDocumentPayload, IngestionDiagnosticsPayload
 
 
 def test_rag_answer_from_ask_api_dict_no_pipeline() -> None:

@@ -1,6 +1,6 @@
 import streamlit as st
 
-from services import streamlit_auth
+import services.session.streamlit_auth as streamlit_auth
 
 
 def require_authentication(current_page: str) -> None:

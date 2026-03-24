@@ -39,7 +39,7 @@ def build_streamlit_session_aware_backend_container_for_tests() -> BackendApplic
     Same composition graph as production, with Streamlit session chain eviction hooks.
 
     **Tests and E2E only** — not imported by the Streamlit UI. The product UI uses HTTP only
-    (:class:`~services.http_backend_client.HttpBackendClient`).
+    (:class:`~services.backend.http_backend_client.HttpBackendClient`).
     """
     from components.shared.streamlit_project_chain_session_cache import (
         invalidate_project_chain as _invalidate_streamlit_session_chain,

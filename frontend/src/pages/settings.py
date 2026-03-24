@@ -14,7 +14,7 @@ from components.shared.page_header import render_page_header
 from components.shared.retrieval_settings_panel import render_retrieval_settings_panel
 from infrastructure.auth.guards import require_authentication
 from services.api_client import BackendClient
-from services.settings_dtos import UpdateProjectRetrievalSettingsCommand
+from services.contract.settings_dtos import UpdateProjectRetrievalSettingsCommand
 
 st.set_page_config(
     page_title="Settings | RAGCraft",

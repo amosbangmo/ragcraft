@@ -1,6 +1,6 @@
 """
 Account profile UI. Mutations use :class:`~services.api_client.BackendClient`; session fields refresh via
-:func:`~services.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
+:func:`~services.session.streamlit_context.refresh_streamlit_auth_session_from_user_id`.
 """
 
 import streamlit as st
@@ -11,7 +11,7 @@ from components.shared.page_header import render_page_header
 from components.shared.section_card import inject_section_card_styles, section_card
 from infrastructure.auth.guards import require_authentication
 from services.api_client import BackendClient
-from services.streamlit_context import refresh_streamlit_auth_session_from_user_id
+from services.session.streamlit_context import refresh_streamlit_auth_session_from_user_id
 
 require_authentication("pages/profile.py")
 apply_layout()

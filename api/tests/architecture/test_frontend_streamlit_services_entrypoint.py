@@ -20,10 +20,10 @@ _COMPONENTS = REPO_ROOT / "frontend" / "src" / "components"
 _ALLOWED_SERVICES_MODULES: frozenset[str] = frozenset(
     {
         "services.api_client",
-        "services.ui_errors",
-        "services.streamlit_context",
-        "services.settings_dtos",
-        "services.streamlit_auth",
+        "services.ui.ui_errors",
+        "services.session.streamlit_context",
+        "services.contract.settings_dtos",
+        "services.session.streamlit_auth",
     }
 )
 

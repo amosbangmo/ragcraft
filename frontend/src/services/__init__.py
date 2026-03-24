@@ -14,7 +14,7 @@ def __getattr__(name: str):
     if name == "streamlit_auth":
         import importlib
 
-        return importlib.import_module("services.streamlit_auth")
+        return importlib.import_module("services.session.streamlit_auth")
     if name in (
         "BackendClient",
         "HttpBackendClient",
@@ -23,7 +23,7 @@ def __getattr__(name: str):
 
         return getattr(_ac, name)
     if name == "load_frontend_backend_settings":
-        from services import settings as _settings
+        from services.config import settings as _settings
 
         return getattr(_settings, name)
     if name in ("get_backend_client", "get_frontend_backend_settings"):

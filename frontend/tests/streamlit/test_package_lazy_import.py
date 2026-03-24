@@ -15,6 +15,6 @@ def test_importing_streamlit_context_does_not_load_removed_in_process_client() -
         if key.startswith("application.frontend_support"):
             del sys.modules[key]
 
-    import services.streamlit_context  # noqa: F401
+    import services.session.streamlit_context  # noqa: F401
 
     assert "application.frontend_support.in_process_backend_client" not in sys.modules

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Protocol, runtime_checkable
 
-from services.api_contract_models import (
+from services.contract.api_contract_models import (
     DeleteDocumentPayload,
     EffectiveRetrievalSettingsPayload,
     IngestDocumentPayload,
@@ -21,7 +21,7 @@ from services.api_contract_models import (
     UpdateProjectRetrievalSettingsCommand,
     WorkspaceProject,
 )
-from services.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
+from services.contract.evaluation_wire_models import BenchmarkResult, ManualEvaluationResult
 
 
 @runtime_checkable
