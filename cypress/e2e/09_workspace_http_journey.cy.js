@@ -1,51 +1,21 @@
 /**
- * End-to-end API journey (same HTTP routes the Streamlit UI uses in HTTP backend mode).
- * Covers: register, login, project, ingest, ask + sources, retrieval settings, manual eval,
- * structured API errors (401 / 422).
+ * Parcours HTTP (mêmes routes que le client Streamlit) : projet → ingest → ask → réglages retrieval → eval.
+ * Inscription + login API : compte E2E partagé (00/01), token dans _ragcraft_api_shared_token.
  */
 describe("RAGCraft workspace API journey", () => {
   const suffix = `${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
-  const username = `cy_${suffix}`;
-  const password = "CypressJourney_Passw0rd!";
-  const displayName = "Cypress User";
   const projectId = `p_${suffix}`;
 
   const authHeaders = (token) => ({
     authorization: `Bearer ${token}`,
   });
 
-  it("registers a new account", () => {
-    cy.request({
-      method: "POST",
-      url: "/auth/register",
-      body: {
-        username,
-        password,
-        confirm_password: password,
-        display_name: displayName,
-      },
-    }).then((resp) => {
-      expect(resp.status).to.eq(201);
-      expect(resp.body.access_token).to.be.a("string").and.not.be.empty;
-      expect(resp.body.user).to.include.keys("user_id", "username");
-      Cypress.env("e2e_token", resp.body.access_token);
-    });
-  });
+  const sharedToken = () => Cypress.env("_ragcraft_api_shared_token");
 
-  it("logs in and receives a bearer token", () => {
-    cy.request({
-      method: "POST",
-      url: "/auth/login",
-      body: { username, password },
-    }).then((resp) => {
-      expect(resp.status).to.eq(200);
-      expect(resp.body.access_token).to.be.a("string").and.not.be.empty;
-      expect(resp.body.message).to.be.a("string");
-    });
-  });
-
-  it("creates a project", () => {
-    const token = Cypress.env("e2e_token");
+  before(() => {
+    const token = sharedToken();
+    expect(token, "token API partagé (before global 09)").to.be.a("string").and.not
+      .be.empty;
     cy.request({
       method: "POST",
       url: "/projects",
@@ -58,36 +28,32 @@ describe("RAGCraft workspace API journey", () => {
   });
 
   it("ingests a document (multipart)", () => {
-    const token = Cypress.env("e2e_token");
-    cy.fixture("mini.pdf", "binary").then((pdfBin) => {
-      const blob = Cypress.Blob.binaryStringToBlob(pdfBin, "application/pdf");
-      const form = new FormData();
-      form.set("file", blob, "mini.pdf");
-      cy.request({
-        method: "POST",
-        url: `/projects/${projectId}/documents/ingest`,
-        headers: authHeaders(token),
-        body: form,
-        timeout: 180000,
-        failOnStatusCode: false,
-      }).then((resp) => {
-        if (resp.status === 200 || resp.status === 201) {
-          expect(resp.body).to.have.property("diagnostics");
-          Cypress.env("e2e_ingest_ok", true);
-        } else {
-          Cypress.env("e2e_ingest_ok", false);
-          expect(resp.status).to.be.oneOf([400, 413, 500, 502, 503]);
-          const b = resp.body;
-          if (b && typeof b === "object" && Object.keys(b).length > 0) {
-            expect(b).to.include.keys("message", "code", "category");
-          }
+    const token = sharedToken();
+    cy.task(
+      "ingestDocumentMultipart",
+      {
+        authToken: token,
+        projectId,
+        baseUrl: Cypress.config("baseUrl"),
+      },
+      { timeout: 180000 },
+    ).then((resp) => {
+      if (resp.status === 200 || resp.status === 201) {
+        expect(resp.body).to.have.property("diagnostics");
+        Cypress.env("e2e_ingest_ok", true);
+      } else {
+        Cypress.env("e2e_ingest_ok", false);
+        expect(resp.status).to.be.oneOf([400, 413, 500, 502, 503]);
+        const b = resp.body;
+        if (b && typeof b === "object" && Object.keys(b).length > 0) {
+          expect(b).to.include.keys("message", "code", "category");
         }
-      });
+      }
     });
   });
 
   it("asks a question and returns source-shaped fields", () => {
-    const token = Cypress.env("e2e_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/ask",
@@ -121,7 +87,7 @@ describe("RAGCraft workspace API journey", () => {
   });
 
   it("reads and updates retrieval settings", () => {
-    const token = Cypress.env("e2e_token");
+    const token = sharedToken();
     cy.request({
       method: "GET",
       url: `/projects/${projectId}/retrieval-settings`,
@@ -147,7 +113,7 @@ describe("RAGCraft workspace API journey", () => {
   });
 
   it("runs manual evaluation for one question", () => {
-    const token = Cypress.env("e2e_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/evaluation/manual",
@@ -186,7 +152,7 @@ describe("RAGCraft workspace API journey", () => {
   });
 
   it("returns structured validation error for invalid chat body", () => {
-    const token = Cypress.env("e2e_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/ask",
@@ -199,9 +165,5 @@ describe("RAGCraft workspace API journey", () => {
       expect(resp.body.code).to.eq("request_validation_failed");
       expect(resp.body.detail).to.be.an("array");
     });
-  });
-
-  after(() => {
-    cy.deleteTestAccount("e2e_token", password);
   });
 });

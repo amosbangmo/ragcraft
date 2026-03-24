@@ -9,6 +9,20 @@ from urllib.parse import quote
 
 import httpx
 
+
+def _multipart_file_parts(uploaded_file: Any, *, default_name: str) -> tuple[str, bytes, str]:
+    """
+    Filename + body + content-type for ``files=`` (httpx expects bytes or a readable, not memoryview).
+
+    Streamlit ``UploadedFile.getbuffer()`` and :class:`_ArmedUpload` return ``memoryview``.
+    """
+    name = getattr(uploaded_file, "name", default_name) or default_name
+    ctype = getattr(uploaded_file, "type", None) or "application/octet-stream"
+    buf = uploaded_file.getbuffer()
+    body = buf if isinstance(buf, (bytes, bytearray)) else bytes(buf)
+    return name, body, str(ctype)
+
+
 from services.api_contract_models import (
     DeleteDocumentPayload,
     EffectiveRetrievalSettingsPayload,
@@ -188,14 +202,12 @@ class HttpBackendClient:
         return bool(data.get("success")), str(data.get("message") or "")
 
     def save_avatar(self, user_id: str, uploaded_file: Any) -> tuple[bool, str]:
-        name = getattr(uploaded_file, "name", "avatar") or "avatar"
-        buf = uploaded_file.getbuffer()
-        ctype = getattr(uploaded_file, "type", None) or "application/octet-stream"
+        name, body, ctype = _multipart_file_parts(uploaded_file, default_name="avatar")
         data = self._t.request_json(
             "POST",
             "/users/me/avatar",
             bearer_token=self._bearer(),
-            files={"file": (name, buf, ctype)},
+            files={"file": (name, body, ctype)},
         )
         return bool(data.get("success")), str(data.get("message") or "")
 
@@ -278,14 +290,12 @@ class HttpBackendClient:
     def ingest_uploaded_file(
         self, user_id: str, project_id: str, uploaded_file: Any
     ) -> IngestDocumentPayload:
-        name = getattr(uploaded_file, "name", "upload") or "upload"
-        buf = uploaded_file.getbuffer()
-        ctype = getattr(uploaded_file, "type", None) or "application/octet-stream"
+        name, body, ctype = _multipart_file_parts(uploaded_file, default_name="upload")
         data = self._t.request_json(
             "POST",
             f"/projects/{quote(project_id)}/documents/ingest",
             bearer_token=self._bearer(),
-            files={"file": (name, buf, ctype)},
+            files={"file": (name, body, ctype)},
         )
         return ingest_document_result_from_api_dict(data)
 

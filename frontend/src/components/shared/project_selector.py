@@ -38,6 +38,10 @@ def render_project_selector(
         current_project_id = projects[0]
         st.session_state["project_id"] = current_project_id
 
+    st.markdown(
+        '<div data-testid="project-selector-root"></div>',
+        unsafe_allow_html=True,
+    )
     # Use key="project_id" so Streamlit updates session state on change before other
     # elements (e.g. sidebar navigation) run in the same script pass.
     selected_project = st.selectbox(

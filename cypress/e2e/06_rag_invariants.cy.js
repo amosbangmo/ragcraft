@@ -1,6 +1,6 @@
 /**
- * HTTP invariants aligned with former api/tests/appli/rag/test_rag_pipeline_invariants.py:
- * pipeline latency wire shape, inspect vs ask latency contract, retrieval mode flags.
+ * HTTP invariants : forme des latences pipeline inspect/ask, drapeaux retrieval (API, cy.request).
+ * Compte + auth : même utilisateur que 00_register / 01_login (prérequis dans support/e2e_prerequisites.js).
  */
 const LATENCY_KEYS = [
   "query_rewrite_ms",
@@ -13,37 +13,22 @@ const LATENCY_KEYS = [
 
 describe("RAG pipeline HTTP invariants", () => {
   const suffix = `${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
-  const username = `raginv_${suffix}`;
-  const password = "RagInv_Passw0rd!!";
   const projectId = `raginv_${suffix}`;
 
   const auth = (token) => ({ authorization: `Bearer ${token}` });
 
-  it("registers user and creates project (setup)", () => {
-    return cy
-      .request({
-        method: "POST",
-        url: "/auth/register",
-        body: {
-          username,
-          password,
-          confirm_password: password,
-          display_name: "RAG Inv",
-        },
-      })
-      .then((r) => {
-        expect(r.status).to.eq(201);
-        expect(r.body).to.have.property("access_token").and.not.be.empty;
-        Cypress.env("raginv_token", r.body.access_token);
-        return cy
-          .request({
-            method: "POST",
-            url: "/projects",
-            headers: auth(r.body.access_token),
-            body: { project_id: projectId },
-          })
-          .then((r2) => expect(r2.status).to.eq(201));
-      });
+  const sharedToken = () => Cypress.env("_ragcraft_api_shared_token");
+
+  before(() => {
+    const token = sharedToken();
+    expect(token, "token API partagé (before global 06)").to.be.a("string").and.not
+      .be.empty;
+    cy.request({
+      method: "POST",
+      url: "/projects",
+      headers: auth(token),
+      body: { project_id: projectId },
+    }).then((r) => expect(r.status).to.eq(201));
   });
 
   const baseBody = (overrides = {}) => ({
@@ -54,7 +39,7 @@ describe("RAG pipeline HTTP invariants", () => {
   });
 
   it("pipeline inspect exposes latency keys and zero answer_generation before ask", () => {
-    const token = Cypress.env("raginv_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/pipeline/inspect",
@@ -86,7 +71,7 @@ describe("RAG pipeline HTTP invariants", () => {
   });
 
   it("chat ask returns latency with non-negative answer_generation_ms", () => {
-    const token = Cypress.env("raginv_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/ask",
@@ -111,7 +96,7 @@ describe("RAG pipeline HTTP invariants", () => {
   });
 
   it("ask answered status implies latency tracks retrieval stage", () => {
-    const token = Cypress.env("raginv_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/ask",
@@ -127,7 +112,7 @@ describe("RAG pipeline HTTP invariants", () => {
   });
 
   it("retrieval_mode reflects hybrid override on inspect when pipeline ok", () => {
-    const token = Cypress.env("raginv_token");
+    const token = sharedToken();
     cy.request({
       method: "POST",
       url: "/chat/pipeline/inspect",
@@ -144,9 +129,5 @@ describe("RAG pipeline HTTP invariants", () => {
       expect(resp.body.pipeline.hybrid_retrieval_enabled).to.eq(true);
       expect(resp.body.pipeline.retrieval_mode).to.be.a("string");
     });
-  });
-
-  after(() => {
-    cy.deleteTestAccount("raginv_token", password);
   });
 });

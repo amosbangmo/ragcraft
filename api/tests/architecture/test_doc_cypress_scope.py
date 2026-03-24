@@ -14,8 +14,8 @@ _GEN = REPO_ROOT / "scripts" / "generate_artifacts.py"
 @pytest.mark.architecture
 def test_cypress_scope_doc_lists_streamlit_and_http_specs() -> None:
     text = _SCOPE.read_text(encoding="utf-8")
-    assert "streamlit/login_shell.cy.js" in text
-    assert "workspace_journey.cy.js" in text
+    assert "00_register_flow.cy.js" in text
+    assert "09_workspace_http_journey.cy.js" in text
     assert "E2E_UI_JOURNEY_MAP" in text
 
 
@@ -23,4 +23,4 @@ def test_cypress_scope_doc_lists_streamlit_and_http_specs() -> None:
 def test_generate_artifacts_writes_journey_map() -> None:
     body = _GEN.read_text(encoding="utf-8")
     assert "E2E_UI_JOURNEY_MAP.txt" in body
-    assert "streamlit/login_shell.cy.js" in body
+    assert "00_register_flow.cy.js" in body

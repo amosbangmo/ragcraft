@@ -32,7 +32,7 @@ This document describes **what the repository implements today**, how it is **en
 | Full HTTP walk (mocked use cases) | **`api/tests/api/test_http_pipeline_e2e.py`** |
 | Composition smoke upload → ask (mocked services) | **`api/tests/e2e/test_smoke_upload_ingest_ask.py`** |
 | Mocked ask **wall time** bound | **`api/tests/appli/test_performance_smoke.py`** |
-| Browser / API E2E on **live uvicorn** + **Streamlit headless** (`/docs`, `/health`, parcours HTTP + iframe Streamlit) | **`cypress/e2e/`** (Cypress, **`npm run cy:ci`**) — voir **`docs/cypress_scope.md`** |
+| Browser / API E2E on **live uvicorn** + **Streamlit headless** (parcours UI **register → login → projet → ingestion → chat → settings**, puis specs HTTP) | **`cypress/e2e/`** (Cypress **`00_`–`09_`**, **`npm run cy:ci`**) — voir **`docs/cypress_scope.md`** |
 
 ---
 
@@ -47,7 +47,7 @@ This document describes **what the repository implements today**, how it is **en
 
 ## 5. Limitations (factual)
 
-- **Cypress** exécute désormais **Streamlit réel** (port **18975**) en plus de l’API (**18976**) : voir **`cypress/e2e/streamlit/`** et **`docs/cypress_scope.md`**. Les parcours **HTTP** (`workspace_journey`, etc.) restent la preuve la plus déterministe pour ingest/ask/settings ; le shell Streamlit et le login widgets sont couverts en navigateur (iframe, **`data-testid`** sur le HTML injecté par markdown).
+- **Cypress** exécute **Streamlit réel** (**18975**) et l’API (**18976**) : parcours navigateur numéroté **`00_register_flow`** → **`05_retrieval_settings`** (inscription obligatoire en premier, **`data-testid`** sur login, navigation et pages), puis **`06_`–`09_`** (invariants HTTP, robustesse, surface publique, parcours API dont ingest multipart Node). Voir **`docs/cypress_scope.md`**.
 - **Mypy** is **not** strict repo-wide; **`pyproject.toml`** enables **`warn_return_any`** and **`no_implicit_optional`** as incremental tightening — full strict passes are optional developer commands.
 - **Heavy parsers** (e.g. unstructured) and **external LLM/embedding** calls are not required for the default CI pytest slice; many tests use **mocks** or **dependency overrides**.
 

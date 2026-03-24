@@ -3,6 +3,8 @@ RAG chat UI. Uses :class:`~services.api_client.BackendClient` for ``ask_question
 targets ``POST /chat/ask`` on the FastAPI app over HTTP.
 """
 
+import html
+
 import streamlit as st
 
 from components.shared.confidence_display import confidence_band
@@ -36,6 +38,8 @@ st.set_page_config(
 
 require_authentication("pages/chat.py")
 apply_layout()
+
+st.markdown('<div data-testid="chat-page-root"></div>', unsafe_allow_html=True)
 
 CHAT_REFRESH_REQUEST_KEY = "chat_refresh_request_running"
 CHAT_REFRESH_RESULT_KEY = "chat_refresh_result_payload"
@@ -122,6 +126,7 @@ client.init_chat_session(project.project_id)
 messages = client.get_chat_messages()
 render_chat_history(messages)
 
+st.markdown('<div data-testid="ask-submit"></div>', unsafe_allow_html=True)
 question = st.chat_input("Ask a question about your documents")
 
 if not question:
@@ -152,7 +157,10 @@ with st.chat_message("assistant"):
             st.warning("No answer available.")
             st.stop()
 
-        st.markdown(response.answer)
+        st.markdown(
+            f'<div data-testid="answer-container">{html.escape(response.answer)}</div>',
+            unsafe_allow_html=True,
+        )
         band = confidence_band(float(response.confidence))
         st.markdown(f"**Confidence:** {response.confidence} ({band})")
 

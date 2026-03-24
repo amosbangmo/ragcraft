@@ -26,8 +26,28 @@ st.set_page_config(
 require_authentication("pages/ingestion.py")
 apply_layout()
 
+st.markdown('<div data-testid="ingestion-page-root"></div>', unsafe_allow_html=True)
+
 INGESTION_REQUEST_KEY = "ingestion_request_running"
 INGESTION_RESULT_KEY = "ingestion_result_payload"
+# Cypress (and some browsers) can show a selected file while the post-rerun execution pass
+# sees an empty ``st.file_uploader`` widget. Snapshot bytes when arming the runner so the
+# spinner pass still ingests what the user chose.
+INGESTION_ARMED_FILES_KEY = "ingestion_armed_file_payloads"
+
+
+class _ArmedUpload:
+    """Minimal UploadedFile-shaped object for :meth:`BackendClient.ingest_uploaded_file`."""
+
+    __slots__ = ("name", "type", "_data")
+
+    def __init__(self, *, name: str, data: bytes, mime: str) -> None:
+        self.name = name
+        self.type = mime
+        self._data = data
+
+    def getbuffer(self):
+        return memoryview(self._data)
 
 
 header = render_page_header(
@@ -54,12 +74,14 @@ documents = client.list_project_documents(user_id, project_id)
 
 st.metric("Existing documents", len(documents))
 
+st.markdown('<div data-testid="ingestion-file-input"></div>', unsafe_allow_html=True)
 uploaded_files = st.file_uploader(
     "Upload documents",
     type=["pdf", "docx", "pptx"],
     accept_multiple_files=True,
 )
 
+st.markdown('<div data-testid="ingestion-submit-button"></div>', unsafe_allow_html=True)
 process_clicked = st.button(
     "Process uploaded documents",
     use_container_width=True,
@@ -69,8 +91,15 @@ process_clicked = st.button(
 
 def _run_ingestion():
     results: list[dict] = []
+    armed = st.session_state.pop(INGESTION_ARMED_FILES_KEY, None)
+    if armed:
+        stream = [
+            _ArmedUpload(name=row["name"], data=row["data"], mime=row["mime"]) for row in armed
+        ]
+    else:
+        stream = list(uploaded_files)
 
-    for uploaded_file in uploaded_files:
+    for uploaded_file in stream:
         result = client.ingest_uploaded_file(user_id, project_id, uploaded_file)
         results.append(
             {
@@ -102,6 +131,7 @@ def _render_ingestion_result(results: list[dict]):
 
     for item in results:
         file_name = item["file_name"]
+        st.markdown('<div data-testid="ingestion-success-banner"></div>', unsafe_allow_html=True)
         st.success(item["success_message"])
 
         diagnostics = item.get("diagnostics") or {}
@@ -129,6 +159,15 @@ def _render_ingestion_result(results: list[dict]):
 if process_clicked and not uploaded_files:
     st.warning("Please upload at least one document.")
 else:
+    if process_clicked and uploaded_files:
+        st.session_state[INGESTION_ARMED_FILES_KEY] = [
+            {
+                "name": f.name,
+                "data": f.getvalue(),
+                "mime": f.type or "application/octet-stream",
+            }
+            for f in uploaded_files
+        ]
     run_request_action(
         request_key=INGESTION_REQUEST_KEY,
         result_key=INGESTION_RESULT_KEY,

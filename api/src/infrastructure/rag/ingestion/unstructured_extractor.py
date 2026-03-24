@@ -294,11 +294,21 @@ def _partition_pdf_with_fallback(file_path: str):
     """
 
     partition_pdf = _load_partition_pdf()
+    infer_tables = INGESTION_CONFIG.infer_table_structure
+
+    if not INGESTION_CONFIG.enable_pdf_image_extraction:
+        elements = partition_pdf(
+            filename=file_path,
+            strategy=INGESTION_CONFIG.pdf_strategy_default,
+            infer_table_structure=infer_tables,
+        )
+        return elements, False
+
     try:
         elements = partition_pdf(
             filename=file_path,
             strategy="hi_res",
-            infer_table_structure=True,
+            infer_table_structure=infer_tables,
             extract_image_block_types=["Image"],
             extract_image_block_to_payload=True,
         )
@@ -319,7 +329,7 @@ def _partition_pdf_with_fallback(file_path: str):
     elements = partition_pdf(
         filename=file_path,
         strategy=INGESTION_CONFIG.pdf_strategy_fallback,
-        infer_table_structure=True,
+        infer_table_structure=infer_tables,
     )
 
     return elements, False
@@ -523,15 +533,55 @@ def _extract_partitioned_elements(elements, source_file, *, image_block_extracti
 # ---------------------------------------------------------------------
 
 
-def _extract_pdf_elements(file_path: str, source_file: str) -> list[dict]:
-
-    elements, image_enabled = _partition_pdf_with_fallback(file_path)
-
-    return _extract_partitioned_elements(
-        elements=elements,
-        source_file=source_file,
-        image_block_extraction_enabled=image_enabled,
+def _fast_pdf_text_only_profile() -> bool:
+    """True for the HTTP E2E profile (fast strategy, no PDF image blocks)."""
+    return (
+        not INGESTION_CONFIG.enable_pdf_image_extraction
+        and INGESTION_CONFIG.pdf_strategy_default.strip().lower() == "fast"
     )
+
+
+def _extract_pdf_text_with_pypdf(file_path: str, source_file: str) -> list[dict]:
+    """
+    Minimal text extraction when ``unstructured.partition.pdf`` cannot import optional deps
+    (common in lean dev installs); used only under :func:`_fast_pdf_text_only_profile`.
+    """
+    from pypdf import PdfReader
+
+    reader = PdfReader(file_path)
+    parts: list[str] = []
+    for page in reader.pages:
+        t = (page.extract_text() or "").strip()
+        if t:
+            parts.append(t)
+    combined = "\n\n".join(parts).strip()
+    if not combined:
+        return []
+    return [
+        {
+            "doc_id": str(uuid.uuid4()),
+            "content_type": "text",
+            "raw_content": combined,
+            "metadata": {
+                "source_file": source_file,
+                "element_category": "pypdf_fast_fallback",
+            },
+        }
+    ]
+
+
+def _extract_pdf_elements(file_path: str, source_file: str) -> list[dict]:
+    try:
+        elements, image_enabled = _partition_pdf_with_fallback(file_path)
+        return _extract_partitioned_elements(
+            elements=elements,
+            source_file=source_file,
+            image_block_extraction_enabled=image_enabled,
+        )
+    except Exception:
+        if _fast_pdf_text_only_profile():
+            return _extract_pdf_text_with_pypdf(file_path, source_file)
+        raise
 
 
 def _extract_docx_or_pptx_text_and_tables(file_path: str, source_file: str) -> list[dict]:

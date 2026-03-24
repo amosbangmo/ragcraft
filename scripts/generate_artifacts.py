@@ -285,7 +285,7 @@ def step_cypress() -> None:
             ================================
 
             Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
-            Spec: cypress/e2e/rag_invariants.cy.js (HTTP inspect/ask, latences, modes)
+            Spec: cypress/e2e/06_rag_invariants.cy.js (HTTP inspect/ask, latences, modes)
             JUnit dédié: rag_invariants_junit.xml (extrait de cypress_junit.xml)
             Suite complète: cypress_junit.xml
             Tests Python mockés historiques: api/tests/appli/rag/test_rag_pipeline_invariants.py
@@ -300,7 +300,7 @@ def step_cypress() -> None:
             ======================================
 
             Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
-            Spec: cypress/e2e/robustness_failure.cy.js
+            Spec: cypress/e2e/07_robustness_failure.cy.js
             Classes d’échec couvertes (API + assertions navigateur où applicable):
             - 401 / session ou token manquant
             - 422 validation (corps de requête invalide)
@@ -323,12 +323,16 @@ def step_cypress() -> None:
 
             Généré: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}
 
-            - cypress/e2e/public_surface.cy.js — Page FastAPI /docs dans le navigateur ; GET /health (JSON).
-            - cypress/e2e/workspace_journey.cy.js — Parcours HTTP (même routes que le client Streamlit) : register, login, projet, ingest multipart, ask + sources, réglages retrieval, évaluation manuelle, erreurs structurées.
-            - cypress/e2e/rag_invariants.cy.js — Invariants RAG côté API (inspect/ask, latences, modes).
-            - cypress/e2e/robustness_failure.cy.js — 401/422, benchmark vide, chemins d’erreur API.
-            - cypress/e2e/streamlit/login_shell.cy.js — UI Streamlit réelle : /login dans le navigateur, iframe + data-testid ragcraft-login-shell.
-            - cypress/e2e/streamlit/authenticated_landing.cy.js — Saisie login dans les widgets Streamlit, puis shell authentifié (data-testid ragcraft-app-shell ou navigation).
+            - cypress/e2e/00_register_flow.cy.js — Inscription Streamlit navigateur en premier (auth-page-root, bannières) ; écrit cypress/.e2e-streamlit-creds.json.
+            - cypress/e2e/01_login_flow.cy.js — Connexion Streamlit avec identifiants sauvegardés.
+            - cypress/e2e/02_project_creation.cy.js — Création de projet UI.
+            - cypress/e2e/03_ingestion_flow.cy.js — Upload + traitement document.
+            - cypress/e2e/04_ask_flow.cy.js — Chat / réponse + sources.
+            - cypress/e2e/05_retrieval_settings.cy.js — Réglages retrieval (page Settings, sidebar-nav-retrieval-settings).
+            - cypress/e2e/06_rag_invariants.cy.js — Invariants RAG HTTP (inspect/ask, latences, modes).
+            - cypress/e2e/07_robustness_failure.cy.js — 401/422, benchmark vide, erreurs structurées.
+            - cypress/e2e/08_public_surface.cy.js — /docs, /health.
+            - cypress/e2e/09_workspace_http_journey.cy.js — Parcours HTTP complet (ingest via tâche Node multipart).
 
             Artefacts: cypress_junit.xml, artifacts/cypress_screenshots/, artifacts/cypress_videos/
             Détails périmètre: docs/cypress_scope.md

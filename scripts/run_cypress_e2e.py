@@ -2,6 +2,14 @@
 """
 Start uvicorn for E2E, run Cypress, write artifacts/cypress_run.log.
 
+SQLite, ``users/<id>/projects/…`` et fichiers ingérés utilisent ``RAGCRAFT_DATA_PATH`` :
+
+- **Par défaut** : ``<repo>/artifacts/e2e_data`` (persistant, inspectable après le run ;
+  le dossier ``artifacts/`` est gitignored).
+- ``RAGCRAFT_E2E_DATA_PATH`` : chemin absolu ou relatif vers un autre répertoire ``data``.
+- ``RAGCRAFT_E2E_TEMP_DATA=1`` : ancien comportement (répertoire temporaire système,
+  effacé à la fin du script).
+
 Exit code: Cypress return code, or 124 (Cypress wall-clock exceeded; see
 ``RAGCRAFT_CYPRESS_CLI_TIMEOUT_S``),
 125 (API never listened on 127.0.0.1:18976 within 60s), 127 (node/Cypress missing).
@@ -21,6 +29,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+from contextlib import contextmanager
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +37,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ART = ROOT / "artifacts"
 LOG = ART / "cypress_run.log"
+API_LOG = ART / "e2e_api_server.log"
+DEFAULT_E2E_DATA = ART / "e2e_data"
+
+
+@contextmanager
+def _e2e_data_root_context():
+    """
+    Yield ``Path`` used as ``RAGCRAFT_DATA_PATH`` (directory may be ``…/data`` or the root itself).
+
+    See module docstring for ``RAGCRAFT_E2E_DATA_PATH`` / ``RAGCRAFT_E2E_TEMP_DATA``.
+    """
+    explicit = os.environ.get("RAGCRAFT_E2E_DATA_PATH", "").strip()
+    if explicit:
+        root = Path(explicit).expanduser().resolve()
+        root.mkdir(parents=True, exist_ok=True)
+        yield root
+        return
+    if os.environ.get("RAGCRAFT_E2E_TEMP_DATA", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ):
+        with tempfile.TemporaryDirectory(prefix="ragcraft_cypress_") as tmp:
+            yield Path(tmp) / "data"
+        return
+    DEFAULT_E2E_DATA.mkdir(parents=True, exist_ok=True)
+    yield DEFAULT_E2E_DATA.resolve()
 
 
 def _log_timeout_level(msg: str) -> None:
@@ -77,7 +113,32 @@ def _e2e_env(*, data_root: Path | None = None) -> dict[str, str]:
     if data_root is not None:
         data_root.mkdir(parents=True, exist_ok=True)
         e["RAGCRAFT_DATA_PATH"] = str(data_root.resolve())
+    # Surface slow/failed ingest in Streamlit before Cypress's 180s assertion (httpx default read is 300s).
+    e.setdefault("RAGCRAFT_API_READ_TIMEOUT_SECONDS", "150")
     return e
+
+
+def _log_faiss_import_probe(*, env: dict[str, str]) -> None:
+    """Confirm the same interpreter API/Streamlit use can import faiss (common E2E footgun)."""
+    try:
+        r = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import faiss; print(getattr(faiss, '__version__', '?'))",
+            ],
+            cwd=str(ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=45,
+            check=False,
+        )
+        out = ((r.stdout or "").strip() or (r.stderr or "").strip()).replace("\n", " ")
+        tag = "ok" if r.returncode == 0 else "FAILED"
+        print(f"[ragcraft-e2e] import faiss ({tag}, rc={r.returncode}): {out[:240]}", flush=True)
+    except Exception as exc:
+        print(f"[ragcraft-e2e] import faiss probe error: {exc}", flush=True)
 
 
 def _wait_port(host: str, port: int, timeout_s: float = 60.0) -> None:
@@ -190,16 +251,38 @@ def main() -> int:
         f"RAGCRAFT_CYPRESS_CLI_TIMEOUT_S pour surcharger)",
         flush=True,
     )
-    with tempfile.TemporaryDirectory(prefix="ragcraft_cypress_") as tmp:
-        data_root = Path(tmp) / "data"
+    print(f"[ragcraft-e2e] Python (API + Streamlit + ce script) = {sys.executable}", flush=True)
+    with _e2e_data_root_context() as data_root:
         env = _e2e_env(data_root=data_root)
-        print("[ragcraft-e2e] Lancement du serveur API E2E (uvicorn)…", flush=True)
+        print(
+            f"[ragcraft-e2e] RAGCRAFT_DATA_PATH (E2E) = {data_root}",
+            flush=True,
+        )
+        _log_faiss_import_probe(env=env)
+        print(
+            f"[ragcraft-e2e] Lancement du serveur API E2E (uvicorn), stderr → {API_LOG.name}…",
+            flush=True,
+        )
+        API_LOG.parent.mkdir(parents=True, exist_ok=True)
+        api_stderr = open(
+            API_LOG,
+            "a",
+            encoding="utf-8",
+            errors="replace",
+            newline="\n",
+            buffering=1,
+        )
+        api_stderr.write(
+            f"\n=== e2e_api_server stderr {datetime.now(timezone.utc).isoformat()} UTC "
+            f"python={sys.executable} ===\n"
+        )
+        api_stderr.flush()
         server = subprocess.Popen(
             [sys.executable, str(ROOT / "scripts" / "e2e_api_server.py")],
             cwd=ROOT,
             env=env,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
+            stderr=api_stderr,
         )
         streamlit_proc: subprocess.Popen | None = None
         try:
@@ -238,7 +321,8 @@ def main() -> int:
                     cwd=str(ROOT),
                     env=env,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.PIPE,
+                    # Never use PIPE here without draining: a full stderr buffer blocks Streamlit.
+                    stderr=subprocess.DEVNULL,
                 )
                 try:
                     _wait_port("127.0.0.1", streamlit_port, timeout_s=120.0)
@@ -293,6 +377,10 @@ def main() -> int:
                     "(Popen.wait after terminate, wall_limit=15s) — sending kill"
                 )
                 server.kill()
+            try:
+                api_stderr.close()
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":

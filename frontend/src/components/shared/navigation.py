@@ -63,16 +63,29 @@ def render_navigation(hide_sidebar: bool = False):
         else:
             st.caption("Not signed in")
 
+        st.markdown('<span data-testid="sidebar-nav-home"></span>', unsafe_allow_html=True)
         st.page_link("app.py", label="🏠 Home")
+        st.markdown('<span data-testid="sidebar-nav-login"></span>', unsafe_allow_html=True)
         st.page_link("pages/login.py", label="🔐 Login")
+        st.markdown('<span data-testid="sidebar-nav-projects"></span>', unsafe_allow_html=True)
         st.page_link("pages/projects.py", label="📁 Projects")
+        st.markdown('<span data-testid="sidebar-nav-ingestion"></span>', unsafe_allow_html=True)
         st.page_link("pages/ingestion.py", label="📄 Ingestion")
+        st.markdown('<span data-testid="sidebar-nav-chat"></span>', unsafe_allow_html=True)
         st.page_link("pages/chat.py", label="💬 Chat")
+        st.markdown('<span data-testid="sidebar-nav-search"></span>', unsafe_allow_html=True)
         st.page_link("pages/search.py", label="🔎 Search")
+        st.markdown('<span data-testid="sidebar-nav-retrieval-inspector"></span>', unsafe_allow_html=True)
         st.page_link("pages/retrieval_inspector.py", label="🧠 Retrieval Inspector")
+        st.markdown('<span data-testid="sidebar-nav-retrieval-comparison"></span>', unsafe_allow_html=True)
         st.page_link("pages/retrieval_comparison.py", label="⚖️ Retrieval Comparison")
+        st.markdown('<span data-testid="sidebar-nav-evaluation"></span>', unsafe_allow_html=True)
         st.page_link("pages/evaluation.py", label="📊 Evaluation")
+        st.markdown(
+            '<span data-testid="sidebar-nav-retrieval-settings"></span>', unsafe_allow_html=True
+        )
         st.page_link("pages/settings.py", label="⚙️ Settings")
+        st.markdown('<span data-testid="sidebar-nav-profile"></span>', unsafe_allow_html=True)
         st.page_link("pages/profile.py", label="👤 Profile")
 
         if streamlit_auth.is_authenticated():

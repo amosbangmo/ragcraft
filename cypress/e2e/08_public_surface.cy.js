@@ -1,5 +1,5 @@
 /**
- * Browser E2E against live uvicorn (same checks as former Playwright tests).
+ * Public API surface in the browser + /health JSON (cy.request).
  */
 describe("public API surface", () => {
   it("OpenAPI /docs renders", () => {

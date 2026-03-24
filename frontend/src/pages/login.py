@@ -73,6 +73,12 @@ if streamlit_auth.is_authenticated():
         st.switch_page("pages/projects.py")
     st.stop()
 
+# Page sentinel for Cypress (Streamlit widgets are siblings, not inside this div).
+st.markdown(
+    '<div data-testid="auth-page-root" aria-label="ragcraft-auth-page"></div>',
+    unsafe_allow_html=True,
+)
+
 st.markdown(
     """
     <div class="login-card" data-testid="ragcraft-login-shell">
@@ -89,13 +95,53 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-tab_login, tab_signup = st.tabs(["Sign in", "Create account"])
+if "_auth_mode" not in st.session_state:
+    st.session_state["_auth_mode"] = "login"
 
-with tab_login:
+
+def _auth_set_login_mode() -> None:
+    st.session_state["_auth_mode"] = "login"
+
+
+def _auth_set_register_mode() -> None:
+    st.session_state["_auth_mode"] = "register"
+
+
+_mode_reg = st.session_state["_auth_mode"] == "register"
+
+st.markdown(
+    f'<div data-testid="auth-toggle-register" data-e2e-active="{str(_mode_reg).lower()}"></div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    f'<div data-testid="auth-toggle-login" data-e2e-active="{str(not _mode_reg).lower()}"></div>',
+    unsafe_allow_html=True,
+)
+
+c1, c2 = st.columns(2)
+with c1:
+    st.button(
+        "I have an account",
+        use_container_width=True,
+        key="auth_mode_login_btn",
+        on_click=_auth_set_login_mode,
+    )
+with c2:
+    st.button(
+        "Register",
+        use_container_width=True,
+        key="auth_mode_register_btn",
+        on_click=_auth_set_register_mode,
+    )
+
+if st.session_state["_auth_mode"] == "login":
+    st.markdown('<div data-testid="login-email-input"></div>', unsafe_allow_html=True)
     username = st.text_input("Username", key="login_username")
+    st.markdown('<div data-testid="login-password-input"></div>', unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="login_password")
 
-    if st.button("Sign in", use_container_width=True, key="login_submit"):
+    st.markdown('<div data-testid="login-submit-button"></div>', unsafe_allow_html=True)
+    if st.button("Log in", use_container_width=True, key="login_submit"):
         success, message = streamlit_auth.login(username, password)
 
         if success:
@@ -104,17 +150,22 @@ with tab_login:
             st.session_state.pop("post_login_redirect", None)
             st.switch_page(redirect_page)
         else:
+            st.markdown('<div data-testid="auth-error-banner"></div>', unsafe_allow_html=True)
             st.error(message)
-
-with tab_signup:
+else:
+    st.markdown('<div data-testid="register-display-name-input"></div>', unsafe_allow_html=True)
     display_name = st.text_input("Display name", key="signup_display_name")
+    st.markdown('<div data-testid="register-email-input"></div>', unsafe_allow_html=True)
     username = st.text_input("Username", key="signup_username")
+    st.markdown('<div data-testid="register-password-input"></div>', unsafe_allow_html=True)
     password = st.text_input("Password", type="password", key="signup_password")
+    st.markdown('<div data-testid="register-confirm-password-input"></div>', unsafe_allow_html=True)
     confirm_password = st.text_input(
         "Confirm password", type="password", key="signup_confirm_password"
     )
 
-    if st.button("Create account", use_container_width=True):
+    st.markdown('<div data-testid="register-submit-button"></div>', unsafe_allow_html=True)
+    if st.button("Create account", use_container_width=True, key="signup_submit"):
         success, message = streamlit_auth.register(
             username=username,
             password=password,
@@ -123,7 +174,9 @@ with tab_signup:
         )
 
         if success:
+            st.markdown('<div data-testid="register-success-banner"></div>', unsafe_allow_html=True)
             st.success(message)
             st.switch_page("pages/projects.py")
         else:
+            st.markdown('<div data-testid="auth-error-banner"></div>', unsafe_allow_html=True)
             st.error(message)

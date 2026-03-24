@@ -23,6 +23,7 @@ st.set_page_config(
 require_authentication("pages/projects.py")
 apply_layout()
 
+st.markdown('<div data-testid="project-page-root"></div>', unsafe_allow_html=True)
 
 header = render_page_header(
     badge="Projects",
@@ -48,14 +49,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+st.markdown('<div data-testid="project-create-section"></div>', unsafe_allow_html=True)
 col1, col2 = st.columns([3, 1])
 with col1:
+    st.markdown('<div data-testid="project-name-input"></div>', unsafe_allow_html=True)
     project_name = st.text_input(
         "Project name", placeholder="e.g. annual-report-2024", key="project_name_input"
     )
 with col2:
     st.write("")
     st.write("")
+    st.markdown('<div data-testid="project-create-button"></div>', unsafe_allow_html=True)
     create_clicked = st.button("Create project", use_container_width=True)
 
 if create_clicked:
@@ -65,6 +69,7 @@ if create_clicked:
     else:
         client.create_project(user_id, normalized_name)
         st.session_state["project_id"] = normalized_name
+        st.markdown('<div data-testid="project-created-banner"></div>', unsafe_allow_html=True)
         st.success(f"Project '{normalized_name}' created.")
 st.markdown("</div>", unsafe_allow_html=True)
 

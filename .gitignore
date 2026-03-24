@@ -62,6 +62,12 @@ model_cache/
 # Jupyter
 .ipynb_checkpoints/
 
+# Cypress local Streamlit E2E credential handoff (00→01… specs)
+cypress/.e2e-streamlit-creds.json
+cypress/.e2e-streamlit-project.json
+cypress/.e2e-streamlit-login-verified.json
+cypress/.e2e-streamlit-ingestion-verified.json
+
 # Testing / coverage / generated reports
 .coverage
 htmlcov/

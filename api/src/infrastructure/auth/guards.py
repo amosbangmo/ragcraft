@@ -11,6 +11,9 @@ def require_authentication(current_page: str):
     if streamlit_auth.is_authenticated():
         return
 
+    if streamlit_auth.try_restore_session_from_browser_cookie():
+        return
+
     st.session_state["post_login_redirect"] = current_page
     st.warning("Please log in to access this page.")
     st.switch_page("pages/login.py")

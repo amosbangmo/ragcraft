@@ -95,10 +95,13 @@ Entities, value objects, **ports** (**`RetrievalPort`**, **`AnswerGenerationPort
 
 **Matrix:** **`docs/testing_strategy.md`**. **Gate:** **`scripts/validate_architecture.*`** (architecture + bootstrap), then **`scripts/run_tests.*`**.
 
+**Browser E2E (Cypress):** **`cypress/e2e/00_register_flow.cy.js` → `05_retrieval_settings.cy.js`** couvrent le **parcours Streamlit réel** (inscription navigateur en premier, puis login, projet, ingestion, chat, réglages retrieval) avec des **`data-testid`** sur la page login, la navigation, les pages métier et les bannières. Les specs **`06_`–`09_`** couvrent les **invariants HTTP**, la robustesse, la surface publique et le **parcours API** complet (ingest multipart via tâche Node). Voir **`docs/cypress_scope.md`**.
+
 | Tool | Config | Use |
 |------|--------|-----|
 | Ruff | **`pyproject.toml`** | `ruff check api/src frontend/src` (+ architecture tests in CI) |
 | pytest | Root + **`api/pyproject.toml`** | Layered suites; marker **`reliability`** for **`api/tests/reliability/`** |
+| Cypress | **`cypress.config.js`**, **`npm run cy:ci`** | Streamlit + FastAPI E2E; JUnit sous **`artifacts/`** |
 
 ---
 

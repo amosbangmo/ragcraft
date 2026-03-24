@@ -1,3 +1,6 @@
+require("./streamlit_e2e");
+require("./e2e_prerequisites");
+
 /**
  * Shared Cypress support: teardown test users via DELETE /users/me (cascade DB + data/users tree).
  *
@@ -85,6 +88,10 @@ beforeEach(function () {
   const spec = (Cypress.spec && Cypress.spec.relative) || "";
   const norm = String(spec).replace(/\\/g, "/");
   if (norm.includes("/streamlit/")) {
+    return;
+  }
+  // Streamlit UI journey (00–05): avoid hitting API /docs before cross-origin Streamlit visits.
+  if (/e2e\/0[0-5]_/.test(norm)) {
     return;
   }
   cy.visit("/docs", {

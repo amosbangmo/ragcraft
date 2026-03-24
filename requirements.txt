@@ -17,6 +17,8 @@ langchain-text-splitters
 unstructured
 unstructured-inference
 unstructured[pdf]
+# Unstructured PDF path imports ``pdfminer``; pin explicitly so minimal installs still pass E2E ingest.
+pdfminer.six
 
 # Explicit file-type deps for HF stability
 opencv-python-headless

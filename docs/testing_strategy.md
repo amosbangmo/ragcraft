@@ -19,7 +19,7 @@ Tests are **layered** for **structural confidence**: layout and imports, bootstr
 | **Infrastructure** | **`api/tests/infra/`** | Adapters, SQLite, services |
 | **Composition** | **`api/tests/composition/`** | Wiring smoke |
 | **E2E / regression** | **`api/tests/e2e/`** | Heavier / env-sensitive gates |
-| **Browser E2E** | **`cypress/e2e/`** | Cypress : **uvicorn E2E** + **Streamlit headless** (voir **`docs/cypress_scope.md`**). Specs HTTP (`workspace_journey.cy.js`, …) + specs Streamlit (`streamlit/*.cy.js` — iframe, login, shell **`data-testid`**). Commande **`npm run cy:ci`** / **`scripts/run_cypress_e2e.py`**. |
+| **Browser E2E** | **`cypress/e2e/`** | Cypress : **uvicorn E2E** + **Streamlit headless** (voir **`docs/cypress_scope.md`**). Parcours UI **`00_`–`05_`** (inscription navigateur en premier, puis login, projet, ingestion, chat, settings) + HTTP **`06_`–`09_`**. Commande **`npm run cy:ci`** / **`scripts/run_cypress_e2e.py`**. |
 | **Frontend** | **`frontend/tests/`** | **`test_api_client.py`**, Streamlit, wire parsing, route literal contract |
 
 **Product matrix:** **`docs/product_features.md`**.
